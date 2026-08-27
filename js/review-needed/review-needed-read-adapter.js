@@ -12,11 +12,17 @@
   var INPUT_CONTRACT = {
     mode: 'normalized-read-only',
     storageBinding: null,
-    reviewQueueItemFields: [
-      'sourceType', 'game', 'level', 'itemId', 'attemptsUsed', 'resolved', 'actionToken'
+    activeStateFields: [
+      'sourceType', 'ownerKey', 'game', 'level', 'itemId', 'state', 'stateToken',
+      'dueOn', 'roundToken', 'retryOrdinal'
     ],
-    srsDueSnapshotFields: ['sourceType', 'game', 'level', 'itemId', 'due', 'mastered'],
-    canonicalSrsStateFields: ['sourceType', 'game', 'level', 'itemId', 'stage', 'dueDate', 'mastered']
+    srsDueSnapshotFields: [
+      'sourceType', 'ownerKey', 'game', 'level', 'itemId', 'due', 'mastered'
+    ],
+    canonicalSrsStateFields: [
+      'sourceType', 'ownerKey', 'game', 'level', 'itemId', 'stateToken',
+      'stage', 'dueDate', 'mastered'
+    ]
   };
 
   function copy(value) {
@@ -35,9 +41,9 @@
     return copy(INPUT_CONTRACT);
   }
 
-  function mapReviewQueueItem(row) {
-    var mapped = pick(row, INPUT_CONTRACT.reviewQueueItemFields);
-    contract.normalizeReviewQueueItem(mapped);
+  function mapActiveState(row) {
+    var mapped = pick(row, INPUT_CONTRACT.activeStateFields);
+    contract.normalizeActiveState(mapped);
     return mapped;
   }
 
@@ -54,13 +60,13 @@
   }
 
   function adapt(payload) {
-    if (!payload || !Array.isArray(payload.reviewQueueItems) || !Array.isArray(payload.srsDueSnapshot)) {
+    if (!payload || !Array.isArray(payload.activeStates) || !Array.isArray(payload.srsDueSnapshot)) {
       var error = new Error('NORMALIZED_INPUT_INVALID');
       error.code = 'NORMALIZED_INPUT_INVALID';
       throw error;
     }
     return {
-      reviewQueueItems: payload.reviewQueueItems.map(mapReviewQueueItem),
+      activeStates: payload.activeStates.map(mapActiveState),
       srsDueSnapshot: payload.srsDueSnapshot.map(mapSrsDueSnapshot)
     };
   }
@@ -74,7 +80,7 @@
 
   return {
     getInputContract: getInputContract,
-    mapReviewQueueItem: mapReviewQueueItem,
+    mapActiveState: mapActiveState,
     mapSrsDueSnapshot: mapSrsDueSnapshot,
     mapCanonicalSrsState: mapCanonicalSrsState,
     adapt: adapt,

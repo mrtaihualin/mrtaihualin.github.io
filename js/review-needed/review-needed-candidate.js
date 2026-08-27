@@ -1,4 +1,4 @@
-/* Headless, read-only Review Needed + SRS Due queue candidate. Not loaded by public runtime. */
+/* Headless, read-only pre-SRS state-machine candidate. Not loaded by public runtime. */
 (function (root, factory) {
   'use strict';
   var api = factory();
@@ -9,10 +9,12 @@
 
   var FEATURE_DEFAULT_ENABLED = false;
   var GAME_IDS = ['tone', 'reading', 'listening', 'typing', 'wordorder'];
+  var ACTIVE_STATES = ['normal', 'retry_end_round', 'next_day_check', 'review_needed', 'weak_4d', 'srs'];
+  var PRE_SRS_STATES = ['normal', 'retry_end_round', 'next_day_check', 'review_needed', 'weak_4d'];
   var VIEW_STATES = ['loading', 'ready', 'empty', 'error', 'access-denied'];
   var TIER_CONFIGS = {
-    free: { id: 'free', maxReviewAttempts: 1, runtimeEnabled: true },
-    paid: { id: 'paid', maxReviewAttempts: 4, runtimeEnabled: false }
+    free: { id: 'free', runtimeEnabled: true },
+    paid: { id: 'paid', runtimeEnabled: false }
   };
 
   function copy(value) {
@@ -37,72 +39,80 @@
       date.getUTCMonth() === parts[1] - 1 && date.getUTCDate() === parts[2];
   }
 
+  function addCalendarDays(value, days) {
+    assertState(isCalendarDate(value), 'INVALID_CALENDAR_DATE', 'date must be valid YYYY-MM-DD');
+    var parts = value.split('-').map(Number);
+    var date = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2] + days));
+    return date.getUTCFullYear() + '-' + String(date.getUTCMonth() + 1).padStart(2, '0') + '-' +
+      String(date.getUTCDate()).padStart(2, '0');
+  }
+
   function normalizeGame(value) {
     var game = String(value || '').toLowerCase();
     if (game === 'word_order') game = 'wordorder';
     return GAME_IDS.indexOf(game) >= 0 ? game : null;
   }
 
+  function identityPart(value, code, label) {
+    assertState(value !== null && value !== undefined && String(value) !== '', code, label + ' is required');
+    value = String(value);
+    assertState(value.indexOf('\u0000') < 0, code, label + ' contains a forbidden separator');
+    return value;
+  }
+
   function normalizeIdentity(row, code) {
+    var ownerKey = identityPart(row && row.ownerKey, code, 'ownerKey');
     var game = normalizeGame(row && row.game);
     assertState(!!game, 'UNKNOWN_GAME', 'unknown game');
-    var level = row && row.level;
-    var itemId = row && row.itemId;
-    assertState(level !== null && level !== undefined && String(level) !== '', code, 'level is required');
-    assertState(itemId !== null && itemId !== undefined && String(itemId) !== '', code, 'itemId is required');
-    level = String(level);
-    itemId = String(itemId);
+    var level = identityPart(row && row.level, code, 'level');
+    var itemId = identityPart(row && row.itemId, code, 'itemId');
     return {
+      ownerKey: ownerKey,
       game: game,
       level: level,
       itemId: itemId,
-      key: game + '\u0000' + level + '\u0000' + itemId
+      key: ownerKey + '\u0000' + game + '\u0000' + level + '\u0000' + itemId
     };
   }
 
-  function normalizeReviewQueueItem(row) {
+  function normalizeToken(value, code, label) {
+    return identityPart(value, code, label);
+  }
+
+  function normalizeActiveState(row) {
     assertState(row && typeof row === 'object' && !Array.isArray(row),
-      'MALFORMED_REVIEW_QUEUE_ITEM', 'Review Needed queue item must be an object');
-    assertState(row.sourceType === 'review_queue_item',
-      'UNKNOWN_REVIEW_SOURCE', 'sourceType must be review_queue_item');
-    var identity = normalizeIdentity(row, 'MALFORMED_REVIEW_QUEUE_ITEM');
-    assertState(typeof row.resolved === 'boolean',
-      'MALFORMED_REVIEW_QUEUE_ITEM', 'resolved must be boolean');
-    var attemptsUsed = Number(row.attemptsUsed);
-    assertState(isFinite(attemptsUsed) && attemptsUsed >= 0 && Math.floor(attemptsUsed) === attemptsUsed,
-      'INVALID_ATTEMPT_COUNT', 'attemptsUsed must be a non-negative integer');
-    assertState(row.actionToken !== null && row.actionToken !== undefined && String(row.actionToken) !== '',
-      'MALFORMED_REVIEW_QUEUE_ITEM', 'actionToken is required');
+      'MALFORMED_ACTIVE_STATE', 'active state must be an object');
+    assertState(row.sourceType === 'active_learning_state',
+      'UNKNOWN_ACTIVE_STATE_SOURCE', 'sourceType must be active_learning_state');
+    var identity = normalizeIdentity(row, 'MALFORMED_ACTIVE_STATE');
+    var state = String(row.state || '').toLowerCase();
+    assertState(ACTIVE_STATES.indexOf(state) >= 0, 'UNKNOWN_ACTIVE_STATE', 'unknown active state');
+    var stateToken = normalizeToken(row.stateToken, 'MALFORMED_ACTIVE_STATE', 'stateToken');
+    var dueOn = row.dueOn == null ? '' : String(row.dueOn);
+    var dueRequired = state === 'next_day_check' || state === 'review_needed' || state === 'weak_4d';
+    assertState(dueRequired ? isCalendarDate(dueOn) : dueOn === '',
+      'MALFORMED_ACTIVE_STATE', dueRequired ? 'state requires dueOn' : 'state must not define dueOn');
+    var roundToken = row.roundToken == null ? '' : String(row.roundToken);
+    var retryOrdinal = row.retryOrdinal == null ? null : Number(row.retryOrdinal);
+    if (state === 'retry_end_round') {
+      roundToken = normalizeToken(roundToken, 'MALFORMED_ACTIVE_STATE', 'roundToken');
+      assertState(retryOrdinal === 1, 'MALFORMED_ACTIVE_STATE', 'retry_end_round must be the one retry');
+    } else {
+      assertState(roundToken === '' && retryOrdinal === null,
+        'MALFORMED_ACTIVE_STATE', 'only retry_end_round may carry retry metadata');
+    }
     return {
-      sourceType: 'review_queue_item',
+      sourceType: 'active_learning_state',
+      ownerKey: identity.ownerKey,
       game: identity.game,
       level: identity.level,
       itemId: identity.itemId,
       identityKey: identity.key,
-      attemptsUsed: attemptsUsed,
-      resolved: row.resolved,
-      actionToken: String(row.actionToken)
-    };
-  }
-
-  function normalizeSrsDueSnapshot(row) {
-    assertState(row && typeof row === 'object' && !Array.isArray(row),
-      'MALFORMED_SRS_SNAPSHOT', 'SRS due snapshot must be an object');
-    assertState(row.sourceType === 'srs_due_snapshot',
-      'UNKNOWN_SRS_SOURCE', 'SRS sourceType must be srs_due_snapshot');
-    var identity = normalizeIdentity(row, 'MALFORMED_SRS_SNAPSHOT');
-    assertState(typeof row.due === 'boolean',
-      'MALFORMED_SRS_SNAPSHOT', 'due must be boolean');
-    assertState(typeof row.mastered === 'boolean',
-      'MALFORMED_SRS_SNAPSHOT', 'mastered must be boolean');
-    return {
-      sourceType: 'srs_due_snapshot',
-      game: identity.game,
-      level: identity.level,
-      itemId: identity.itemId,
-      identityKey: identity.key,
-      due: row.due,
-      mastered: row.mastered
+      state: state,
+      stateToken: stateToken,
+      dueOn: dueOn,
+      roundToken: roundToken,
+      retryOrdinal: retryOrdinal
     };
   }
 
@@ -116,21 +126,55 @@
     assertState(isFinite(stage) && stage >= 0 && Math.floor(stage) === stage,
       'MALFORMED_CANONICAL_SRS_STATE', 'stage must be a non-negative integer');
     assertState(typeof row.dueDate === 'string' && (!row.dueDate || isCalendarDate(row.dueDate)),
-      'MALFORMED_CANONICAL_SRS_STATE', 'dueDate must be empty or a valid YYYY-MM-DD');
+      'MALFORMED_CANONICAL_SRS_STATE', 'dueDate must be empty or valid YYYY-MM-DD');
     assertState(typeof row.mastered === 'boolean',
       'MALFORMED_CANONICAL_SRS_STATE', 'mastered must be boolean');
     assertState(row.mastered || stage === 0 || !!row.dueDate,
       'MALFORMED_CANONICAL_SRS_STATE', 'non-mastered stage above zero requires dueDate');
     return {
       sourceType: 'canonical_srs_state',
+      ownerKey: identity.ownerKey,
       game: identity.game,
       level: identity.level,
       itemId: identity.itemId,
       identityKey: identity.key,
+      stateToken: normalizeToken(row.stateToken, 'MALFORMED_CANONICAL_SRS_STATE', 'stateToken'),
       stage: stage,
       dueDate: row.dueDate,
       mastered: row.mastered
     };
+  }
+
+  function normalizeSrsDueSnapshot(row) {
+    assertState(row && typeof row === 'object' && !Array.isArray(row),
+      'MALFORMED_SRS_SNAPSHOT', 'SRS due snapshot must be an object');
+    assertState(row.sourceType === 'srs_due_snapshot',
+      'UNKNOWN_SRS_SOURCE', 'sourceType must be srs_due_snapshot');
+    var identity = normalizeIdentity(row, 'MALFORMED_SRS_SNAPSHOT');
+    assertState(typeof row.due === 'boolean', 'MALFORMED_SRS_SNAPSHOT', 'due must be boolean');
+    assertState(typeof row.mastered === 'boolean', 'MALFORMED_SRS_SNAPSHOT', 'mastered must be boolean');
+    return {
+      sourceType: 'srs_due_snapshot',
+      ownerKey: identity.ownerKey,
+      game: identity.game,
+      level: identity.level,
+      itemId: identity.itemId,
+      identityKey: identity.key,
+      due: row.due,
+      mastered: row.mastered
+    };
+  }
+
+  function normalizeStateSet(rows) {
+    assertState(Array.isArray(rows), 'INVALID_ACTIVE_STATES', 'activeStates must be an array');
+    var identities = Object.create(null);
+    return rows.map(function (raw) {
+      var row = normalizeActiveState(raw);
+      assertState(!identities[row.identityKey], 'DUPLICATE_ACTIVE_STATE',
+        'one owner + game + level + item may have only one active state');
+      identities[row.identityKey] = true;
+      return row;
+    });
   }
 
   function tierConfig(tier) {
@@ -139,184 +183,273 @@
     return copy(TIER_CONFIGS[id]);
   }
 
-  function reviewAttemptWindow(tier, attemptsUsed, options) {
-    options = options || {};
-    var config = tierConfig(tier || 'free');
-    if (!config.runtimeEnabled && options.allowDormantTier !== true) throw errorWithCode('TIER_DISABLED');
-    var used = Number(attemptsUsed);
-    assertState(isFinite(used) && used >= 0 && Math.floor(used) === used,
-      'INVALID_ATTEMPT_COUNT', 'attempt count must be a non-negative integer');
-    var remaining = Math.max(0, config.maxReviewAttempts - used);
+  function scoreBand(score) {
+    assertState(typeof score === 'number' && isFinite(score) && Math.floor(score) === score && score >= 0 && score <= 10,
+      'INVALID_SCORE', 'score must be an integer from 0 to 10');
+    if (score === 10) return '10';
+    if (score >= 4) return '4-9';
+    return '0-3';
+  }
+
+  function targetFor(state, band) {
+    if (state === 'normal') {
+      if (band === '10') return 'srs';
+      if (band === '4-9') return 'weak_4d';
+      return 'retry_end_round';
+    }
+    if (state === 'retry_end_round') {
+      return band === '10' ? 'next_day_check' : 'review_needed';
+    }
+    if (state === 'next_day_check' || state === 'review_needed') {
+      if (band === '10') return 'srs';
+      if (band === '4-9') return 'weak_4d';
+      return 'review_needed';
+    }
+    if (state === 'weak_4d') {
+      if (band === '10') return 'srs';
+      if (band === '4-9') return 'weak_4d';
+      return 'retry_end_round';
+    }
+    throw errorWithCode('SRS_OWNER_ONLY', 'SRS transitions belong only to the SRS owner');
+  }
+
+  function activeStateFromTransition(source, target, evidence) {
+    var dueOn = '';
+    if (target === 'next_day_check' || target === 'review_needed') dueOn = addCalendarDays(evidence.occurredOn, 1);
+    if (target === 'weak_4d') dueOn = addCalendarDays(evidence.occurredOn, 4);
+    var roundToken = '';
+    var retryOrdinal = null;
+    if (target === 'retry_end_round') {
+      roundToken = normalizeToken(evidence.roundToken, 'ROUND_TOKEN_REQUIRED', 'roundToken');
+      retryOrdinal = 1;
+    }
     return {
-      tier: config.id,
-      maxReviewAttempts: config.maxReviewAttempts,
-      attemptsUsed: used,
-      attemptsRemaining: remaining,
-      canAttempt: remaining > 0
+      sourceType: 'active_learning_state',
+      ownerKey: source.ownerKey,
+      game: source.game,
+      level: source.level,
+      itemId: source.itemId,
+      identityKey: source.identityKey,
+      state: target,
+      stateToken: 'next:' + evidence.actionToken,
+      dueOn: dueOn,
+      roundToken: roundToken,
+      retryOrdinal: retryOrdinal
     };
   }
 
-  function emptyGames() {
-    var games = {};
-    GAME_IDS.forEach(function (game) {
-      games[game] = { game: game, reviewNeeded: [], srsDueOnly: [], queue: [] };
+  function buildTransitionDirective(rawState, rawEvidence) {
+    var source = normalizeActiveState(rawState);
+    assertState(PRE_SRS_STATES.indexOf(source.state) >= 0,
+      'SRS_OWNER_ONLY', 'SRS transitions cannot return to pre-SRS states');
+    var evidence = copy(rawEvidence || {});
+    var band = scoreBand(evidence.score);
+    assertState(isCalendarDate(evidence.occurredOn), 'INVALID_CALENDAR_DATE', 'occurredOn is required');
+    evidence.actionToken = normalizeToken(evidence.actionToken, 'MALFORMED_RESULT_EVIDENCE', 'actionToken');
+    var target = targetFor(source.state, band);
+    var nextState;
+    var srsOwnerDirective = null;
+
+    if (target === 'srs') {
+      assertState(evidence.srsStateStatus === 'absent' || evidence.srsStateStatus === 'present',
+        'SRS_STATE_PRESENCE_REQUIRED', 'SRS entry requires explicit absent or present status');
+      if (evidence.srsStateStatus === 'absent') {
+        assertState(!evidence.existingSrsState, 'CONFLICTING_SRS_STATE_STATUS',
+          'absent status cannot include canonical SRS state');
+        nextState = activeStateFromTransition(source, 'srs', evidence);
+        srsOwnerDirective = {
+          action: 'request-canonical-initial-route',
+          derivedStage: 0,
+          day1Passed: false,
+          firstCheckpoint: 'resolve-by-current-srs-authority',
+          duplicateSrsCreationAllowed: false
+        };
+      } else {
+        var existing = normalizeCanonicalSrsState(evidence.existingSrsState);
+        assertState(existing.identityKey === source.identityKey,
+          'SRS_IDENTITY_MISMATCH', 'canonical SRS state must match active identity');
+        nextState = {
+          sourceType: 'active_learning_state',
+          ownerKey: existing.ownerKey,
+          game: existing.game,
+          level: existing.level,
+          itemId: existing.itemId,
+          identityKey: existing.identityKey,
+          state: 'srs',
+          stateToken: existing.stateToken,
+          dueOn: '',
+          roundToken: '',
+          retryOrdinal: null
+        };
+        srsOwnerDirective = { action: 'reuse-existing-canonical-state', state: existing };
+      }
+    } else {
+      assertState(evidence.srsStateStatus == null && !evidence.existingSrsState,
+        'CONFLICTING_SRS_STATE_STATUS', 'pre-SRS transition cannot carry SRS state');
+      nextState = activeStateFromTransition(source, target, evidence);
+    }
+
+    return {
+      readOnlyDirective: true,
+      identityKey: source.identityKey,
+      actionToken: evidence.actionToken,
+      score: Number(evidence.score),
+      scoreBand: band,
+      fromState: source.state,
+      toState: target,
+      expectedStateToken: source.stateToken,
+      closeStateToken: source.stateToken,
+      nextActiveState: nextState,
+      dueOn: nextState.dueOn || null,
+      queueGroup: target === 'next_day_check' || target === 'review_needed' ? 'next-day-priority-group' :
+        target === 'retry_end_round' ? 'end-of-round-once' : target === 'weak_4d' ? 'weak-4d' : 'srs-owner',
+      absoluteQuestionPosition: null,
+      atomicOwnerContract: {
+        compareAndSwap: true,
+        replaceOneActiveState: true,
+        idempotencyKey: evidence.actionToken,
+        duplicateActiveStateAllowed: false
+      },
+      srsOwnerDirective: srsOwnerDirective,
+      candidateMutatesSrs: false,
+      candidateMutatesStorage: false,
+      savedWord: 'manual-only'
+    };
+  }
+
+  function applyDirectives(activeStates, directives) {
+    var normalized = normalizeStateSet(activeStates);
+    assertState(Array.isArray(directives), 'INVALID_DIRECTIVES', 'directives must be an array');
+    var byIdentity = Object.create(null);
+    var seenActions = Object.create(null);
+    normalized.forEach(function (row) { byIdentity[row.identityKey] = row; });
+    var applied = 0;
+    var duplicateIgnored = 0;
+    var raceRejected = 0;
+    directives.forEach(function (directive) {
+      assertState(directive && directive.readOnlyDirective === true && directive.atomicOwnerContract,
+        'MALFORMED_DIRECTIVE', 'owner directive is malformed');
+      var action = normalizeToken(directive.actionToken, 'MALFORMED_DIRECTIVE', 'actionToken');
+      assertState(directive.atomicOwnerContract.compareAndSwap === true &&
+        directive.atomicOwnerContract.replaceOneActiveState === true &&
+        directive.atomicOwnerContract.duplicateActiveStateAllowed === false &&
+        directive.atomicOwnerContract.idempotencyKey === action &&
+        directive.closeStateToken === directive.expectedStateToken &&
+        directive.candidateMutatesSrs === false && directive.candidateMutatesStorage === false,
+      'MALFORMED_DIRECTIVE', 'directive must preserve the atomic read-only owner contract');
+      var serialized = JSON.stringify(directive);
+      if (seenActions[action]) {
+        assertState(seenActions[action] === serialized, 'IDEMPOTENCY_CONFLICT',
+          'same actionToken cannot describe another transition');
+        duplicateIgnored += 1;
+        return;
+      }
+      var current = byIdentity[directive.identityKey];
+      if (!current || current.stateToken !== directive.expectedStateToken) {
+        raceRejected += 1;
+        return;
+      }
+      var next = normalizeActiveState(directive.nextActiveState);
+      assertState(next.identityKey === directive.identityKey,
+        'DIRECTIVE_IDENTITY_MISMATCH', 'next active state must keep identity');
+      byIdentity[directive.identityKey] = next;
+      seenActions[action] = serialized;
+      applied += 1;
     });
-    return games;
+    return {
+      readOnlySimulation: true,
+      activeStates: Object.keys(byIdentity).map(function (key) { return byIdentity[key]; }).sort(sortIdentity),
+      applied: applied,
+      duplicateIgnored: duplicateIgnored,
+      raceRejected: raceRejected
+    };
   }
 
   function sortIdentity(a, b) {
     return a.identityKey.localeCompare(b.identityKey);
   }
 
-  function queueItem(sourceType, row, alsoSrsDue, attemptWindow) {
-    var isReview = sourceType === 'review_needed';
+  function queueRow(row, group, sourceType) {
     return {
-      sourceType: sourceType,
+      sourceType: sourceType || row.state,
+      ownerKey: row.ownerKey,
       game: row.game,
       level: row.level,
       itemId: row.itemId,
       identityKey: row.identityKey,
-      actionToken: isReview ? row.actionToken : null,
-      alsoSrsDue: alsoSrsDue === true,
-      attemptsUsed: isReview ? attemptWindow.attemptsUsed : null,
-      attemptsRemaining: isReview ? attemptWindow.attemptsRemaining : null,
-      resultRouting: {
-        reviewResolution: isReview,
-        srsOwnerEvaluationIfDue: sourceType === 'srs_due' || alsoSrsDue === true,
-        srsInitialEntryOnReviewCorrect: isReview ? 'canonical-owner-route' : 'not-applicable',
-        candidateMutatesSrs: false,
-        savedWord: 'manual-only'
-      }
-    };
-  }
-
-  function buildReviewResolutionDirective(item, result) {
-    assertState(item && item.sourceType === 'review_needed',
-      'INVALID_REVIEW_QUEUE_ITEM', 'resolution requires a Review Needed queue item');
-    var itemIdentity = normalizeIdentity(item, 'INVALID_REVIEW_QUEUE_ITEM');
-    assertState(item.identityKey === itemIdentity.key && item.actionToken != null && String(item.actionToken) !== '',
-      'INVALID_REVIEW_QUEUE_ITEM', 'Review queue identity and actionToken are required');
-    assertState(result && (result.outcome === 'correct' || result.outcome === 'incorrect'),
-      'INVALID_REVIEW_RESULT', 'result outcome must be correct or incorrect');
-    var base = {
-      readOnlyDirective: true,
-      identityKey: item.identityKey,
-      actionToken: item.actionToken,
-      reviewResult: result.outcome,
-      candidateMutatesReview: false,
-      candidateMutatesSrs: false,
+      state: row.state,
+      dueOn: row.dueOn || null,
+      priorityGroup: group,
+      absoluteQuestionPosition: null,
+      stateToken: row.stateToken,
       savedWord: 'manual-only'
     };
-    if (result.outcome === 'incorrect') {
-      base.reviewQueue = 'attempt-consumed';
-      base.srsAction = 'none';
-      base.srsInitialRoute = null;
-      return base;
-    }
-
-    base.reviewQueue = 'close';
-    assertState(result.srsStateStatus === 'absent' || result.srsStateStatus === 'present',
-      'SRS_STATE_PRESENCE_REQUIRED', 'correct Review resolution requires explicit SRS state presence');
-    if (result.srsStateStatus === 'absent') {
-      assertState(!result.existingSrsState && item.alsoSrsDue !== true,
-        'CONFLICTING_SRS_STATE_STATUS', 'absent status cannot include an existing SRS state');
-      base.srsAction = 'request-canonical-initial-route';
-      base.srsInitialRoute = {
-        derivedStage: 0,
-        day1Passed: false,
-        firstCheckpoint: 'resolve-by-current-srs-authority',
-        duplicateSrsCreationAllowed: false
-      };
-      base.existingSrsState = null;
-      return base;
-    }
-
-    var existing = normalizeCanonicalSrsState(result.existingSrsState);
-    assertState(existing.identityKey === item.identityKey,
-      'SRS_IDENTITY_MISMATCH', 'existing SRS state must match the Review item identity');
-    base.srsAction = 'reuse-existing-canonical-state';
-    base.srsInitialRoute = null;
-    base.existingSrsState = existing;
-    return base;
   }
 
-  function composeQueue(inputs, options) {
+  function composeQueuePlan(inputs, options) {
     inputs = inputs || {};
     options = options || {};
+    var today = String(options.today || '');
+    assertState(isCalendarDate(today), 'INVALID_TODAY', 'today must be valid YYYY-MM-DD');
     var config = tierConfig(options.tier || 'free');
     if (!config.runtimeEnabled && options.allowDormantTier !== true) throw errorWithCode('TIER_DISABLED');
-    assertState(Array.isArray(inputs.reviewQueueItems), 'INVALID_REVIEW_INPUT', 'reviewQueueItems must be an array');
+    var states = normalizeStateSet(inputs.activeStates);
     assertState(Array.isArray(inputs.srsDueSnapshot), 'INVALID_SRS_INPUT', 'srsDueSnapshot must be an array');
-
-    var reviewIdentities = Object.create(null);
-    var actionTokens = Object.create(null);
-    var reviewRows = [];
-    var ignoredReview = { resolved: 0, attemptLimit: 0 };
-    inputs.reviewQueueItems.forEach(function (raw) {
-      var row = normalizeReviewQueueItem(raw);
-      assertState(!actionTokens[row.actionToken], 'DUPLICATE_ACTION_TOKEN', 'duplicate review actionToken');
-      actionTokens[row.actionToken] = true;
-      assertState(!reviewIdentities[row.identityKey],
-        'DUPLICATE_REVIEW_IDENTITY', 'duplicate normalized review identity');
-      reviewIdentities[row.identityKey] = true;
-      if (row.resolved) { ignoredReview.resolved += 1; return; }
-      var window = reviewAttemptWindow(config.id, row.attemptsUsed, {
-        allowDormantTier: options.allowDormantTier === true
-      });
-      if (!window.canAttempt) { ignoredReview.attemptLimit += 1; return; }
-      row.attemptWindow = window;
-      reviewRows.push(row);
+    var stateByIdentity = Object.create(null);
+    states.forEach(function (row) { stateByIdentity[row.identityKey] = row; });
+    var dueIdentities = Object.create(null);
+    var dueRows = inputs.srsDueSnapshot.map(normalizeSrsDueSnapshot);
+    dueRows.forEach(function (row) {
+      assertState(!dueIdentities[row.identityKey], 'DUPLICATE_SRS_DUE_SNAPSHOT', 'duplicate SRS Due identity');
+      dueIdentities[row.identityKey] = true;
+      var state = stateByIdentity[row.identityKey];
+      assertState(!!state && state.state === 'srs', 'SRS_DUE_STATE_CONFLICT',
+        'SRS Due snapshot requires the one active state to be SRS');
     });
 
-    var srsIdentities = Object.create(null);
-    var dueRows = [];
-    var ignoredSrs = { notDue: 0, mastered: 0 };
-    inputs.srsDueSnapshot.forEach(function (raw) {
-      var row = normalizeSrsDueSnapshot(raw);
-      assertState(!srsIdentities[row.identityKey],
-        'DUPLICATE_SRS_IDENTITY', 'duplicate normalized SRS identity');
-      srsIdentities[row.identityKey] = true;
-      if (row.mastered) { ignoredSrs.mastered += 1; return; }
-      if (!row.due) { ignoredSrs.notDue += 1; return; }
-      dueRows.push(row);
+    var groups = {
+      nextDayPriority: [],
+      weakDue: [],
+      srsDue: [],
+      normal: [],
+      retryEndRound: []
+    };
+    var notDue = 0;
+    states.forEach(function (row) {
+      if (row.state === 'next_day_check' || row.state === 'review_needed') {
+        if (row.dueOn <= today) groups.nextDayPriority.push(queueRow(row, 'next-day-priority-group'));
+        else notDue += 1;
+      } else if (row.state === 'weak_4d') {
+        if (row.dueOn <= today) groups.weakDue.push(queueRow(row, 'weak-4d-due'));
+        else notDue += 1;
+      } else if (row.state === 'retry_end_round') {
+        groups.retryEndRound.push(queueRow(row, 'end-of-round-once'));
+      } else if (row.state === 'normal') {
+        groups.normal.push(queueRow(row, 'normal-round'));
+      }
     });
-
-    reviewRows.sort(sortIdentity);
-    dueRows.sort(sortIdentity);
-    var dueByIdentity = Object.create(null);
-    dueRows.forEach(function (row) { dueByIdentity[row.identityKey] = row; });
-    var consumedDue = Object.create(null);
-    var reviewQueue = reviewRows.map(function (row) {
-      var alsoDue = !!dueByIdentity[row.identityKey];
-      if (alsoDue) consumedDue[row.identityKey] = true;
-      return queueItem('review_needed', row, alsoDue, row.attemptWindow);
+    dueRows.forEach(function (row) {
+      if (row.due && !row.mastered) groups.srsDue.push(queueRow(stateByIdentity[row.identityKey], 'srs-due', 'srs_due'));
     });
-    var dueOnlyQueue = dueRows.filter(function (row) {
-      return !consumedDue[row.identityKey];
-    }).map(function (row) {
-      return queueItem('srs_due', row, false, null);
-    });
-    var queue = reviewQueue.concat(dueOnlyQueue);
-    var games = emptyGames();
-    reviewQueue.forEach(function (item) { games[item.game].reviewNeeded.push(item); });
-    dueOnlyQueue.forEach(function (item) { games[item.game].srsDueOnly.push(item); });
-    GAME_IDS.forEach(function (game) {
-      games[game].queue = games[game].reviewNeeded.concat(games[game].srsDueOnly);
-    });
-
+    Object.keys(groups).forEach(function (key) { groups[key].sort(sortIdentity); });
+    var technicalRows = groups.nextDayPriority.concat(groups.weakDue, groups.srsDue, groups.normal, groups.retryEndRound);
     return {
       readOnly: true,
       tier: config.id,
-      config: config,
-      queue: queue,
-      games: games,
-      totals: {
-        reviewNeeded: reviewQueue.length,
-        srsDueOnly: dueOnlyQueue.length,
-        deduplicatedReviewAndDue: Object.keys(consumedDue).length,
-        queue: queue.length
+      today: today,
+      groups: groups,
+      technicalRows: technicalRows,
+      absoluteQuestionOrder: null,
+      priorityContract: {
+        nextDayItemsAreFrontGroup: true,
+        everyNextDayItemIsLiteralQuestionOne: false,
+        retryAppearsOnceAtEndOfRound: true
       },
-      ignored: { review: ignoredReview, srs: ignoredSrs }
+      totals: {
+        activeStates: states.length,
+        technicalRows: technicalRows.length,
+        notDue: notDue
+      }
     };
   }
 
@@ -333,27 +466,33 @@
     var config = tierConfig(tier);
     if (!config.runtimeEnabled && options.allowDormantTier !== true) throw errorWithCode('TIER_DISABLED');
     return {
-      composeQueue: function (inputs, composeOptions) {
-        composeOptions = composeOptions || {};
+      composeQueuePlan: function (inputs, composeOptions) {
+        composeOptions = copy(composeOptions || {});
         composeOptions.tier = tier;
         composeOptions.allowDormantTier = options.allowDormantTier === true;
-        return composeQueue(inputs, composeOptions);
-      }
+        return composeQueuePlan(inputs, composeOptions);
+      },
+      buildTransitionDirective: buildTransitionDirective
     };
   }
 
   return {
     FEATURE_DEFAULT_ENABLED: FEATURE_DEFAULT_ENABLED,
     GAME_IDS: GAME_IDS.slice(),
+    ACTIVE_STATES: ACTIVE_STATES.slice(),
+    PRE_SRS_STATES: PRE_SRS_STATES.slice(),
     VIEW_STATES: VIEW_STATES.slice(),
     getTierConfig: tierConfig,
     normalizeGame: normalizeGame,
-    normalizeReviewQueueItem: normalizeReviewQueueItem,
-    normalizeSrsDueSnapshot: normalizeSrsDueSnapshot,
+    normalizeActiveState: normalizeActiveState,
     normalizeCanonicalSrsState: normalizeCanonicalSrsState,
-    reviewAttemptWindow: reviewAttemptWindow,
-    composeQueue: composeQueue,
-    buildReviewResolutionDirective: buildReviewResolutionDirective,
+    normalizeSrsDueSnapshot: normalizeSrsDueSnapshot,
+    normalizeStateSet: normalizeStateSet,
+    scoreBand: scoreBand,
+    addCalendarDays: addCalendarDays,
+    buildTransitionDirective: buildTransitionDirective,
+    applyDirectives: applyDirectives,
+    composeQueuePlan: composeQueuePlan,
     viewState: viewState,
     createCandidate: createCandidate
   };

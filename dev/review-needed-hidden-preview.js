@@ -5,11 +5,18 @@
   var enabled = params.get('review-needed-preview') === '1';
   if (!local || !enabled) return;
 
+  function escapeHtml(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function (character) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character];
+    });
+  }
+
   var root = document.getElementById('review-needed-preview');
   var stateNode = document.getElementById('preview-state');
   var output = document.getElementById('preview-output');
   root.hidden = false;
   root.setAttribute('aria-hidden', 'false');
+  output.setAttribute('tabindex', '0');
 
   var key = params.get('state') || 'day1';
   var fixture = window.ReviewNeededHiddenFixtures[key] || window.ReviewNeededHiddenFixtures.day1;
@@ -20,25 +27,23 @@
   }
 
   var candidate = window.ReviewNeededCandidate.createCandidate({ enabled: true, tier: 'free' });
-  var snapshot = candidate.composeQueue({
-    reviewQueueItems: fixture.reviewQueueItems,
+  var plan = candidate.composeQueuePlan({
+    activeStates: fixture.activeStates,
     srsDueSnapshot: fixture.srsDueSnapshot
-  });
-  var rows = snapshot.queue.map(function (item) {
-    return '<tr><td>' + item.game + '</td><td>' + item.level + '</td><td>' + item.itemId +
-      '</td><td><code>' + item.sourceType + '</code></td><td>' + (item.alsoSrsDue ? 'yes' : 'no') +
-      '</td><td>' + (item.attemptsRemaining == null ? 'n/a' : item.attemptsRemaining) + '</td></tr>';
+  }, { today: fixture.today });
+  var rows = plan.technicalRows.map(function (item) {
+    return '<tr><td>' + escapeHtml(item.game) + '</td><td>' + escapeHtml(item.level) + '</td><td>' +
+      escapeHtml(item.itemId) + '</td><td><code>' + escapeHtml(item.sourceType) + '</code></td><td>' +
+      escapeHtml(item.priorityGroup) + '</td><td>' + escapeHtml(item.dueOn || 'n/a') + '</td></tr>';
   }).join('');
-  var reviewOnly = snapshot.queue.filter(function (item) {
-    return item.sourceType === 'review_needed' && !item.alsoSrsDue;
-  })[0];
-  var initialDirective = reviewOnly ? window.ReviewNeededCandidate.buildReviewResolutionDirective(reviewOnly, {
-    outcome: 'correct', srsStateStatus: 'absent'
+  var reviewState = fixture.activeStates.filter(function (item) { return item.state === 'review_needed'; })[0];
+  var directive = reviewState ? candidate.buildTransitionDirective(reviewState, {
+    score: 10, occurredOn: fixture.today, actionToken: 'preview-review-correct', srsStateStatus: 'absent'
   }) : null;
-  output.innerHTML = '<p>Technical sources stay separate. Review rows precede remaining SRS Due rows; this preview performs no resolution or SRS transition.</p>' +
-    (initialDirective ? '<p>Read-only correct-result directive: <code>' + initialDirective.reviewQueue +
-      ' Review queue → ' + initialDirective.srsAction + ' → derived stage ' +
-      initialDirective.srsInitialRoute.derivedStage + '</code>. The SRS owner resolves its first checkpoint.</p>' : '') +
-    '<table><caption>Composed read-only fixture queue</caption><thead><tr><th scope="col">Game</th><th scope="col">Level</th><th scope="col">Item</th><th scope="col">Source/type</th><th scope="col">Also SRS Due</th><th scope="col">Review attempts remaining</th></tr></thead><tbody>' +
+  output.innerHTML = '<p>Technical state groups only. The display order is diagnostic; it does not define final question placement or copy.</p>' +
+    (directive ? '<p>Read-only owner directive: <code>' + escapeHtml(directive.fromState) + ' → ' +
+      escapeHtml(directive.toState) + ' · derived stage ' +
+      escapeHtml(directive.srsOwnerDirective.derivedStage) + '</code>. No storage or SRS mutation occurs here.</p>' : '') +
+    '<table><caption>Normalized active-state queue plan</caption><thead><tr><th scope="col">Game</th><th scope="col">Level</th><th scope="col">Item</th><th scope="col">State/source</th><th scope="col">Technical group</th><th scope="col">Due on</th></tr></thead><tbody>' +
     rows + '</tbody></table>';
 })(window, document);

@@ -5,51 +5,61 @@
   else root.ReviewNeededHiddenFixtures = fixtures;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
-  var games = ['tone', 'reading', 'listening', 'typing', 'wordorder'];
 
-  function reviewQueueItems(label) {
-    return games.map(function (game, index) {
-      return {
-        sourceType: 'review_queue_item', game: game, level: String(index + 1),
-        itemId: 'fixture-' + game, attemptsUsed: 0, resolved: false,
-        actionToken: 'review-' + game + '-' + label
-      };
-    });
+  function active(state, overrides) {
+    var row = Object.assign({
+      sourceType: 'active_learning_state', ownerKey: 'fixture-owner', game: 'tone', level: '1',
+      itemId: 'fixture-item', state: state, stateToken: 'state-' + state,
+      dueOn: '', roundToken: '', retryOrdinal: null
+    }, overrides || {});
+    if (state === 'retry_end_round' && !(overrides && Object.prototype.hasOwnProperty.call(overrides, 'roundToken'))) {
+      row.roundToken = 'fixture-round';
+      row.retryOrdinal = 1;
+    }
+    return row;
   }
 
-  var day1Review = reviewQueueItems('day1-valid-upstream');
-  var day1Srs = [
-    { sourceType: 'srs_due_snapshot', game: 'tone', level: '1', itemId: 'fixture-tone', due: true, mastered: false },
-    { sourceType: 'srs_due_snapshot', game: 'tone', level: '1', itemId: 'due-only-tone', due: true, mastered: false }
+  var day1States = [
+    active('next_day_check', { game: 'tone', itemId: 'next-tone', dueOn: '2026-08-28' }),
+    active('review_needed', { game: 'reading', level: '2', itemId: 'review-reading', dueOn: '2026-08-28' }),
+    active('weak_4d', { game: 'listening', level: '3', itemId: 'weak-listening', dueOn: '2026-08-28' }),
+    active('normal', { game: 'typing', level: '4', itemId: 'normal-typing' }),
+    active('retry_end_round', { game: 'wordorder', level: '5', itemId: 'retry-wordorder', roundToken: 'round-day1', retryOrdinal: 1 }),
+    active('srs', { game: 'tone', level: '2', itemId: 'srs-tone', stateToken: 'srs-tone-state' }),
+    active('review_needed', { game: 'reading', level: '3', itemId: 'future-review', dueOn: '2026-08-29' })
   ];
-  var day8Srs = games.map(function (game, index) {
-    return { sourceType: 'srs_due_snapshot', game: game, level: String(index + 1), itemId: 'due-' + game, due: true, mastered: false };
-  }).concat(games.map(function (game, index) {
-    return { sourceType: 'srs_due_snapshot', game: game, level: String(index + 1), itemId: 'mastered-' + game, due: true, mastered: true };
-  }));
 
   return {
-    day0: { status: 'ready', reviewQueueItems: [], srsDueSnapshot: [] },
-    day1: { status: 'ready', reviewQueueItems: day1Review, srsDueSnapshot: day1Srs },
+    active: active,
+    day0: { status: 'ready', today: '2026-08-27', activeStates: [], srsDueSnapshot: [] },
+    day1: {
+      status: 'ready', today: '2026-08-28', activeStates: day1States,
+      srsDueSnapshot: [{
+        sourceType: 'srs_due_snapshot', ownerKey: 'fixture-owner', game: 'tone', level: '2',
+        itemId: 'srs-tone', due: true, mastered: false
+      }]
+    },
     day8: {
-      status: 'ready', reviewQueueItems: reviewQueueItems('day8-valid-upstream'), srsDueSnapshot: day8Srs
+      status: 'ready', today: '2026-09-04',
+      activeStates: [
+        active('review_needed', { game: 'tone', itemId: 'review-day8', dueOn: '2026-09-04' }),
+        active('weak_4d', { game: 'reading', level: '2', itemId: 'weak-day8', dueOn: '2026-09-04' }),
+        active('srs', { game: 'listening', level: '3', itemId: 'srs-due-day8' }),
+        active('srs', { game: 'typing', level: '4', itemId: 'srs-mastered-day8' })
+      ],
+      srsDueSnapshot: [
+        { sourceType: 'srs_due_snapshot', ownerKey: 'fixture-owner', game: 'listening', level: '3', itemId: 'srs-due-day8', due: true, mastered: false },
+        { sourceType: 'srs_due_snapshot', ownerKey: 'fixture-owner', game: 'typing', level: '4', itemId: 'srs-mastered-day8', due: true, mastered: true }
+      ]
     },
-    reviewCorrectToInitialSrs: {
-      result: { outcome: 'correct', srsStateStatus: 'absent' },
-      expected: { reviewQueue: 'close', srsAction: 'request-canonical-initial-route', derivedStage: 0 }
+    existingSrs: {
+      sourceType: 'canonical_srs_state', ownerKey: 'fixture-owner', game: 'tone', level: '1',
+      itemId: 'fixture-item', stateToken: 'canonical-srs-existing', stage: 2,
+      dueDate: '2026-09-03', mastered: false
     },
-    reviewCorrectExistingSrs: {
-      result: {
-        outcome: 'correct', srsStateStatus: 'present',
-        existingSrsState: {
-          sourceType: 'canonical_srs_state', game: 'tone', level: '1', itemId: 'fixture-tone',
-          stage: 2, dueDate: '2026-09-03', mastered: false
-        }
-      }
-    },
-    empty: { status: 'empty', reviewQueueItems: [], srsDueSnapshot: [] },
-    loading: { status: 'loading', reviewQueueItems: [], srsDueSnapshot: [] },
-    error: { status: 'error', error: 'FIXTURE_READ_ERROR', reviewQueueItems: [], srsDueSnapshot: [] },
-    accessDenied: { status: 'access-denied', error: 'FIXTURE_ACCESS_DENIED', reviewQueueItems: [], srsDueSnapshot: [] }
+    empty: { status: 'empty', activeStates: [], srsDueSnapshot: [] },
+    loading: { status: 'loading', activeStates: [], srsDueSnapshot: [] },
+    error: { status: 'error', error: 'FIXTURE_READ_ERROR', activeStates: [], srsDueSnapshot: [] },
+    accessDenied: { status: 'access-denied', error: 'FIXTURE_ACCESS_DENIED', activeStates: [], srsDueSnapshot: [] }
   };
 });
