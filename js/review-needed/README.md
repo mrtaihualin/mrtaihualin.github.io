@@ -116,6 +116,7 @@ Earlier commits and checklist rows remain history. This Delta starts at `c3b0d78
 - The hidden bridge now requires two server-owner seams before reading state: exact `content_ref` resolution to one stable item and a per-game server-verified learning score. It never reads client `item_id` or `learning_score` as authority.
 - `supabase/migrations/20260827111028_phase1_learning_review_atomic_source.sql` prepares the Free-only atomic owner, CAS, durable idempotency, exact replay/conflict handling, stable-id SRS stage-0 entry and deny-by-default privileges.
 - The source is committed preparation only. It is not applied anywhere and must wait for Free SRS Day 8 PASS plus fresh Pre-Work, Security, migration-collision and rollback gates. Paid/Public/Production remain disabled.
+- The five-game server verifier source is now prepared under `score-submit` with a hard default-OFF constant. Tone recomputes the raw ladder/component average, Reading recomputes the first-check syllable average, Listening keeps primary listening score only, Typing derives its quota from protected canonical units, and Word Order derives remaining life from wrong/hint primitives. Every path excludes combo/golden/level/end-round/SRS bonuses, rejects client learning-score authority and fails closed on missing/ambiguous content. No Review/RPC mutation is wired or activated.
 
 ## Stop boundary
 

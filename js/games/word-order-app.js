@@ -186,6 +186,7 @@
   var used = {};          // orig index -> true 表示已被放進格子
   var attemptedWrongThisSentence = false;
   var hintUsedThisSentence = false;
+  var hintCountThisSentence = 0;
   var locked = false;     // 這句已經答對/公佈答案，鎖住不能再改
   var wrongCount = 0;     // จำนวนครั้งที่เรียงผิด (สะสมทั้งประโยคนี้ — ใช้กำหนดว่าผิดครั้งถัดไปหักเท่าไหร่)
   var life = SENTENCE_LIFE_START; // "ชีวิต" ของประโยคนี้ — หักจากทั้งเรียงผิดและ提示 พูลเดียวกัน (ข้อ3.6) ถึง 0 = ตาย
@@ -421,10 +422,10 @@
       // กันประโยคยาวไม่มีเว้นวรรค (เขียนไทยจริงไม่เว้นวรรคระหว่างคำ) ตกขอบหน้ากระดาษ/ถูกตัดกลางคำ — Lin 2026-07-31
       var wordsArr = (s && s.words && s.words.length) ? s.words.map(function(w){return w.th;}) : null;
       var wordGlosses = (s && s.words && s.words.length) ? s.words.map(function(w){return {th:w.th||'', zh:w.zh||''};}) : null;
-      var base = {th:s?s.th:'', wordsArr:wordsArr, wordGlosses:wordGlosses, zh:s?s.zh:'', userAnswer:lastSubmittedAnswer||'', correctAnswer:s&&s.words?s.words.map(function(w){return w.th;}).join(' '):(s?s.th:''), wrong:(typeof wrongCount!=='undefined'?wrongCount:0), attempts:submittedAttempts.slice(), failed:false, guide:false, pts:0, srsDue:'', mastered:false};
+      var base = {th:s?s.th:'', wordsArr:wordsArr, wordGlosses:wordGlosses, zh:s?s.zh:'', userAnswer:lastSubmittedAnswer||'', correctAnswer:s&&s.words?s.words.map(function(w){return w.th;}).join(' '):(s?s.th:''), wrong:(typeof wrongCount!=='undefined'?wrongCount:0), attempts:submittedAttempts.slice(), learningEvidence:{hintCount:hintCountThisSentence}, failed:false, guide:hintCountThisSentence>0, pts:0, srsDue:'', mastered:false};
       for (var k in o) { if (Object.prototype.hasOwnProperty.call(o,k)) base[k] = o[k]; }
       roundLog.push(base);
-      if(roundReport&&window.RoundReport)RoundReport.addItem(roundReport,{content_ref:{source:'game_sentences',key:base.th},question:base.th,meaning:base.zh,attempts:base.attempts,user_answer:base.userAnswer,correct_answer:base.correctAnswer,is_correct:!base.failed&&!base.guide&&base.wrong===0,wrong_count:base.wrong,item_score:base.pts,hint_used:!!base.guide,words:wordGlosses||[],srs_state:base.srsDue||null,mastered_state:!!base.mastered});
+      if(roundReport&&window.RoundReport)RoundReport.addItem(roundReport,{content_ref:{source:'game_sentences',key:base.th},question:base.th,meaning:base.zh,attempts:base.attempts,user_answer:base.userAnswer,correct_answer:base.correctAnswer,is_correct:!base.failed&&!base.guide&&base.wrong===0,wrong_count:base.wrong,item_score:base.pts,hint_used:!!base.guide,learning_evidence:base.learningEvidence,words:wordGlosses||[],srs_state:base.srsDue||null,mastered_state:!!base.mastered});
     } catch(e){}
   }
   // 2026-07-13 Lin：ดึงประโยคที่พลาดในรอบนี้จาก roundLog ไปเก็บลง reading_sessions.wrong_items (ฐานข้อมูลจุดอ่อน)
@@ -874,6 +875,7 @@
     answer = []; used = {};
     attemptedWrongThisSentence = false;
     hintUsedThisSentence = false;
+    hintCountThisSentence = 0;
     locked = false;
     wrongCount = 0; sentenceFailed = false;
     submittedAttempts = [];
@@ -1234,6 +1236,7 @@
     answer.push(correctPrefixLen);
     used[correctPrefixLen] = true;
     hintUsedThisSentence = true;
+    hintCountThisSentence++;
     life -= HINT_DEDUCT; // ข้อ3.6: 提示หักครั้งละ2 พูลเดียวกับผิด ไม่จำกัดจำนวนครั้ง
     renderSlots(s);
     renderBank();
@@ -1378,7 +1381,7 @@
         var _woSrsBonus=Math.max(0,score-roundBonus-_woItemScore);
         var _woSubmissionId=READING_AUTH.saveScore(weightedScore,1,'word_order',rgWrongItemsFromLog(),{
           difficulty:'高',
-          items:roundLog.map(function(w){return {key:w.th,points:Number(w.pts)||0,wrong:Number(w.wrong)||0,guide:!!w.guide,failed:!!w.failed,mastered:!!w.mastered};}),
+          items:roundLog.map(function(w){return {key:w.th,contentRef:{source:'game_sentences',key:w.th},points:Number(w.pts)||0,wrong:Number(w.wrong)||0,guide:!!w.guide,failed:!!w.failed,mastered:!!w.mastered,learningEvidence:w.learningEvidence||null};}),
           roundBonus:roundBonus,srsBonus:_woSrsBonus
         });
         if(roundReport)roundReport.submission_id=_woSubmissionId||null;

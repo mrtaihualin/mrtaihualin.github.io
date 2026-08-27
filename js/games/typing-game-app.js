@@ -1157,7 +1157,7 @@ function endRound(){
   try{
     if(window.READING_AUTH && READING_AUTH.saveScore) submissionId=READING_AUTH.saveScore(weightedScore,1,'typing',rgWrongItemsFromLog(),{
       difficulty:curLevel,
-      items:roundLog.map(function(w){return {key:w.contentKey||w.th,points:Number(w.pts)||0,wrong:Number(w.wrong)||0,guide:!!w.guide,failed:!!w.failed,mastered:!!w.mastered};}),
+      items:roundLog.map(function(w){return {key:w.contentKey||w.th,contentRef:{source:curLevel==='高'?'game_sentences':'game_words',key:w.contentKey||w.th},points:Number(w.pts)||0,wrong:Number(w.wrong)||0,guide:!!w.guide,failed:!!w.failed,mastered:!!w.mastered};}),
       roundBonus:roundBonus,srsBonus:0
     });
   }catch(e){} // S29: คะแนน Core 5 ผ่าน score-submit เท่านั้น

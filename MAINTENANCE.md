@@ -160,15 +160,21 @@
 - Replaced score/Leaderboard promises in the guest entry and Login modal with neutral Login-only copy while preserving Email OTP, Google, Facebook, LINE and the existing account-method safety warning.
 - Advanced `reading-auth.js` on Vault from v27 to v28 and `auth-widget.js` on its seven existing consumers from v15 to v16. Public Login and the Minimum Guest gate remain unchanged.
 
-**Prior update: 2026-08-26 Asia/Bangkok** — Login callback credential-fragment fail-closed fix
-**Prior update: 2026-08-27 Asia/Bangkok** — Hidden pre-SRS Review integration seam
+**Prior update: 2026-08-27 Asia/Bangkok** — Hidden five-game learning-score verifier source
 
+## 2026-08-27 — Hidden five-game learning-score verifier source (`PASS_LOCAL / DEFAULT_OFF`)
+
+- Added a default-OFF server verifier beside `score-submit` for Tone, Reading, Listening, Typing and Word Order. It derives integer `0–10` learning evidence from each game's existing pre-bonus primitives and protected canonical content, never from a client-computed learning score.
+- Core game result source now carries exact existing `contentRef` plus only the primitive evidence needed by the verifier. `round-report-v1` preserves that hidden evidence without adding storage or a public entry.
+- Review/SRS mutation remains owned by the separate atomic RPC source. No Staging/Production apply, Edge/client deploy, public activation, navigation or UI change is part of this checkpoint.
 ## 2026-08-27 — Hidden pre-SRS Review integration seam (`PASS_LOCAL / OWNER_STORAGE_GATE_OPEN`)
 
 - Reused exact clean Hidden Candidate commit `80a78346ec3a3178a9cc88325adb1a8f8d5b6524` and added one default-OFF bridge from the existing `round-report-v1` completion shape to an explicitly injected atomic learning-state/SRS owner. The bridge performs no network, storage, Supabase, Auth or SRS mutation itself.
 - The bridge requires a stable item identity, an explicit canonical integer learning score `0–10`, action-token idempotency, state-token compare-and-swap and one owner that is atomic across pre-SRS replacement and SRS entry. In-SRS evidence bypasses the pre-SRS candidate and remains SRS-owner-only with no Review/Weak backflow; Paid runtime remains disabled.
 - Source audit found the current Core-5 RoundReport does not yet provide the required stable `item_id` plus canonical `learning_score`, and the current SRS owner cannot atomically replace a pre-SRS state because no authorized durable pre-SRS state binding exists. The bridge therefore stays unlinked/default OFF and fails closed until the shared authority/schema/security gate is resolved.
 - Verification: integration `6/6`, Hidden Candidate `29/29`, syntax and diff checks PASS. No public HTML/runtime entry, Staging/Production call, schema/RPC/Edge/Auth/identity/automation mutation, push, PR, merge or deploy occurred.
+
+**Prior update: 2026-08-26 Asia/Bangkok** — Login callback credential-fragment fail-closed fix
 
 ## 2026-08-26 — Login callback credential-fragment fail-closed (`PASS_LOCAL / RELEASE_PENDING`)
 

@@ -196,11 +196,13 @@ function rgCurSyllableScore(){ try{ if(readingAttemptScore!=null)return readingA
 var HIGH_RAW_START_IDX=7;      // 0-based → พยางค์ที่ 8 เป็นต้นไป (เฉพาะ高／ประโยคยาว) ไม่เอาเข้าเฉลี่ย ไม่คูณ weight
 var HIGH_RAW_BONUS_PER_SYL=2;  // +2 ดิบ/พยางค์ (ถ้าพยางค์นั้นถูกในที่สุด — ไม่สเกลตามจำนวนผิด)
 var readingAttemptScore=null;  // Phase 1: snapshot จาก 檢查 ครั้งแรกเท่านั้น; correction ห้ามเขียนทับ
+var readingFirstCheckWrongCounts=null; // primitive evidence for server verifier; never a client-computed score
 var readingCorrectionAttempts=0;
 var readingFirstCheckDone=false;
 // ใช้สูตรเดิมของเกมเท่านั้น เพราะ exact component-error mapping ยังรอ Lin re-lock; ฟังก์ชันนี้แค่ snapshot ไม่สร้างสูตรใหม่
 function rgSnapshotExistingAttemptScore(){
   if(wordUsedGuide)return 0;
+  readingFirstCheckWrongCounts=(sylWrongCount&&sylWrongCount.length)?sylWrongCount.slice():[typeof wrongCount!=='undefined'?wrongCount:0];
   var n=(sylWrongCount&&sylWrongCount.length)?sylWrongCount.length:1;
   var avgCount=Math.max(1,Math.min(n,HIGH_RAW_START_IDX));
   var sum=0,i;
@@ -226,10 +228,10 @@ function rgLogWord(o){
     var w=WORDS[idx];
     var totalWrong=(sylWrongCount&&sylWrongCount.length)?sylWrongCount.reduce(function(a,b){return a+(b||0);},0):(typeof wrongCount!=='undefined'?wrongCount:0);
     var wordGlosses=(w&&w.words&&w.words.length)?w.words.map(function(part){return {th:part.th||'',zh:part.zh||''};}):null;
-    var base={th:w?w.th:'',contentKey:rgContentKey(w),zh:w?w.zh:'',wordGlosses:wordGlosses,reading:w&&w.readingTH?w.readingTH:'',userAnswer:readingSubmittedAttempts.length?readingSubmittedAttempts[readingSubmittedAttempts.length-1].answer:'',correctAnswer:w&&w.readingTH?w.readingTH:(w?w.th:''),wrong:totalWrong,attempts:readingSubmittedAttempts.slice(),attemptScore:readingAttemptScore,correctionAttempts:readingCorrectionAttempts,failed:false,guide:false,pts:0,srsDue:'',mastered:false};
+    var base={th:w?w.th:'',contentKey:rgContentKey(w),zh:w?w.zh:'',wordGlosses:wordGlosses,reading:w&&w.readingTH?w.readingTH:'',userAnswer:readingSubmittedAttempts.length?readingSubmittedAttempts[readingSubmittedAttempts.length-1].answer:'',correctAnswer:w&&w.readingTH?w.readingTH:(w?w.th:''),wrong:totalWrong,attempts:readingSubmittedAttempts.slice(),attemptScore:readingAttemptScore,correctionAttempts:readingCorrectionAttempts,learningEvidence:{firstCheckSyllableWrongCounts:(readingFirstCheckWrongCounts||sylWrongCount||[]).slice()},failed:false,guide:false,pts:0,srsDue:'',mastered:false};
     for(var k in o){ if(Object.prototype.hasOwnProperty.call(o,k)) base[k]=o[k]; }
     roundLog.push(base);
-    if(roundReport&&window.RoundReport)RoundReport.addItem(roundReport,{content_ref:{source:(w&&w.words&&w.words.length)?'game_sentences':'game_words',key:rgContentKey(w)},question:base.th,meaning:base.zh,attempts:base.attempts,user_answer:base.userAnswer,correct_answer:base.correctAnswer,is_correct:!base.failed&&!base.guide&&base.wrong===0,wrong_count:base.wrong,item_score:base.pts,hint_used:!!base.guide,linguistic:{reading_th:base.reading,syls:w&&w.syls||null,read_syls:w&&w.readSyls||null},words:wordGlosses||[],srs_state:base.srsDue||null,mastered_state:!!base.mastered});
+    if(roundReport&&window.RoundReport)RoundReport.addItem(roundReport,{content_ref:{source:(w&&w.words&&w.words.length)?'game_sentences':'game_words',key:rgContentKey(w)},question:base.th,meaning:base.zh,attempts:base.attempts,user_answer:base.userAnswer,correct_answer:base.correctAnswer,is_correct:!base.failed&&!base.guide&&base.wrong===0,wrong_count:base.wrong,item_score:base.pts,hint_used:!!base.guide,learning_evidence:base.learningEvidence,linguistic:{reading_th:base.reading,syls:w&&w.syls||null,read_syls:w&&w.readSyls||null},words:wordGlosses||[],srs_state:base.srsDue||null,mastered_state:!!base.mastered});
   }catch(e){}
 }
 // 2026-07-13 Lin：ดึงคำที่พลาดในรอบนี้จาก roundLog ไปเก็บลง reading_sessions.wrong_items (ฐานข้อมูลจุดอ่อน)
@@ -893,7 +895,7 @@ function loadWord(){
   sylList=buildSyls(WORD);
   sylIdx=0;wordHadWrong=false;wordFailed=false;wrongCount=0;sylCache=[];readingSubmittedAttempts=[]; // sylCache: เก็บ state แต่ละพยางค์ ให้เลือกพยางค์ไหนก่อนก็ได้ (คำใหม่ = ล้าง)
   sylWrongCount=new Array(sylList.length).fill(0); // งานที่1: ตัวนับผิดแยกรายพยางค์ (คำใหม่ = ล้าง)
-  readingAttemptScore=null;readingCorrectionAttempts=0;readingFirstCheckDone=false;
+  readingAttemptScore=null;readingFirstCheckWrongCounts=null;readingCorrectionAttempts=0;readingFirstCheckDone=false;
   wordUsedGuide=false;curWordIsKnownCheck=false;    // งานที่3+7: ล้างสถานะต่อคำใหม่
   wordGolden=Math.random()<GOLDEN_WORD_CHANCE; // สุ่มคำทองใหม่ทุกคำ (Lin 2026-07-03)
   rgApplyParticleToTitle(); // Lin 2026-08-01: ตั้งชื่อประโยคเต็ม (#wth) + ต่อครับ/ค่ะ/คะ ถ้าเปิดปุ่มไว้ (เฉพาะ高級句子)
@@ -1440,7 +1442,7 @@ function endRound(){
   try{
     if(window.READING_AUTH && READING_AUTH.saveScore) submissionId=READING_AUTH.saveScore(weightedScore,1,'reading',rgWrongItemsFromLog(),{
       difficulty:curLevel,
-      items:roundLog.map(function(w){return {key:w.contentKey||w.th,points:Number(w.pts)||0,wrong:Number(w.wrong)||0,guide:!!w.guide,failed:!!w.failed,mastered:!!w.mastered};}),
+      items:roundLog.map(function(w){return {key:w.contentKey||w.th,contentRef:{source:curLevel==='高'?'game_sentences':'game_words',key:w.contentKey||w.th},points:Number(w.pts)||0,wrong:Number(w.wrong)||0,guide:!!w.guide,failed:!!w.failed,mastered:!!w.mastered,learningEvidence:w.learningEvidence||null};}),
       roundBonus:roundBonus,srsBonus:0
     });
   }catch(e){} // S29: server-authoritative score submission พร้อมหลักฐาน First Check ต่อ item

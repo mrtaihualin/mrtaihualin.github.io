@@ -6,6 +6,7 @@
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { validateCanonicalScoreEvidence, validateScoreSubmission } from './score-engine.mjs';
+import { HIDDEN_REVIEW_SCORE_DEFAULT_ENABLED, verifyRoundLearningScores } from './learning-score-verifier.mjs';
 
 const ALLOWED_ORIGINS = [
   'https://mrtaihualin.com',
@@ -112,6 +113,28 @@ serve(async (req) => {
     if (keys.some((key) => !canonicalKeys.has(key))) return reply(origin, { error: 'invalid_content_evidence' }, 400);
     try { validateCanonicalScoreEvidence(accepted, canonical.data || []); }
     catch (error) { return reply(origin, { error: error?.code || 'invalid_content_evidence' }, 400); }
+
+    // Hidden pre-SRS source seam. It is deliberately compile-time OFF and performs no Review/SRS
+    // mutation. Activation requires a separately authorized release and the atomic owner RPC.
+    if (HIDDEN_REVIEW_SCORE_DEFAULT_ENABLED) {
+      try {
+        let learningCanonical = canonical.data || [];
+        if (accepted.game === 'tone' && accepted.difficulty === '高') {
+          const sentenceRows = await admin.from('game_sentences').select('th,wc,reading_th,words');
+          if (sentenceRows.error) return reply(origin, { error: 'content_validation_unavailable' }, 503);
+          learningCanonical = sentenceRows.data || [];
+        }
+        verifyRoundLearningScores({
+          game: accepted.game,
+          difficulty: accepted.difficulty,
+          items: body.evidence.items,
+          canonicalRows: learningCanonical,
+          requireExplicitContentRef: true,
+        });
+      } catch (error) {
+        return reply(origin, { error: error?.code || 'invalid_learning_evidence' }, 400);
+      }
+    }
 
     const evidenceHash = await sha256({
       game: accepted.game,

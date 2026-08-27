@@ -729,7 +729,7 @@
       mode: state.mode, listens: state.listenCount,
       listeningScore: 0, typingBonus: 0, totalScore: 0,
       typingWrong: 0, wordCount: LISTENING_SCORE.wordCount(w.th),
-      unitCount: LISTENING_SCORE.typingUnitCount(w), attempts: []
+      unitCount: LISTENING_SCORE.typingUnitCount(w), level: w.level || '初', attempts: []
     });
     if (el.skipBtn) { el.skipBtn.style.display = 'none'; el.skipBtn.disabled = true; }
     el.resultBanner.className = 'result-banner gsh-feedback-slot show';
@@ -918,6 +918,7 @@
       typingWrong: state.typingWrong,
       wordCount: LISTENING_SCORE.wordCount(w.th),
       unitCount: LISTENING_SCORE.typingUnitCount(w),
+      level: w.level || '初',
       srsDue: existingSrs.dueDate || '',
       srsDueAttempt: isSrsDueAttempt,
       mastered: !!existingSrs.mastered,
@@ -1210,7 +1211,7 @@
       difficulty: state.level,
       items: state.log.map(function (entry) {
         return {
-          key: entry.th, points: entry.totalScore, wrong: entry.correct || entry.skipped ? 0 : 1,
+          key: entry.th, contentRef: { source: 'game_words', key: entry.th + '@' + levelNumber({ level: entry.level }) }, points: entry.totalScore, wrong: entry.correct || entry.skipped ? 0 : 1,
           guide: false, failed: false, mastered: false,
           mode: entry.mode, listens: entry.listens, correct: entry.correct,
           wordCount: entry.wordCount, unitCount: entry.unitCount, typingWrong: entry.typingWrong

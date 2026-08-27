@@ -1182,6 +1182,7 @@ function tfResetWordScoring() {
   //   สะสม "คะแนนฐานต่อพยางค์ (ยังไม่คูณทอง/คอมโบ)" ไว้ก่อน แล้วไปเฉลี่ย + คูณทอง/คอมโบ "ครั้งเดียวตอนจบคำ" ที่ tfCommitWordAndAdvance
     session.curWordSylRawSum = 0;        // ผลรวมคะแนนฐานทุกพยางค์ (ก่อนเฉลี่ย, ก่อนคูณ)
   session.curWordSylScoredCount = 0;   // จำนวนพยางค์ที่คิดคะแนนแล้ว (ตัวหารเฉลี่ย)
+  session.learningComponentWrongCounts = []; // หลักฐานดิบสำหรับตัวตรวจคะแนนฝั่ง server; ไม่ใช่คะแนนจาก client
   session.curWordWrongGuess = false;   // เคยเดาผิด/🤷 ในคำ/พยางค์นี้ไหม (กันโกง first-try)
   // ── Lin 2026-07-04: สถานะปุ่ม "?" (= ปุ่มแอบดู ตัวเดียวกัน) ต่อคำ/ประโยคนี้ ──
   session.hintUsed = false;      // กด ? ไปแล้วหรือยังในคำนี้ (ครั้งแรกนับผิด 1 ครั้ง, ครั้งถัดไปฟรี — ดู tfUseHint)
@@ -1366,6 +1367,7 @@ function tfScoreFirstTry() {
     session.scoredSyls[k] = true;
     // ── Lin 2026-07-04: สะสมคะแนน "ฐาน" ต่อพยางค์ (ยังไม่คูณทอง/คอมโบ) — ไปเฉลี่ย+คูณครั้งเดียวตอนจบคำ ──
     var sylBase = TF_SCORE.cfg.SCORE_FIRST_TRY;
+    session.learningComponentWrongCounts[k] = 0;
     session.curWordSylRawSum = (session.curWordSylRawSum || 0) + sylBase;
     session.curWordSylScoredCount = (session.curWordSylScoredCount || 0) + 1;
     // เด้งฟีดแบ็กรายพยางค์ (คะแนนฐาน) แต่ "ยังไม่บวกเข้า session.score" — คะแนนจริงบวกทีเดียวตอนจบคำ
@@ -1413,6 +1415,7 @@ function tfScoreDeduce() {
     session.scoredSyls[k] = true;
     // ── Lin 2026-07-04: คะแนนฐานต่อพยางค์ = บันได [10,7,4,1,0] ตาม "หักรวม" (กดผิด+แอบดูที่โดนหัก) — เฉลี่ย+คูณทอง/คอมโบครั้งเดียวตอนจบคำ ──
     var sylBase = TF_WORDSCORE.score(session);
+    session.learningComponentWrongCounts[k] = Math.min(session.currentWordDeduct || 0, 4);
     session.curWordSylRawSum = (session.curWordSylRawSum || 0) + sylBase;
     session.curWordSylScoredCount = (session.curWordSylScoredCount || 0) + 1;
     session.curWordAllFirstTry = false;
@@ -1485,6 +1488,7 @@ function tfForceRevealZero() {
     // ── Lin 2026-07-04: พยางค์ fail = 0 คะแนน แต่ยังนับเป็น 1 พยางค์ในตัวหารเฉลี่ย (บวก 0 เข้า rawSum) ──
     session.curWordSylRawSum = (session.curWordSylRawSum || 0) + 0;
     session.curWordSylScoredCount = (session.curWordSylScoredCount || 0) + 1;
+    session.learningComponentWrongCounts[k] = 4;
     session.curWordAllFirstTry = false;
     session.combo = 0;
     var sct = computeTone(syl);
@@ -1606,6 +1610,7 @@ function tfCommitWordAndAdvance(opts) {
     firstTry: firstTry,
     golden: !!session.currentWordGolden,
     forced: !!opts.forced,
+    learningEvidence: { componentWrongCounts: (session.learningComponentWrongCounts && session.learningComponentWrongCounts.length) ? session.learningComponentWrongCounts.slice() : [Math.min(session.currentWordDeduct || mistakes || 0, 4)] },
     needReview: !!opts.forced || mistakes > 0 || !firstTry
   });
   if (roundReport && window.RoundReport) {
@@ -1619,6 +1624,7 @@ function tfCommitWordAndAdvance(opts) {
       correct_answer: TONES[tone] ? TONES[tone].zh : String(tone || ''),
       is_correct: mistakes === 0 && firstTry && !opts.forced,
       wrong_count: mistakes, item_score: _tfResult.score, hint_used: _tfResult.hintUsed,
+      learning_evidence: _tfResult.learningEvidence,
       linguistic: { reading_th: entry.readingTH || '', syls: entry.syls || null, read_syls: entry.readSyls || null, correct_tone: tone },
       words: (_tfSentence && advSentenceCtx.words) ? advSentenceCtx.words.map(function(w){return {th:w.th||'',zh:w.zh||''};}) : [],
       srs_state: _tfRec && (_tfRec.dueDate || _tfRec.stage) || null,
@@ -2620,7 +2626,7 @@ function stepSessionSummary() {
     try{
       if(window.READING_AUTH && READING_AUTH.saveScore) _tfSubmissionId=READING_AUTH.saveScore(weightedScore,1,'tone',results.filter(function(r){return r.mistakes>0;}).map(function(r){return {word:r.entry.word,wrong:r.mistakes||0};}),{
         difficulty:({1:'初',2:'中',3:'高'})[selectedLevel]||'初',
-        items:results.map(function(r){return {key:r.entry.contentKey||r.entry.word,points:Number(r.score)||0,wrong:Number(r.mistakes)||0,guide:false,failed:!!r.forced,skipped:!!r.skipped,mastered:false};}),
+        items:results.map(function(r){return {key:r.entry.contentKey||r.entry.word,contentRef:{source:selectedLevel===3?'game_sentences':'game_words',key:selectedLevel===3&&advSentenceCtx?advSentenceCtx.th:(r.entry.contentKey||r.entry.word+'@'+(selectedLevel||1))},points:Number(r.score)||0,wrong:Number(r.mistakes)||0,guide:!!r.hintUsed,failed:!!r.forced,skipped:!!r.skipped,mastered:false,learningEvidence:r.learningEvidence||null};}),
         roundBonus:Number(session.bonusAwarded)||0,
         srsBonus:Number(session.srsReviewBonus)||0
       });

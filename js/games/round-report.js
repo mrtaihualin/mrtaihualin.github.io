@@ -102,6 +102,7 @@
       attempts: attempts,
       hint_used: input.hint_used == null ? null : !!input.hint_used,
       listen_count: input.listen_count == null ? null : Math.max(0, number(input.listen_count, 0)),
+      learning_evidence: input.learning_evidence ? clone(input.learning_evidence) : null,
       linguistic: input.linguistic ? clone(input.linguistic) : null,
       words: words,
       srs_state: input.srs_state || null,

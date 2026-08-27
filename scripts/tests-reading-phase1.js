@@ -27,7 +27,7 @@ function block(startText, endText) {
 
 test('attempt score and correction evidence reset for every new word', () => {
   const loadWord = block('function loadWord()', 'function loadSyl()');
-  assert.match(loadWord, /readingAttemptScore=null;readingCorrectionAttempts=0;readingFirstCheckDone=false/);
+  assert.match(loadWord, /readingAttemptScore=null;readingFirstCheckWrongCounts=null;readingCorrectionAttempts=0;readingFirstCheckDone=false/);
 });
 
 test('report captures only snapshots submitted by Check', () => {

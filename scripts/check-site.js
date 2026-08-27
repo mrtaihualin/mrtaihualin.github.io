@@ -114,6 +114,7 @@ runTest(['scripts/tests-game-behavioral.js'], 'game behavioral tests');
 runTest(['scripts/tests-s13-protected-architecture.js'], 'S13 protected content/audio architecture tests');
 runTest(['scripts/tests-phase1-private-audio-3-recovery.js'], 'PRIVATE_AUDIO_3 scoped recovery tests');
 runTest(['scripts/tests-s29-score-security.mjs'], 'S29 score-security tests');
+runTest(['scripts/tests-learning-score-verifier.mjs'], 'hidden five-game learning-score verifier tests');
 runTest(['scripts/tests-phase1-nickname-safety.js'], 'Phase 1 nickname safety/security tests');
 runTest(['scripts/tests-phase1-nickname-recovery.js'], 'Phase 1 nickname recovery source/SQL tests');
 // เพิ่ม 2026-08-13 — Guest activity ห้ามกลายเป็น account Progress/SRS/Mastered หลัง Login
