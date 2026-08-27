@@ -638,6 +638,9 @@ if (document.fonts && document.fonts.load) {
   @media (min-width:1025px),
          (min-width:769px) and (min-height:601px),
          (max-width:768px) and (orientation:portrait) {
+    body[data-gsh-game="tone"] #cookieConsentBanner {
+      z-index:100100 !important;
+    }
     body[data-gsh-game="tone"] .rg-ctl-wrap {
       flex-direction:row !important;
       align-items:center !important;

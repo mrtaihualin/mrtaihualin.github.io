@@ -5,6 +5,7 @@
 ## 2026-08-27 — Tone Desktop + Mobile Portrait floating controls (`PASS_LOCAL / PREVIEW_PASS / HUMAN_REVIEW_PENDING`)
 
 - Tone Desktop and Mobile Portrait now place the existing game switcher, focus/fullscreen and More controls in one horizontal row. Both existing dropdown panels are anchored above that row.
+- The first-visit Cookie consent banner now remains in the top stacking layer above those controls and either open dropdown, so its copy and decision buttons cannot be covered.
 - The change is scoped only to Tone ordinary Desktop and Mobile Portrait. The short-screen Mobile Landscape media boundary and its implementation files remain unchanged; no gameplay, Listening availability, Auth, Database, Edge Function or user-data behavior changed.
 - Targeted coverage and the full 1,014-file site gate pass. Netlify Preview `pr87-tone-controls-preview` loads live Tone content and passes browser checks at Desktop 1280×720 and Portrait 390×844, including both upward-opening menus. The existing 844×390 Mobile Landscape position remains unchanged; Human preview acceptance remains pending.
 

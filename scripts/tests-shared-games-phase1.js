@@ -206,6 +206,7 @@ test('floating controls use the locked switcher, focus and More Menu copy', () =
 
 test('Tone Desktop and Mobile Portrait keep all three controls horizontal with menus opening upward', () => {
   const tone = games.find((g) => g.id === 'tone').htmlText;
+  assert.match(tone, /#cookieConsentBanner \{\s*z-index:100100 !important;/, 'Tone cookie consent must stay above the floating controls and their menus');
   assert.match(tone, /@media \(min-width:1025px\),\s*\(min-width:769px\) and \(min-height:601px\),\s*\(max-width:768px\) and \(orientation:portrait\) \{[\s\S]{0,360}\.rg-ctl-wrap \{[\s\S]{0,140}flex-direction:row !important;[\s\S]{0,100}align-items:center !important;/);
   assert.match(tone, /\.rg-ctl-wrap > #game-switcher,\s*body\[data-gsh-game="tone"\] \.rg-ctl-wrap > \.grw-menu \{[\s\S]{0,260}position:absolute !important;[\s\S]{0,120}bottom:calc\(100% \+ 8px\) !important;/);
   assert.match(tone, /@media \(orientation:landscape\) and \(max-width:1024px\) and \(max-height:600px\)/, 'Tone must retain the separate Mobile Landscape boundary');
