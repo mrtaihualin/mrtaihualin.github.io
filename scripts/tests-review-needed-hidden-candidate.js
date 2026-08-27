@@ -11,14 +11,33 @@ var fixtures = require(path.join(root, 'scripts/fixtures/review-needed-hidden-fi
 var passes = 0;
 
 function check(label, fn) {
-  return Promise.resolve().then(fn).then(function () {
-    passes += 1;
-    process.stdout.write('PASS ' + label + '\n');
-  });
+  fn();
+  passes += 1;
+  process.stdout.write('PASS ' + label + '\n');
 }
 
 function throwsCode(fn, code) {
   assert.throws(fn, function (error) { return error && error.code === code; });
+}
+
+function review(overrides) {
+  return Object.assign({
+    sourceType: 'review_queue_item', game: 'tone', level: '1', itemId: 'item-a',
+    attemptsUsed: 0, resolved: false, actionToken: 'action-a'
+  }, overrides || {});
+}
+
+function srs(overrides) {
+  return Object.assign({
+    sourceType: 'srs_due_snapshot', game: 'tone', level: '1', itemId: 'item-a',
+    due: true, mastered: false
+  }, overrides || {});
+}
+
+function compose(reviewQueueItems, srsDueSnapshot, options) {
+  return contract.composeQueue({
+    reviewQueueItems: reviewQueueItems || [], srsDueSnapshot: srsDueSnapshot || []
+  }, Object.assign({ tier: 'free' }, options || {}));
 }
 
 function publicHtmlFiles(dir) {
@@ -32,169 +51,253 @@ function publicHtmlFiles(dir) {
   return output;
 }
 
-Promise.resolve()
-  .then(function () { return check('feature flag defaults OFF', function () {
+try {
+  check('feature flag defaults OFF and dormant Paid cannot activate', function () {
     assert.strictEqual(contract.FEATURE_DEFAULT_ENABLED, false);
     throwsCode(function () { contract.createCandidate({ tier: 'free' }); }, 'FEATURE_DISABLED');
-  }); })
-  .then(function () { return check('five-game contract and aliases stay isolated', function () {
+    throwsCode(function () { contract.createCandidate({ enabled: true, tier: 'paid' }); }, 'TIER_DISABLED');
+  });
+
+  check('five games and game + level + item identity stay explicit', function () {
     assert.deepStrictEqual(contract.GAME_IDS, ['tone', 'reading', 'listening', 'typing', 'wordorder']);
     assert.strictEqual(contract.normalizeGame('word_order'), 'wordorder');
     assert.strictEqual(contract.normalizeGame('challenge'), null);
-  }); })
-  .then(function () { return check('Day 0 is not due and pure derivation never advances state', function () {
-    var input = JSON.parse(JSON.stringify(fixtures.day0.rows));
-    var snapshot = contract.buildSnapshot(input, { tier: 'free', today: fixtures.day0.today, roundSize: 5 });
-    assert.strictEqual(snapshot.totals.due, 0);
-    assert.strictEqual(snapshot.totals.notDue, 5);
-    assert.strictEqual(snapshot.ignoredRows, 1);
-    assert.deepStrictEqual(input, fixtures.day0.rows);
-    assert.strictEqual(contract.advance, undefined);
-  }); })
-  .then(function () { return check('derived stage 0 with no date is immediately due without mutation', function () {
-    var row = { record_type: 'srs_state', game: 'tone', level: 1, word: 'stage-zero', stage: 0,
-      due_date: '', ever_failed: true, mastered: false };
-    var snapshot = contract.buildSnapshot([row], { tier: 'free', today: fixtures.day0.today, roundSize: 5 });
-    assert.strictEqual(snapshot.games.tone.due.length, 1);
-    assert.strictEqual(snapshot.games.reading.due.length, 0);
-    assert.strictEqual(row.stage, 0);
-  }); })
-  .then(function () { return check('Day 1 exposes one due item independently in each game', function () {
-    var snapshot = contract.buildSnapshot(fixtures.day1.rows, { tier: 'free', today: fixtures.day1.today, roundSize: 5 });
-    contract.GAME_IDS.forEach(function (game) {
-      assert.strictEqual(snapshot.games[game].due.length, 1);
-      assert.strictEqual(snapshot.games[game].selectedDue.length, 1);
-      assert.strictEqual(snapshot.games[game].dueQuota, 1);
-      assert.strictEqual(snapshot.games[game].maxReviewAttempts, 1);
-      assert.strictEqual(snapshot.games[game].due[0].game, game);
-    });
-  }); })
-  .then(function () { return check('Day 8 keeps Mastered out of every Free due queue', function () {
-    var snapshot = contract.buildSnapshot(fixtures.day8.rows, { tier: 'free', today: fixtures.day8.today, roundSize: 5 });
-    contract.GAME_IDS.forEach(function (game) {
-      assert.strictEqual(snapshot.games[game].due.length, 1);
-      assert.strictEqual(snapshot.games[game].masteredCount, 1);
-      assert.strictEqual(snapshot.games[game].due.some(function (row) { return row.mastered; }), false);
-    });
-    assert.strictEqual(snapshot.totals.mastered, 5);
-  }); })
-  .then(function () { return check('same item identity remains independent across all five games', function () {
-    var rows = contract.GAME_IDS.map(function (game) {
-      return { record_type: 'srs_state', game: game, level: 1, word: 'same-item', stage: 1,
-        due_date: fixtures.day1.today, ever_failed: false, mastered: false };
-    });
-    var snapshot = contract.buildSnapshot(rows, { tier: 'free', today: fixtures.day1.today, roundSize: 5 });
-    contract.GAME_IDS.forEach(function (game) {
-      assert.strictEqual(snapshot.games[game].history.length, 1);
-      assert.strictEqual(snapshot.games[game].due[0].itemKey, '1|same-item');
-      assert.strictEqual(snapshot.games[game].due[0].game, game);
-    });
-  }); })
-  .then(function () { return check('Free and dormant Paid policies are configuration, not Free hard-coding', function () {
-    var free = contract.getTierConfig('free');
-    var paid = contract.getTierConfig('paid');
-    assert.deepStrictEqual([free.dueRatio, free.maxReviewAttempts], [0.20, 1]);
-    assert.deepStrictEqual([paid.dueRatio, paid.maxReviewAttempts, paid.runtimeEnabled], [0.30, 4, false]);
+    var one = compose([review()], []);
+    assert.strictEqual(one.queue[0].identityKey, 'tone\u00001\u0000item-a');
+  });
+
+  check('Review trigger stays outside the candidate; only valid upstream queue items are accepted', function () {
+    var day0 = contract.composeQueue({
+      reviewQueueItems: fixtures.day0.reviewQueueItems, srsDueSnapshot: []
+    }, { tier: 'free' });
+    var day1 = contract.composeQueue({
+      reviewQueueItems: fixtures.day1.reviewQueueItems, srsDueSnapshot: []
+    }, { tier: 'free' });
+    assert.strictEqual(day0.totals.reviewNeeded, 0);
+    assert.strictEqual(day1.totals.reviewNeeded, 5);
     throwsCode(function () {
-      contract.buildSnapshot(fixtures.day1.rows, { tier: 'paid', today: fixtures.day1.today, roundSize: 10 });
-    }, 'TIER_DISABLED');
-    var dormant = contract.buildSnapshot(fixtures.day1.rows, {
-      tier: 'paid', today: fixtures.day1.today, roundSize: 10, allowDormantTier: true
+      compose([Object.assign({}, review(), { sourceType: 'review_incorrect_evidence' })], []);
+    }, 'UNKNOWN_REVIEW_SOURCE');
+    assert.strictEqual(contract.normalizeReviewEvidence, undefined);
+  });
+
+  check('resolved upstream queue items never re-enter Review Needed', function () {
+    var result = compose([review({ resolved: true })], []);
+    assert.strictEqual(result.queue.length, 0);
+    assert.deepStrictEqual(result.ignored.review, { resolved: 1, attemptLimit: 0 });
+  });
+
+  check('Free attempt 0 opens and attempt 1 exits the flow', function () {
+    var open = compose([review({ attemptsUsed: 0 })], []);
+    var closed = compose([review({ attemptsUsed: 1 })], []);
+    assert.strictEqual(open.queue[0].attemptsRemaining, 1);
+    assert.strictEqual(closed.queue.length, 0);
+    assert.strictEqual(closed.ignored.review.attemptLimit, 1);
+    assert.deepStrictEqual(contract.getTierConfig('free'), {
+      id: 'free', maxReviewAttempts: 1, runtimeEnabled: true
     });
-    assert.strictEqual(dormant.games.tone.dueQuota, 3);
-    assert.strictEqual(dormant.games.tone.maxReviewAttempts, 4);
-  }); })
-  .then(function () { return check('Review Needed limits are attempt maxima and stop at Free 1 / Paid 4', function () {
-    var freeOpen = contract.reviewAttemptWindow('free', 0);
-    var freeClosed = contract.reviewAttemptWindow('free', 1);
-    assert.deepStrictEqual([freeOpen.maxReviewAttempts, freeOpen.attemptsRemaining, freeOpen.canAttempt], [1, 1, true]);
-    assert.deepStrictEqual([freeClosed.attemptsRemaining, freeClosed.canAttempt], [0, false]);
-    var paidOpen = contract.reviewAttemptWindow('paid', 3, { allowDormantTier: true });
-    var paidClosed = contract.reviewAttemptWindow('paid', 4, { allowDormantTier: true });
-    assert.deepStrictEqual([paidOpen.maxReviewAttempts, paidOpen.attemptsRemaining, paidOpen.canAttempt], [4, 1, true]);
-    assert.deepStrictEqual([paidClosed.attemptsRemaining, paidClosed.canAttempt], [0, false]);
-    assert.strictEqual(Object.keys(paidClosed).some(function (key) { return /day|delay|reschedule/i.test(key); }), false);
-    throwsCode(function () { contract.createCandidate({ enabled: true, tier: 'paid' }); }, 'TIER_DISABLED');
-    throwsCode(function () { contract.reviewAttemptWindow('free', -1); }, 'INVALID_ATTEMPT_COUNT');
-    throwsCode(function () { contract.reviewAttemptWindow('free', 0.5); }, 'INVALID_ATTEMPT_COUNT');
-  }); })
-  .then(function () { return check('malformed, duplicate, and unknown canonical rows fail closed', function () {
-    var valid = { record_type: 'srs_state', game: 'tone', level: 1, word: 'valid', stage: 1,
-      due_date: fixtures.day1.today, ever_failed: false, mastered: false };
-    throwsCode(function () { contract.buildSnapshot({}, { tier: 'free', today: fixtures.day1.today }); }, 'INVALID_ROWS');
-    throwsCode(function () { contract.buildSnapshot([Object.assign({}, valid, { game: 'unknown' })], { tier: 'free', today: fixtures.day1.today }); }, 'UNKNOWN_GAME');
-    throwsCode(function () { contract.buildSnapshot([Object.assign({}, valid, { stage: 1.5 })], { tier: 'free', today: fixtures.day1.today }); }, 'MALFORMED_STATE_ROW');
-    throwsCode(function () { contract.buildSnapshot([Object.assign({}, valid, { mastered: 'false' })], { tier: 'free', today: fixtures.day1.today }); }, 'MALFORMED_STATE_ROW');
-    throwsCode(function () { contract.buildSnapshot([Object.assign({}, valid, { due_date: '2026-99-99' })], { tier: 'free', today: fixtures.day1.today }); }, 'MALFORMED_STATE_ROW');
-    throwsCode(function () { contract.buildSnapshot([Object.assign({}, valid, { due_date: '' })], { tier: 'free', today: fixtures.day1.today }); }, 'MALFORMED_STATE_ROW');
-    throwsCode(function () { contract.buildSnapshot([valid, Object.assign({}, valid)], { tier: 'free', today: fixtures.day1.today }); }, 'DUPLICATE_STATE_ROW');
-    throwsCode(function () { contract.buildSnapshot([valid], { tier: 'free', today: '2026-02-30' }); }, 'INVALID_TODAY');
-  }); })
-  .then(function () { return check('empty/loading/error/access-denied fixture states exist', function () {
+  });
+
+  check('dormant Paid permits at most 4 attempts without a day or delay rule', function () {
+    assert.deepStrictEqual(contract.getTierConfig('paid'), {
+      id: 'paid', maxReviewAttempts: 4, runtimeEnabled: false
+    });
+    var open = compose([review({ attemptsUsed: 3 })], [], { tier: 'paid', allowDormantTier: true });
+    var closed = compose([review({ attemptsUsed: 4 })], [], { tier: 'paid', allowDormantTier: true });
+    assert.strictEqual(open.queue[0].attemptsRemaining, 1);
+    assert.strictEqual(closed.queue.length, 0);
+    assert.deepStrictEqual(Object.keys(open.config).sort(), ['id', 'maxReviewAttempts', 'runtimeEnabled']);
+    assert.strictEqual(Object.keys(open.queue[0]).some(function (key) {
+      return /delay|reschedule|nextAttempt|attemptDate/i.test(key);
+    }), false);
+  });
+
+  check('same Review + Due identity appears once as Review before remaining Due', function () {
+    var result = compose([review()], [srs(), srs({ itemId: 'item-b' })]);
+    assert.deepStrictEqual(result.queue.map(function (item) { return item.sourceType; }), [
+      'review_needed', 'srs_due'
+    ]);
+    assert.deepStrictEqual(result.queue.map(function (item) { return item.itemId; }), ['item-a', 'item-b']);
+    assert.strictEqual(result.queue[0].alsoSrsDue, true);
+    assert.strictEqual(result.totals.deduplicatedReviewAndDue, 1);
+    assert.strictEqual(result.queue.filter(function (item) { return item.identityKey === result.queue[0].identityKey; }).length, 1);
+    assert.deepStrictEqual(result.queue.map(function (item) { return item.actionToken; }), ['action-a', null]);
+  });
+
+  check('one item routes one result to Review and SRS owner only when actually due', function () {
+    var overlap = compose([review()], [srs()]).queue[0];
+    var reviewOnly = compose([review()], []).queue[0];
+    assert.deepStrictEqual(overlap.resultRouting, {
+      reviewResolution: true,
+      srsOwnerEvaluationIfDue: true,
+      srsInitialEntryOnReviewCorrect: 'canonical-owner-route',
+      candidateMutatesSrs: false,
+      savedWord: 'manual-only'
+    });
+    assert.strictEqual(reviewOnly.resultRouting.srsOwnerEvaluationIfDue, false);
+    assert.strictEqual(contract.advance, undefined);
+  });
+
+  check('correct Review closes the wrong queue and requests canonical derived stage 0 only', function () {
+    var queueItem = contract.composeQueue({
+      reviewQueueItems: fixtures.day1.reviewQueueItems,
+      srsDueSnapshot: []
+    }, { tier: 'free' }).games.tone.queue[0];
+    var before = JSON.parse(JSON.stringify(queueItem));
+    var directive = contract.buildReviewResolutionDirective(
+      queueItem, fixtures.reviewCorrectToInitialSrs.result
+    );
+    assert.strictEqual(directive.reviewQueue, 'close');
+    assert.strictEqual(directive.srsAction, 'request-canonical-initial-route');
+    assert.strictEqual(directive.srsInitialRoute.derivedStage, 0);
+    assert.strictEqual(directive.srsInitialRoute.day1Passed, false);
+    assert.strictEqual(directive.srsInitialRoute.firstCheckpoint, 'resolve-by-current-srs-authority');
+    assert.strictEqual(directive.srsInitialRoute.duplicateSrsCreationAllowed, false);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(directive.srsInitialRoute, 'dueDate'), false);
+    assert.strictEqual(directive.candidateMutatesSrs, false);
+    assert.deepStrictEqual(queueItem, before);
     assert.deepStrictEqual(
-      [fixtures.empty.status, fixtures.loading.status, fixtures.error.status, fixtures.accessDenied.status],
-      ['empty', 'loading', 'error', 'access-denied']
+      contract.buildReviewResolutionDirective(queueItem, fixtures.reviewCorrectToInitialSrs.result),
+      directive,
+      'same action token must produce the same deterministic directive'
+    );
+  });
+
+  check('correct Review reuses an existing canonical SRS state without stage/due change or duplicate creation', function () {
+    var queueItem = contract.composeQueue({
+      reviewQueueItems: fixtures.day1.reviewQueueItems,
+      srsDueSnapshot: fixtures.day1.srsDueSnapshot
+    }, { tier: 'free' }).games.tone.queue[0];
+    var existing = JSON.parse(JSON.stringify(fixtures.reviewCorrectExistingSrs.result.existingSrsState));
+    var directive = contract.buildReviewResolutionDirective(
+      queueItem, fixtures.reviewCorrectExistingSrs.result
+    );
+    assert.strictEqual(directive.reviewQueue, 'close');
+    assert.strictEqual(directive.srsAction, 'reuse-existing-canonical-state');
+    assert.strictEqual(directive.srsInitialRoute, null);
+    assert.strictEqual(directive.existingSrsState.stage, 2);
+    assert.strictEqual(directive.existingSrsState.dueDate, '2026-09-03');
+    assert.deepStrictEqual(fixtures.reviewCorrectExistingSrs.result.existingSrsState, existing);
+    throwsCode(function () {
+      contract.buildReviewResolutionDirective(queueItem, { outcome: 'correct', srsStateStatus: 'absent' });
+    }, 'CONFLICTING_SRS_STATE_STATUS');
+  });
+
+  check('unknown or mismatched SRS presence fails closed; incorrect Review does not start SRS', function () {
+    var item = compose([review()], []).queue[0];
+    throwsCode(function () {
+      contract.buildReviewResolutionDirective(item, { outcome: 'correct', srsStateStatus: 'unknown' });
+    }, 'SRS_STATE_PRESENCE_REQUIRED');
+    throwsCode(function () {
+      contract.buildReviewResolutionDirective(item, {
+        outcome: 'correct', srsStateStatus: 'absent',
+        existingSrsState: { sourceType: 'canonical_srs_state' }
+      });
+    }, 'CONFLICTING_SRS_STATE_STATUS');
+    throwsCode(function () {
+      contract.buildReviewResolutionDirective(item, {
+        outcome: 'correct', srsStateStatus: 'present',
+        existingSrsState: {
+          sourceType: 'canonical_srs_state', game: 'reading', level: '1', itemId: 'item-a',
+          stage: 0, dueDate: '', mastered: false
+        }
+      });
+    }, 'SRS_IDENTITY_MISMATCH');
+    throwsCode(function () {
+      contract.buildReviewResolutionDirective(item, {
+        outcome: 'correct', srsStateStatus: 'present',
+        existingSrsState: {
+          sourceType: 'canonical_srs_state', game: 'tone', level: '1', itemId: 'item-a',
+          stage: 0, dueDate: '2026-99-99', mastered: false
+        }
+      });
+    }, 'MALFORMED_CANONICAL_SRS_STATE');
+    var incorrect = contract.buildReviewResolutionDirective(item, { outcome: 'incorrect' });
+    assert.strictEqual(incorrect.reviewQueue, 'attempt-consumed');
+    assert.strictEqual(incorrect.srsAction, 'none');
+  });
+
+  check('same level/item remains isolated across all five games', function () {
+    var reviews = contract.GAME_IDS.map(function (game, index) {
+      return review({ game: game, itemId: 'same', actionToken: 'action-' + index });
+    });
+    var dues = contract.GAME_IDS.map(function (game) { return srs({ game: game, itemId: 'same' }); });
+    var result = compose(reviews, dues);
+    assert.strictEqual(result.queue.length, 5);
+    contract.GAME_IDS.forEach(function (game) {
+      assert.strictEqual(result.games[game].queue.length, 1);
+      assert.strictEqual(result.games[game].queue[0].game, game);
+      assert.strictEqual(result.games[game].queue[0].alsoSrsDue, true);
+    });
+  });
+
+  check('malformed, unknown, duplicate, and invalid-date inputs fail closed', function () {
+    throwsCode(function () { compose({}, []); }, 'INVALID_REVIEW_INPUT');
+    throwsCode(function () { compose([], {}); }, 'INVALID_SRS_INPUT');
+    throwsCode(function () { compose([review({ game: 'unknown' })], []); }, 'UNKNOWN_GAME');
+    throwsCode(function () { compose([review({ sourceType: 'raw_attempt' })], []); }, 'UNKNOWN_REVIEW_SOURCE');
+    throwsCode(function () { compose([review(), review({ itemId: 'item-b' })], []); }, 'DUPLICATE_ACTION_TOKEN');
+    throwsCode(function () { compose([review(), review({ actionToken: 'action-b' })], []); }, 'DUPLICATE_REVIEW_IDENTITY');
+    throwsCode(function () { compose([], [srs(), srs()]); }, 'DUPLICATE_SRS_IDENTITY');
+    throwsCode(function () { compose([], [srs({ due: 'yes' })]); }, 'MALFORMED_SRS_SNAPSHOT');
+  });
+
+  check('Mastered never enters the SRS Due queue', function () {
+    var result = compose([], [srs({ itemId: 'mastered', mastered: true }), srs({ itemId: 'active' })]);
+    assert.deepStrictEqual(result.queue.map(function (item) { return item.itemId; }), ['active']);
+    assert.strictEqual(result.ignored.srs.mastered, 1);
+  });
+
+  check('Day 0, Day 1, Day 8 and empty/loading/error/access-denied fixtures remain available', function () {
+    var day8 = contract.composeQueue({
+      reviewQueueItems: fixtures.day8.reviewQueueItems,
+      srsDueSnapshot: fixtures.day8.srsDueSnapshot
+    }, { tier: 'free' });
+    assert.strictEqual(day8.totals.reviewNeeded, 5);
+    assert.strictEqual(day8.totals.srsDueOnly, 5);
+    assert.strictEqual(day8.ignored.srs.mastered, 5);
+    assert.deepStrictEqual(
+      [fixtures.day0.status, fixtures.day1.status, fixtures.day8.status, fixtures.empty.status,
+        fixtures.loading.status, fixtures.error.status, fixtures.accessDenied.status],
+      ['ready', 'ready', 'ready', 'empty', 'loading', 'error', 'access-denied']
     );
     ['loading', 'empty', 'error', 'access-denied'].forEach(function (status) {
       assert.strictEqual(contract.viewState(status).status, status);
     });
-  }); })
-  .then(function () { return check('adapter performs only current table/select/user-filter reads', function () {
-    var calls = [];
-    var query = {
-      select: function (fields) { calls.push(['select', fields]); return this; },
-      eq: function (field, value) { calls.push(['eq', field, value]); return this; },
-      then: function (resolve) { resolve({ data: fixtures.day1.rows.filter(function (row) { return row.record_type === 'srs_state'; }).map(function (row) {
-        return Object.assign({ user_id: 'must-not-leak', private_note: 'must-not-leak' }, row);
-      }), error: null }); }
-    };
-    var client = {
-      from: function (table) { calls.push(['from', table]); return query; },
-      insert: function () { throw new Error('write attempted'); },
-      update: function () { throw new Error('write attempted'); },
-      upsert: function () { throw new Error('write attempted'); },
-      rpc: function () { throw new Error('write attempted'); }
-    };
-    return adapter.readRows(client, 'fixture-user').then(function (rows) {
-      assert.strictEqual(rows.length, 5);
-      assert.deepStrictEqual(calls, [
-        ['from', 'tone_srs_state'],
-        ['select', adapter.SELECT_FIELDS],
-        ['eq', 'user_id', 'fixture-user']
-      ]);
-      assert.strictEqual(rows.every(function (row) { return row.record_type === 'srs_state'; }), true);
-      assert.strictEqual(rows.every(function (row) { return !('user_id' in row) && !('private_note' in row); }), true);
+  });
+
+  check('adapter is schema-neutral, allowlisted, and contains no Review trigger fields', function () {
+    var mapping = adapter.getInputContract();
+    assert.strictEqual(mapping.mode, 'normalized-read-only');
+    assert.strictEqual(mapping.storageBinding, null);
+    assert.strictEqual(mapping.reviewQueueItemFields.indexOf('eligibleOn'), -1);
+    assert.strictEqual(mapping.reviewQueueItemFields.indexOf('occurredDate'), -1);
+    assert.strictEqual(mapping.reviewQueueItemFields.indexOf('outcome'), -1);
+    assert.strictEqual(mapping.reviewQueueItemFields.indexOf('userId'), -1);
+    mapping.reviewQueueItemFields.push('mutation');
+    assert.strictEqual(adapter.getInputContract().reviewQueueItemFields.indexOf('mutation'), -1);
+    var mapped = adapter.adapt({
+      reviewQueueItems: [Object.assign({ userId: 'drop-me', privateNote: 'drop-me' }, review())],
+      srsDueSnapshot: [Object.assign({ userId: 'drop-me' }, srs())]
     });
-  }); })
-  .then(function () { return check('integration mapping is explicit, reusable, and read-only', function () {
-    var mapping = adapter.getReadMapping();
-    assert.deepStrictEqual(mapping, {
-      table: 'tone_srs_state',
-      selectFields: ['game', 'level', 'word', 'stage', 'due_date', 'ever_failed', 'mastered'],
-      userFilter: 'user_id',
-      identityFields: ['game', 'level', 'word'],
-      recordType: 'srs_state',
-      mode: 'read-only'
-    });
-    mapping.selectFields.push('should-not-mutate-contract');
-    assert.strictEqual(adapter.getReadMapping().selectFields.indexOf('should-not-mutate-contract'), -1);
-  }); })
-  .then(function () { return check('adapter maps denied and generic failures without fallback writes', function () {
-    var deniedClient = { from: function () { return {
-      select: function () { return this; }, eq: function () { return Promise.resolve({ data: null, error: { status: 403, message: 'denied' } }); }
-    }; } };
-    return Promise.all([
-      adapter.load(deniedClient, 'fixture-user', { tier: 'free', today: fixtures.day1.today }),
-      adapter.load(null, 'fixture-user', { tier: 'free', today: fixtures.day1.today }),
-      adapter.load({ from: function () { throw new Error('sync read failure'); } }, 'fixture-user',
-        { tier: 'free', today: fixtures.day1.today })
-    ]).then(function (states) {
-      assert.strictEqual(states[0].status, 'access-denied');
-      assert.strictEqual(states[1].status, 'error');
-      assert.strictEqual(states[2].status, 'error');
-    });
-  }); })
-  .then(function () { return check('developer preview is noindex, hidden, localhost-only, and explicit-enable only', function () {
+    assert.strictEqual(mapped.reviewQueueItems[0].userId, undefined);
+    assert.strictEqual(mapped.reviewQueueItems[0].privateNote, undefined);
+    assert.strictEqual(mapped.srsDueSnapshot[0].userId, undefined);
+    var canonical = adapter.mapCanonicalSrsState(Object.assign({ privateNote: 'drop-me' },
+      fixtures.reviewCorrectExistingSrs.result.existingSrsState));
+    assert.strictEqual(canonical.privateNote, undefined);
+    assert.strictEqual(canonical.stage, 2);
+    assert.strictEqual(canonical.dueDate, '2026-09-03');
+    throwsCode(function () { adapter.adapt({ reviewQueueItems: [] }); }, 'NORMALIZED_INPUT_INVALID');
+  });
+
+  check('adapter classifies access failures without binding a fallback', function () {
+    assert.strictEqual(adapter.classifyError({ status: 403 }), 'access-denied');
+    assert.strictEqual(adapter.classifyError({ code: 'ACCESS_DENIED' }), 'access-denied');
+    assert.strictEqual(adapter.classifyError(new Error('read failed')), 'error');
+  });
+
+  check('developer preview is noindex, hidden, localhost-only, and explicit-enable only', function () {
     var html = fs.readFileSync(path.join(root, 'dev/review-needed-hidden-preview.html'), 'utf8');
     var script = fs.readFileSync(path.join(root, 'dev/review-needed-hidden-preview.js'), 'utf8');
     assert.ok(/name="robots" content="noindex,nofollow,noarchive"/.test(html));
@@ -204,45 +307,45 @@ Promise.resolve()
     assert.ok(/localhost\|127\\\.0\\\.0\\\.1/.test(script));
     assert.ok(/params\.get\('review-needed-preview'\) === '1'/.test(script));
     assert.ok(/if \(!local \|\| !enabled\) return;/.test(script));
-  }); })
-  .then(function () { return check('public HTML, sitemap, robots, and service-worker surfaces have no preview entry', function () {
-    var publicNeedles = ['review-needed-hidden-preview', 'review-needed-candidate.js', 'review-needed-read-adapter.js'];
+    assert.ok(/review_needed/.test(script) || /sourceType/.test(script));
+    assert.ok(/SRS Due/.test(script));
+  });
+
+  check('public HTML and release surfaces have no candidate entry', function () {
+    var needles = ['review-needed-hidden-preview', 'review-needed-candidate.js', 'review-needed-read-adapter.js'];
     publicHtmlFiles(root).forEach(function (file) {
       var source = fs.readFileSync(file, 'utf8');
-      publicNeedles.forEach(function (needle) {
+      needles.forEach(function (needle) {
         assert.strictEqual(source.indexOf(needle), -1, path.relative(root, file) + ' ' + needle);
       });
     });
     ['sitemap.xml', 'robots.txt', 'data/nav-template.js', 'js/core/shared.js', 'js/core/shared.min.js'].forEach(function (file) {
-      if (fs.existsSync(path.join(root, file))) {
-        var source = fs.readFileSync(path.join(root, file), 'utf8');
-        publicNeedles.forEach(function (needle) { assert.strictEqual(source.indexOf(needle), -1, file + ' ' + needle); });
-      }
+      if (!fs.existsSync(path.join(root, file))) return;
+      var source = fs.readFileSync(path.join(root, file), 'utf8');
+      needles.forEach(function (needle) { assert.strictEqual(source.indexOf(needle), -1, file + ' ' + needle); });
     });
     fs.readdirSync(root).filter(function (file) { return /service[-_]?worker|^sw\.js$/i.test(file); }).forEach(function (file) {
       var source = fs.readFileSync(path.join(root, file), 'utf8');
-      publicNeedles.forEach(function (needle) { assert.strictEqual(source.indexOf(needle), -1, file + ' ' + needle); });
+      needles.forEach(function (needle) { assert.strictEqual(source.indexOf(needle), -1, file + ' ' + needle); });
     });
-  }); })
-  .then(function () { return check('candidate and adapter contain no storage or remote mutation path', function () {
+  });
+
+  check('candidate has no storage, network, form, Supabase, or mutation path', function () {
     var sources = [
       fs.readFileSync(path.join(root, 'js/review-needed/review-needed-candidate.js'), 'utf8'),
-      fs.readFileSync(path.join(root, 'js/review-needed/review-needed-read-adapter.js'), 'utf8')
+      fs.readFileSync(path.join(root, 'js/review-needed/review-needed-read-adapter.js'), 'utf8'),
+      fs.readFileSync(path.join(root, 'dev/review-needed-hidden-preview.js'), 'utf8')
     ].join('\n');
     ['.insert(', '.update(', '.upsert(', '.delete(', '.rpc(', 'localStorage', 'sessionStorage', 'fetch(',
-      'XMLHttpRequest', 'sendBeacon', 'WebSocket', 'EventSource'].forEach(function (needle) {
+      'XMLHttpRequest', 'sendBeacon', 'WebSocket', 'EventSource', 'tone_srs_state', 'supabase'].forEach(function (needle) {
       assert.strictEqual(sources.indexOf(needle), -1, needle);
     });
-    var preview = fs.readFileSync(path.join(root, 'dev/review-needed-hidden-preview.js'), 'utf8');
-    ['fetch(', 'XMLHttpRequest', 'sendBeacon', 'WebSocket', 'EventSource'].forEach(function (needle) {
-      assert.strictEqual(preview.indexOf(needle), -1, needle);
-    });
     assert.strictEqual(fs.readFileSync(path.join(root, 'dev/review-needed-hidden-preview.html'), 'utf8').indexOf('<form'), -1);
-  }); })
-  .then(function () {
-    process.stdout.write('REVIEW_NEEDED_HIDDEN_CANDIDATE_PASS ' + passes + '\n');
-  })
-  .catch(function (error) {
-    console.error(error && error.stack || error);
-    process.exit(1);
+    assert.strictEqual(/Day\s*[35]|auto-?save/i.test(sources), false);
   });
+
+  process.stdout.write('REVIEW_NEEDED_HIDDEN_CANDIDATE_PASS ' + passes + '\n');
+} catch (error) {
+  console.error(error && error.stack || error);
+  process.exit(1);
+}

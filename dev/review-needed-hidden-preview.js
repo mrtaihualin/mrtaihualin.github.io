@@ -20,15 +20,25 @@
   }
 
   var candidate = window.ReviewNeededCandidate.createCandidate({ enabled: true, tier: 'free' });
-  var snapshot = candidate.buildSnapshot(fixture.rows, { today: fixture.today, roundSize: 5 });
-  var rows = window.ReviewNeededCandidate.GAME_IDS.map(function (game) {
-    var item = snapshot.games[game];
-    return '<tr><td>' + game + '</td><td>' + item.history.length + '</td><td>' +
-      item.due.length + '</td><td>' + item.selectedDue.length + '</td><td>' +
-      item.masteredCount + '</td><td>' + item.maxReviewAttempts + '</td></tr>';
+  var snapshot = candidate.composeQueue({
+    reviewQueueItems: fixture.reviewQueueItems,
+    srsDueSnapshot: fixture.srsDueSnapshot
+  });
+  var rows = snapshot.queue.map(function (item) {
+    return '<tr><td>' + item.game + '</td><td>' + item.level + '</td><td>' + item.itemId +
+      '</td><td><code>' + item.sourceType + '</code></td><td>' + (item.alsoSrsDue ? 'yes' : 'no') +
+      '</td><td>' + (item.attemptsRemaining == null ? 'n/a' : item.attemptsRemaining) + '</td></tr>';
   }).join('');
-  output.innerHTML = '<p>Tier config: <code>Due ' + (snapshot.config.dueRatio * 100) +
-    '% / Review Needed ' + snapshot.config.maxReviewAttempts + '</code></p>' +
-    '<table><caption>Technical fixture summary by isolated game</caption><thead><tr><th scope="col">Game</th><th scope="col">History</th><th scope="col">Due</th><th scope="col">Selected due</th><th scope="col">Mastered</th><th scope="col">Attempt limit</th></tr></thead><tbody>' +
+  var reviewOnly = snapshot.queue.filter(function (item) {
+    return item.sourceType === 'review_needed' && !item.alsoSrsDue;
+  })[0];
+  var initialDirective = reviewOnly ? window.ReviewNeededCandidate.buildReviewResolutionDirective(reviewOnly, {
+    outcome: 'correct', srsStateStatus: 'absent'
+  }) : null;
+  output.innerHTML = '<p>Technical sources stay separate. Review rows precede remaining SRS Due rows; this preview performs no resolution or SRS transition.</p>' +
+    (initialDirective ? '<p>Read-only correct-result directive: <code>' + initialDirective.reviewQueue +
+      ' Review queue → ' + initialDirective.srsAction + ' → derived stage ' +
+      initialDirective.srsInitialRoute.derivedStage + '</code>. The SRS owner resolves its first checkpoint.</p>' : '') +
+    '<table><caption>Composed read-only fixture queue</caption><thead><tr><th scope="col">Game</th><th scope="col">Level</th><th scope="col">Item</th><th scope="col">Source/type</th><th scope="col">Also SRS Due</th><th scope="col">Review attempts remaining</th></tr></thead><tbody>' +
     rows + '</tbody></table>';
 })(window, document);

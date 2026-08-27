@@ -7,34 +7,49 @@
   'use strict';
   var games = ['tone', 'reading', 'listening', 'typing', 'wordorder'];
 
-  function rows(stage, dueDate) {
-    var result = games.map(function (game, index) {
+  function reviewQueueItems(label) {
+    return games.map(function (game, index) {
       return {
-        record_type: 'srs_state', game: game, level: index + 1,
-        word: 'fixture-' + game, stage: stage, due_date: dueDate,
-        ever_failed: false, mastered: false
+        sourceType: 'review_queue_item', game: game, level: String(index + 1),
+        itemId: 'fixture-' + game, attemptsUsed: 0, resolved: false,
+        actionToken: 'review-' + game + '-' + label
       };
     });
-    result.push({ record_type: 'attempt', game: 'tone', word: 'raw-attempt-is-not-state' });
-    return result;
   }
 
-  var day8Rows = rows(2, '2026-09-03');
-  games.forEach(function (game, index) {
-    day8Rows.push({
-      record_type: 'srs_state', game: game, level: index + 1,
-      word: 'mastered-' + game, stage: 3, due_date: '2026-09-03',
-      ever_failed: false, mastered: true
-    });
-  });
+  var day1Review = reviewQueueItems('day1-valid-upstream');
+  var day1Srs = [
+    { sourceType: 'srs_due_snapshot', game: 'tone', level: '1', itemId: 'fixture-tone', due: true, mastered: false },
+    { sourceType: 'srs_due_snapshot', game: 'tone', level: '1', itemId: 'due-only-tone', due: true, mastered: false }
+  ];
+  var day8Srs = games.map(function (game, index) {
+    return { sourceType: 'srs_due_snapshot', game: game, level: String(index + 1), itemId: 'due-' + game, due: true, mastered: false };
+  }).concat(games.map(function (game, index) {
+    return { sourceType: 'srs_due_snapshot', game: game, level: String(index + 1), itemId: 'mastered-' + game, due: true, mastered: true };
+  }));
 
   return {
-    day0: { status: 'ready', today: '2026-08-26', rows: rows(1, '2026-08-27') },
-    day1: { status: 'ready', today: '2026-08-27', rows: rows(1, '2026-08-27') },
-    day8: { status: 'ready', today: '2026-09-03', rows: day8Rows },
-    empty: { status: 'empty', today: '2026-08-27', rows: [] },
-    loading: { status: 'loading', today: '2026-08-27', rows: [] },
-    error: { status: 'error', today: '2026-08-27', error: 'FIXTURE_READ_ERROR', rows: [] },
-    accessDenied: { status: 'access-denied', today: '2026-08-27', error: 'FIXTURE_ACCESS_DENIED', rows: [] }
+    day0: { status: 'ready', reviewQueueItems: [], srsDueSnapshot: [] },
+    day1: { status: 'ready', reviewQueueItems: day1Review, srsDueSnapshot: day1Srs },
+    day8: {
+      status: 'ready', reviewQueueItems: reviewQueueItems('day8-valid-upstream'), srsDueSnapshot: day8Srs
+    },
+    reviewCorrectToInitialSrs: {
+      result: { outcome: 'correct', srsStateStatus: 'absent' },
+      expected: { reviewQueue: 'close', srsAction: 'request-canonical-initial-route', derivedStage: 0 }
+    },
+    reviewCorrectExistingSrs: {
+      result: {
+        outcome: 'correct', srsStateStatus: 'present',
+        existingSrsState: {
+          sourceType: 'canonical_srs_state', game: 'tone', level: '1', itemId: 'fixture-tone',
+          stage: 2, dueDate: '2026-09-03', mastered: false
+        }
+      }
+    },
+    empty: { status: 'empty', reviewQueueItems: [], srsDueSnapshot: [] },
+    loading: { status: 'loading', reviewQueueItems: [], srsDueSnapshot: [] },
+    error: { status: 'error', error: 'FIXTURE_READ_ERROR', reviewQueueItems: [], srsDueSnapshot: [] },
+    accessDenied: { status: 'access-denied', error: 'FIXTURE_ACCESS_DENIED', reviewQueueItems: [], srsDueSnapshot: [] }
   };
 });

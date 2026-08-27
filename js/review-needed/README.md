@@ -2,31 +2,40 @@
 
 > Status: `CURRENT FOR THIS ISOLATED BRANCH / NON-PRODUCT PREVIEW / DEFAULT OFF`
 > Role: minimum source-adjacent Master Plan + Full Checklist for the exact hidden candidate authorized by Lin on 2026-08-27.
-> This file does not change Product WHAT, Phase status, SRS Sandbox ownership, Production, Staging, or public activation.
+> This file does not change Product WHAT, Phase status, SRS ownership, Production, Staging, or public activation.
+
+## Correction authority
+
+Lin's latest explicit Product clarification supersedes the earlier candidate interpretation preserved in commits `2761659` and `472f8e5`:
+
+- Review Needed is not SRS Due.
+- Review Needed trigger/eligibility is not locked here: the candidate accepts only an already-valid upstream Review Needed queue item and does not decide which wrong-result type or date creates it.
+- Free permits at most one Review Needed correction attempt. Dormant Paid permits at most four attempts; these are attempt counts, not day counts.
+- SRS Due is a separate owner-provided snapshot. This candidate never mutates SRS state itself.
+- When the same `game + level + item` is both Review Needed and SRS Due, the composer emits one Review item first and routes its one result to Review resolution plus the SRS owner only because it is due.
+- Latest replacement Decision: when Review Needed is answered correctly, close the wrong-item queue and request the SRS owner's canonical initial route. If canonical SRS state is absent, that route begins at derived stage `0` and resolves the first checkpoint from current SRS authority; it is not stage `1`, stage `2`, or a passed Day 1. If state already exists, reuse it unchanged and never create a duplicate. Unknown presence fails closed.
+- Saved Word remains a separate manual action. There is no auto-save or Day 3/Day 5 messaging.
+
+The previous `tone_srs_state`-derived Review projection and its `dueQuota/selectedDue` preview were a conflation. They are removed from the current contract, adapter, fixture, preview, and tests. Their old PASS rows below are historical evidence only and no longer describe the candidate.
 
 ## Pre-Work Gate
 
-- Current phase: original Phase 1 Guest/Login Free remains paused outside the separately authorized Login Core and Sandbox lanes; this task is a new hidden/local preparation exception only.
-- Master Plan and Full Checklist: this file, limited to the candidate below.
-- Decision/requirement authority: Current Product `PD-SRS-01`, `PD-MGL-01`, current Phase 1 `P1-B-02`, and the Free/Paid SRS Sandbox plans as evidence contracts only.
-- Current status/handoff: Free Day 0 evidence is preserved; the SRS chat alone owns natural Day 1/Day 8 and the Paid checkpoints. This task must not write or reconcile those lanes.
-- Scope: pure five-game read model, read-only adapter, dormant tier configuration, fixtures/tests, and a localhost-only developer preview.
-- Applicable locked requirements: raw attempts are not SRS state; histories stay per game; Free Due 20% and one Review Needed attempt; Paid contract 30% and at most four attempts while runtime remains disabled; not-due/same-day cannot advance; Mastered is absent from the Free due queue.
-- `1` and `4` are maximum Review Needed attempt counts, not day counts. This candidate defines no failure reschedule delay.
-- Definition of Done: reusable module and adapter; Day 0/1/8 plus empty/loading/error/access-denied fixtures; feature flag defaults OFF; preview is localhost-only, unlinked, hidden before enable, and `noindex`; no write path; targeted regression, site gate, write-set, secret/PII, and Git checks pass.
-- Verification: `node scripts/tests-review-needed-hidden-candidate.js`, existing SRS regression, and `node scripts/check-site.js`.
-- Authorization: local hidden preparation and a local checkpoint commit only. No public activation, Production/Staging mutation, push, PR, merge, deploy, shared UI/navigation, or Phase PASS.
-
-```text
-Result: READY — hidden/local Review Needed candidate
-Blocker: NONE
-Decision needed: NONE
-Next action: NONE inside hidden/local technical scope; activation remains separately gated below
-```
+- Current phase: original Phase 1 Guest/Login Free remains paused outside separately authorized lanes; this task is a hidden/local preparation exception only.
+- Master Plan and Full Checklist: this README, limited to the candidate below.
+- Decision authority: Lin's latest explicit clarification above is binding for this Delta and is reconciled into Current Product `PD-SRS-01`. Phase 1, Central, and Free/Paid SRS plans/checklists remain read-only authority/evidence inputs.
+- Current status/handoff: SRS owners retain natural-time evidence, state, schedule, and transition ownership. This candidate must not write or reconcile those lanes.
+- Scope: pure five-game queue composer, schema-neutral normalized input adapter, dormant Paid attempt-limit contract, synthetic fixtures/tests, and localhost-only developer preview.
+- Definition of Done: separate valid Review queue/SRS inputs without defining a trigger; Free `1` and dormant Paid `4`; identity dedupe and Review-first ordering; correct Review closes its queue and emits only canonical stage-0 entry or existing-state reuse; five-game isolation; Mastered exclusion; fail-closed malformed/presence input; read-only directives; hidden/default-OFF boundary; targeted and risk-based regression; browser technical checks; leakage and write-set checks; local corrective commit.
+- Authorization: local hidden preparation and local corrective commit only. No public activation, Production/Staging mutation, push, PR, merge, deploy, shared UI/navigation, SRS namespace, or Phase PASS.
 
 ## Master Plan
 
-Build a view-only boundary over the current `tone_srs_state` read contract. Keep queue derivation pure and tier-configured so later verified SRS evidence can change inputs without requiring UI or persistence rewrites. The preview uses synthetic fixtures only and is not a proposed final screen, layout, or copy.
+Keep all upstream storage and event details outside this candidate until their owning schema is locked. Consume two normalized read-only arrays, validate them strictly, and compose a deterministic queue without emitting mutations:
+
+1. `reviewQueueItems`: already-valid Review Needed items and attempt status supplied by the owning upstream authority.
+2. `srsDueSnapshot`: the SRS owner's already-evaluated `due/mastered` snapshot.
+3. Deduplicate by `game + level + itemId`, retain Review priority, and preserve remaining Due items.
+4. Expose read-only directives only: Review resolution, conditional SRS-owner evaluation, canonical initial-entry request after a correct Review, existing-state reuse, no candidate mutation, Saved Word manual-only.
 
 ### Owned write-set
 
@@ -34,54 +43,62 @@ Build a view-only boundary over the current `tone_srs_state` read contract. Keep
 - `dev/review-needed-hidden-preview.*`
 - `scripts/fixtures/review-needed-hidden-fixtures.js`
 - `scripts/tests-review-needed-hidden-candidate.js`
-- one verified Delta entry in `MAINTENANCE.md`
 
 ## Full Checklist
 
 | Item | Acceptance | State |
 |---|---|---|
-| `RNH-A-01` | Authority, collision boundary, and exact local-only authorization resolved | `PASS` |
-| `RNH-B-01` | Headless five-game SRS read contract ignores raw attempts and never mutates state | `PASS` |
-| `RNH-B-02` | Read-only adapter uses only the current table/select/user filter contract | `PASS` |
-| `RNH-B-03` | Tier configuration proves Free `20% / 1` and dormant Paid `30% / 4` without enabling Paid runtime | `PASS` |
-| `RNH-C-01` | Day 0/1/8 and empty/loading/error/access-denied fixtures pass | `PASS` |
-| `RNH-C-02` | Local preview is default OFF, localhost-only, unlinked, hidden before enable, and noindex | `PASS` |
-| `RNH-V-01` | Targeted regression, current SRS regression, full site gate, write-set, and leakage checks pass | `PASS` |
-| `RNH-Z-01` | Local checkpoint commit only; no push/PR/merge/deploy/runtime mutation | `PASS` |
-| `RNH-H-01` | Malformed/unknown/duplicate canonical rows fail closed; stage 0 and cross-game identity remain correct | `PASS` |
-| `RNH-H-02` | Exact allowlisted read mapping can accept later SRS evidence without carrying user identifiers or extra fields | `PASS` |
-| `RNH-H-03` | Preview passes desktop/mobile hidden, viewport, keyboard, semantic-table and basic accessibility checks | `PASS` |
-| `RNH-H-04` | Remaining activation-only dependencies are explicit without inventing placement, copy, design, or reschedule behavior | `PASS` |
-| `RNH-Z-02` | Hardening Delta passes targeted/full verification and is preserved in a second local-only commit | `PASS` |
+| `RNH-A-01` | Earlier local-only authority/collision boundary resolved | `PASS (historical)` |
+| `RNH-B-01..03` | Earlier SRS-derived headless projection/adapter/tier proof | `SUPERSEDED — conflation corrected` |
+| `RNH-C-01..02` | Earlier fixtures and hidden preview boundary | `PASS (historical; fixtures/preview replaced)` |
+| `RNH-H-01..04` | Earlier hardening, adapter, browser, and activation dependency audit | `PASS (historical; corrected contract reverified below)` |
+| `RNH-Z-01..02` | Earlier two local commits with no remote action | `PASS (historical)` |
+| `RNH-CFX-01` | Valid Review queue items and SRS Due snapshot are distinct normalized sources with no storage binding | `PASS` |
+| `RNH-CFX-02` | Candidate defines no wrong-type/date trigger; it accepts only valid upstream Review queue items and keeps resolved items out | `PASS` |
+| `RNH-CFX-03` | Free max `1`; dormant Paid max `4` without retry-day/delay rule or runtime activation | `PASS` |
+| `RNH-CFX-04` | Same Review+Due identity emits once as Review; remaining Due follows; one result routes to the correct owners | `PASS` |
+| `RNH-CFX-05` | Five-game isolation, duplicate/action identity, malformed/date/unknown fail-closed, and Mastered exclusion | `PASS` |
+| `RNH-CFX-06` | Day 0/1/8 and empty/loading/error/access-denied synthetic fixtures cover corrected sources | `PASS` |
+| `RNH-CFX-07` | Preview visibly distinguishes source/type while remaining technical, hidden, local, unlinked, and noindex | `PASS` |
+| `RNH-CFX-08` | Correct Review closes only its wrong queue, requests canonical derived stage `0` when SRS is absent, reuses existing state unchanged, and fails closed on unknown/mismatched presence | `PASS` |
+| `RNH-CFX-V` | Targeted, SRS/game/listening regression, site, browser, leakage, write-set, and Git checks | `PASS` |
+| `RNH-CFX-Z` | Corrective Delta preserved in a new local commit; no remote action | `PASS` |
 
-## Reusable integration seam
+## Normalized integration seam
 
-`review-needed-read-adapter.js` owns the allowlisted mapping from the existing `tone_srs_state` read result into the headless contract. Its boundary is fixed to:
+`review-needed-read-adapter.js` deliberately contains no table, event, account, Supabase, RPC, endpoint, timezone, or environment binding. Upstream owners must provide exact normalized fields:
 
-- table `tone_srs_state`;
-- selected fields `game, level, word, stage, due_date, ever_failed, mastered`;
-- account filter `user_id`;
-- item identity `game + level + word`;
-- output record type `srs_state` and mode `read-only`.
+- Valid Review Needed queue item: `sourceType, game, level, itemId, attemptsUsed, resolved, actionToken`.
+- SRS Due snapshot: `sourceType, game, level, itemId, due, mastered`.
+- Existing canonical SRS state, only when resolving a correct Review against `present`: `sourceType, game, level, itemId, stage, dueDate, mastered`.
 
-The mapper drops any returned field outside that allowlist, including user identifiers. A later integration must provide the exact verified current read result; this candidate does not add a schema, RPC, write fallback, Auth behavior, or Staging connection.
+The adapter drops fields outside these allowlists and validation fails closed. It has no `outcome`, `occurredDate`, `eligibleOn`, wrong-type, date, timezone, storage, or event trigger contract. Correct-result resolution requires explicit `absent` or `present` SRS-state status. Unknown status fails closed. A later integration may map an authorized owning schema into this seam, but this candidate does not guess that mapping.
 
-The `dueQuota/selectedDue` values are a deterministic read-only preview projection for contract tests. They do not replace the existing game/runtime allocator, its carry behavior, attempt evidence, or transition owner. Final integration must consume and verify the owning runtime result instead of making this candidate a second state machine.
+The pure resolution directive never writes. For `absent`, it requests `derivedStage: 0`, records `day1Passed: false`, leaves the checkpoint to current SRS authority, and forbids duplicate creation. For `present`, it returns the normalized existing stage/due unchanged and requests reuse. The owning integration must make the canonical, idempotent transition; this hidden candidate cannot perform it.
+
+SRS Due ratios and scheduling remain entirely with the SRS owner. The Review tier contract contains only `maxReviewAttempts` and runtime enablement; no SRS quota is projected here. Paid is dormant and the contract intentionally defines no scheduling rule for attempts two through four.
+
+## Hidden developer preview
+
+`dev/review-needed-hidden-preview.html` is synthetic and non-product. It has no public link, form, storage, or network path; carries `noindex,nofollow,noarchive`; begins hidden; requires localhost or loopback plus `?review-needed-preview=1`; and shows technical source/type fields only. It is not final placement, copy, design, or Human visual approval evidence.
 
 ## Activation checklist — intentionally waiting
 
-- Free public integration waits for the SRS owner's natural-time Day 1/Day 8 evidence and the owning authority's reconciliation. This candidate does not consume or alter that namespace.
-- Paid remains dormant. Any Paid activation additionally waits for its owning natural-time evidence and separate Paid/runtime authorization; the `30% / maximum 4 attempts` contract alone is not activation.
-- Final placement, product-facing copy/design, and Human visual acceptance require their owning Product/UI authorization.
-- Integration must be verified on one exact authorized release candidate against the current account-bound read contract, access-denied/error behavior, five-game isolation, and regression gates.
-- Public entry/flag/navigation, push/PR/merge/deploy, Production verification, rollback, and final activation remain separate release gates.
+- A Product Decision and owner contract for which wrong-result types/dates create a valid Review Needed item; this candidate intentionally stops before that trigger.
+- Exact authorized mappings from the owning valid Review queue, SRS Due snapshot, and canonical SRS-state presence/read schemas into this normalized seam.
+- SRS owner's required natural-time evidence and integration verification on the exact release candidate; this task does not consume or alter that evidence namespace.
+- Product/UI authorization for final placement, copy, design, Saved Word interaction, and Human visual acceptance.
+- A separate Product decision for any Paid retry scheduling after its first attempt, plus Paid/runtime authorization and evidence.
+- Account/access behavior, one-result routing, five-game isolation, and no-duplicate identity verified in the authorized integration environment.
+- Separate authorization for public flag/entry/navigation, push/PR/merge/deploy, Production verification, rollback, and activation.
 
-## Hardening verification checkpoint
+## Corrective verification checkpoint
 
-- Targeted contract/adapter/hidden-boundary suite: `17/17` PASS.
-- Desktop `1280×800`: default OFF rendered no visible content; explicit local flag rendered five isolated rows, remained within viewport, exposed a caption/six scoped headers/live status, had no links/forms/focus trap, and logged no warning/error.
-- Mobile `390×844`: body and preview region remained contained; the technical table was horizontally scrollable inside its region, heading/five rows remained available, keyboard Tab produced no unexpected focus target, and console warning/error remained empty.
-- No network mutation API, storage mutation, form, public link, navigation entry, or non-local enable path exists in the candidate write-set.
+- Corrected candidate suite: `20/20` PASS, including no trigger inference, Review/SRS dedupe, correct-result queue close, canonical derived-stage-0 request, existing-state reuse, five-game isolation, Free `1`, dormant Paid `4`, and fail-closed presence/identity/date validation.
+- Preserved regressions: Phase 1 SRS `17/17`, Listening `55/55`, shared game system `29/29`, game-flow and behavioral suites PASS.
+- Full site gate: `1,022` project files PASS, including JavaScript/HTML/CSS, secret scan, Phase 1 suites, navigation, mobile/accessibility warning-only gate, and SEO/sitemap.
+- Browser: Desktop `1280×800` and Mobile `390×844` PASS; default OFF renders no visible text; explicit localhost flag renders six deduplicated technical rows, stage-0 directive, scoped headers/live status, contained/scrollable mobile table, no trigger copy, no link/form/focus target, and no console warning/error.
+- Write-set remains seven candidate-owned files. No Supabase, Auth, Login, game runtime, shared UI/navigation, service worker, sitemap, robots, SRS Sandbox, Production, or Staging file/path is changed.
 
 ## Stop boundary
 
