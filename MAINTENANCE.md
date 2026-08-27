@@ -2193,3 +2193,9 @@ node scripts/check-site.js
 - Removed the `離開遊戲` item and its confirmation dialog from the shared game More menu for every game surface; Lego's distinct `結束遊戲` round-completion action is preserved.
 - Rebuilt the shared runtime, advanced its generated-page cache key to v41, and changed the shared regression to prevent the removed control or dialog from returning.
 - No gameplay, scoring, content, Database, Auth, Edge Function, user-data, Listening availability, or Mobile Landscape source changed.
+
+# 2026-08-27 — Restore Tone 初級 Thai pronunciation fallback
+
+- Screen-recording evidence showed that `讀音` worked for 中級/高級 but stayed blank for 初級 rows whose protected `reading_th` value was null; the same recording confirmed the existing font toggle visibly switched the Thai word in every tested level.
+- Updated the shared protected-content adapter to fall back to the written Thai word when `readingTH` is null, blank, or missing, while preserving explicit multi-syllable readings such as `เครื่อง-บิน`.
+- Advanced the protected-content client cache key to v10 on the five Core game pages and added a behavioral regression for null, blank, and explicit readings. No Database, Auth, Edge Function, user-data, Listening availability, or Mobile Landscape source changed.

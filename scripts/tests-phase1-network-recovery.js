@@ -113,6 +113,17 @@ const validConfig = { url: 'https://project.supabase.co', anonKey: 'public-anon-
     const result = await guard.request(() => Promise.resolve({ ok: true }), '/ok', {}, 50, null);
     assert.strictEqual(result.ok, true);
   });
+  await test('Tone pronunciation falls back to the written word when protected 初 data has no reading_th', async () => {
+    const harness = createBootHarness({ readyState: 'complete', config: validConfig });
+    const rows = harness.sandbox.buildWordListForToneFinder([
+      { word: 'จาก', readingTH: null, en: 'jaak', zh: '從', level: '初' },
+      { word: 'กิน', readingTH: '', en: 'gin', zh: '吃', level: '初' },
+      { word: 'เครื่องบิน', readingTH: 'เครื่อง-บิน', en: 'khrueang-bin', zh: '飛機', level: '中' },
+    ]);
+    assert.strictEqual(rows[0].readingTH, 'จาก');
+    assert.strictEqual(rows[1].readingTH, 'กิน');
+    assert.strictEqual(rows[2].readingTH, 'เครื่อง-บิน');
+  });
   await test('request rejects deterministically when fetch never settles', async () => {
     await assert.rejects(guard.request(() => new Promise(() => {}), '/hang', {}, 10, null), (error) => error.code === 'NETWORK_TIMEOUT');
   });
@@ -127,7 +138,7 @@ const validConfig = { url: 'https://project.supabase.co', anonKey: 'public-anon-
   });
   await test('Core 5 load the guard before the protected content client', async () => {
     ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html'].forEach((page) => {
-      assert.match(read(page), /network-guard\.js\?v=1[\s\S]*game-content-client\.js\?v=9/);
+      assert.match(read(page), /network-guard\.js\?v=1[\s\S]*game-content-client\.js\?v=10/);
     });
   });
   await test('optional same-origin errors do not show a false fatal game banner', async () => {
