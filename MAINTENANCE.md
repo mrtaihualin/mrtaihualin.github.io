@@ -1,6 +1,14 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-27 Asia/Bangkok** — Six-game automatic Login popup removal
+**Updated: 2026-08-28 Asia/Bangkok** — Reading Desktop Tone-shell parity
+
+## 2026-08-28 — Reading Desktop Tone-shell parity (`PASS_LOCAL / LOCAL_BROWSER_PASS / HUMAN_REVIEW_PENDING / PRODUCTION_UNCHANGED`)
+
+- Reused only the accepted Tone shell treatment that is compatible with Reading ordinary Desktop: the Reading title/subtitle remain visible in focus mode, the site announcement stays out of the game surface, and the existing game switcher, focus and More controls form one horizontal row with both menus opening above it.
+- Kept the first-visit Cookie consent layer above those controls and menus. Reading gameplay, First Check score, Hint zero-lock, component order, option generation, font/particle behavior, Portrait and Mobile Landscape remain unchanged.
+- Reading and shared-game regressions, source whitespace validation and local browser checks at Desktop 1280×720 pass. The browser confirms the three-control row, visible focus-mode header, hidden announcement and upward-opening switcher/More menus; protected content is unavailable from the plain local origin, so exact-build Human visual acceptance remains pending before release.
+
+**Prior update: 2026-08-27 Asia/Bangkok** — Six-game automatic Login popup removal
 
 ## 2026-08-27 — Six-game automatic Login cap popup removal (`PASS_LOCAL / HUMAN_PASS / RELEASE_PENDING`)
 

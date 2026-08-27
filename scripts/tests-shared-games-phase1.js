@@ -224,6 +224,16 @@ test('Tone Desktop and Mobile Portrait keep all three controls horizontal with m
   assert.match(tone, /@media \(orientation:landscape\) and \(max-width:1024px\) and \(max-height:600px\)/, 'Tone must retain the separate Mobile Landscape boundary');
 });
 
+test('Reading Desktop reuses the accepted Tone shell controls without changing mobile layouts', () => {
+  const reading = games.find((g) => g.id === 'reading').htmlText;
+  assert.match(reading, /@media \(min-width:1025px\), \(min-width:769px\) and \(min-height:601px\) \{[\s\S]{0,220}data-gsh-game="reading"\] > \.avail-band \{ display:none !important; \}/, 'Reading Desktop must omit the site announcement like Tone');
+  assert.match(reading, /data-gsh-game="reading"\]\.rg-fake-fullscreen \.page-header \{ display:block !important; \}/, 'Reading Desktop focus mode must keep the game title and subtitle visible');
+  assert.match(reading, /data-gsh-game="reading"\] #cookieConsentBanner \{ z-index:100100 !important; \}/, 'Reading cookie consent must stay above the floating controls and menus');
+  assert.match(reading, /data-gsh-game="reading"\] \.rg-ctl-wrap \{[\s\S]{0,140}flex-direction:row !important;[\s\S]{0,100}align-items:center !important;/, 'Reading Desktop must keep all three controls in one row');
+  assert.match(reading, /\.rg-ctl-wrap > #game-switcher,\s*body\[data-gsh-game="reading"\] \.rg-ctl-wrap > \.grw-menu \{[\s\S]{0,260}position:absolute !important;[\s\S]{0,120}bottom:calc\(100% \+ 8px\) !important;/, 'Reading Desktop menus must open above the horizontal row');
+  assert.doesNotMatch(reading, /@media \(max-width:768px\) and \(orientation:portrait\)[\s\S]{0,400}data-gsh-game="reading"\] \.rg-ctl-wrap/, 'Reading Mobile Portrait controls must remain untouched');
+});
+
 test('all games omit the removed leave-game control and dialog', () => {
   const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
   assert.doesNotMatch(sharedJs, /要離開遊戲嗎？|繼續遊戲|離開遊戲/);
