@@ -2187,3 +2187,27 @@ node scripts/check-site.js
 - Added a bounded retry for the four idempotent protected-content reads when PostgREST transiently returns HTTP 401; the rate-limit RPC is never retried, and persistent failures still fail closed.
 - Preserved content caps, JWT-derived tiering, Database/Auth configuration, protected catalog boundaries, Listening closure, and all game UI.
 - Verification: targeted game behavioral coverage plus `git diff --check` and `node scripts/check-site.js` passed across 1,014 project files.
+
+# 2026-08-27 — Remove the shared Leave Game control
+
+- Removed the `離開遊戲` item and its confirmation dialog from the shared game More menu for every game surface; Lego's distinct `結束遊戲` round-completion action is preserved.
+- Rebuilt the shared runtime, advanced its generated-page cache key to v41, and changed the shared regression to prevent the removed control or dialog from returning.
+- No gameplay, scoring, content, Database, Auth, Edge Function, user-data, Listening availability, or Mobile Landscape source changed.
+
+# 2026-08-27 — Restore Tone 初級 Thai pronunciation fallback
+
+- Screen-recording evidence showed that `讀音` worked for 中級/高級 but stayed blank for 初級 rows whose protected `reading_th` value was null; the same recording confirmed the existing font toggle visibly switched the Thai word in every tested level.
+- Updated the shared protected-content adapter to fall back to the written Thai word when `readingTH` is null, blank, or missing, while preserving explicit multi-syllable readings such as `เครื่อง-บิน`.
+- Advanced the protected-content client cache key to v10 on the five Core game pages and added a behavioral regression for null, blank, and explicit readings. No Database, Auth, Edge Function, user-data, Listening availability, or Mobile Landscape source changed.
+
+# 2026-08-27 — Keep Standard/Modern font control state truthful
+
+- Preserved the locked mapping `Standard = Sarabun` and `Modern = Noto Sans Thai`, but changed the shared font control to derive its label, `aria-pressed`, and explicit mode from the live game class instead of a cached boolean.
+- The shared control now resynchronizes after game-owned class changes and across tabs using the existing `rg_modern_font` preference; gameplay is not reloaded or reset.
+- Rebuilt the shared runtime, advanced the generated-page cache key to v42, and added regression coverage. No game UI layout, Database, Auth, Edge Function, user data, Listening availability, or Mobile Landscape source changed.
+
+# 2026-08-27 — Complete Tone question font coverage
+
+- Audited the Thai question-word and question-sentence selectors across the game set. Reading, Typing, Word Order, Lego, and Challenge already use selectors covered by their Standard/Modern rules.
+- Added the missing Tone `tf-adv-sent-main` selector so 高級 question sentences now switch with the same `Standard = Sarabun` and `Modern = Noto Sans Thai` preference already used by 初級/中級 question words.
+- Kept the toolbar control icon-only and made no layout, gameplay, Database, Auth, Edge Function, user-data, Listening-availability, or Mobile Landscape change.

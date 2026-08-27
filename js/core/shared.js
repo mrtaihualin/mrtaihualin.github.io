@@ -68,17 +68,11 @@ window.GameUiCopy = window.GameUiCopy || (function () {
       detail: '查看本輪詳細紀錄',
       trial: '預約免費體驗課 →',
       home: '回到首頁'
-    },
-    exit: {
-      title: '要離開遊戲嗎？',
-      continueAction: '繼續遊戲',
-      leaveAction: '離開遊戲'
     }
   };
   return {
     resume: messages.resume,
     result: messages.result,
-    exit: messages.exit,
     resumeLine: function (game, level, progress) {
       return messages.resume.prefix + [game, level, progress].filter(Boolean).join('・');
     }
@@ -2009,25 +2003,40 @@ window.deleteFBComment = function(postId, idx) {
         var hasFontToggle = typeof window.rgToggleFont === 'function' || (window.TF && typeof window.TF.toggleFont === 'function');
         if (!fontSlot || fontSlot.querySelector('button')) return true;
         if (!hasFontToggle) return false;
-        var fontOn = isFontOn();
         var fontBtn = document.createElement('button');
         fontBtn.type = 'button';
         fontBtn.className = 'word-ctl-btn';
         var renderFontBtn = function () {
+          var fontOn = isFontOn();
           fontBtn.textContent = '\u270D\uFE0F';   // Lin 2026-07-25: เดิมสลับเป็น ✅ ตอนเปิด — ✅ เป็นเครื่องหมายถูกทั่วไป ไม่สื่อว่า "ฟอนต์" และไม่ผูกแบรนด์ (กฎ 16) · สถานะดูจากป้าย 標準字/現代字 ข้างๆ ได้แล้ว
           fontBtn.title = fontOn ? '目前：現代字體（點擊換回標準）' : '目前：標準字體（點擊換現代）';
           fontBtn.setAttribute('aria-label', fontBtn.title);
+          fontBtn.setAttribute('aria-pressed', fontOn ? 'true' : 'false');
+          fontBtn.setAttribute('data-font-mode', fontOn ? 'modern' : 'standard');
         };
         renderFontBtn();
         fontBtn.onclick = function (e) {
           e.stopPropagation();
           if (callFontToggle()) {
-            fontOn = isFontOn();
             renderFontBtn();
             if (window.WordMenu && window.WordMenu.refresh) window.WordMenu.refresh();
           }
         };
         fontSlot.appendChild(fontBtn);
+        // Keep the control truthful when the shared preference is restored or changed
+        // outside this exact button (for example another game/tab).
+        try {
+          var fontClassObserver = new MutationObserver(renderFontBtn);
+          fontClassObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+        } catch (e) {}
+        window.addEventListener('storage', function (e) {
+          if (e.key !== 'rg_modern_font') return;
+          var modern = e.newValue === '1';
+          var usesToneFontClass = window.TF && typeof window.TF.toggleFont === 'function';
+          document.body.classList.toggle('rg-modern-font', modern && !usesToneFontClass);
+          document.body.classList.toggle('tf-modern-font', modern && usesToneFontClass);
+          renderFontBtn();
+        });
         return true;
       }
       if (!bindFontSlot()) {
@@ -2198,44 +2207,6 @@ window.deleteFBComment = function(postId, idx) {
         return false;
       }
       var hasAsk = typeof window.rgOpenAsk === 'function' || (window.TF && typeof window.TF.openAsk === 'function');
-      var exitCopy = window.GameUiCopy.exit;
-
-      function openGameExit(trigger) {
-        var old = document.getElementById('gsh-game-exit-dialog');
-        if (old) old.remove();
-        var overlay = document.createElement('div');
-        overlay.id = 'gsh-game-exit-dialog';
-        overlay.className = 'gsh-game-exit-overlay';
-        overlay.setAttribute('role', 'dialog');
-        overlay.setAttribute('aria-modal', 'true');
-        overlay.setAttribute('aria-labelledby', 'gsh-game-exit-title');
-        overlay.innerHTML =
-          '<div class="gsh-game-exit-box">' +
-            '<div id="gsh-game-exit-title" class="gsh-game-exit-title">' + exitCopy.title + '</div>' +
-            '<div class="gsh-game-exit-actions">' +
-              '<button type="button" data-game-exit-continue>' + exitCopy.continueAction + '</button>' +
-              '<button type="button" data-game-exit-leave>' + exitCopy.leaveAction + '</button>' +
-            '</div>' +
-          '</div>';
-        var continueButton = overlay.querySelector('[data-game-exit-continue]');
-        var leaveButton = overlay.querySelector('[data-game-exit-leave]');
-        function closeExit() {
-          document.removeEventListener('keydown', onExitKeydown);
-          overlay.remove();
-          if (trigger && trigger.focus) trigger.focus();
-        }
-        function onExitKeydown(event) {
-          if (event.key !== 'Escape') return;
-          event.preventDefault();
-          closeExit();
-        }
-        continueButton.onclick = closeExit;
-        leaveButton.onclick = function () { window.location.assign('/games.html'); };
-        overlay.addEventListener('click', function (event) { if (event.target === overlay) closeExit(); });
-        document.addEventListener('keydown', onExitKeydown);
-        document.body.appendChild(overlay);
-        continueButton.focus();
-      }
 
       var menu = document.createElement('div');
       menu.className = 'grw-menu';
@@ -2245,8 +2216,7 @@ window.deleteFBComment = function(postId, idx) {
       menu.innerHTML =
         (hasAsk ? '<div class="grw-item" data-act="ask"><span class="ico">💬</span>有問題想問老師</div>' : '') +
         '<div class="grw-item" data-act="report"><span class="ico">🔧</span>回報問題</div>' +
-        '<div class="grw-item" data-act="review"><span class="ico">💭</span>心得 / 學到了什麼</div>' +
-        (GAME_ID !== 'challenge' ? '<div class="grw-item" data-act="exit"><span class="ico">↩</span>' + exitCopy.leaveAction + '</div>' : '');
+        '<div class="grw-item" data-act="review"><span class="ico">💭</span>心得 / 學到了什麼</div>';
       menu.addEventListener('click', function (e) {
         var it = e.target.closest('.grw-item');
         if (!it) return;
@@ -2255,7 +2225,6 @@ window.deleteFBComment = function(postId, idx) {
         if (it.dataset.act === 'ask') callAsk();
         else if (it.dataset.act === 'report') grwOpenReport(GAME_ID, FN_URL);
         else if (it.dataset.act === 'review') grwOpenReview(GAME_ID, FN_URL);
-        else if (it.dataset.act === 'exit') openGameExit(it);
       });
       // Lin 2026-07-25: เมนูนี้ไม่เคยลงทะเบียนกับ GamePanels กลางมาก่อน → เปิด 🪧 พร้อม 🎮/🍚 ค้างไว้ได้ ซ้อนทับกันบนจอ (บั๊กจริงที่ Lin เจอ)
       // แก้: ลงทะเบียนเหมือนกล่องอื่น กันซ้อนทั้ง 2 ทาง (เปิด 🪧 ต้องปิดกล่องอื่นก่อน + กล่องอื่นเปิดต้องปิด 🪧 ได้ด้วย)

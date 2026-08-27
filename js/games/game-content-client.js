@@ -35,7 +35,7 @@
     return master.map(function (w) {
       return {
         word: w.word,
-        readingTH: w.readingTH !== undefined ? w.readingTH : w.word,
+        readingTH: (typeof w.readingTH === 'string' && w.readingTH.trim()) ? w.readingTH : w.word,
         readingEN: w.en,
         zh: w.zh,
         level: LEVEL_TXT_TO_NUM[w.level],
