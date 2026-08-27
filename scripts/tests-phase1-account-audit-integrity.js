@@ -35,6 +35,25 @@ check('browser audit request cannot choose owner, actor, or before/after state',
   assert.doesNotMatch(call[0], /user_id|actor|before_state|after_state|providers_before/);
 });
 
+check('Facebook callback verifies fresh Auth user before deciding link result', () => {
+  const callback = authWidget.match(/function checkPendingFacebookLinkAudit\(\) \{[\s\S]*?\n  \}\n\n  \/\/ ── init:/);
+  assert.ok(callback, 'Facebook pending-link callback exists');
+  assert.match(callback[0], /withClientTimeout\(sb\.auth\.getUser\(\), '確認 Facebook 連接狀態', false\)/);
+  assert.match(callback[0], /pending\.user_id !== verifiedUser\.id/);
+  assert.match(callback[0], /\(verifiedUser\.identities \|\| \[\]\)\.map/);
+  assert.doesNotMatch(callback[0], /var providersAfter = \(API\.user\.identities/);
+});
+
+check('fresh verified user replaces cached UI user before link audit', () => {
+  const callback = authWidget.match(/function checkPendingFacebookLinkAudit\(\) \{[\s\S]*?\n  \}\n\n  \/\/ ── init:/);
+  assert.ok(callback, 'Facebook pending-link callback exists');
+  const refreshAt = callback[0].indexOf('API.user = verifiedUser;');
+  const changeAt = callback[0].indexOf('fireChange();', refreshAt);
+  const auditAt = callback[0].indexOf("callAccountFn('account-unlink'", refreshAt);
+  assert.ok(refreshAt >= 0 && changeAt > refreshAt && auditAt > changeAt,
+    'verified user refreshes listeners before audit');
+});
+
 check('Edge recognizes only the locked Facebook link-audit provider', () => {
   assert.match(accountUnlink, /const AUDITABLE_LINK_PROVIDERS = \['facebook'\]/);
   assert.match(accountUnlink, /action === 'audit_link' && !AUDITABLE_LINK_PROVIDERS\.includes\(provider\)/);
