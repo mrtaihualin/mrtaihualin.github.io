@@ -13,8 +13,14 @@
   var PRE_SRS_STATES = ['normal', 'retry_end_round', 'next_day_check', 'review_needed', 'weak_4d'];
   var VIEW_STATES = ['loading', 'ready', 'empty', 'error', 'access-denied'];
   var TIER_CONFIGS = {
-    free: { id: 'free', runtimeEnabled: true },
-    paid: { id: 'paid', runtimeEnabled: false }
+    free: {
+      id: 'free', runtimeEnabled: true, reviewAttemptMax: 1, reviewAllocationRate: 0.20,
+      srsOwnerRoute: { initialStage: 0, checkpoints: [1, 7], masteredAfter: 7, challengeCheckpoints: [] }
+    },
+    paid: {
+      id: 'paid', runtimeEnabled: false, reviewAttemptMax: 3, reviewAllocationRate: 0.30,
+      srsOwnerRoute: { initialStage: 0, checkpoints: [1, 7, 16], masteredAfter: 16, challengeCheckpoints: [30, 60, 90] }
+    }
   };
 
   function copy(value) {
@@ -94,12 +100,21 @@
       'MALFORMED_ACTIVE_STATE', dueRequired ? 'state requires dueOn' : 'state must not define dueOn');
     var roundToken = row.roundToken == null ? '' : String(row.roundToken);
     var retryOrdinal = row.retryOrdinal == null ? null : Number(row.retryOrdinal);
+    var reviewAttemptsUsed = row.reviewAttemptsUsed == null ? null : row.reviewAttemptsUsed;
     if (state === 'retry_end_round') {
       roundToken = normalizeToken(roundToken, 'MALFORMED_ACTIVE_STATE', 'roundToken');
       assertState(retryOrdinal === 1, 'MALFORMED_ACTIVE_STATE', 'retry_end_round must be the one retry');
     } else {
       assertState(roundToken === '' && retryOrdinal === null,
         'MALFORMED_ACTIVE_STATE', 'only retry_end_round may carry retry metadata');
+    }
+    if (state === 'next_day_check' || state === 'review_needed') {
+      assertState(typeof reviewAttemptsUsed === 'number' && isFinite(reviewAttemptsUsed) && reviewAttemptsUsed >= 0 &&
+        Math.floor(reviewAttemptsUsed) === reviewAttemptsUsed,
+      'MALFORMED_ACTIVE_STATE', 'next-day Review states require a non-negative reviewAttemptsUsed');
+    } else {
+      assertState(reviewAttemptsUsed === null,
+        'MALFORMED_ACTIVE_STATE', 'only next-day Review states may carry reviewAttemptsUsed');
     }
     return {
       sourceType: 'active_learning_state',
@@ -112,7 +127,8 @@
       stateToken: stateToken,
       dueOn: dueOn,
       roundToken: roundToken,
-      retryOrdinal: retryOrdinal
+      retryOrdinal: retryOrdinal,
+      reviewAttemptsUsed: reviewAttemptsUsed
     };
   }
 
@@ -183,6 +199,20 @@
     return copy(TIER_CONFIGS[id]);
   }
 
+  function enabledTierConfig(options) {
+    options = options || {};
+    var config = tierConfig(options.tier || 'free');
+    if (!config.runtimeEnabled && options.allowDormantTier !== true) throw errorWithCode('TIER_DISABLED');
+    return config;
+  }
+
+  function validateTierState(state, config) {
+    if (state.state === 'next_day_check' || state.state === 'review_needed') {
+      assertState(state.reviewAttemptsUsed < config.reviewAttemptMax,
+        'REVIEW_ATTEMPT_EXHAUSTED', 'Review state has no remaining attempt for this tier');
+    }
+  }
+
   function scoreBand(score) {
     assertState(typeof score === 'number' && isFinite(score) && Math.floor(score) === score && score >= 0 && score <= 10,
       'INVALID_SCORE', 'score must be an integer from 0 to 10');
@@ -191,29 +221,40 @@
     return '0-3';
   }
 
-  function targetFor(state, band) {
+  function transitionDecision(source, band, config) {
+    var state = source.state;
+    var target;
+    var reviewAttempt = null;
     if (state === 'normal') {
-      if (band === '10') return 'srs';
-      if (band === '4-9') return 'weak_4d';
-      return 'retry_end_round';
+      target = band === '10' ? 'srs' : band === '4-9' ? 'weak_4d' : 'retry_end_round';
     }
-    if (state === 'retry_end_round') {
-      return band === '10' ? 'next_day_check' : 'review_needed';
+    else if (state === 'retry_end_round') {
+      target = band === '10' ? 'next_day_check' : 'review_needed';
+      reviewAttempt = {
+        counted: false, before: 0, after: 0, max: config.reviewAttemptMax,
+        remaining: config.reviewAttemptMax, exhausted: false
+      };
     }
-    if (state === 'next_day_check' || state === 'review_needed') {
-      if (band === '10') return 'srs';
-      if (band === '4-9') return 'weak_4d';
-      return 'review_needed';
+    else if (state === 'next_day_check' || state === 'review_needed') {
+      var after = source.reviewAttemptsUsed + 1;
+      var exhausted = after >= config.reviewAttemptMax;
+      reviewAttempt = {
+        counted: true, before: source.reviewAttemptsUsed, after: after,
+        max: config.reviewAttemptMax, remaining: Math.max(0, config.reviewAttemptMax - after),
+        exhausted: exhausted
+      };
+      if (band === '10') target = 'srs';
+      else if (band === '4-9') target = 'weak_4d';
+      else target = exhausted ? 'weak_4d' : 'review_needed';
     }
-    if (state === 'weak_4d') {
-      if (band === '10') return 'srs';
-      if (band === '4-9') return 'weak_4d';
-      return 'retry_end_round';
+    else if (state === 'weak_4d') {
+      target = band === '10' ? 'srs' : band === '4-9' ? 'weak_4d' : 'retry_end_round';
     }
-    throw errorWithCode('SRS_OWNER_ONLY', 'SRS transitions belong only to the SRS owner');
+    else throw errorWithCode('SRS_OWNER_ONLY', 'SRS transitions belong only to the SRS owner');
+    return { target: target, reviewAttempt: reviewAttempt };
   }
 
-  function activeStateFromTransition(source, target, evidence) {
+  function activeStateFromTransition(source, target, evidence, reviewAttemptsUsed) {
     var dueOn = '';
     if (target === 'next_day_check' || target === 'review_needed') dueOn = addCalendarDays(evidence.occurredOn, 1);
     if (target === 'weak_4d') dueOn = addCalendarDays(evidence.occurredOn, 4);
@@ -234,19 +275,23 @@
       stateToken: 'next:' + evidence.actionToken,
       dueOn: dueOn,
       roundToken: roundToken,
-      retryOrdinal: retryOrdinal
+      retryOrdinal: retryOrdinal,
+      reviewAttemptsUsed: target === 'next_day_check' || target === 'review_needed' ? reviewAttemptsUsed : null
     };
   }
 
-  function buildTransitionDirective(rawState, rawEvidence) {
+  function buildTransitionDirective(rawState, rawEvidence, options) {
     var source = normalizeActiveState(rawState);
     assertState(PRE_SRS_STATES.indexOf(source.state) >= 0,
       'SRS_OWNER_ONLY', 'SRS transitions cannot return to pre-SRS states');
     var evidence = copy(rawEvidence || {});
+    var config = enabledTierConfig(options);
+    validateTierState(source, config);
     var band = scoreBand(evidence.score);
     assertState(isCalendarDate(evidence.occurredOn), 'INVALID_CALENDAR_DATE', 'occurredOn is required');
     evidence.actionToken = normalizeToken(evidence.actionToken, 'MALFORMED_RESULT_EVIDENCE', 'actionToken');
-    var target = targetFor(source.state, band);
+    var decision = transitionDecision(source, band, config);
+    var target = decision.target;
     var nextState;
     var srsOwnerDirective = null;
 
@@ -256,9 +301,11 @@
       if (evidence.srsStateStatus === 'absent') {
         assertState(!evidence.existingSrsState, 'CONFLICTING_SRS_STATE_STATUS',
           'absent status cannot include canonical SRS state');
-        nextState = activeStateFromTransition(source, 'srs', evidence);
+        nextState = activeStateFromTransition(source, 'srs', evidence, null);
         srsOwnerDirective = {
           action: 'request-canonical-initial-route',
+          tier: config.id,
+          ownerRoute: copy(config.srsOwnerRoute),
           derivedStage: 0,
           day1Passed: false,
           firstCheckpoint: 'resolve-by-current-srs-authority',
@@ -279,18 +326,24 @@
           stateToken: existing.stateToken,
           dueOn: '',
           roundToken: '',
-          retryOrdinal: null
+          retryOrdinal: null,
+          reviewAttemptsUsed: null
         };
-        srsOwnerDirective = { action: 'reuse-existing-canonical-state', state: existing };
+        srsOwnerDirective = {
+          action: 'reuse-existing-canonical-state', tier: config.id,
+          ownerRoute: copy(config.srsOwnerRoute), state: existing
+        };
       }
     } else {
       assertState(evidence.srsStateStatus == null && !evidence.existingSrsState,
         'CONFLICTING_SRS_STATE_STATUS', 'pre-SRS transition cannot carry SRS state');
-      nextState = activeStateFromTransition(source, target, evidence);
+      nextState = activeStateFromTransition(source, target, evidence,
+        decision.reviewAttempt ? decision.reviewAttempt.after : null);
     }
 
     return {
       readOnlyDirective: true,
+      tier: config.id,
       identityKey: source.identityKey,
       actionToken: evidence.actionToken,
       score: Number(evidence.score),
@@ -310,6 +363,7 @@
         idempotencyKey: evidence.actionToken,
         duplicateActiveStateAllowed: false
       },
+      reviewAttempt: decision.reviewAttempt,
       srsOwnerDirective: srsOwnerDirective,
       candidateMutatesSrs: false,
       candidateMutatesStorage: false,
@@ -369,7 +423,7 @@
     return a.identityKey.localeCompare(b.identityKey);
   }
 
-  function queueRow(row, group, sourceType) {
+  function queueRow(row, group, sourceType, allocationStatus) {
     return {
       sourceType: sourceType || row.state,
       ownerKey: row.ownerKey,
@@ -382,6 +436,8 @@
       priorityGroup: group,
       absoluteQuestionPosition: null,
       stateToken: row.stateToken,
+      reviewAttemptsUsed: row.reviewAttemptsUsed,
+      allocationStatus: allocationStatus || null,
       savedWord: 'manual-only'
     };
   }
@@ -391,9 +447,13 @@
     options = options || {};
     var today = String(options.today || '');
     assertState(isCalendarDate(today), 'INVALID_TODAY', 'today must be valid YYYY-MM-DD');
-    var config = tierConfig(options.tier || 'free');
-    if (!config.runtimeEnabled && options.allowDormantTier !== true) throw errorWithCode('TIER_DISABLED');
+    var config = enabledTierConfig(options);
+    var playSetSize = options.playSetSize;
+    assertState(typeof playSetSize === 'number' && isFinite(playSetSize) &&
+      playSetSize > 0 && Math.floor(playSetSize) === playSetSize,
+      'INVALID_PLAY_SET_SIZE', 'playSetSize must be a positive integer');
     var states = normalizeStateSet(inputs.activeStates);
+    states.forEach(function (row) { validateTierState(row, config); });
     assertState(Array.isArray(inputs.srsDueSnapshot), 'INVALID_SRS_INPUT', 'srsDueSnapshot must be an array');
     var stateByIdentity = Object.create(null);
     states.forEach(function (row) { stateByIdentity[row.identityKey] = row; });
@@ -409,15 +469,17 @@
 
     var groups = {
       nextDayPriority: [],
+      reviewCarryForward: [],
       weakDue: [],
       srsDue: [],
       normal: [],
       retryEndRound: []
     };
+    var eligibleReviewRows = [];
     var notDue = 0;
     states.forEach(function (row) {
       if (row.state === 'next_day_check' || row.state === 'review_needed') {
-        if (row.dueOn <= today) groups.nextDayPriority.push(queueRow(row, 'next-day-priority-group'));
+        if (row.dueOn <= today) eligibleReviewRows.push(queueRow(row, 'next-day-priority-group'));
         else notDue += 1;
       } else if (row.state === 'weak_4d') {
         if (row.dueOn <= today) groups.weakDue.push(queueRow(row, 'weak-4d-due'));
@@ -431,23 +493,53 @@
     dueRows.forEach(function (row) {
       if (row.due && !row.mastered) groups.srsDue.push(queueRow(stateByIdentity[row.identityKey], 'srs-due', 'srs_due'));
     });
-    Object.keys(groups).forEach(function (key) { groups[key].sort(sortIdentity); });
-    var technicalRows = groups.nextDayPriority.concat(groups.weakDue, groups.srsDue, groups.normal, groups.retryEndRound);
+    var reviewSlotLimit = Math.floor((playSetSize * config.reviewAllocationRate) + 0.000000001);
+    groups.nextDayPriority = eligibleReviewRows.slice(0, reviewSlotLimit).map(function (row) {
+      row.allocationStatus = 'selected-current-set';
+      return row;
+    });
+    groups.reviewCarryForward = eligibleReviewRows.slice(reviewSlotLimit).map(function (row) {
+      row.allocationStatus = 'carry-forward';
+      return row;
+    });
+    ['weakDue', 'srsDue', 'normal', 'retryEndRound'].forEach(function (key) {
+      groups[key].sort(sortIdentity);
+    });
+    var technicalRows = groups.nextDayPriority.concat(groups.reviewCarryForward,
+      groups.weakDue, groups.srsDue, groups.normal, groups.retryEndRound);
     return {
       readOnly: true,
       tier: config.id,
       today: today,
       groups: groups,
       technicalRows: technicalRows,
+      reviewAllocation: {
+        rate: config.reviewAllocationRate,
+        playSetSize: playSetSize,
+        slotLimit: reviewSlotLimit,
+        eligibleCount: eligibleReviewRows.length,
+        selected: copy(groups.nextDayPriority),
+        carryForward: copy(groups.reviewCarryForward),
+        preservesNormalizedInputOrder: true,
+        independentFromSrsDueQuota: true,
+        unplayedStateRemainsEligibleUntilOwnerTransition: true,
+        candidateMutatesState: false
+      },
       absoluteQuestionOrder: null,
       priorityContract: {
         nextDayItemsAreFrontGroup: true,
         everyNextDayItemIsLiteralQuestionOne: false,
-        retryAppearsOnceAtEndOfRound: true
+        retryAppearsOnceAtEndOfRound: true,
+        overflowMovesToNextPlaySet: true,
+        unplayedCarriesAcrossCalendarDays: true,
+        finalWithinGroupOrder: null
       },
       totals: {
         activeStates: states.length,
         technicalRows: technicalRows.length,
+        reviewEligible: eligibleReviewRows.length,
+        reviewSelected: groups.nextDayPriority.length,
+        reviewCarryForward: groups.reviewCarryForward.length,
         notDue: notDue
       }
     };
@@ -472,7 +564,12 @@
         composeOptions.allowDormantTier = options.allowDormantTier === true;
         return composeQueuePlan(inputs, composeOptions);
       },
-      buildTransitionDirective: buildTransitionDirective
+      buildTransitionDirective: function (state, evidence) {
+        return buildTransitionDirective(state, evidence, {
+          tier: tier,
+          allowDormantTier: options.allowDormantTier === true
+        });
+      }
     };
   }
 

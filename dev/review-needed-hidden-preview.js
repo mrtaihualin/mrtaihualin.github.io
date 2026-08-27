@@ -19,31 +19,39 @@
   output.setAttribute('tabindex', '0');
 
   var key = params.get('state') || 'day1';
+  var tier = params.get('tier') === 'paid' ? 'paid' : 'free';
   var fixture = window.ReviewNeededHiddenFixtures[key] || window.ReviewNeededHiddenFixtures.day1;
-  stateNode.textContent = 'Fixture: ' + key + ' · state: ' + fixture.status;
+  stateNode.textContent = 'Fixture: ' + key + ' · tier: ' + tier + ' · state: ' + fixture.status;
   if (fixture.status !== 'ready') {
     output.textContent = fixture.error || fixture.status;
     return;
   }
 
-  var candidate = window.ReviewNeededCandidate.createCandidate({ enabled: true, tier: 'free' });
+  var candidate = window.ReviewNeededCandidate.createCandidate({
+    enabled: true, tier: tier, allowDormantTier: tier === 'paid'
+  });
   var plan = candidate.composeQueuePlan({
     activeStates: fixture.activeStates,
     srsDueSnapshot: fixture.srsDueSnapshot
-  }, { today: fixture.today });
+  }, { today: fixture.today, playSetSize: fixture.playSetSize });
   var rows = plan.technicalRows.map(function (item) {
     return '<tr><td>' + escapeHtml(item.game) + '</td><td>' + escapeHtml(item.level) + '</td><td>' +
       escapeHtml(item.itemId) + '</td><td><code>' + escapeHtml(item.sourceType) + '</code></td><td>' +
-      escapeHtml(item.priorityGroup) + '</td><td>' + escapeHtml(item.dueOn || 'n/a') + '</td></tr>';
+      escapeHtml(item.priorityGroup) + '</td><td>' + escapeHtml(item.allocationStatus || 'n/a') + '</td><td>' +
+      escapeHtml(item.reviewAttemptsUsed == null ? 'n/a' : item.reviewAttemptsUsed) + '</td><td>' +
+      escapeHtml(item.dueOn || 'n/a') + '</td></tr>';
   }).join('');
   var reviewState = fixture.activeStates.filter(function (item) { return item.state === 'review_needed'; })[0];
   var directive = reviewState ? candidate.buildTransitionDirective(reviewState, {
     score: 10, occurredOn: fixture.today, actionToken: 'preview-review-correct', srsStateStatus: 'absent'
   }) : null;
   output.innerHTML = '<p>Technical state groups only. The display order is diagnostic; it does not define final question placement or copy.</p>' +
+    '<p>Review allocation: <code>' + escapeHtml(plan.reviewAllocation.rate * 100) + '% · ' +
+    escapeHtml(plan.reviewAllocation.selected.length) + ' selected · ' +
+    escapeHtml(plan.reviewAllocation.carryForward.length) + ' carry-forward</code>. SRS Due quota stays separate.</p>' +
     (directive ? '<p>Read-only owner directive: <code>' + escapeHtml(directive.fromState) + ' → ' +
       escapeHtml(directive.toState) + ' · derived stage ' +
       escapeHtml(directive.srsOwnerDirective.derivedStage) + '</code>. No storage or SRS mutation occurs here.</p>' : '') +
-    '<table><caption>Normalized active-state queue plan</caption><thead><tr><th scope="col">Game</th><th scope="col">Level</th><th scope="col">Item</th><th scope="col">State/source</th><th scope="col">Technical group</th><th scope="col">Due on</th></tr></thead><tbody>' +
+    '<table><caption>Normalized active-state queue plan</caption><thead><tr><th scope="col">Game</th><th scope="col">Level</th><th scope="col">Item</th><th scope="col">State/source</th><th scope="col">Technical group</th><th scope="col">Allocation</th><th scope="col">Attempts used</th><th scope="col">Due on</th></tr></thead><tbody>' +
     rows + '</tbody></table>';
 })(window, document);

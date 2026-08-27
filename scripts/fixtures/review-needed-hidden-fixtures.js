@@ -10,11 +10,15 @@
     var row = Object.assign({
       sourceType: 'active_learning_state', ownerKey: 'fixture-owner', game: 'tone', level: '1',
       itemId: 'fixture-item', state: state, stateToken: 'state-' + state,
-      dueOn: '', roundToken: '', retryOrdinal: null
+      dueOn: '', roundToken: '', retryOrdinal: null, reviewAttemptsUsed: null
     }, overrides || {});
     if (state === 'retry_end_round' && !(overrides && Object.prototype.hasOwnProperty.call(overrides, 'roundToken'))) {
       row.roundToken = 'fixture-round';
       row.retryOrdinal = 1;
+    }
+    if ((state === 'next_day_check' || state === 'review_needed') &&
+        !(overrides && Object.prototype.hasOwnProperty.call(overrides, 'reviewAttemptsUsed'))) {
+      row.reviewAttemptsUsed = 0;
     }
     return row;
   }
@@ -22,6 +26,8 @@
   var day1States = [
     active('next_day_check', { game: 'tone', itemId: 'next-tone', dueOn: '2026-08-28' }),
     active('review_needed', { game: 'reading', level: '2', itemId: 'review-reading', dueOn: '2026-08-28' }),
+    active('review_needed', { game: 'listening', level: '2', itemId: 'review-listening', dueOn: '2026-08-28' }),
+    active('next_day_check', { game: 'typing', level: '2', itemId: 'next-typing', dueOn: '2026-08-28' }),
     active('weak_4d', { game: 'listening', level: '3', itemId: 'weak-listening', dueOn: '2026-08-28' }),
     active('normal', { game: 'typing', level: '4', itemId: 'normal-typing' }),
     active('retry_end_round', { game: 'wordorder', level: '5', itemId: 'retry-wordorder', roundToken: 'round-day1', retryOrdinal: 1 }),
@@ -31,16 +37,16 @@
 
   return {
     active: active,
-    day0: { status: 'ready', today: '2026-08-27', activeStates: [], srsDueSnapshot: [] },
+    day0: { status: 'ready', today: '2026-08-27', playSetSize: 10, activeStates: [], srsDueSnapshot: [] },
     day1: {
-      status: 'ready', today: '2026-08-28', activeStates: day1States,
+      status: 'ready', today: '2026-08-28', playSetSize: 10, activeStates: day1States,
       srsDueSnapshot: [{
         sourceType: 'srs_due_snapshot', ownerKey: 'fixture-owner', game: 'tone', level: '2',
         itemId: 'srs-tone', due: true, mastered: false
       }]
     },
     day8: {
-      status: 'ready', today: '2026-09-04',
+      status: 'ready', today: '2026-09-04', playSetSize: 10,
       activeStates: [
         active('review_needed', { game: 'tone', itemId: 'review-day8', dueOn: '2026-09-04' }),
         active('weak_4d', { game: 'reading', level: '2', itemId: 'weak-day8', dueOn: '2026-09-04' }),

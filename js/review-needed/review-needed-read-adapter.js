@@ -14,7 +14,7 @@
     storageBinding: null,
     activeStateFields: [
       'sourceType', 'ownerKey', 'game', 'level', 'itemId', 'state', 'stateToken',
-      'dueOn', 'roundToken', 'retryOrdinal'
+      'dueOn', 'roundToken', 'retryOrdinal', 'reviewAttemptsUsed'
     ],
     srsDueSnapshotFields: [
       'sourceType', 'ownerKey', 'game', 'level', 'itemId', 'due', 'mastered'
