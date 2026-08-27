@@ -2003,25 +2003,40 @@ window.deleteFBComment = function(postId, idx) {
         var hasFontToggle = typeof window.rgToggleFont === 'function' || (window.TF && typeof window.TF.toggleFont === 'function');
         if (!fontSlot || fontSlot.querySelector('button')) return true;
         if (!hasFontToggle) return false;
-        var fontOn = isFontOn();
         var fontBtn = document.createElement('button');
         fontBtn.type = 'button';
         fontBtn.className = 'word-ctl-btn';
         var renderFontBtn = function () {
+          var fontOn = isFontOn();
           fontBtn.textContent = '\u270D\uFE0F';   // Lin 2026-07-25: เดิมสลับเป็น ✅ ตอนเปิด — ✅ เป็นเครื่องหมายถูกทั่วไป ไม่สื่อว่า "ฟอนต์" และไม่ผูกแบรนด์ (กฎ 16) · สถานะดูจากป้าย 標準字/現代字 ข้างๆ ได้แล้ว
           fontBtn.title = fontOn ? '目前：現代字體（點擊換回標準）' : '目前：標準字體（點擊換現代）';
           fontBtn.setAttribute('aria-label', fontBtn.title);
+          fontBtn.setAttribute('aria-pressed', fontOn ? 'true' : 'false');
+          fontBtn.setAttribute('data-font-mode', fontOn ? 'modern' : 'standard');
         };
         renderFontBtn();
         fontBtn.onclick = function (e) {
           e.stopPropagation();
           if (callFontToggle()) {
-            fontOn = isFontOn();
             renderFontBtn();
             if (window.WordMenu && window.WordMenu.refresh) window.WordMenu.refresh();
           }
         };
         fontSlot.appendChild(fontBtn);
+        // Keep the control truthful when the shared preference is restored or changed
+        // outside this exact button (for example another game/tab).
+        try {
+          var fontClassObserver = new MutationObserver(renderFontBtn);
+          fontClassObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+        } catch (e) {}
+        window.addEventListener('storage', function (e) {
+          if (e.key !== 'rg_modern_font') return;
+          var modern = e.newValue === '1';
+          var usesToneFontClass = window.TF && typeof window.TF.toggleFont === 'function';
+          document.body.classList.toggle('rg-modern-font', modern && !usesToneFontClass);
+          document.body.classList.toggle('tf-modern-font', modern && usesToneFontClass);
+          renderFontBtn();
+        });
         return true;
       }
       if (!bindFontSlot()) {

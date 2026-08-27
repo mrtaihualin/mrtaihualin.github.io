@@ -2199,3 +2199,9 @@ node scripts/check-site.js
 - Screen-recording evidence showed that `讀音` worked for 中級/高級 but stayed blank for 初級 rows whose protected `reading_th` value was null; the same recording confirmed the existing font toggle visibly switched the Thai word in every tested level.
 - Updated the shared protected-content adapter to fall back to the written Thai word when `readingTH` is null, blank, or missing, while preserving explicit multi-syllable readings such as `เครื่อง-บิน`.
 - Advanced the protected-content client cache key to v10 on the five Core game pages and added a behavioral regression for null, blank, and explicit readings. No Database, Auth, Edge Function, user-data, Listening availability, or Mobile Landscape source changed.
+
+# 2026-08-27 — Keep Standard/Modern font control state truthful
+
+- Preserved the locked mapping `Standard = Sarabun` and `Modern = Noto Sans Thai`, but changed the shared font control to derive its label, `aria-pressed`, and explicit mode from the live game class instead of a cached boolean.
+- The shared control now resynchronizes after game-owned class changes and across tabs using the existing `rg_modern_font` preference; gameplay is not reloaded or reset.
+- Rebuilt the shared runtime, advanced the generated-page cache key to v42, and added regression coverage. No game UI layout, Database, Auth, Edge Function, user data, Listening availability, or Mobile Landscape source changed.

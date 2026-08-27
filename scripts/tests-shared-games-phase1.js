@@ -201,15 +201,15 @@ test('floating controls use the locked switcher, focus and More Menu copy', () =
   assert.match(sharedJs, /fitMenuToViewport\(\)/);
   assert.match(sharedJs, /fitMoreMenuToViewport\(\)/);
   assert.match(sharedJs, /path\.indexOf\('listening-game'\) > -1\) GAME_ID = 'listening'/, 'Listening must use the shared More mapping');
-  assert.match(games.find((g) => g.id === 'listening').htmlText, /shared\.min\.js\?v=41/, 'Listening must load the current shared mapping version');
+  assert.match(games.find((g) => g.id === 'listening').htmlText, /shared\.min\.js\?v=42/, 'Listening must load the current shared mapping version');
 });
 
 test('all games omit the removed leave-game control and dialog', () => {
   const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
   assert.doesNotMatch(sharedJs, /要離開遊戲嗎？|繼續遊戲|離開遊戲/);
   assert.doesNotMatch(sharedJs, /data-act="exit"|openGameExit|gsh-game-exit-dialog/);
-  for (const g of games) assert.match(g.htmlText, /shared\.min\.js\?v=41/, `${g.id}: must load the exit-free shared runtime`);
-  assert.match(legoHtml, /shared\.min\.js\?v=41/, 'Lego must load the exit-free shared runtime');
+  for (const g of games) assert.match(g.htmlText, /shared\.min\.js\?v=42/, `${g.id}: must load the exit-free shared runtime`);
+  assert.match(legoHtml, /shared\.min\.js\?v=42/, 'Lego must load the exit-free shared runtime');
 });
 
 test('completed rounds no longer interrupt play with the removed VocabPopup lead flow', () => {
@@ -225,6 +225,10 @@ test('shared font control binds after asynchronous Core 5 game startup', () => {
   assert.match(sharedJs, /if \(!bindFontSlot\(\)\)[\s\S]{0,300}setInterval/, 'shared font adapter must retry after DOM ready');
   assert.match(sharedJs, /bindFontSlot\(\) \|\| fontBindAttempts >= 160/, 'font retry must stop after the existing loader window');
   assert.match(sharedJs, /fontSlot\.querySelector\('button'\)/, 'font adapter must not duplicate the shared control');
+  assert.match(sharedJs, /var fontOn = isFontOn\(\);[\s\S]{0,500}aria-pressed/, 'font control must derive its visible and accessible state from the live body class');
+  assert.match(sharedJs, /data-font-mode/, 'font control must expose its exact standard or modern state');
+  assert.match(sharedJs, /MutationObserver\(renderFontBtn\)/, 'font control must resync when the game-owned font class changes');
+  assert.match(sharedJs, /e\.key !== 'rg_modern_font'/, 'font control must resync the shared preference across tabs');
   for (const g of games) {
     assert.match(g.htmlText, /id="font-toggle-slot"/, `${g.id}: missing shared font slot`);
   }
@@ -233,7 +237,7 @@ test('shared font control binds after asynchronous Core 5 game startup', () => {
 test('Lego consumes the shared two-mode font path without a particle control', () => {
   const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
   const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
-  assert.match(legoHtml, /shared\.min\.js\?v=41/, 'Lego must load the current shared game runtime');
+  assert.match(legoHtml, /shared\.min\.js\?v=42/, 'Lego must load the current shared game runtime');
   assert.match(legoHtml, /lego-game-app\.js\?v=12/, 'Lego must load its Guest-only quota runtime');
   assert.match(legoApp, /window\.rgToggleFont\s*=\s*function/, 'Lego must expose the shared font adapter API');
   assert.match(legoApp, /classList\.toggle\('rg-modern-font'\)/, 'Lego must preserve the existing standard/modern modes');
@@ -366,7 +370,7 @@ test('mobile resume uses one compact shared-copy line and three horizontal actio
   for (const g of games) {
     const sharedCssVersion = ['tone', 'reading', 'typing', 'wordorder'].includes(g.id) ? 29 : 26;
     assert.match(g.htmlText, new RegExp(`css/shared\\.css\\?v=${sharedCssVersion}`), `${g.id}: must load current shared game CSS`);
-    assert.match(g.htmlText, /js\/core\/shared\.min\.js\?v=41/, `${g.id}: must load shared resume copy`);
+    assert.match(g.htmlText, /js\/core\/shared\.min\.js\?v=42/, `${g.id}: must load shared resume copy`);
     assert.match(g.appText, /GameUiCopy\.resumeLine/, `${g.id}: resume detail must use shared semantic copy`);
   }
 });
