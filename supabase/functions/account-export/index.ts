@@ -19,13 +19,14 @@
 //     profiles, game_accounts, game_reward_points, game_reward_events, star_ledger, tone_progress,
 //     tone_sessions, tone_srs_state, reading_sessions)
 //
-//   ชั้นที่ 2 (เฉพาะตารางที่ "ไม่มี policy อ่านให้ authenticated เลย" — ตรวจแล้วมี 2 ตาราง):
+//   ชั้นที่ 2 (เฉพาะตารางที่ "ไม่มี policy อ่านให้ authenticated เลย"):
 //     - line_identities: เปิด RLS ไว้แต่ "ไม่มี policy ใดๆ เลย" (fail-closed สนิท — ดู schema บรรทัด
 //       528 + ไม่ปรากฏใน 02_policies.sql) → ผู้ใช้ทั่วไปอ่านแม้แต่แถวตัวเองก็ไม่ได้ผ่าน RLS-scoped client
 //     - account_audit_log: ตั้งใจเปิด RLS แบบไม่มี policy เช่นกัน (ดู
 //       supabase/sql/2026-08-08_account_audit_log.sql บรรทัด 58-62 — คอมเมนต์บอกชัดว่า "อ่านได้ทาง
 //       Supabase SQL Editor เท่านั้น ตอนนี้" ยังไม่มีฟังก์ชัน SECURITY DEFINER สำหรับอ่านของตัวเอง)
-//     สองตารางนี้จึง "ต้อง" ใช้ client แบบ service_role (ข้าม RLS ได้) แต่ทุกครั้งที่ใช้ service_role
+//     - phase1_learning_review_states: source-only pre-SRS state เปิด/force RLS และไม่มี browser policy
+//     ตารางกลุ่มนี้จึง "ต้อง" ใช้ client แบบ service_role (ข้าม RLS ได้) แต่ทุกครั้งที่ใช้ service_role
 //     ต้องแปะ `.eq('user_id', callerUid)` เองด้วยมือเสมอ — และ callerUid ตัวนี้มาจาก auth.getUser()
 //     ในชั้นที่ 1 เท่านั้น (ตัวแปรเดียวกัน ไม่มีทางอื่นที่จะได้ค่านี้มา) ไม่ใช่จาก body ที่ client ส่งมา
 //
@@ -33,7 +34,8 @@
 //   profiles, game_accounts, game_reward_points, star_ledger, tone_progress, tone_sessions,
 //   tone_srs_state, reading_sessions, game_reward_events, line_identities (แค่ provider+วันที่ผูก
 //   ไม่รวม token), auth.users (แค่ email + created_at — ได้มาจาก auth.getUser() ของผู้เรียกเองอยู่แล้ว
-//   ไม่ต้องเรียก admin API เพิ่ม), account_audit_log (สรุปภาษาคน ไม่ใช่แถวดิบ — ดูคอมเมนต์จุดที่ดึง)
+//   ไม่ต้องเรียก admin API เพิ่ม), account_audit_log (สรุปภาษาคน ไม่ใช่แถวดิบ — ดูคอมเมนต์จุดที่ดึง),
+//   phase1_learning_review_states (เฉพาะ state ของผู้เรียก; ไม่มี operation/replay log)
 //
 // ห้ามรวมเด็ดขาด (นอก scope ที่ Lin อนุมัติ — ตรงตามคำสั่งต้นทาง):
 //   - payout_ledger (การเงิน — คนละระบบ ไม่แตะ)
@@ -215,7 +217,7 @@ serve(async (req) => {
     const [
       profileRes, gameAccountRes, rewardPointsRes, starLedgerRes,
       toneProgressRes, toneSessionsRes, toneSrsRes, readingSessionsRes, rewardEventsRes,
-      lineIdentityRes, auditLogRes,
+      lineIdentityRes, auditLogRes, learningReviewRes,
       wordVaultWrap,
     ] = await Promise.all([
       // ── ชั้นที่ 1: RLS-scoped client (ผูก Authorization ของผู้เรียก) — Postgres กรอง auth.uid()=user_id ให้เอง ──
@@ -225,7 +227,7 @@ serve(async (req) => {
       userClient.from('star_ledger').select('word,level,stars,reason,game,created_at').eq('user_id', callerUid).order('created_at', { ascending: false }).limit(HISTORY_ROW_CAP),
       userClient.from('tone_progress').select('data,updated_at').eq('user_id', callerUid).maybeSingle(),
       userClient.from('tone_sessions').select('created_at,mode,score,total,wrong_words').eq('user_id', callerUid).order('created_at', { ascending: false }).limit(HISTORY_ROW_CAP),
-      userClient.from('tone_srs_state').select('level,word,stage,due_date,ever_failed,mastered,game,updated_at').eq('user_id', callerUid).order('updated_at', { ascending: false }).limit(HISTORY_ROW_CAP),
+      userClient.from('tone_srs_state').select('level,word,item_id,stage,due_date,ever_failed,mastered,game,updated_at').eq('user_id', callerUid).order('updated_at', { ascending: false }).limit(HISTORY_ROW_CAP),
       userClient.from('reading_sessions').select('score,games,game,wrong_items,created_at').eq('user_id', callerUid).order('created_at', { ascending: false }).limit(HISTORY_ROW_CAP),
       userClient.from('game_reward_events').select('game,type,content,status,points_awarded,admin_note,created_at,reviewed_at').eq('user_id', callerUid).order('created_at', { ascending: false }).limit(HISTORY_ROW_CAP),
 
@@ -233,6 +235,7 @@ serve(async (req) => {
       // เองด้วยมือทุกครั้ง callerUid มาจาก auth.getUser() ด้านบนเท่านั้น ไม่ใช่จาก body/query string ──
       admin.from('line_identities').select('line_user_id,created_at').eq('user_id', callerUid),
       admin.from('account_audit_log').select('event_type,provider,created_at').eq('user_id', callerUid).order('created_at', { ascending: false }).limit(HISTORY_ROW_CAP),
+      admin.from('phase1_learning_review_states').select('game,level,item_id,state,due_on,review_attempts_used,updated_at').eq('user_id', callerUid).order('updated_at', { ascending: false }).limit(HISTORY_ROW_CAP),
 
       // 🆕 คลังคำ (單字庫) — ชั้นที่ 1 เหมือนกลุ่มบน (มี SELECT policy auth.uid()=user_id แล้ว)
       //    ห่อด้วยตัวช่วยเพราะต้องรองรับฐานข้อมูลที่ยังไม่มีคอลัมน์ deleted_at
@@ -246,6 +249,7 @@ serve(async (req) => {
       ['star_ledger', starLedgerRes], ['tone_progress', toneProgressRes], ['tone_sessions', toneSessionsRes],
       ['tone_srs_state', toneSrsRes], ['reading_sessions', readingSessionsRes], ['game_reward_events', rewardEventsRes],
       ['line_identities', lineIdentityRes], ['account_audit_log', auditLogRes],
+      ['phase1_learning_review_states', learningReviewRes],
       ['learning_saved_items', wordVaultRes],
     ]) {
       if (res.error) {
@@ -293,6 +297,7 @@ serve(async (req) => {
       total_reading_sessions: readingSessionsRes.data.length,
       total_star_ledger_entries: starLedgerRes.data.length,
       total_words_in_srs: toneSrsRes.data.length,
+      total_words_in_pre_srs_review: learningReviewRes.data.length,
       linked_login_methods: providers.length + lineIdentityRes.data.length,
       total_saved_words: vaultActive.length,   // 🆕 คำในคลังคำที่ยังอยู่ (ไม่นับคำที่ลบแล้ว)
     };
@@ -302,6 +307,7 @@ serve(async (req) => {
       star_ledger: starLedgerRes.data.length >= HISTORY_ROW_CAP,
       tone_sessions: toneSessionsRes.data.length >= HISTORY_ROW_CAP,
       tone_srs_state: toneSrsRes.data.length >= HISTORY_ROW_CAP,
+      phase1_learning_review_states: learningReviewRes.data.length >= HISTORY_ROW_CAP,
       reading_sessions: readingSessionsRes.data.length >= HISTORY_ROW_CAP,
       game_reward_events: rewardEventsRes.data.length >= HISTORY_ROW_CAP,
       account_history: accountHistory.length >= HISTORY_ROW_CAP,
@@ -330,6 +336,7 @@ serve(async (req) => {
         star_ledger: starLedgerRes.data,
         tone_sessions: toneSessionsRes.data,
         tone_srs_state: toneSrsRes.data,
+        phase1_learning_review_states: learningReviewRes.data,
         reading_sessions: readingSessionsRes.data,
         game_reward_events: rewardEventsRes.data,
         account_changes: accountHistory, // สรุปภาษาคนจาก account_audit_log — ไม่ใช่แถวดิบ

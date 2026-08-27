@@ -280,7 +280,6 @@
     options = options || {};
     var tier = options.tier === 'paid' ? 'paid' : (options.tier === 'free' ? 'free' : 'guest');
     var ratio = tier === 'paid' ? 0.30 : (tier === 'free' ? 0.20 : 0);
-    var reviewLimit = tier === 'paid' ? 4 : (tier === 'free' ? 1 : 0);
     var total = Math.max(0, Math.floor(Number(options.total) || 0));
     var idOf = typeof options.idOf === 'function' ? options.idOf : function (item) { return item && (item.id || item.th || item.word); };
     var seen = Object.create(null);
@@ -313,7 +312,6 @@
     return {
       tier: tier,
       ratio: ratio,
-      reviewLimit: reviewLimit,
       quota: dueLimit,
       items: items,
       selectedDue: selectedDue,

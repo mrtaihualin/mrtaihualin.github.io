@@ -161,6 +161,14 @@
 - Advanced `reading-auth.js` on Vault from v27 to v28 and `auth-widget.js` on its seven existing consumers from v15 to v16. Public Login and the Minimum Guest gate remain unchanged.
 
 **Prior update: 2026-08-26 Asia/Bangkok** — Login callback credential-fragment fail-closed fix
+**Prior update: 2026-08-27 Asia/Bangkok** — Hidden pre-SRS Review integration seam
+
+## 2026-08-27 — Hidden pre-SRS Review integration seam (`PASS_LOCAL / OWNER_STORAGE_GATE_OPEN`)
+
+- Reused exact clean Hidden Candidate commit `80a78346ec3a3178a9cc88325adb1a8f8d5b6524` and added one default-OFF bridge from the existing `round-report-v1` completion shape to an explicitly injected atomic learning-state/SRS owner. The bridge performs no network, storage, Supabase, Auth or SRS mutation itself.
+- The bridge requires a stable item identity, an explicit canonical integer learning score `0–10`, action-token idempotency, state-token compare-and-swap and one owner that is atomic across pre-SRS replacement and SRS entry. In-SRS evidence bypasses the pre-SRS candidate and remains SRS-owner-only with no Review/Weak backflow; Paid runtime remains disabled.
+- Source audit found the current Core-5 RoundReport does not yet provide the required stable `item_id` plus canonical `learning_score`, and the current SRS owner cannot atomically replace a pre-SRS state because no authorized durable pre-SRS state binding exists. The bridge therefore stays unlinked/default OFF and fails closed until the shared authority/schema/security gate is resolved.
+- Verification: integration `6/6`, Hidden Candidate `29/29`, syntax and diff checks PASS. No public HTML/runtime entry, Staging/Production call, schema/RPC/Edge/Auth/identity/automation mutation, push, PR, merge or deploy occurred.
 
 ## 2026-08-26 — Login callback credential-fragment fail-closed (`PASS_LOCAL / RELEASE_PENDING`)
 
@@ -2425,3 +2433,9 @@ node scripts/check-site.js
 - Added synthetic Day 0/1/8 and empty/loading/error/access-denied fixtures plus a developer-only preview that is default OFF, localhost-only, explicitly enabled, initially hidden, unlinked, and `noindex`.
 - Verification: hidden-candidate tests `12/12`; existing Phase 1 SRS `17/17`; game-flow and Listening regressions PASS; local browser confirmed OFF produces no visible content and explicit localhost Day 1 shows five isolated rows with no links/forms or console warnings/errors; `node scripts/check-site.js` PASS across 1,021 files including secret scan.
 - No Production/Staging call or mutation, database/schema/RPC/Edge/Auth/test-identity/automation change, public activation, push, PR, merge, or deploy.
+
+## 2026-08-27 — Hidden Review atomic source preparation
+
+- Added source-only Free pre-SRS tables and one service-role RPC that resolves the existing `content_ref` to exactly one `learning_items.item_id`, applies transitions atomically with compare-and-swap, stores exact replay results, rejects changed replay, and enters the existing SRS owner at stage 0 without backflow.
+- Browser roles receive no table or RPC write privilege. The bridge ignores client item IDs and client score values; it requires a game-specific server verification seam and keeps canonical learning scores before every combo/golden/level/end-round/SRS bonus.
+- Local PostgreSQL verification compiles the migration and passes deny-by-default, missing/duplicate identity, Free Review timing/attempts, idempotency/conflict/CAS, stage-0/no-backflow, five-game isolation and concurrent exactly-once checks. The source is not applied to Staging or Production; Paid and public runtime remain OFF.

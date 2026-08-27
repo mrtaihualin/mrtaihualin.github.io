@@ -149,8 +149,8 @@
   }
   // ===== LISTENING_SRS_RACE_GUARD_END =====
 
-  // ===== LISTENING_REVIEW_POLICY_START =====
-  function createListeningReviewPolicy(options) {
+  // ===== LISTENING_SRS_DUE_POLICY_START =====
+  function createListeningSrsDuePolicy(options) {
     var reviewKeys = Object.create(null);
     var attempts = Object.create(null);
     var submissions = Object.create(null);
@@ -163,9 +163,9 @@
       submissions = Object.create(null);
       limitPerItem = 0;
     }
-    function begin(selectedDue, reviewLimit) {
+    function begin(selectedDue) {
       reset();
-      limitPerItem = Math.max(0, Math.min(1, Math.floor(Number(reviewLimit) || 0)));
+      limitPerItem = (selectedDue || []).length ? 1 : 0;
       (selectedDue || []).forEach(function (word) {
         var key = keyOf(word);
         if (key) reviewKeys[key] = true;
@@ -226,7 +226,7 @@
       snapshot: snapshot
     };
   }
-  // ===== LISTENING_REVIEW_POLICY_END =====
+  // ===== LISTENING_SRS_DUE_POLICY_END =====
 
   function qs(id) { return document.getElementById(id); }
 
@@ -344,7 +344,7 @@
   }
 
   function srsKey(word) { return (word && word.th || '') + '@' + levelNumber(word); }
-  var listeningReviewPolicy = createListeningReviewPolicy({ keyOf: srsKey });
+  var listeningSrsDuePolicy = createListeningSrsDuePolicy({ keyOf: srsKey });
   function taipeiDate(value) {
     var d = value == null ? new Date() : new Date(value);
     try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(d); }
@@ -418,7 +418,7 @@
 
   function allocateListeningRound(pool, n) {
     if (!window.READING_AUTH || !READING_AUTH.srsUser || !window.GameFlow || !GameFlow.allocateSrs) {
-      listeningReviewPolicy.begin([], 0);
+      listeningSrsDuePolicy.begin([]);
       return sampleRound(pool, n);
     }
     var due = shuffle(pool.filter(isSrsDue));
@@ -430,7 +430,7 @@
       tier: 'free', total: Math.min(n, due.length + regular.length),
       due: due, regular: regular, idOf: srsKey, scope: 'listening'
     });
-    listeningReviewPolicy.begin(allocation.selectedDue, allocation.reviewLimit);
+    listeningSrsDuePolicy.begin(allocation.selectedDue);
     return allocation.items;
   }
 
@@ -860,9 +860,9 @@
   function sendListeningSrs(word, primaryScore) {
     try {
       if (!window.TONE_SERVER || !TONE_SERVER.available()) return;
-      if (!listeningReviewPolicy.claimSubmission(word)) return;
+      if (!listeningSrsDuePolicy.claimSubmission(word)) return;
       // Persist the claim before starting the request. A refresh/restart cannot
-      // generate a second request id for the same Review Needed item.
+      // generate a second request id for the same in-SRS Due item.
       saveResumeState();
       TONE_SERVER.finishRound({
         game: 'listening', word: word.th, level: levelNumber(word),
@@ -903,9 +903,9 @@
     closeTypeKeyboard();
     state.audioFailed = false;
     if (el.skipBtn) { el.skipBtn.style.display = 'none'; el.skipBtn.disabled = true; }
-    if (!listeningReviewPolicy.claimAttempt(w)) return;
+    if (!listeningSrsDuePolicy.claimAttempt(w)) return;
     var existingSrs = listeningSrs[srsKey(w)] || {};
-    var isReviewAttempt = listeningReviewPolicy.isReview(w);
+    var isSrsDueAttempt = listeningSrsDuePolicy.isReview(w);
     if (isCorrect) state.correct++; else state.wrong++;
     var primary = Number(detail.primaryScore) || 0;
     var bonus = Number(detail.typingBonus) || 0;
@@ -919,7 +919,7 @@
       wordCount: LISTENING_SCORE.wordCount(w.th),
       unitCount: LISTENING_SCORE.typingUnitCount(w),
       srsDue: existingSrs.dueDate || '',
-      reviewNeeded: isReviewAttempt,
+      srsDueAttempt: isSrsDueAttempt,
       mastered: !!existingSrs.mastered,
       attempts: state.itemAttempts.slice()
     });
@@ -934,11 +934,11 @@
         item_score: primary + bonus, listen_count: state.listenCount,
         linguistic: { reading_th: w.readingTH || '', reading_en: w.en || '', level: w.level || '', answer_mode: state.mode, listening_score: primary, typing_score: bonus },
         srs_state: existingSrs.stage == null ? null : existingSrs.stage,
-        review_state: isReviewAttempt ? 'needed' : 'not_due',
+        review_state: null,
         mastered_state: !!existingSrs.mastered
       });
     }
-    var requeueThisRound = listeningReviewPolicy.shouldRequeue(w, detail.requeue);
+    var requeueThisRound = listeningSrsDuePolicy.shouldRequeue(w, detail.requeue);
     if (requeueThisRound) {
       state.round.push(w);
       el.qt.textContent = String(state.round.length);
@@ -1004,7 +1004,7 @@
         answered: state.answered,
         nextMode: state.nextMode,
         itemAttempts: state.itemAttempts,
-        listeningReviewPolicy: listeningReviewPolicy.snapshot(),
+        listeningSrsDuePolicy: listeningSrsDuePolicy.snapshot(),
         log: state.log,
         report: state.report && window.RoundReport ? RoundReport.snapshot(state.report) : null
       });
@@ -1064,7 +1064,7 @@
       typingWrong: saved.answered ? 0 : (typeof saved.typingWrong === 'number' ? saved.typingWrong : 0),
       preserveAttempt: !saved.answered,
       itemAttempts: Array.isArray(saved.itemAttempts) ? saved.itemAttempts : [],
-      listeningReviewPolicy: saved.listeningReviewPolicy || null,
+      listeningSrsDuePolicy: saved.listeningSrsDuePolicy || saved.listeningReviewPolicy || null,
       log: Array.isArray(saved.log) ? saved.log : [],
       report: saved.report || null
     };
@@ -1084,13 +1084,13 @@
     if (!pend) return;
     // A v11 resume has no selected-Due ledger. Start fresh instead of guessing;
     // auth may still be resolving here, so this must not depend on current user.
-    if (!pend.listeningReviewPolicy) {
+    if (!pend.listeningSrsDuePolicy) {
       state._pendingResume = null;
       try { if (window.GameResume) window.GameResume.clear('listening-game'); } catch (e) {}
       startRound();
       return;
     }
-    listeningReviewPolicy.restore(pend.listeningReviewPolicy);
+    listeningSrsDuePolicy.restore(pend.listeningSrsDuePolicy);
     state.level = pend.level;
     renderLevelTabs();
     state.pool = buildPool(state.level);
@@ -1134,12 +1134,12 @@
     state._pendingResume = null;
     try { if (window.GameResume) window.GameResume.clear('listening-game'); } catch (e) {}
     if (!pend) return;
-    listeningReviewPolicy.restore(pend.listeningReviewPolicy);
+    listeningSrsDuePolicy.restore(pend.listeningSrsDuePolicy);
     state.level = pend.level;
     renderLevelTabs();
     state.pool = buildPool(state.level);
     state.round = pend.round.filter(function (word) {
-      return !listeningReviewPolicy.isReview(word) || !listeningReviewPolicy.hasAttempted(word);
+      return !listeningSrsDuePolicy.isReview(word) || !listeningSrsDuePolicy.hasAttempted(word);
     });
     if (!state.round.length) { startRound(); return; }
     state.idx = 0; state.correct = 0; state.wrong = 0;

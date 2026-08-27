@@ -9,6 +9,8 @@
 
 One opaque owner plus `game + level + item` has exactly one active state. Five-game histories remain isolated. Free and Paid use the same score transitions; only Review attempt and allocation limits differ.
 
+`item` means only `learning_items.item_id` resolved through the existing `content_ref` connector. A missing or ambiguous match fails closed; the client cannot nominate an item id. `score` means the integer `0–10` produced by that game's server-verifiable item rule before combo, golden, level, end-round and SRS bonuses. Client score fields are ignored, and no cross-game score normalization is performed.
+
 | Current state | Score | Replacement state | Due/group |
 |---|---:|---|---|
 | `NORMAL` | `10` | `SRS` canonical initial route | owner stage `0`; not Day 1 passed |
@@ -53,7 +55,7 @@ The candidate emits deterministic/idempotent directives and never mutates SRS or
 - Active state: `sourceType, ownerKey, game, level, itemId, state, stateToken, dueOn, roundToken, retryOrdinal, reviewAttemptsUsed`.
 - SRS Due snapshot: `sourceType, ownerKey, game, level, itemId, due, mastered`.
 - Existing canonical SRS state: `sourceType, ownerKey, game, level, itemId, stateToken, stage, dueDate, mastered`.
-- Result evidence: exact numeric `score`, explicit calendar `occurredOn`, opaque unique `actionToken`, and `roundToken` only when the replacement is the once-per-round retry.
+- Result evidence: server-verified per-game numeric `score`, exact canonical `content_ref`, explicit calendar `occurredOn`, opaque unique `actionToken`, and `roundToken` only when the replacement is the once-per-round retry.
 - Queue options: explicit `tier`, calendar `today`, positive integer `playSetSize`, and explicit dormant-tier allowance for Paid verification.
 - SRS entry: explicit canonical-state status `absent` or `present`; unknown/conflict fails closed.
 
@@ -108,6 +110,12 @@ Earlier commits and checklist rows remain history. This Delta starts at `c3b0d78
 - Verify exact integration concurrency, session/device continuity, allocation carry-forward and canonical SRS reuse with owner evidence.
 - Complete SRS natural-time evidence and any required Human/Product UI/public-release gates.
 - Obtain separate authorization for public flag/entry/navigation, push/PR/merge/deploy, Production/Staging and activation.
+
+## Integration source checkpoint — 2026-08-27
+
+- The hidden bridge now requires two server-owner seams before reading state: exact `content_ref` resolution to one stable item and a per-game server-verified learning score. It never reads client `item_id` or `learning_score` as authority.
+- `supabase/migrations/20260827111028_phase1_learning_review_atomic_source.sql` prepares the Free-only atomic owner, CAS, durable idempotency, exact replay/conflict handling, stable-id SRS stage-0 entry and deny-by-default privileges.
+- The source is committed preparation only. It is not applied anywhere and must wait for Free SRS Day 8 PASS plus fresh Pre-Work, Security, migration-collision and rollback gates. Paid/Public/Production remain disabled.
 
 ## Stop boundary
 

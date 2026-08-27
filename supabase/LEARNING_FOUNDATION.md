@@ -5,6 +5,8 @@
 - Reuse the existing Learning Item/Memory/Skill/content model. Do not create a parallel model; route a claimed gap to Current Product/architecture authority.
 - `learning_items.item_id` is stable identity. When a content key changes, preserve its history in `learning_item_key_history`.
 - `practice_events` is append-only raw evidence; `learning_memory` is derived state.
+- The locked pre-SRS Review route is operational state, not a second Learning Item or Skill/Memory model: it uses `learning_items.item_id` resolved from the existing `content_ref`, keeps game histories isolated, and enters the existing `tone_srs_state` owner atomically. Missing or ambiguous identity fails closed.
+- The canonical 0–10 learning score is decided per item by that game's server-verifiable rules before combo, golden, level, end-round or SRS bonuses. Client-provided score values are never authoritative and scores are not normalized across games.
 - Saved/Vault, Played evidence and Learning Memory are distinct concepts and may not be inferred from one another.
 - Personal learning items are owner-only. System content has no personal owner. Preserve RLS isolation.
 - Empty lookup tables may be intentional. Do not invent Skill/tag/formula/price/quota/game-compatibility values that Product authority has not locked.
