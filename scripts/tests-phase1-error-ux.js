@@ -172,21 +172,19 @@ test('content loading error has retry, home and support recovery', () => {
   assert.match(content, /返回遊戲總覽/);
   assert.match(content, /用LINE問老師/);
 });
-test('all Core 5 Guest pages expose only Login Core and ship current isolated audio error handling', () => {
+test('all Core 5 Guest pages park Auth and ship current isolated audio error handling', () => {
   ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html'].forEach((page) => {
     const html = read(page);
-    assert.match(html, /auth-widget\.js\?v=17/);
-    assert.match(html, /reading-auth\.js\?v=29/);
-    assert.doesNotMatch(html, /game-account\.js|learning-summary\.js|practice-events\.js/);
+    assert.doesNotMatch(html, /auth-widget\.js/);
     assert.match(html, /protected-word-audio\.js\?v=3/);
   });
 });
-test('parked account sources and active Login callback preserve current failure-handling clients', () => {
+test('parked account and callback sources preserve current failure-handling clients', () => {
   ['leaderboard.html','listening-board.html','my-progress.html','reading-board.html',
     'typing-board.html','word-order-board.html','vault.html']
     .forEach((page) => assert.match(read(page), /auth-widget\.js\?v=17/, page));
   ['lego.html','listening-game.html','reading-game.html','tone-finder.html','typing-game.html','word-order.html']
-    .forEach((page) => assert.match(read(page), /auth-widget\.js\?v=17/, page));
+    .forEach((page) => assert.doesNotMatch(read(page), /auth-widget\.js/, page));
   assert.match(read('leaderboard.html'), /leaderboard\.js\?v=13/);
   ['reading-board.html','listening-board.html','typing-board.html','word-order-board.html']
     .forEach((page) => assert.match(read(page), /reading-leaderboard\.js\?v=9/, page));

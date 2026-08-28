@@ -87,14 +87,13 @@ test('personal vault saves and deletes use bounded owner-safe online retry', () 
   assert.match(wordVault, /if \(!_ownerIsCurrent\(owner\)\) return;[\s\S]{0,180}delete _saveInFlight\[th\]/);
   assert.match(sentenceVault, /if \(!ownerIsCurrent\(owner\)\) return;[\s\S]{0,180}delete _saveInFlight\[th\]/);
 });
-test('Core 5 keep round-save parked while exposing isolated Login Core', () => {
+test('Core 5 park personal round-save clients in Minimum Guest mode', () => {
   ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html'].forEach((page) => {
     const html = read(page);
     assert.doesNotMatch(html, /tone-server\.js/);
     assert.match(html, /network-guard\.js\?v=1/);
-    assert.match(html, /reading-auth\.js\?v=29/);
+    assert.doesNotMatch(html, /reading-auth\.js/);
   });
-  assert.match(read('js/games/reading-auth.js'), /if \(publicLoginOnly\) return null;/);
 });
 
 if (!process.exitCode) console.log('\n✅ Phase 1 API/Edge/save/retry safety passed (' + passed + ' checks)');

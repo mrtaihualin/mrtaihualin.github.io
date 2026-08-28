@@ -1,14 +1,6 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-28 Asia/Bangkok** — LOGIN-L8 Public Login-only activation
-
-## 2026-08-28 — LOGIN-L8 Public Login-only activation (`PASS_LOCAL / RELEASE_PENDING`)
-
-- Added the explicit reversible `LOGIN_CORE_PUBLIC_ENTRY` activation while retaining Minimum Guest as the owner of gameplay, score, SRS/Review, personal data, Leaderboards, Paid/Challenge and game-state isolation. The six public games load only the exact Login Core widget and Login transport; the game-facing Auth user stays Guest and score submission remains a no-op.
-- Re-enabled the existing LINE callback transport and exposed the existing neutral Login-only control without restoring any parked account/learning bundle, route or promise. Protected content/audio continue using the isolated anonymous client, and parked personal/board/Challenge pages still fail closed before their runtime.
-- Added activation/isolation/cache/error/owner/transaction regression coverage. The complete 1,014-file site gate and secret scan pass; no Supabase schema/config/provider/account/session/user-data mutation is part of this source Delta. Rollback is one clean revert to the immediately preceding Production commit.
-
-**Prior update: 2026-08-27 Asia/Bangkok** — LOGIN-L7 Facebook link callback fresh-user verification
+**Updated: 2026-08-27 Asia/Bangkok** — LOGIN-L7 Facebook link callback fresh-user verification
 
 ## 2026-08-27 — LOGIN-L7 Facebook link callback fresh-user verification (`PASS_LOCAL / HIDDEN_PREVIEW_PENDING`)
 
