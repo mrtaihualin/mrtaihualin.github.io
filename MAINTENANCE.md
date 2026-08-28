@@ -2,7 +2,7 @@
 
 **Updated: 2026-08-28 Asia/Bangkok** — Reading Desktop Tone-shell parity
 
-## 2026-08-28 — Reading Desktop Tone-shell parity (`PASS_LOCAL / PREVIEW_PASS / HUMAN_REVIEW_PENDING / PRODUCTION_UNCHANGED`)
+## 2026-08-28 — Reading Desktop Tone-shell parity (`PASS_LOCAL / LOCAL_BROWSER_PASS / HUMAN_REVIEW_PENDING / PRODUCTION_UNCHANGED`)
 
 - Reused the accepted Tone shell treatment that is compatible with Reading ordinary Desktop: the Reading title/subtitle remain visible in focus mode, the site announcement stays out of the game surface, and the existing game-switcher and focus controls form one horizontal row with the switcher opening above it. No retired `🍚` or absent More control was added.
 - Copied Tone's complete gold question-band presentation on Reading Desktop: progress spacing, inner padding, Thai/roman/Chinese reading rhythm, translation color, and the full-width gold learning-tool row with its closing border. Reading's additional learning tools and gameplay remain intact; Portrait and Mobile Landscape are unchanged.
