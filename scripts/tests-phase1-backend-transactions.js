@@ -116,12 +116,16 @@ test('Lego client reuses uncertain request id and rejects stale owner completion
   assert.match(legoClient, /if\(quota\._owner&&!legoQuotaSameOwner\(quota\._owner\)\) quota=\{ok:false,reason:'owner_changed'\}/);
 });
 
-test('Minimum Guest pages park personal transaction clients while preserving source contracts', () => {
-  for (const page of ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html']) {
+test('Reading exposes isolated Login Core while all personal transaction clients remain parked', () => {
+  for (const page of ['tone-finder.html','listening-game.html','typing-game.html','word-order.html']) {
     const html = read(page);
     assert.doesNotMatch(html, /tone-server\.js/, page);
     assert.doesNotMatch(html, /reading-auth\.js/, page);
   }
+  const reading = read('reading-game.html');
+  assert.doesNotMatch(reading, /tone-server\.js/);
+  assert.match(reading, /reading-auth\.js\?v=29/);
+  assert.match(read('js/games/reading-auth.js'), /if \(publicLoginOnly\) return null;/);
   const lego = read('lego.html');
   assert.match(lego, /network-guard\.js\?v=1[\s\S]+lego-game-app\.js\?v=12/);
   assert.doesNotMatch(lego, /reading-auth\.js/);
