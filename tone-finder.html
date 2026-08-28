@@ -73,7 +73,7 @@ if (document.fonts && document.fonts.load) {
   document.fonts.load("400 14px 'Noto Sans Thai'", "◌่้๊๋").catch(function(){});
 }
 </script>
-<link rel="stylesheet" href="css/shared.css?v=32">
+<link rel="stylesheet" href="css/shared.css?v=33">
 <link rel="stylesheet" href="css/tone-mobile-landscape.css?v=2">
 <style>
   /* P6-28 (2026-08-08): ปุ่มเรียกฟังก์ชันเกม (TF.* มาจาก tone-finder-game.min.js โหลดแบบ async
@@ -1818,7 +1818,7 @@ document.addEventListener('contextmenu', function(e){
   ]
 }
 </script>
-<script src="js/core/minimum-guest-launch.js?v=2"></script>
+<script src="js/core/minimum-guest-launch.js?v=4"></script>
 </head>
 <body data-gsh-game="tone">
 <!--ANN-BAND:START--><!-- Login UI scope: no announcement strip. --><!--ANN-BAND:END-->
@@ -1970,7 +1970,6 @@ document.addEventListener('contextmenu', function(e){
       {id:'font-toggle-slot',    label:'字體',   state:'font'},
       {id:'tf-particle-toggle',  label:'禮貌詞', state:'particle'}
     ]});});</script>
-    <div class="gsh-skip-slot" id="tf-skip-slot" aria-hidden="true" data-gsh-action-slot="skip"></div>
     <div class="tf-bc" id="tf-bc"></div>
     <div class="tf-nav-bar" id="tf-nav-bar">
       <button class="tf-nav-btn" id="tf-back-btn" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_step_back',{category:'game'});}catch(e){}TF.back()" disabled>← 上一步</button>
@@ -2025,7 +2024,7 @@ document.addEventListener('contextmenu', function(e){
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/tone-finder-game.min.js?v=77']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/tone-finder-game.min.js?v=78']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 
@@ -2049,7 +2048,7 @@ document.addEventListener('contextmenu', function(e){
           → หน้านี้เป็นหน้าเดียวที่ผิดแถว = ของค้างจากตอนอัปโหลดชุดแรก (git: 6a10c58)
      ถ้าวันหลังหน้านี้จะมีหน้าต่างบทความ/โพสต์จริงๆ ค่อยใส่ 2 บรรทัดนี้กลับมา -->
 <script src="data/nav-template.js?v=4"></script>
-<script src="js/core/shared.min.js?v=43"></script>
+<script src="js/core/shared.min.js?v=45"></script>
 <script src="js/games/game-flow.js?v=11"></script>
 <script src="js/games/tone-mobile-landscape.js?v=1"></script>
 <script>

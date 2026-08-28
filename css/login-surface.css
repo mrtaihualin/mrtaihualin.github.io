@@ -1,6 +1,20 @@
-/* Shared Login surface for the games/account entry lane.
-   Reading remains the auth-flow owner; this file only standardizes placement. */
-.mrt-login-surface {
+/* Shared Login placement. Reading remains the auth-flow owner.
+   Game surfaces deliberately retain their original, game-owned dimensions. */
+.mrt-login-surface { font-family: 'Noto Sans TC', sans-serif; }
+
+.mrt-login-surface[data-login-surface="game"] { margin-top: 0; }
+
+/* Fit the new Login action inside Tone's original 46px Desktop profile row.
+   Existing Tone controls and the row itself keep their exact old dimensions. */
+@media (min-width: 1025px),
+       (min-width: 769px) and (min-height: 601px) {
+  .mrt-login-surface[data-login-surface="game"] .mrt-login-button {
+    padding-top: 2.25px !important;
+    padding-bottom: 2.25px !important;
+  }
+}
+
+.mrt-login-surface[data-login-surface="single"] {
   width: min(100%, 1080px);
   min-height: 92px;
   margin: 22px auto 28px;
@@ -14,11 +28,6 @@
   background: #faf4e8;
   border: 2px solid #c8973a;
   border-radius: 22px;
-  font-family: 'Noto Sans TC', sans-serif;
-}
-
-.mrt-login-surface[data-login-surface="game"] {
-  margin-top: 0;
 }
 
 .mrt-login-surface #rg-login-slot,
@@ -30,8 +39,8 @@
   flex: 0 0 auto !important;
 }
 
-.mrt-login-surface #rg-login-btn,
-.mrt-login-surface .mrt-login-button {
+.mrt-login-surface[data-login-surface="single"] #rg-login-btn,
+.mrt-login-surface[data-login-surface="single"] .mrt-login-button {
   min-width: 176px;
   min-height: 54px;
   padding: 12px 28px !important;
@@ -49,7 +58,7 @@
   cursor: pointer;
 }
 
-.mrt-login-surface .mrt-login-howto {
+.mrt-login-surface[data-login-surface="single"] .mrt-login-howto {
   min-width: 146px;
   min-height: 54px;
   padding: 12px 25px !important;
@@ -81,31 +90,22 @@
   text-align: center;
 }
 
-/* Keep the five shared game headers on one baseline without redesigning them. */
-@media (min-width: 1025px),
-       (min-width: 769px) and (min-height: 601px),
-       (max-width: 768px) and (orientation: portrait) {
-  body[data-gsh-game] .gsh-page-header {
-    min-height: 62px;
-  }
-}
-
 @media (max-width: 560px) and (orientation: portrait) {
-  .mrt-login-surface {
+  .mrt-login-surface[data-login-surface="single"] {
     min-height: 82px;
     margin: 16px auto 22px;
     padding: 13px 14px;
     gap: 10px;
     border-radius: 18px;
   }
-  .mrt-login-surface #rg-login-btn,
-  .mrt-login-surface .mrt-login-button {
+  .mrt-login-surface[data-login-surface="single"] #rg-login-btn,
+  .mrt-login-surface[data-login-surface="single"] .mrt-login-button {
     min-width: 142px;
     min-height: 48px;
     padding: 10px 20px !important;
     font-size: 17px !important;
   }
-  .mrt-login-surface .mrt-login-howto {
+  .mrt-login-surface[data-login-surface="single"] .mrt-login-howto {
     min-width: 122px;
     min-height: 48px;
     padding: 10px 18px !important;

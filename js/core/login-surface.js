@@ -94,7 +94,6 @@
 
     surface.classList.add('mrt-login-surface');
     surface.setAttribute('data-login-surface', 'game');
-    surface.removeAttribute('style');
 
     help = surface.querySelector('#rg-howto-btn,#tf-howto-btn,#lg-howto-btn,#typing-howto-btn,#wo-howto-btn,#lego-howto-btn,[title="怎麼玩"]');
     if (help) {

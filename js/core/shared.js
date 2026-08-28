@@ -214,12 +214,12 @@ if (suppressScopedAnnouncement) {
   if (!document.querySelector('link[href*="login-surface.css"]')) {
     var stylesheet = document.createElement('link');
     stylesheet.rel = 'stylesheet';
-    stylesheet.href = 'css/login-surface.css?v=1';
+    stylesheet.href = 'css/login-surface.css?v=3';
     document.head.appendChild(stylesheet);
   }
   if (!document.querySelector('script[src*="login-surface.js"]')) {
     var controller = document.createElement('script');
-    controller.src = 'js/core/login-surface.js?v=1';
+    controller.src = 'js/core/login-surface.js?v=3';
     document.head.appendChild(controller);
   }
 })();

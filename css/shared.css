@@ -823,204 +823,31 @@ body .gsh-shell.tf-page { padding-top:8px; }
 .gsh-mistake-back { margin:14px auto 0; display:block; }
 
 /* ===================================================================
-   SHARED PAGE FRAMEWORK — Tone-authoritative Desktop + Mobile Portrait
-   Lin 2026-08-28: Core 5 use one axis, one slot system and one control row.
-   Lego participates only through the existing Login surface; its lower game
-   layout and behavior remain outside this packet.
-   The short-screen Mobile Landscape contract below is a separate owner and
-   intentionally remains later in this file so its existing rules keep priority.
+   SHARED PAGE POSITIONING — Tone-authoritative Desktop + Portrait
+   Lin 2026-08-28: reuse the original Tone dimensions. This layer changes
+   axis/order/anchoring only; it must not resize cards, copy, buttons or rows.
+   Lego lower gameplay and Mobile Landscape remain outside this packet.
    =================================================================== */
-body[data-gsh-game]:not([data-gsh-game="lego"]) {
-  --gsh-framework-width:640px;
-  --gsh-framework-card-radius:20px;
-  --gsh-copy-main-height:57px;
-  --gsh-copy-reading-height:28px;
-  --gsh-copy-roman-height:23px;
-  --gsh-copy-translation-height:28px;
-  --gsh-progress-height:39px;
-  --gsh-tools-height:56px;
-  --gsh-skip-slot-height:48px;
-  --gsh-skip-action-width:73px;
-  --gsh-skip-action-height:40px;
-}
-
 @media (min-width:1025px),
        (min-width:769px) and (min-height:601px),
        (max-width:768px) and (orientation:portrait) {
-/* Tone 初級 supplies the measurable four-row rhythm. The slot remains even
-   when game-owned content is unavailable or intentionally hidden. */
-body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-question-surface .gsh-question-stack,
-body[data-gsh-game="word-order"] .gsh-question-stack {
-  display:grid;
-  grid-template-rows:
-    var(--gsh-copy-main-height)
-    var(--gsh-copy-reading-height)
-    var(--gsh-copy-roman-height)
-    var(--gsh-copy-translation-height);
-  width:100%; height:136px; min-height:136px; overflow:hidden;
-}
-body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-question-surface .gsh-copy-slot,
-body[data-gsh-game="word-order"] .gsh-question-stack > .gsh-copy-slot {
-  width:100%; min-width:0; min-height:0; margin:0 !important; padding:0;
-  display:flex !important; align-items:center; justify-content:center;
-  overflow:hidden; text-align:center; box-sizing:border-box;
-}
-body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-question-surface .gsh-question-stack > #tf-read-line {
-  display:contents;
-}
-body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-question-surface .gsh-copy-slot[aria-hidden="true"],
-body[data-gsh-game="word-order"] .gsh-question-stack > .gsh-copy-slot[aria-hidden="true"] {
-  visibility:hidden;
-}
-body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-question-surface .gsh-copy-main > *,
-body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-question-surface .gsh-copy-reading > *,
-body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-question-surface .gsh-copy-roman > *,
-body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-question-surface .gsh-copy-translation > * {
-  max-width:100%; max-height:100%; margin:0 !important; overflow:hidden;
-}
-body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-question-surface .gsh-copy-main > * {
-  line-height:1.5 !important;
-}
-body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-question-surface .gsh-copy-reading > *,
-body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-question-surface .gsh-copy-roman > *,
-body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-question-surface .gsh-copy-translation > * {
-  line-height:normal !important;
-}
-body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-question-surface .gsh-copy-main {
-  padding-top:0;
-}
-body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-question-surface .gsh-copy-reading {
-  padding-top:4px;
-}
-body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-question-surface .gsh-copy-roman {
-  padding-top:2px;
-}
-body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-question-surface .gsh-copy-translation {
-  padding-top:6px;
-}
-}
-
-@media (min-width:1025px),
-       (min-width:769px) and (min-height:601px),
-       (max-width:768px) and (orientation:portrait) {
-  body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-shell,
-  body[data-gsh-game]:not([data-gsh-game="lego"]) .page {
-    width:100%; max-width:688px; margin-inline:auto; padding-inline:24px !important;
-    box-sizing:border-box;
-  }
   body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-page-header,
   body[data-gsh-game]:not([data-gsh-game="lego"]) .mrt-login-surface,
   body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-session-header,
   body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-resume-banner,
   body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-gameplay {
-    width:100%; max-width:var(--gsh-framework-width); margin-inline:auto;
+    margin-inline:auto;
     box-sizing:border-box;
   }
-  body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-page-header {
-    height:62px; min-height:62px; margin-bottom:10px;
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    overflow:hidden; text-align:center;
-  }
-  body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-page-header h1 {
-    margin:0 !important; font-size:clamp(20px,4vw,28px); line-height:1.25;
-  }
-  body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-page-header p,
-  body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-page-header .page-sub,
-  body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-page-header .tf-page-hint {
-    margin:3px 0 0 !important; font-size:12px; line-height:1.5;
-  }
-  body[data-gsh-game]:not([data-gsh-game="lego"]) .mrt-login-surface { min-height:92px; margin-top:0; margin-bottom:28px; }
-  body[data-gsh-game]:not([data-gsh-game="lego"]) .tf-tools-row,
-  body[data-gsh-game]:not([data-gsh-game="lego"]) .rg-tools-row {
-    width:100%; max-width:var(--gsh-framework-width); margin:0 auto 10px !important;
-    padding:0 !important; box-sizing:border-box;
-  }
-  body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-session-header {
-    height:82px; min-height:82px; margin-top:0; margin-bottom:0; padding:0 0 10px;
-    flex-direction:column; flex-wrap:nowrap; gap:10px;
-  }
-  body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-session-placeholder { visibility:hidden; pointer-events:none; }
-  body[data-gsh-game="listening"] .gsh-session-placeholder {
-    position:relative; top:10px; margin-bottom:10px;
-  }
-  body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-gameplay {
-    margin-top:0; border-radius:var(--gsh-framework-card-radius); gap:0;
-  }
-  body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-progress,
-  body[data-gsh-game]:not([data-gsh-game="lego"]) #tf-bars-wrap {
-    width:100%; height:var(--gsh-progress-height); min-height:var(--gsh-progress-height);
-    margin:6px 0 4px !important; box-sizing:border-box;
-  }
-  body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-progress-placeholder,
-  body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-tools-placeholder { visibility:hidden; pointer-events:none; }
-  body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-gameplay > .gold-banner,
-  body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-question-surface {
-    padding-left:10px !important; padding-right:10px !important;
-  }
-  body[data-gsh-game]:not([data-gsh-game="lego"]) .word-area.gsh-question-surface {
-    padding-left:0 !important; padding-right:0 !important;
-  }
-  body[data-gsh-game="reading"] .gsh-gameplay > .gold-banner,
-  body[data-gsh-game="typing"] .gsh-gameplay > .gold-banner,
-  body[data-gsh-game="word-order"] .gsh-gameplay > .gold-banner {
-    width:calc(100% + 40px) !important;
-    margin:-20px -20px 0 !important; padding:16px 10px 10px !important;
-    border-bottom:0 !important;
-  }
-  body[data-gsh-game="word-order"] .gsh-gameplay > .gold-banner {
-    margin-top:-22px !important;
-  }
-  body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-gameplay > .gsh-learning-tools {
-    height:var(--gsh-tools-height); min-height:var(--gsh-tools-height);
-    margin:0 !important; padding:0 !important; box-sizing:border-box;
-  }
-  body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-gameplay > .gsh-skip-slot {
-    width:100%; height:var(--gsh-skip-slot-height); min-height:var(--gsh-skip-slot-height);
-    margin:0 !important; padding:4px 0 !important; box-sizing:border-box;
-    display:flex; flex:0 0 var(--gsh-skip-slot-height); align-items:center; justify-content:center;
-  }
-  body[data-gsh-game][data-gsh-game="reading"] .gsh-gameplay > .gsh-skip-slot,
-  body[data-gsh-game][data-gsh-game="listening"] .gsh-gameplay > .gsh-skip-slot,
-  body[data-gsh-game][data-gsh-game="typing"] .gsh-gameplay > .gsh-skip-slot,
-  body[data-gsh-game][data-gsh-game="word-order"] .gsh-gameplay > .gsh-skip-slot {
-    width:calc(100% + 40px); max-width:none; margin-inline:-20px !important;
-  }
-  body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-skip-slot > .gsh-skip-action {
-    width:var(--gsh-skip-action-width); height:var(--gsh-skip-action-height);
-    min-width:var(--gsh-skip-action-width); min-height:var(--gsh-skip-action-height);
-    margin:0 !important; padding:0 !important; box-sizing:border-box;
-  }
-  body[data-gsh-game="word-order"] .gsh-wordorder-content-slot {
-    width:100%; height:136px; min-height:136px; overflow:auto;
-    flex:0 0 136px; box-sizing:border-box;
-  }
-  body[data-gsh-game="reading"] .gsh-gameplay > .gsh-learning-tools,
-  body[data-gsh-game="typing"] .gsh-gameplay > .gsh-learning-tools,
-  body[data-gsh-game="word-order"] .gsh-gameplay > .gsh-learning-tools {
-    width:calc(100% + 40px) !important; max-width:none;
-  }
-  body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-gameplay > #word-ctl-row.gsh-learning-tools {
-    width:calc(100% + 40px) !important; max-width:none;
-    margin:0 -20px !important; padding:0 !important;
-  }
-  body[data-gsh-game="tone"] .gsh-gameplay > #tf-word-ctl-row.gsh-learning-tools {
-    width:100% !important; margin:0 !important; padding:0 !important;
-  }
-  body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-level-selector { flex:none; }
+  body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-page-header { text-align:center; }
+  body[data-gsh-game]:not([data-gsh-game="lego"]) .mrt-login-surface,
+  body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-gameplay { margin-top:0; }
 
-  /* Tone owns the three physical slots; labels/actions remain game-owned. */
+  /* The original Tone floating control sizes/gaps remain game-owned. */
   body[data-gsh-game]:not([data-gsh-game="lego"]) .rg-ctl-wrap {
     right:12px !important;
     bottom:calc(60px + env(safe-area-inset-bottom,0px)) !important;
-    width:148px !important; height:44px !important;
-    display:grid !important; grid-template-columns:repeat(3,44px) !important;
-    grid-auto-flow:column !important; align-items:center !important;
-    justify-content:end !important; gap:8px !important;
     z-index:100000 !important;
-  }
-  body[data-gsh-game]:not([data-gsh-game="lego"]) .rg-ctl-wrap > .rg-ctl-fab {
-    width:44px !important; height:44px !important; min-width:44px !important;
-    min-height:44px !important; margin:0 !important; padding:0 !important;
   }
   body[data-gsh-game]:not([data-gsh-game="lego"]) .rg-ctl-wrap > #game-switcher,
   body[data-gsh-game]:not([data-gsh-game="lego"]) .rg-ctl-wrap > .grw-menu {
@@ -1031,39 +858,6 @@ body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-question-surface .gsh-copy-
 }
 
 @media (max-width:768px) and (orientation:portrait) {
-  body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-shell,
-  body[data-gsh-game]:not([data-gsh-game="lego"]) .page { padding:10px 10px 154px !important; }
-  body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-page-header { margin-bottom:7px; }
-  body[data-gsh-game]:not([data-gsh-game="lego"]) .mrt-login-surface {
-    min-height:82px; margin-top:0; margin-bottom:22px;
-  }
-  body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-session-header { height:84px; min-height:84px; }
-  body[data-gsh-game="reading"] .gsh-gameplay > .gold-banner,
-  body[data-gsh-game="typing"] .gsh-gameplay > .gold-banner,
-  body[data-gsh-game="word-order"] .gsh-gameplay > .gold-banner {
-    width:calc(100% + 37px) !important;
-    margin:-18.5px -18.5px 0 !important;
-    padding:10px 10px 6px !important;
-  }
-  body[data-gsh-game="word-order"] .gsh-gameplay > .gold-banner {
-    margin-top:-20.5px !important;
-  }
-  body[data-gsh-game="reading"] .gsh-gameplay > #word-ctl-row.gsh-learning-tools,
-  body[data-gsh-game="typing"] .gsh-gameplay > #word-ctl-row.gsh-learning-tools,
-  body[data-gsh-game="word-order"] .gsh-gameplay > #word-ctl-row.gsh-learning-tools {
-    width:calc(100% + 37px) !important;
-    margin:0 -18.5px !important;
-  }
-  body[data-gsh-game][data-gsh-game="reading"] .gsh-gameplay > .gsh-skip-slot,
-  body[data-gsh-game][data-gsh-game="listening"] .gsh-gameplay > .gsh-skip-slot,
-  body[data-gsh-game][data-gsh-game="typing"] .gsh-gameplay > .gsh-skip-slot,
-  body[data-gsh-game][data-gsh-game="word-order"] .gsh-gameplay > .gsh-skip-slot {
-    width:calc(100% + 37px); margin-inline:-18.5px !important;
-  }
-  body[data-gsh-game="listening"] .gsh-session-placeholder {
-    position:relative; top:10px; margin-bottom:10px;
-  }
-  body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-gameplay { border-radius:var(--gsh-framework-card-radius); }
   body[data-gsh-game]:not([data-gsh-game="lego"]) .rg-ctl-wrap {
     bottom:calc(68px + env(safe-area-inset-bottom,0px)) !important;
   }

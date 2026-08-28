@@ -967,8 +967,9 @@ function tfReadingUnlocked() { return S.step === 'result' || S.step === 'overvie
 
 function tfReadingLineHtml() {
   var showEn = tfEnMode && tfReadingUnlocked();
+  if (!tfPronMode && !showEn) return '';
   var e = tfCurEntry();
-  if (!e) return '<div class="gsh-copy-slot gsh-copy-reading" aria-hidden="true"></div><div class="gsh-copy-slot gsh-copy-roman" aria-hidden="true"></div>';
+  if (!e) return '';
 
   // ── กันเฉลยข้ามพยางค์ (Lin 2026-07-25) — เหลือใช้กับ 英文讀音 เท่านั้น (2026-07-30) ──
   // คำหลายพยางค์ถามทีละพยางค์ → ถ้าโชว์คำอ่าน "ทั้งคำ" หลังตอบพยางค์แรก = เฉลยวรรณยุกต์พยางค์ที่ยังไม่ถามด้วย
@@ -982,17 +983,15 @@ function tfReadingLineHtml() {
     return ps.slice(0, _done).join('-') + '-…';
   }
 
-  var thaiHtml = '';
-  var romanHtml = '';
+  var html = '';
   // 讀音 ไทย: โชว์ทุกขั้น เต็มทั้งคำ ไม่ clip + โชว์ทุกคำแม้อ่านตรงกับตัวเขียน (Lin 2026-07-30 — กติกาเดียวกับเกมเรียงคำที่แก้รอบนี้ กันเข้าใจผิดว่าปุ่มเสีย)
   // Lin 2026-08-01: โหมดประโยค高級 ไม่โชว์คำอ่านรายคำ (tf-read-th) ตรงนี้แล้ว — ซ้อนกับคำอ่านยาวทั้งประโยค (sentReadingHtml/tf-adv-sent-reading) ที่โชว์อยู่ด้านล่างอยู่แล้ว (ซึ่งมีคำอ่านของคำนี้รวมอยู่ในนั้นแล้ว)
   if (tfPronMode && !advSentenceCtx) {
     var _th = e.readingTH || (tfMobileLandscape() ? e.word : '') || '';
-    if (_th) thaiHtml = '<div class="tf-read-th">' + _th + '</div>';
+    if (_th) html += '<div class="tf-read-th">' + _th + '</div>';
   }
-  if (showEn)     { var _en = e.readingEN || '';           if (_en) romanHtml = '<div class="tf-read-en">' + _clip(_en) + '</div>'; }
-  return '<div class="gsh-copy-slot gsh-copy-reading"' + (thaiHtml ? '' : ' aria-hidden="true"') + '>' + thaiHtml + '</div>'
-    + '<div class="gsh-copy-slot gsh-copy-roman"' + (romanHtml ? '' : ' aria-hidden="true"') + '>' + romanHtml + '</div>';
+  if (showEn)     { var _en = e.readingEN || '';           if (_en) html += '<div class="tf-read-en">' + _clip(_en) + '</div>'; }
+  return html;
 }
 
 // อัปเดตเฉพาะบรรทัดคำอ่าน (ไม่ render ใหม่ทั้งหน้า — กันสถานะเกมสะดุด)
@@ -2206,11 +2205,7 @@ function render() {
     }
     // บรรทัดคำอ่าน: 讀音 โชว์ได้ทุกขั้น (Lin 2026-07-30) · 英文讀音 โชว์หลังตอบแล้วเท่านั้น (ดู tfReadingLineHtml)
     // Lin 2026-07-30 (รอบ 2): เรียงใต้คำให้เหมือนกันทุกเกม → 讀音 → 英文讀音 → 翻譯 (เดิมคำแปลอยู่เหนือคำอ่าน)
-    var mainSlotHtml = '<div class="gsh-copy-slot gsh-copy-main">' + mainBoxHtml + '</div>';
-    var readingSlotsHtml = '<div id="tf-read-line">' + tfReadingLineHtml() + '</div>';
-    if (sentReadingHtml) readingSlotsHtml = '<div class="gsh-copy-slot gsh-copy-reading">' + sentReadingHtml + '</div><div class="gsh-copy-slot gsh-copy-roman" aria-hidden="true"></div>';
-    var translationSlotHtml = '<div class="gsh-copy-slot gsh-copy-translation"' + ((zhHtml || sentCtxZhHtml) ? '' : ' aria-hidden="true"') + '>' + zhHtml + sentCtxZhHtml + '</div>';
-    banner.innerHTML = sentCtxHtml + barsHtml + '<div class="gsh-question-stack" data-gsh-question-stack="v1">' + mainSlotHtml + readingSlotsHtml + translationSlotHtml + '</div>' + tfGuideNoteHtml();
+    banner.innerHTML = sentCtxHtml + barsHtml + mainBoxHtml + '<div id="tf-read-line">' + tfReadingLineHtml() + '</div>' + zhHtml + sentReadingHtml + sentCtxZhHtml + tfGuideNoteHtml();
     // Lin 2026-07-30: กล่องพยางค์/กล่องคำในประโยค 高級 อยู่นอกกรอบทอง — เติมเนื้อหาแยกจาก banner.innerHTML ข้างบน (ดู #tf-syl-strip ใน tone-finder.html)
     var tfSylStripEl = document.getElementById('tf-syl-strip');
     if (tfSylStripEl) {
@@ -2268,11 +2263,6 @@ function render() {
   // Main body
   var body = document.getElementById('tf-body');
   body.innerHTML = buildStep();
-  var fixedSkipSlot = document.getElementById('tf-skip-slot');
-  if (fixedSkipSlot) {
-    fixedSkipSlot.innerHTML = '';
-    fixedSkipSlot.setAttribute('aria-hidden', 'true');
-  }
   if (window.GameFlow) {
     GameFlow.cancel('tone-finder');
     if (S.step === 'result' && session) {
@@ -2304,16 +2294,9 @@ function render() {
     // Lin 2026-07-04: อยู่ในโหมดพิสูจน์ (known-check) แล้ว → ซ่อนปุ่ม "已記得" (กันกดวน + ต้องพิสูจน์ให้จบก่อน)
     if (session.curWordIsKnownCheck) _hideKnown = true;
     if (!_hideKnown) {
-      var neutralSkip = tfNeutralSkipSurface();
-      var skipButtonHtml = '<button type="button" class="tf-known-btn gsh-skip-action" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_skip_click\',{category:\'game\'});}catch(e){}TF.skipCurrentWord()">跳過</button>';
-      if (neutralSkip && tfDesktopOrPortrait() && fixedSkipSlot) {
-        fixedSkipSlot.innerHTML = skipButtonHtml;
-        fixedSkipSlot.setAttribute('aria-hidden', 'false');
-      } else {
-        body.innerHTML += neutralSkip
-          ? '<div class="tf-known-bar">' + skipButtonHtml + '</div>'
-          : '<div class="tf-known-bar"><button class="tf-known-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_mark_known_click\',{category:\'game\'});}catch(e){}TF.markKnown()">\u2713 \u5df2\u8a18\u5f97\u9019\u500b\u5b57</button></div>';
-      }
+      body.innerHTML += tfNeutralSkipSurface()
+        ? '<div class="tf-known-bar"><button type="button" class="tf-known-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_skip_click\',{category:\'game\'});}catch(e){}TF.skipCurrentWord()">跳過</button></div>'
+        : '<div class="tf-known-bar"><button class="tf-known-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_mark_known_click\',{category:\'game\'});}catch(e){}TF.markKnown()">\u2713 \u5df2\u8a18\u5f97\u9019\u500b\u5b57</button></div>';
     }
   }
 

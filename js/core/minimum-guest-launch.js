@@ -31,12 +31,12 @@
   if (!document.querySelector('link[href*="login-surface.css"]')) {
     var loginStylesheet = document.createElement('link');
     loginStylesheet.rel = 'stylesheet';
-    loginStylesheet.href = 'css/login-surface.css?v=1';
+    loginStylesheet.href = 'css/login-surface.css?v=3';
     document.head.appendChild(loginStylesheet);
   }
   if (!document.querySelector('script[src*="login-surface.js"]')) {
     var loginController = document.createElement('script');
-    loginController.src = 'js/core/login-surface.js?v=1';
+    loginController.src = 'js/core/login-surface.js?v=3';
     loginController.defer = true;
     document.head.appendChild(loginController);
   }
