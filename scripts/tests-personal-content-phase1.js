@@ -60,15 +60,14 @@ check('Save provenance alone never labels an item as Played or re-practice', /�
 check('verified gameplay evidence alone enables Played and re-practice copy', /evidence && evidence\.played/.test(practiceBody) && /已練習/.test(practiceBody) && /再練習/.test(practiceBody));
 check('Played status has an explicit retry path without changing saved provenance', /playedRequestFailed/.test(practiceBody) && /重新載入練習紀錄/.test(practiceBody) && !/savedInfo\(/.test(practiceBody));
 check('word-order Save writes sentence library', /SentenceVault\.createSaveBtn/.test(wordOrder) && !/WordVault\.createSaveBtn\(s\.th/.test(wordOrder));
-check('Lego Login Result alone exposes sentence-library selection',
-  /class="lego-result-save hidden" id="lego-result-save"/.test(lego) &&
-  /window\.READING_AUTH&&window\.READING_AUTH\.user&&window\.SentenceVault/.test(legoApp) &&
-  /data-lego-save-index/.test(legoApp) && /全部選取/.test(legoApp) && /儲存到句子庫/.test(legoApp));
-check('Lego Result save uses confirmed sentences only and preserves user-created typing',
-  /legoCompletedSentences\.forEach\(\(sentence,index\)/.test(legoApp) &&
-  /const sentence=legoCompletedSentences\[Number/.test(legoApp) &&
-  /source:sentence\.custom\?'lego-user-created':'lego'/.test(legoApp) &&
-  !/legoCurrentSentence\(\)[\s\S]{0,300}SentenceVault\.addSentence/.test(legoApp));
+check('Lego Set 1 remains Guest-safe and does not expose account sentence-library mutation',
+  /body data-gsh-game="lego"/.test(lego) &&
+  !/SentenceVault\.addSentence|data-lego-save-index/.test(legoApp));
+check('Lego Set 1 Result uses confirmed sentences only and preserves custom-input ownership',
+  /state\.confirmed\.push\(item\)/.test(legoApp) &&
+  /state\.confirmed\.forEach\(\(item\)/.test(legoApp) &&
+  /custom:\s*hasCustom\(\)/.test(legoApp) &&
+  !/SentenceVault\.addSentence/.test(legoApp));
 check('sentence direct practice reuses existing practice mode', /location\.search\.match\(\/\[\?&\]sentence=/.test(wordOrder) && /practiceMode = true;[\s\S]{0,160}SET = \[requestedIndex\]/.test(wordOrder));
 check('account export includes every vault key, not only words', /from\('learning_saved_items'\)/.test(exportFn) && !/eq\('vault_key', 'linvault'\)/.test(exportFn));
 

@@ -155,16 +155,15 @@ async function main(){
     assert.strictEqual(events.length,2);
   });
 
-  await test('Lego lifecycle fires once at actual round start and only at five-sentence completion',()=>{
+  await test('Lego Set 1 lifecycle starts after quota and completes when the player ends the session',()=>{
     const source=read('js/games/lego-game-app.js');
     const start=source.indexOf("legoDispatchStudyRound('gsh:round-start'");
-    const quotaAllowed=source.indexOf('if(!quota.ok)');
-    const completeGuard=source.indexOf('if(sentencesThisRound<SENTENCES_PER_ROUND)');
+    const quotaAllowed=source.indexOf('if (!quota.ok)');
     const complete=source.indexOf("legoDispatchStudyRound('gsh:round-complete'");
     assert(start>quotaAllowed);
-    assert(complete>completeGuard);
-    assert.match(source,/if\(!legoStudyRoundActive\)[\s\S]+gsh:round-start/);
-    assert.match(source,/legoStudyRoundActive=false;[\s\S]+gsh:round-complete/);
+    assert(complete>start);
+    assert.match(source,/if \(!legoStudyRoundActive\)[\s\S]+gsh:round-start/);
+    assert.match(source,/legoStudyRoundActive = false;[\s\S]+gsh:round-complete/);
   });
 
   await test('Guest and Login minute gates build proposals without quota, active plan, or navigation',()=>{

@@ -127,7 +127,7 @@ test('Reading exposes isolated Login Core while all personal transaction clients
   assert.match(reading, /reading-auth\.js\?v=29/);
   assert.match(read('js/games/reading-auth.js'), /if \(publicLoginOnly\) return null;/);
   const lego = read('lego.html');
-  assert.match(lego, /network-guard\.js\?v=1[\s\S]+lego-game-app\.js\?v=12/);
+  assert.match(lego, /network-guard\.js\?v=1[\s\S]+lego-game-app\.js\?v=13/);
   assert.doesNotMatch(lego, /reading-auth\.js/);
   assert.match(read('vault.html'), /reading-auth\.js\?v=28/);
 });
