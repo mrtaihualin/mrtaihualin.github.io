@@ -1,6 +1,12 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-28 Asia/Bangkok** — Reading Desktop Tone-shell parity
+**Updated: 2026-08-28 Asia/Bangkok** — Six-game Desktop question rhythm / progress-row retirement
+
+## 2026-08-28 — Six-game Desktop question rhythm / progress-row retirement (`PASS_LOCAL / PREVIEW_PASS / HUMAN_PENDING / PRODUCTION_UNCHANGED`)
+
+- Standardized the ordinary-Desktop question-copy line boxes across Tone, Reading, Listening, Typing, Word Order and Lego, with the same Tone-derived Thai-reading, romanization and translation spacing. Game-owned text, font sizes, controls and gameplay remain unchanged.
+- Retired the duplicate visible `進度` row on ordinary Desktop while preserving the session question counter, per-question score row and underlying progress state. Portrait and Mobile Landscape remain outside this change.
+- Reading and shared-game regressions, the Tone Mobile Landscape boundary, secret scan, source whitespace validation and the full 1,018-file site gate pass. The Netlify Draft browser check at 1280×720 confirms zero visible `進度` rows and the expected rendered 4px / 2px / 6px reading gaps; Human visual acceptance remains pending. No Login/Auth, SRS/Review, provider/session/account, Personal Data or Production mutation is included.
 
 ## 2026-08-28 — Reading Desktop Tone-shell parity (`PASS_LOCAL / PREVIEW_PASS / HUMAN_PASS / PRODUCTION_UNCHANGED`)
 

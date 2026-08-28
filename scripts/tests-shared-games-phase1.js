@@ -249,6 +249,15 @@ test('Reading Desktop copies the complete Tone gold-band rhythm while retaining 
   assert.match(reading, /id="rg-particle-toggle"/, 'Reading must retain its additional politeness tool');
 });
 
+test('ordinary Desktop uses one six-game question-copy rhythm and retires the duplicate progress row', () => {
+  assert.match(sharedCss, /@media \(min-width:769px\) and \(min-height:601px\)\{[\s\S]*?data-gsh-game="tone"\] \.tf-banner-word,[\s\S]*?data-gsh-game="reading"\] \.word-th,[\s\S]*?data-gsh-game="typing"\] \.word-th,[\s\S]*?data-gsh-game="listening"\] \.lg-rev-th,[\s\S]*?data-gsh-game="word-order"\] \.wo-word-th,[\s\S]*?data-gsh-game="lego"\] \.out-th,[\s\S]*?line-height:1\.25 !important;/, 'all six Desktop games must share the same primary question line box');
+  assert.match(sharedCss, /data-gsh-game="tone"\] \.tf-read-th,[\s\S]*?data-gsh-game="reading"\] \.rev-pron,[\s\S]*?data-gsh-game="typing"\] \.rev-pron,[\s\S]*?data-gsh-game="listening"\] \.lg-rev-pron,[\s\S]*?data-gsh-game="word-order"\] \.wo-read-th \{[\s\S]*?line-height:1\.25 !important;[\s\S]*?margin-top:4px !important;/, 'Thai reading lines must use the shared Tone rhythm');
+  assert.match(sharedCss, /data-gsh-game="tone"\] \.tf-read-en,[\s\S]*?data-gsh-game="reading"\] \.rev-en,[\s\S]*?data-gsh-game="typing"\] \.rev-en,[\s\S]*?data-gsh-game="listening"\] \.lg-rev-en,[\s\S]*?data-gsh-game="word-order"\] \.wo-read-en \{[\s\S]*?margin-top:2px !important;/, 'romanization lines must use the shared Tone rhythm');
+  assert.match(sharedCss, /data-gsh-game="tone"\] \.word-zh,[\s\S]*?data-gsh-game="reading"\] \.word-zh,[\s\S]*?data-gsh-game="typing"\] \.word-zh,[\s\S]*?data-gsh-game="listening"\] \.lg-rev-zh,[\s\S]*?data-gsh-game="word-order"\] \.wo-read-zh,[\s\S]*?data-gsh-game="lego"\] \.out-zh,[\s\S]*?margin-top:6px !important;/, 'translation lines must use the shared Tone rhythm');
+  assert.match(sharedCss, /data-gsh-game\] \.gsh-progress > \.bar-row:first-child,[\s\S]*?data-gsh-game="tone"\] #tf-bars-wrap > \.bar-row:first-child \{\s*display:none !important;/, 'ordinary Desktop must hide the retired 進度 row in every active game while retaining its DOM/state');
+  assert.match(sharedCss, /@media \(orientation:landscape\) and \(max-width:1024px\) and \(max-height:600px\)/, 'Mobile Landscape must retain its separate boundary');
+});
+
 test('Reading exposes learning tools inline without the retired rice-bowl menu contract', () => {
   const reading = games.find((g) => g.id === 'reading').htmlText;
   assert.doesNotMatch(reading, /#wm-trigger|document\.getElementById\('wm-trigger'\)|點 🍚|ปุ่ม 🍚/, 'Reading help and tour must not depend on the retired rice-bowl menu');

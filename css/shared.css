@@ -700,6 +700,61 @@ body .gsh-shell.tf-page { padding-top:8px; }
   body[data-gsh-game] .gsh-learning-tools > #rg-vault-btn-slot { order:9; }
   body[data-gsh-game="typing"] .gsh-learning-tools > #rg-webkbd-toggle { display:none !important; }
   body[data-gsh-game] .gsh-desktop-hint-off[data-visible="true"] { display:inline-flex !important; }
+
+  /* Lin 2026-08-28: ordinary Desktop uses one question-copy rhythm across all
+     six games. Keep game-owned font sizes/content, but make the actual line
+     boxes and the Thai-reading/romanization/translation gaps deterministic. */
+  body[data-gsh-game="tone"] .tf-banner-word,
+  body[data-gsh-game="tone"] .tf-adv-sent-main,
+  body[data-gsh-game="reading"] .word-th,
+  body[data-gsh-game="typing"] .word-th,
+  body[data-gsh-game="listening"] .lg-rev-th,
+  body[data-gsh-game="word-order"] .wo-word-th,
+  body[data-gsh-game="lego"] .out-th,
+  body[data-gsh-game="lego"] .lego-flow-th {
+    line-height:1.25 !important;
+    margin-top:0 !important;
+    margin-bottom:0 !important;
+    padding-top:0 !important;
+  }
+  body[data-gsh-game="tone"] .tf-read-th,
+  body[data-gsh-game="tone"] .tf-adv-sent-reading,
+  body[data-gsh-game="reading"] .rev-pron,
+  body[data-gsh-game="typing"] .rev-pron,
+  body[data-gsh-game="listening"] .lg-rev-pron,
+  body[data-gsh-game="word-order"] .wo-read-th {
+    line-height:1.25 !important;
+    margin-top:4px !important;
+    margin-bottom:0 !important;
+  }
+  body[data-gsh-game="tone"] .tf-read-en,
+  body[data-gsh-game="reading"] .rev-en,
+  body[data-gsh-game="typing"] .rev-en,
+  body[data-gsh-game="listening"] .lg-rev-en,
+  body[data-gsh-game="word-order"] .wo-read-en {
+    line-height:1.25 !important;
+    margin-top:2px !important;
+    margin-bottom:0 !important;
+  }
+  body[data-gsh-game="tone"] .word-zh,
+  body[data-gsh-game="tone"] .tf-adv-sent-ctx-zh,
+  body[data-gsh-game="reading"] .word-zh,
+  body[data-gsh-game="typing"] .word-zh,
+  body[data-gsh-game="listening"] .lg-rev-zh,
+  body[data-gsh-game="word-order"] .wo-read-zh,
+  body[data-gsh-game="lego"] .out-zh,
+  body[data-gsh-game="lego"] .lego-flow-zh {
+    line-height:1.25 !important;
+    margin-top:6px !important;
+    margin-bottom:0 !important;
+  }
+
+  /* The question counter remains in the session header; the duplicate visual
+     進度 bar is retired on Desktop only. Score bars and game state stay live. */
+  body[data-gsh-game] .gsh-progress > .bar-row:first-child,
+  body[data-gsh-game="tone"] #tf-bars-wrap > .bar-row:first-child {
+    display:none !important;
+  }
 }
 
 .gsh-progress { width:100%; max-width:640px; margin:0 0 12px; }
