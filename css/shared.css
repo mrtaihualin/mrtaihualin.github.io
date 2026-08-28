@@ -939,8 +939,14 @@ body[data-gsh-game] .gsh-question-surface .gsh-copy-translation {
   body[data-gsh-game="listening"] .gsh-session-placeholder {
     position:relative; top:10px; margin-bottom:10px;
   }
-  body[data-gsh-game="lego"] .gsh-session-header {
+  body[data-gsh-game="lego"] .gsh-session-placeholder {
     position:relative; top:10px; margin-bottom:10px;
+  }
+  body[data-gsh-game="lego"] .page { position:relative; }
+  body[data-gsh-game="lego"] #levels {
+    position:absolute; top:210px; left:50%; z-index:2;
+    width:var(--gsh-framework-width); max-width:calc(100% - 48px);
+    margin:0; transform:translateX(-50%);
   }
   body[data-gsh-game] .gsh-gameplay {
     margin-top:0; border-radius:var(--gsh-framework-card-radius); gap:0;
@@ -1040,6 +1046,9 @@ body[data-gsh-game] .gsh-question-surface .gsh-copy-translation {
   }
   body[data-gsh-game="lego"] .gsh-gameplay > .out-banner {
     padding:10px 10px 6px !important;
+  }
+  body[data-gsh-game="lego"] #levels {
+    top:193px; width:calc(100% - 20px); max-width:none;
   }
   body[data-gsh-game="reading"] .gsh-gameplay > #word-ctl-row.gsh-learning-tools,
   body[data-gsh-game="typing"] .gsh-gameplay > #word-ctl-row.gsh-learning-tools,

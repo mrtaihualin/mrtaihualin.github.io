@@ -297,7 +297,7 @@ test('Tone Beginner owns one measurable four-row superset rhythm without collaps
     assert.match(html, /gsh-question-surface/, `${id}: missing shared question-surface hook`);
   }
   assert.match(lego, /gsh-copy-reading" aria-hidden="true"[\s\S]{0,120}gsh-copy-roman" aria-hidden="true"/, 'Lego unavailable reading rows must retain fixed slots');
-  assert.match(lego, /gsh-session-header[\s\S]{0,120}id="levels" hidden/, 'Lego word-set menu must consume the shared session slot');
+  assert.match(sharedCss, /data-gsh-game="lego"\] #levels \{[\s\S]{0,180}position:absolute;[\s\S]{0,160}top:210px;/, 'Lego word-set menu must overlay the shared session slot only outside Landscape');
 });
 
 test('Reading and Tone Mobile Portrait centre round status between Level and gameplay', () => {
