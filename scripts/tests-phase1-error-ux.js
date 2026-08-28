@@ -172,23 +172,30 @@ test('content loading error has retry, home and support recovery', () => {
   assert.match(content, /返回遊戲總覽/);
   assert.match(content, /用LINE問老師/);
 });
-test('all Core 5 Guest pages park Auth and ship current isolated audio error handling', () => {
-  ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html'].forEach((page) => {
+test('Reading exposes Login Core while other Core 5 pages keep Auth parked and all retain audio recovery', () => {
+  ['tone-finder.html','listening-game.html','typing-game.html','word-order.html'].forEach((page) => {
     const html = read(page);
     assert.doesNotMatch(html, /auth-widget\.js/);
     assert.match(html, /protected-word-audio\.js\?v=3/);
   });
+  const reading = read('reading-game.html');
+  assert.match(reading, /auth-widget\.js\?v=17/);
+  assert.match(reading, /reading-auth\.js\?v=29/);
+  assert.doesNotMatch(reading, /game-account\.js|learning-summary\.js|practice-events\.js/);
+  assert.match(reading, /protected-word-audio\.js\?v=3/);
 });
-test('parked account and callback sources preserve current failure-handling clients', () => {
+test('parked account sources and active Login callback preserve current failure handling', () => {
   ['leaderboard.html','listening-board.html','my-progress.html','reading-board.html',
     'typing-board.html','word-order-board.html','vault.html']
     .forEach((page) => assert.match(read(page), /auth-widget\.js\?v=17/, page));
-  ['lego.html','listening-game.html','reading-game.html','tone-finder.html','typing-game.html','word-order.html']
+  ['lego.html','listening-game.html','tone-finder.html','typing-game.html','word-order.html']
     .forEach((page) => assert.doesNotMatch(read(page), /auth-widget\.js/, page));
+  assert.match(read('reading-game.html'), /auth-widget\.js\?v=17/);
   assert.match(read('leaderboard.html'), /leaderboard\.js\?v=13/);
   ['reading-board.html','listening-board.html','typing-board.html','word-order-board.html']
     .forEach((page) => assert.match(read(page), /reading-leaderboard\.js\?v=9/, page));
   assert.match(read('line-callback.html'), /line-callback\.js\?v=5/);
+  assert.doesNotMatch(read('line-callback.html'), /var target='\/games\.html\?guest_launch=1'/);
 });
 
 (async function runRuntimeAudioRecovery() {

@@ -9,6 +9,18 @@
 - Corrected Reading's visible `第 n/N 字` counter to follow the active syllable and the actual syllable total of the current word or sentence (for example, `第 1/7 字`), instead of showing the current one-record round as `第 1/1 字`. The existing round queue, Resume detail and scoring remain unchanged.
 - Reading and shared-game regressions, the Tone Mobile Landscape boundary, secret scan, source whitespace validation and the full 1,018-file site gate pass. The Netlify Draft browser check at 1280×720 confirms zero visible `進度` rows and the expected rendered 4px / 2px / 6px reading gaps; Human visual acceptance remains pending. No Login/Auth, SRS/Review, provider/session/account, Personal Data or Production mutation is included.
 
+**Prior update: 2026-08-28 Asia/Bangkok** — LOGIN-L8 combined Reading Preview Candidate
+
+## 2026-08-28 — LOGIN-L8 combined Reading Preview Candidate (`PASS_LOCAL / PREVIEW_APPROVAL_PENDING / PRODUCTION_UNCHANGED`)
+
+- Reconciled the Public Login activation onto the exact accepted Reading PR #90 head without changing its UI intent: `reading-game.html` differs from PR #90 only by the two authorized `auth-widget.js?v=17` and `reading-auth.js?v=29` tags at the preserved Supabase head seam.
+- Minimum Guest still owns gameplay, score, SRS, Personal Data, Leaderboard and Challenge. The Login client keeps its authenticated identity internal while `READING_AUTH.user` stays Guest, score submission returns before any request, and no GameAccount/personal-learning client is loaded. Tone, Listening, Typing, Word Order, Lego and Vault remain byte-unchanged.
+- Enabled the existing LINE callback source required by the Login entry; no Supabase schema/config, provider, account, session or user-data mutation is part of this source candidate. Current Supabase browser-Auth guidance remains compatible and the current changelog contains no applicable hosted browser-Auth breaking change.
+- Reading 16/16, shared games 43/43, Auth/session/account/audit/error/owner 87/87, transaction/save isolation 20/20, Email OTP 23/23, secret scan and the full 1,016-file site gate pass. Desktop local smoke confirms the neutral Login modal and all four provider controls; Desktop and Mobile Portrait both keep the Login entry, no horizontal overflow and parked-feature isolation. The local protected-content failure/recovery banner is intentionally not treated as deploy evidence.
+- The standalone legacy `tests-minimum-guest-launch.js` remains read-only. Current main and PR #90 both reproduce its pre-existing removed-cap assertion failure; this activation candidate also reaches its now-obsolete pre-activation LINE-callback assertion earlier. Neither assertion was edited or used to mask the passing candidate-specific and required gates.
+
+**Prior update: 2026-08-28 Asia/Bangkok** — Reading Desktop Tone-shell parity
+
 ## 2026-08-28 — Reading Desktop Tone-shell parity (`PASS_LOCAL / PREVIEW_PASS / HUMAN_PASS / PRODUCTION_UNCHANGED`)
 
 - Reused the accepted Tone shell treatment that is compatible with Reading ordinary Desktop: the Reading title/subtitle remain visible in focus mode, the site announcement stays out of the game surface, and the existing game-switcher and focus controls form one horizontal row with the switcher opening above it. No retired `🍚` or absent More control was added.
