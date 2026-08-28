@@ -224,6 +224,38 @@ test('Tone Desktop and Mobile Portrait keep all three controls horizontal with m
   assert.match(tone, /@media \(orientation:landscape\) and \(max-width:1024px\) and \(max-height:600px\)/, 'Tone must retain the separate Mobile Landscape boundary');
 });
 
+test('Reading Desktop reuses the compatible Tone shell treatment without inventing retired controls', () => {
+  const reading = games.find((g) => g.id === 'reading').htmlText;
+  assert.match(reading, /@media \(min-width:1025px\), \(min-width:769px\) and \(min-height:601px\) \{[\s\S]{0,220}data-gsh-game="reading"\] > \.avail-band \{ display:none !important; \}/, 'Reading Desktop must omit the site announcement like Tone');
+  assert.match(reading, /data-gsh-game="reading"\]\.rg-fake-fullscreen \.page-header \{ display:block !important; \}/, 'Reading Desktop focus mode must keep the game title and subtitle visible');
+  assert.match(reading, /data-gsh-game="reading"\] #cookieConsentBanner \{ z-index:100100 !important; \}/, 'Reading cookie consent must stay above the floating controls and menus');
+  assert.match(reading, /data-gsh-game="reading"\] \.rg-ctl-wrap \{[\s\S]{0,140}flex-direction:row !important;[\s\S]{0,100}align-items:center !important;/, 'Reading Desktop must keep its existing switcher and focus controls in one row');
+  assert.match(reading, /\.rg-ctl-wrap > #game-switcher \{[\s\S]{0,260}position:absolute !important;[\s\S]{0,120}bottom:calc\(100% \+ 8px\) !important;/, 'Reading Desktop game switcher must open above the horizontal row');
+  assert.doesNotMatch(reading, /data-gsh-game="reading"\] \.rg-ctl-wrap > \.grw-menu/, 'Reading Desktop parity must not style an absent More menu');
+  assert.doesNotMatch(reading, /@media \(max-width:768px\) and \(orientation:portrait\)[\s\S]{0,400}data-gsh-game="reading"\] \.rg-ctl-wrap/, 'Reading Mobile Portrait controls must remain untouched');
+});
+
+test('Reading Desktop copies the complete Tone gold-band rhythm while retaining Reading tools', () => {
+  const reading = games.find((g) => g.id === 'reading').htmlText;
+  assert.match(reading, /data-gsh-game="reading"\] \.gold-banner \{\s*padding:16px 22px 0;\s*border-bottom:0;/, 'Reading Desktop gold band must use Tone horizontal and top spacing');
+  assert.match(reading, /\.gold-banner \.bars-wrap \{\s*margin:6px 0 4px;/, 'Reading Desktop progress rows must use Tone placement');
+  assert.match(reading, /data-gsh-game="reading"\] \.word-area \{ margin:0; \}/, 'Reading Desktop word area must remove the old extra offset');
+  assert.match(reading, /data-gsh-game="reading"\] \.word-th \{\s*padding-top:0;\s*font-family:'Sarabun',sans-serif;/, 'Reading Desktop Thai prompt must use Tone placement and font');
+  assert.match(reading, /data-gsh-game="reading"\] \.rev-pron \{\s*margin-top:4px;\s*font-family:'Sarabun',sans-serif;/, 'Reading Desktop Thai reading must use Tone spacing');
+  assert.match(reading, /data-gsh-game="reading"\] \.rev-en \{ margin-top:2px; \}/, 'Reading Desktop roman reading must use Tone spacing');
+  assert.match(reading, /data-gsh-game="reading"\] \.word-zh \{\s*color:#a08050;\s*margin-top:6px;/, 'Reading Desktop translation must use Tone color and spacing');
+  assert.match(reading, /data-gsh-game="reading"\] #word-ctl-row \{[\s\S]{0,280}width:calc\(100% \+ 44px\);[\s\S]{0,120}margin:10px -22px 0 !important;[\s\S]{0,120}padding:0 22px 14px;[\s\S]{0,180}border-bottom:2px solid rgba\(184,134,40,\.50\);/, 'Reading-specific tools must occupy Tone\'s full-width gold tool row');
+  assert.match(reading, /id="rg-en-toggle"/, 'Reading must retain its additional English-reading tool');
+  assert.match(reading, /id="rg-particle-toggle"/, 'Reading must retain its additional politeness tool');
+});
+
+test('Reading exposes learning tools inline without the retired rice-bowl menu contract', () => {
+  const reading = games.find((g) => g.id === 'reading').htmlText;
+  assert.doesNotMatch(reading, /#wm-trigger|document\.getElementById\('wm-trigger'\)|點 🍚|ปุ่ม 🍚/, 'Reading help and tour must not depend on the retired rice-bowl menu');
+  assert.match(reading, /\{sel:'#word-ctl-row',[\s\S]{0,180}學習工具都在這裡/, 'Reading tour must point to the inline learning toolbar');
+  assert.match(reading, /toolsRow\.getAttribute\('data-wm-done'\)===\'1\'/, 'Reading tour must wait for the inline toolbar to finish binding');
+});
+
 test('all games omit the removed leave-game control and dialog', () => {
   const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
   assert.doesNotMatch(sharedJs, /要離開遊戲嗎？|繼續遊戲|離開遊戲/);

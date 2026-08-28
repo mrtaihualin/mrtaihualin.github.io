@@ -1,6 +1,16 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-27 Asia/Bangkok** — LOGIN-L7 Facebook link callback fresh-user verification
+**Updated: 2026-08-28 Asia/Bangkok** — Reading Desktop Tone-shell parity
+
+## 2026-08-28 — Reading Desktop Tone-shell parity (`PASS_LOCAL / PREVIEW_PASS / HUMAN_PASS / PRODUCTION_UNCHANGED`)
+
+- Reused the accepted Tone shell treatment that is compatible with Reading ordinary Desktop: the Reading title/subtitle remain visible in focus mode, the site announcement stays out of the game surface, and the existing game-switcher and focus controls form one horizontal row with the switcher opening above it. No retired `🍚` or absent More control was added.
+- Copied Tone's complete gold question-band presentation on Reading Desktop: progress spacing, inner padding, Thai/roman/Chinese reading rhythm, translation color, and the full-width gold learning-tool row with its closing border. Reading's additional learning tools and gameplay remain intact; Portrait and Mobile Landscape are unchanged.
+- Corrected Reading's stale help and first-visit tour so they point to the existing inline learning toolbar instead of the retired `🍚` menu. Reading gameplay, First Check score, Hint zero-lock, component order, option generation, font/particle behavior and mobile layouts remain unchanged.
+- Reading and shared-game regressions, Login/Auth compatibility checks, source whitespace validation, secret scan and the full 1,018-file gate pass. The Draft browser check at Desktop 1280×720 loads protected Guest content and confirms the retained Reading menu, inline learning toolbar, no `🍚` trigger and Tone-matched question band; Lin accepted this Draft visually.
+- Reconciled the candidate with current `main` while keeping its diff to this Reading UI, its regression coverage and this evidence record. Public Login remains off: the rolled-back LOGIN-L8 activation adds only `auth-widget.js?v=17` and `reading-auth.js?v=29` at the preserved Reading head seam, while the current dormant Login/Auth sources remain byte-for-byte unchanged from `main`. No Tone, other-game, SRS/Review, Personal Data, provider, session or account mutation is part of this candidate.
+
+**Prior update: 2026-08-27 Asia/Bangkok** — LOGIN-L7 Facebook link callback fresh-user verification
 
 ## 2026-08-27 — LOGIN-L7 Facebook link callback fresh-user verification (`PASS_LOCAL / HIDDEN_PREVIEW_PENDING`)
 

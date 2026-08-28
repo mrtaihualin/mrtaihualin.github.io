@@ -91,7 +91,7 @@ if (document.fonts && document.fonts.load) {
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script>
 <script defer src="js/games/round-report.js?v=3"></script>
 <script src="js/games/protected-word-audio.js?v=3"></script><!-- Core 5: isolated Guest audio client -->
-<script src="js/games/word-menu.js?v=9"></script><!-- เมนู 🍚 รวมตัวเลือกใต้คำศัพท์ (แบบรายการแนวตั้ง) — Lin 2026-07-19 -->
+<script src="js/games/word-menu.js?v=9"></script><!-- เครื่องมือช่วยเรียนแบบแถวข้างคำศัพท์; ไม่มีเมนู 🍚 แล้ว -->
 <script src="js/core/network-guard.js?v=1"></script>
 <script src="js/games/game-content-client.js?v=11"></script>
 <script src="data/tone-engine.js?v=3"></script>
@@ -121,6 +121,61 @@ html:not(.gc-ready) [onclick*="rgBackToEndFromMistakes("]{
 .page-header{text-align:center;margin-bottom:10px;}
 .page-title{font-family:'Noto Serif TC',serif;font-size:clamp(20px,4vw,28px);font-weight:900;color:#8B6310;letter-spacing:2px;}
 .page-sub{font-family:'Noto Sans TC',sans-serif;font-size:12px;color:#b08040;margin-top:3px;}
+
+/* Reading Desktop reuses the accepted Tone shell treatment only where the
+   controls and hierarchy are shared. Portrait and Mobile Landscape stay on
+   their existing layouts. */
+@media (min-width:1025px), (min-width:769px) and (min-height:601px) {
+  body[data-gsh-game="reading"] > .avail-band { display:none !important; }
+  body[data-gsh-game="reading"].rg-fake-fullscreen .page-header { display:block !important; }
+  body[data-gsh-game="reading"] #cookieConsentBanner { z-index:100100 !important; }
+  body[data-gsh-game="reading"] .rg-ctl-wrap {
+    flex-direction:row !important;
+    align-items:center !important;
+    gap:8px !important;
+  }
+  body[data-gsh-game="reading"] .rg-ctl-wrap > #game-switcher {
+    position:absolute !important;
+    right:0 !important;
+    bottom:calc(100% + 8px) !important;
+    top:auto !important;
+    left:auto !important;
+    margin:0 !important;
+    transform:none !important;
+  }
+
+  /* Copy Tone's complete gold question band on ordinary Desktop. Reading keeps
+     its own learning-tool buttons; only their surface, spacing and placement
+     follow Tone's #tf-word-ctl-row contract. */
+  body[data-gsh-game="reading"] .gold-banner {
+    padding:16px 22px 0;
+    border-bottom:0;
+  }
+  body[data-gsh-game="reading"] .gold-banner .bars-wrap {
+    margin:6px 0 4px;
+  }
+  body[data-gsh-game="reading"] .word-area { margin:0; }
+  body[data-gsh-game="reading"] .word-th {
+    padding-top:0;
+    font-family:'Sarabun',sans-serif;
+  }
+  body[data-gsh-game="reading"] .rev-pron {
+    margin-top:4px;
+    font-family:'Sarabun',sans-serif;
+  }
+  body[data-gsh-game="reading"] .rev-en { margin-top:2px; }
+  body[data-gsh-game="reading"] .word-zh {
+    color:#a08050;
+    margin-top:6px;
+  }
+  body[data-gsh-game="reading"] #word-ctl-row {
+    width:calc(100% + 44px);
+    margin:10px -22px 0 !important;
+    padding:0 22px 14px;
+    background:#F8F0DE;
+    border-bottom:2px solid rgba(184,134,40,.50);
+  }
+}
 
 .level-tabs{display:flex;gap:8px;margin-bottom:10px;width:100%;max-width:640px;}
 /* Phase C.1 (2026-08-10): level-tabs + top-bar ย้ายเข้า .gsh-session-header เดียวกัน (ดูบรรทัด ~476) —
@@ -438,8 +493,8 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
       <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">✓「已記得」按鈕是什麼意思</div>
       <p style="margin:0 0 10px;">覺得這個字已經很熟，可按「已記得」跳過提示直接自測。不會加分、不會加星星，就算全拼對也一樣——純粹標記「已精通」，用在複習系統。</p>
 
-      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🍚 好用小工具（點 🍚 圖示打開選單）</div>
-      <p style="margin:0 0 10px;">點 🍚 圖示展開直式清單：🔊發音（AI 語音）・讀音顯示・英文讀音・翻譯顯示・🔖加入單字庫（收藏這個字，之後可在別處複習）・💡／🔥提示模式切換・字體切換・🙏禮貌詞（只在高級句子出現，切換句尾要不要顯示 ครับ／ค่ะ／คะ，純顯示不影響拼字或計分）。</p>
+      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🧰 好用小工具</div>
+      <p style="margin:0 0 10px;">題目上方的工具列可直接使用：🔊發音（AI 語音）・讀音顯示・英文讀音・翻譯顯示・🔖加入單字庫（收藏這個字，之後可在別處複習）・💡／🔥提示模式切換・字體切換・🙏禮貌詞（只在高級句子出現，切換句尾要不要顯示 ครับ／ค่ะ／คะ，純顯示不影響拼字或計分）。</p>
 
       <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🏆 星星、稻米勳章</div>
       <p style="margin:0 0 10px;">星星不是拼對一次就有，是這個字經過複習、真的「精通」了才拿到（跟其他遊戲共用）。星星累積解鎖 5 款稻米勳章：茉莉香米（10顆）→ 糯米（20顆）→ 紫米（40顆）→ 香黑米（60顆）→ 紅米（100顆）。</p>
@@ -541,7 +596,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
         <!-- Lin 2026-08-01: ปุ่มครับ/ค่ะ/คะ ท้ายประโยค高級 (เหมือนเกมเสียง) — ไม่เกี่ยวกับกล่องฝึกเขียน/คะแนนเลย โผล่เฉพาะตอนเล่น高級句子เท่านั้น -->
         <button id="rg-particle-toggle" class="word-ctl-btn" type="button" onclick="rgToggleParticleMode();try{gtag('event','reading_game_particle_toggle',{category:'game',mode:rgParticleMode})}catch(e){}" style="display:none;">🙏</button>
       </div>
-      <!-- Lin 2026-07-19: ยุบปุ่มทั้ง 5 เข้าเมนู 🍚 (รายการแนวตั้ง ไอคอน+ชื่อ+สถานะ) — ปุ่มเดิม/ช่องเสียบเดิมถูกย้ายเข้าเมนู ไม่ได้สร้างใหม่ ตรรกะเดิมทำงานครบ -->
+      <!-- เครื่องมือช่วยเรียนใช้ปุ่มเดิมในแถวนี้โดยตรง; ไม่มีปุ่มเปิดเมนู 🍚 -->
       <!-- Lin 2026-07-30 (แก้รอบ 2): เรียงลำดับกลางทุกเกม: 發音 → 讀音 → 英文讀音 → 翻譯 → 單字庫 → 提示 → 字體 → 螢幕鍵盤 (เกมไหนไม่มีปุ่มไหนก็เลื่อนขึ้น) -->
       <script>document.addEventListener('DOMContentLoaded',function(){WordMenu.init({rowId:'word-ctl-row',items:[
         {id:'rg-sound-toggle',    label:'發音',   state:'none'},
@@ -725,7 +780,7 @@ var GT_TOUR_STEPS=[
   {sel:'#wth',              title:'這裡是要拼的字', text:'畫面會顯示現在要拼的泰文字，跟著音節拆解，一格一格拼出來。'},
   {sel:'#slot-row',         title:'把零件拼進這裡', text:'子音、聲調符、母音、尾音，每一格都要放對零件，才能拼出正確的字。'},
   {sel:'#pool',             title:'零件在下面選', text:'點一下下面的零件方塊，就會自動填進對的格子，填錯了可以再換一個試試。'},
-  {sel:'#wm-trigger',       title:'更多功能都在這裡', text:'點 🍚 打開選單：發音、讀音、翻譯、收藏單字、提示切換、字體切換、🙏禮貌詞（高級句子專用）都在裡面。'},
+  {sel:'#word-ctl-row',     title:'學習工具都在這裡', text:'直接使用這排工具：發音、讀音、翻譯、收藏單字、提示切換、字體切換，以及高級句子的🙏禮貌詞。'},
   {sel:'#rg-profile-wrap',  title:'帳號狀態列', text:'<b>你的資料</b>：🔥連續天數・🛡️護盾・⭐星星・🌱勳章<br><b>怎麼玩</b>：忘記玩法，點 📖 隨時再看說明'}
 ];
 var gtTourIdx=0;
@@ -781,7 +836,7 @@ function gtTourStart(){
   var card=document.getElementById('gt-tour-card'); if(card) card.style.display='block';
   gtTourRender();
 }
-// รอให้โจทย์ข้อแรก + ปุ่ม 🍚 (สร้างหลัง DOMContentLoaded โดย word-menu.js) พร้อมก่อน ค่อยเริ่มทัวร์ — กันชี้ผิดที่/ชี้ที่ว่าง
+// รอให้โจทย์ข้อแรก + แถวเครื่องมือพร้อมก่อน ค่อยเริ่มทัวร์ — กันชี้ผิดที่/ชี้ที่ว่าง
 (function(){
   try{
     if(localStorage.getItem('howto_tour_seen_reading')) return;
@@ -789,7 +844,8 @@ function gtTourStart(){
     var waitReady=setInterval(function(){
       tries++;
       var wth=document.getElementById('wth');
-      var ready=document.getElementById('wm-trigger') && document.getElementById('rg-guide-toggle') && document.getElementById('pool') && wth && wth.textContent.trim()!=='' && wth.textContent.trim()!=='—';
+      var toolsRow=document.getElementById('word-ctl-row');
+      var ready=toolsRow && toolsRow.getAttribute('data-wm-done')==='1' && document.getElementById('rg-guide-toggle') && document.getElementById('pool') && wth && wth.textContent.trim()!=='' && wth.textContent.trim()!=='—';
       if(ready || tries>25){
         clearInterval(waitReady);
         if(ready) setTimeout(gtTourStart, 500);
@@ -800,7 +856,7 @@ function gtTourStart(){
 </script>
 
 <!-- P-shared-ui: ลงทะเบียนกล่อง howto/star/badge/ask-teacher กับ GamePanels กลาง (registerGameModal ใน shared.js)
-     ให้เมนู 🎮/🍚/🪧 ของ shared.js ปิดกล่องพวกนี้อัตโนมัติเวลาเปิดกล่องอื่น (closeOthers) — ไม่แตะกลไกเปิด/ปิดเดิมเลย
+     ให้เมนู 🎮/⋯ ของ shared.js ปิดกล่องพวกนี้อัตโนมัติเวลาเปิดกล่องอื่น (closeOthers) — ไม่แตะกลไกเปิด/ปิดเดิมเลย
      แค่ "อ่านสถานะ" (isOpen) และ "เรียกวิธีปิดเดิม" (close) เท่านั้น — Lin 2026-08-10 (shared game UI rollout) -->
 <script>
 document.addEventListener('DOMContentLoaded', function(){
