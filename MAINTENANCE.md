@@ -4,8 +4,9 @@
 
 ## 2026-08-28 — Reading Desktop Tone-shell parity (`PASS_LOCAL / LOCAL_BROWSER_PASS / HUMAN_REVIEW_PENDING / PRODUCTION_UNCHANGED`)
 
-- Reused only the accepted Tone shell treatment that is compatible with Reading ordinary Desktop: the Reading title/subtitle remain visible in focus mode, the site announcement stays out of the game surface, and the existing game-switcher and focus controls form one horizontal row with the switcher opening above it. No retired `🍚` or absent More control was added.
-- Corrected Reading's stale help and first-visit tour so they point to the existing inline learning toolbar instead of the retired `🍚` menu. The learning toolbar and gameplay card remain Reading-specific; matching other Desktop shell areas to Tone is a later bounded visual task.
+- Reused the accepted Tone shell treatment that is compatible with Reading ordinary Desktop: the Reading title/subtitle remain visible in focus mode, the site announcement stays out of the game surface, and the existing game-switcher and focus controls form one horizontal row with the switcher opening above it. No retired `🍚` or absent More control was added.
+- Copied Tone's complete gold question-band presentation on Reading Desktop: progress spacing, inner padding, Thai/roman/Chinese reading rhythm, translation color, and the full-width gold learning-tool row with its closing border. Reading's additional learning tools and gameplay remain intact; Portrait and Mobile Landscape are unchanged.
+- Corrected Reading's stale help and first-visit tour so they point to the existing inline learning toolbar instead of the retired `🍚` menu.
 - Kept the first-visit Cookie consent layer above those controls and menus. Reading gameplay, First Check score, Hint zero-lock, component order, option generation, font/particle behavior, Portrait and Mobile Landscape remain unchanged.
 - Reading and shared-game regressions, source whitespace validation and the full 1,015-file gate pass. The exact-build Draft browser check at Desktop 1280×720 loads protected Guest content and confirms the two-control row, inline learning toolbar, working first-visit tour, no `🍚` trigger, visible focus-mode header and hidden announcement; Human visual acceptance remains pending before release.
 

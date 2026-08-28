@@ -235,6 +235,20 @@ test('Reading Desktop reuses the compatible Tone shell treatment without inventi
   assert.doesNotMatch(reading, /@media \(max-width:768px\) and \(orientation:portrait\)[\s\S]{0,400}data-gsh-game="reading"\] \.rg-ctl-wrap/, 'Reading Mobile Portrait controls must remain untouched');
 });
 
+test('Reading Desktop copies the complete Tone gold-band rhythm while retaining Reading tools', () => {
+  const reading = games.find((g) => g.id === 'reading').htmlText;
+  assert.match(reading, /data-gsh-game="reading"\] \.gold-banner \{\s*padding:16px 22px 0;\s*border-bottom:0;/, 'Reading Desktop gold band must use Tone horizontal and top spacing');
+  assert.match(reading, /\.gold-banner \.bars-wrap \{\s*margin:6px 0 4px;/, 'Reading Desktop progress rows must use Tone placement');
+  assert.match(reading, /data-gsh-game="reading"\] \.word-area \{ margin:0; \}/, 'Reading Desktop word area must remove the old extra offset');
+  assert.match(reading, /data-gsh-game="reading"\] \.word-th \{\s*padding-top:0;\s*font-family:'Sarabun',sans-serif;/, 'Reading Desktop Thai prompt must use Tone placement and font');
+  assert.match(reading, /data-gsh-game="reading"\] \.rev-pron \{\s*margin-top:4px;\s*font-family:'Sarabun',sans-serif;/, 'Reading Desktop Thai reading must use Tone spacing');
+  assert.match(reading, /data-gsh-game="reading"\] \.rev-en \{ margin-top:2px; \}/, 'Reading Desktop roman reading must use Tone spacing');
+  assert.match(reading, /data-gsh-game="reading"\] \.word-zh \{\s*color:#a08050;\s*margin-top:6px;/, 'Reading Desktop translation must use Tone color and spacing');
+  assert.match(reading, /data-gsh-game="reading"\] #word-ctl-row \{[\s\S]{0,280}width:calc\(100% \+ 44px\);[\s\S]{0,120}margin:10px -22px 0 !important;[\s\S]{0,120}padding:0 22px 14px;[\s\S]{0,180}border-bottom:2px solid rgba\(184,134,40,\.50\);/, 'Reading-specific tools must occupy Tone\'s full-width gold tool row');
+  assert.match(reading, /id="rg-en-toggle"/, 'Reading must retain its additional English-reading tool');
+  assert.match(reading, /id="rg-particle-toggle"/, 'Reading must retain its additional politeness tool');
+});
+
 test('Reading exposes learning tools inline without the retired rice-bowl menu contract', () => {
   const reading = games.find((g) => g.id === 'reading').htmlText;
   assert.doesNotMatch(reading, /#wm-trigger|document\.getElementById\('wm-trigger'\)|點 🍚|ปุ่ม 🍚/, 'Reading help and tour must not depend on the retired rice-bowl menu');

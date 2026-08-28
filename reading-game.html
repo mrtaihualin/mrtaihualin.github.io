@@ -143,6 +143,38 @@ html:not(.gc-ready) [onclick*="rgBackToEndFromMistakes("]{
     margin:0 !important;
     transform:none !important;
   }
+
+  /* Copy Tone's complete gold question band on ordinary Desktop. Reading keeps
+     its own learning-tool buttons; only their surface, spacing and placement
+     follow Tone's #tf-word-ctl-row contract. */
+  body[data-gsh-game="reading"] .gold-banner {
+    padding:16px 22px 0;
+    border-bottom:0;
+  }
+  body[data-gsh-game="reading"] .gold-banner .bars-wrap {
+    margin:6px 0 4px;
+  }
+  body[data-gsh-game="reading"] .word-area { margin:0; }
+  body[data-gsh-game="reading"] .word-th {
+    padding-top:0;
+    font-family:'Sarabun',sans-serif;
+  }
+  body[data-gsh-game="reading"] .rev-pron {
+    margin-top:4px;
+    font-family:'Sarabun',sans-serif;
+  }
+  body[data-gsh-game="reading"] .rev-en { margin-top:2px; }
+  body[data-gsh-game="reading"] .word-zh {
+    color:#a08050;
+    margin-top:6px;
+  }
+  body[data-gsh-game="reading"] #word-ctl-row {
+    width:calc(100% + 44px);
+    margin:10px -22px 0 !important;
+    padding:0 22px 14px;
+    background:#F8F0DE;
+    border-bottom:2px solid rgba(184,134,40,.50);
+  }
 }
 
 .level-tabs{display:flex;gap:8px;margin-bottom:10px;width:100%;max-width:640px;}
