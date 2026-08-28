@@ -2707,11 +2707,6 @@ function stepSessionSummary() {
     '</div>' +
     '<table class="tf-sum-table"><thead><tr><th></th><th>單字</th><th>中文</th><th>聲調</th><th>結果</th><th style="text-align:right;">分數</th></tr></thead>' +
       '<tbody>'+rows+'</tbody></table>' +
-    ((window.READING_AUTH && READING_AUTH.user) ? '' :
-      '<div class="tf-result-login-card" style="margin-top:16px;padding:11px 14px;background:#FBF0DA;border:1px solid #EAC36B;border-radius:12px;font-size:13px;color:#8B6310;line-height:1.6;text-align:center;">' +
-        '🏆 登入就能<b>累積分數、上排行榜</b>，換手機也記得你～' +
-        '<button onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_summary_login_click\',{category:\'game\'});}catch(e){}tfCtaLogin()" style="margin-left:6px;border:none;background:#C8973A;color:#fff;border-radius:8px;padding:5px 13px;font-size:12.5px;font-weight:700;cursor:pointer;">登入</button>' +
-      '</div>') +
     // F1 (2026-08-10): แถวปุ่มท้ายผลลัพธ์ เปลี่ยนจาก inline flex style เดิม → class gsh-end-actions (shared.css: column บนมือถือ, row บนจอใหญ่ ≥600px) เพิ่มปุ่ม 查看錯題 (F2) เข้าแถวเดียวกัน — ปุ่ม/ลิงก์เดิมทุกปุ่มยังอยู่ครบ ไม่มีปุ่มไหนถูกลบ ไม่เปลี่ยน onclick/href ใดๆ เลย
     '<div class="gsh-end-actions tf-result-actions">' +
       '<button class="tf-session-next-btn" id="tf-pdf-btn" data-game-result-print="v1" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_download_report_click\',{category:\'game\'});}catch(e){}TF.downloadReport()">📄 列印／儲存學習紀錄</button>' +

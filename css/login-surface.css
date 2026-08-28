@@ -1,0 +1,122 @@
+/* Shared Login surface for the games/account entry lane.
+   Reading remains the auth-flow owner; this file only standardizes placement. */
+.mrt-login-surface {
+  width: min(100%, 1080px);
+  min-height: 92px;
+  margin: 22px auto 28px;
+  padding: 16px 22px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  background: #faf4e8;
+  border: 2px solid #c8973a;
+  border-radius: 22px;
+  font-family: 'Noto Sans TC', sans-serif;
+}
+
+.mrt-login-surface[data-login-surface="game"] {
+  margin-top: 0;
+}
+
+.mrt-login-surface #rg-login-slot,
+.mrt-login-surface .mrt-login-slot {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  margin: 0 !important;
+  flex: 0 0 auto !important;
+}
+
+.mrt-login-surface #rg-login-btn,
+.mrt-login-surface .mrt-login-button {
+  min-width: 176px;
+  min-height: 54px;
+  padding: 12px 28px !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 9px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: linear-gradient(135deg, #9b6a08, #d6a12c) !important;
+  color: #fff !important;
+  box-shadow: 0 8px 20px rgba(139, 99, 16, .28) !important;
+  font: 800 20px/1 'Noto Sans TC', sans-serif !important;
+  letter-spacing: .5px !important;
+  cursor: pointer;
+}
+
+.mrt-login-surface .mrt-login-howto {
+  min-width: 146px;
+  min-height: 54px;
+  padding: 12px 25px !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: #f6edda !important;
+  color: #6f4d0b !important;
+  box-shadow: none !important;
+  font: 800 19px/1 'Noto Sans TC', sans-serif !important;
+  cursor: pointer;
+}
+
+.mrt-login-surface .rg-stat-row,
+.mrt-login-surface [id$="stat-row"],
+.mrt-login-surface #rg-cta-login,
+.mrt-login-surface .lg-account-context-chip,
+.mrt-login-surface .howto-hint-bubble {
+  display: none !important;
+}
+
+.mrt-login-safe-state {
+  width: 100%;
+  margin: -14px auto 24px;
+  color: #74664d;
+  font: 500 13px/1.7 'Noto Sans TC', sans-serif;
+  text-align: center;
+}
+
+/* Keep the five shared game headers on one baseline without redesigning them. */
+@media (min-width: 1025px),
+       (min-width: 769px) and (min-height: 601px),
+       (max-width: 768px) and (orientation: portrait) {
+  body[data-gsh-game] .gsh-page-header {
+    min-height: 62px;
+  }
+}
+
+@media (max-width: 560px) and (orientation: portrait) {
+  .mrt-login-surface {
+    min-height: 82px;
+    margin: 16px auto 22px;
+    padding: 13px 14px;
+    gap: 10px;
+    border-radius: 18px;
+  }
+  .mrt-login-surface #rg-login-btn,
+  .mrt-login-surface .mrt-login-button {
+    min-width: 142px;
+    min-height: 48px;
+    padding: 10px 20px !important;
+    font-size: 17px !important;
+  }
+  .mrt-login-surface .mrt-login-howto {
+    min-width: 122px;
+    min-height: 48px;
+    padding: 10px 18px !important;
+    font-size: 16px !important;
+  }
+}
+
+/* Locked contract: Login is absent in Mobile Landscape. */
+@media (orientation: landscape) and (max-width: 1024px) and (max-height: 600px) {
+  .mrt-login-surface,
+  .mrt-login-safe-state {
+    display: none !important;
+  }
+}

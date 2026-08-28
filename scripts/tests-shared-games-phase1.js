@@ -69,7 +69,7 @@ test('Tone ordinary Desktop main and secondary headers exactly match the Core ga
   assert.doesNotMatch(toneApp, /getElementById\('tf-hint'\)\.style\.display\s*=\s*(?:'none'|\(S\.step)/, 'Tone: source runtime must not hide the secondary header');
   assert.match(toneMin, /getElementById\("tf-hint"\)\.style\.display="block"/, 'Tone: deployed runtime must keep the secondary header visible');
   assert.doesNotMatch(toneMin, /getElementById\("tf-hint"\)\.style\.display=(?:"none"|"level-select")/, 'Tone: deployed runtime must not hide the secondary header');
-  assert.match(tone, /<!--ANN-BAND:START--><!-- Tone is a Core game surface: no announcement strip\. --><!--ANN-BAND:END-->/, 'Tone must not render the shared announcement strip');
+  assert.match(tone, /<!--ANN-BAND:START--><!-- Login UI scope: no announcement strip\. --><!--ANN-BAND:END-->/, 'Tone must not render the shared announcement strip');
   assert.match(tone, /body\[data-gsh-game="tone"\] > \.avail-band \{ display:none !important; \}/, 'Tone must also hide any announcement fallback inserted by shared runtime');
   assert.match(tone, /@media \(min-width:1025px\), \(min-width:769px\) and \(min-height:601px\)[\s\S]{0,420}#tf-syl-strip\[style\*="display: flex"\] \+ \.tf-body\s*\{\s*padding-top:0;/, 'Tone syllable spacing must cover tall and wide-short Desktop without changing mobile landscape');
 });
@@ -201,7 +201,7 @@ test('floating controls use the locked switcher, focus and More Menu copy', () =
   assert.match(sharedJs, /fitMenuToViewport\(\)/);
   assert.match(sharedJs, /fitMoreMenuToViewport\(\)/);
   assert.match(sharedJs, /path\.indexOf\('listening-game'\) > -1\) GAME_ID = 'listening'/, 'Listening must use the shared More mapping');
-  assert.match(games.find((g) => g.id === 'listening').htmlText, /shared\.min\.js\?v=42/, 'Listening must load the current shared mapping version');
+  assert.match(games.find((g) => g.id === 'listening').htmlText, /shared\.min\.js\?v=43/, 'Listening must load the current shared mapping version');
 });
 
 test('all game pages permanently omit the automatic Login cap popup', () => {
@@ -214,6 +214,47 @@ test('all game pages permanently omit the automatic Login cap popup', () => {
     assert.match(g.htmlText, /game-content-client\.js\?v=11/, `${g.id}: must load the popup-free game content client`);
   }
   assert.doesNotMatch(legoHtml, /gc-cap-banner|免費內容你都練過一輪|登入帳號（完全免費）可以解鎖更多/);
+});
+
+test('all scoped pages use one fail-closed Login surface and permanently omit announcements', () => {
+  const loginCss = fs.readFileSync(path.join(root, 'css/login-surface.css'), 'utf8');
+  const loginJs = fs.readFileSync(path.join(root, 'js/core/login-surface.js'), 'utf8');
+  const minimumGuest = fs.readFileSync(path.join(root, 'js/core/minimum-guest-launch.js'), 'utf8');
+  const readingAuth = fs.readFileSync(path.join(root, 'js/games/reading-auth.js'), 'utf8');
+  const toneApp = fs.readFileSync(path.join(root, 'js/games/tone-finder-game.js'), 'utf8');
+  const scopedPages = [
+    'games.html', 'games-practice.html', 'games-challenge.html',
+    'tone-finder.html', 'reading-game.html', 'listening-game.html', 'typing-game.html', 'word-order.html', 'lego.html',
+    'my-progress.html', 'vault.html', 'all-board.html', 'leaderboard.html', 'reading-board.html',
+    'listening-board.html', 'typing-board.html', 'word-order-board.html', 'lego-board.html', 'mix-board.html'
+  ];
+  for (const file of scopedPages) {
+    const html = fs.readFileSync(path.join(root, file), 'utf8');
+    assert.match(html, /<!--ANN-BAND:START--><!-- Login UI scope: no announcement strip\. --><!--ANN-BAND:END-->/, `${file}: announcement must be empty`);
+    assert.doesNotMatch(html, /<div class="avail-band" id="ann-band"/, `${file}: static announcement must be absent`);
+    assert.match(html, /minimum-guest-launch\.js\?v=2/, `${file}: must load the non-redirect Login gate`);
+    assert.match(html, /shared\.min\.js\?v=43/, `${file}: must load the announcement runtime guard`);
+  }
+  assert.match(sharedJs, /suppressScopedAnnouncement/);
+  assert.match(sharedJs, /staleScopedAnnouncement\.remove\(\)/);
+  assert.match(minimumGuest, /window\.MRT_PARKED_ACCOUNT_SURFACE = parked\.test\(path\)/);
+  assert.doesNotMatch(minimumGuest, /location\.replace\('\/games\.html\?guest_launch=1'\)/);
+  assert.match(loginJs, /'tone-finder\.html'[\s\S]*'reading-game\.html'[\s\S]*'listening-game\.html'[\s\S]*'typing-game\.html'[\s\S]*'word-order\.html'[\s\S]*'lego\.html'/);
+  assert.match(loginJs, /help\.textContent = '📖 玩法'/);
+  assert.match(loginCss, /\.mrt-login-surface[\s\S]{0,420}background: #faf4e8;[\s\S]{0,120}border: 2px solid #c8973a;/);
+  assert.match(loginCss, /body\[data-gsh-game\] \.gsh-page-header \{\s*min-height: 62px;/, 'shared game headers must keep the Login bar on one baseline');
+  assert.match(loginCss, /@media \(orientation: landscape\) and \(max-width: 1024px\) and \(max-height: 600px\)[\s\S]{0,180}\.mrt-login-surface,[\s\S]{0,100}display: none !important;/, 'Mobile Landscape must show no Login');
+  assert.match(readingAuth, /id="rg-login-btn" class="mrt-login-button"/, 'Reading provider flow must own the standardized Login button');
+  assert.doesNotMatch(toneApp, /tf-result-login-card|tone_finder_summary_login_click/, 'Tone Result must not create a second Login CTA');
+
+  for (const file of ['my-progress.html', 'vault.html', 'leaderboard.html', 'reading-board.html', 'listening-board.html', 'typing-board.html', 'word-order-board.html']) {
+    const html = fs.readFileSync(path.join(root, file), 'utf8');
+    assert.doesNotMatch(html, /document\.open\(\)|location\.replace\(target\)/, `${file}: direct Login surface must not redirect`);
+  }
+  for (const file of ['my-progress.html', 'vault.html', 'leaderboard.html', 'reading-board.html', 'listening-board.html', 'typing-board.html', 'word-order-board.html']) {
+    const html = fs.readFileSync(path.join(root, file), 'utf8');
+    assert.match(html, /type="text\/plain" data-mrt-parked-runtime/, `${file}: data runtime must remain parked`);
+  }
 });
 
 test('Tone Desktop and Mobile Portrait keep all three controls horizontal with menus opening upward', () => {
@@ -267,8 +308,8 @@ test('all games omit the removed leave-game control and dialog', () => {
   const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
   assert.doesNotMatch(sharedJs, /要離開遊戲嗎？|繼續遊戲|離開遊戲/);
   assert.doesNotMatch(sharedJs, /data-act="exit"|openGameExit|gsh-game-exit-dialog/);
-  for (const g of games) assert.match(g.htmlText, /shared\.min\.js\?v=42/, `${g.id}: must load the exit-free shared runtime`);
-  assert.match(legoHtml, /shared\.min\.js\?v=42/, 'Lego must load the exit-free shared runtime');
+  for (const g of games) assert.match(g.htmlText, /shared\.min\.js\?v=43/, `${g.id}: must load the exit-free shared runtime`);
+  assert.match(legoHtml, /shared\.min\.js\?v=43/, 'Lego must load the exit-free shared runtime');
 });
 
 test('completed rounds no longer interrupt play with the removed VocabPopup lead flow', () => {
@@ -303,7 +344,7 @@ test('Tone question words and advanced sentences both follow the shared font mod
 test('Lego consumes the shared two-mode font path without a particle control', () => {
   const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
   const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
-  assert.match(legoHtml, /shared\.min\.js\?v=42/, 'Lego must load the current shared game runtime');
+  assert.match(legoHtml, /shared\.min\.js\?v=43/, 'Lego must load the current shared game runtime');
   assert.match(legoHtml, /lego-game-app\.js\?v=12/, 'Lego must load its Guest-only quota runtime');
   assert.match(legoApp, /window\.rgToggleFont\s*=\s*function/, 'Lego must expose the shared font adapter API');
   assert.match(legoApp, /classList\.toggle\('rg-modern-font'\)/, 'Lego must preserve the existing standard/modern modes');
@@ -436,7 +477,7 @@ test('mobile resume uses one compact shared-copy line and three horizontal actio
   for (const g of games) {
     const sharedCssVersion = ['tone', 'reading', 'typing', 'wordorder'].includes(g.id) ? 29 : 26;
     assert.match(g.htmlText, new RegExp(`css/shared\\.css\\?v=${sharedCssVersion}`), `${g.id}: must load current shared game CSS`);
-    assert.match(g.htmlText, /js\/core\/shared\.min\.js\?v=42/, `${g.id}: must load shared resume copy`);
+    assert.match(g.htmlText, /js\/core\/shared\.min\.js\?v=43/, `${g.id}: must load shared resume copy`);
     assert.match(g.appText, /GameUiCopy\.resumeLine/, `${g.id}: resume detail must use shared semantic copy`);
   }
 });
@@ -617,7 +658,7 @@ test('Tone active-question guidance permanently locks that question to zero', ()
   assert.match(toneMin, /聲調選擇錯誤/, 'Tone: deployed minified bundle must charge a wrong initial tone answer');
   assert.match(toneMin, /開始練習/, 'Tone: deployed minified bundle must include the guided-question gate');
   assert.match(toneMin, /pageshow/, 'Tone: deployed minified bundle must include the page-return guard');
-  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=74/, 'Tone: page must request the rebuilt Result runtime version');
+  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=75/, 'Tone: page must request the rebuilt Result runtime version');
 });
 
 test('Tone mobile touch surfaces keep Desktop gameplay free of keyboard-only copy', () => {

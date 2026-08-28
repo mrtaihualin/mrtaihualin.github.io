@@ -1,6 +1,15 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-28 Asia/Bangkok** — LOGIN-L8 combined Reading Preview Candidate
+**Updated: 2026-08-28 Asia/Bangkok** — Shared Login surfaces across games and parked account pages
+
+## 2026-08-28 — Shared Login surfaces / announcement removal (`PASS_LOCAL / PRODUCTION_UNCHANGED`)
+
+- Standardized one centered cream/gold Login surface across Tone, Reading, Listening, Typing, Word Order and Lego, reusing Reading's existing provider/modal flow. Tone and Reading measure identically at Desktop (640×92 at the same coordinates); all six use the same surface dimensions and `登入 / 玩法` controls, while Hub, Practice, Challenge, Learning Center, Vault and all leaderboard/result routes use Login only.
+- Removed the static announcement strip from all 19 scoped pages and added generator plus shared-runtime guards so it cannot be recreated. Removed Tone's duplicate Result Login card; the fixed top surface persists, and the Login modal remains absent until the player clicks Login.
+- Replaced parked-route redirects with safe visible surfaces while leaving Learning/Personal/Vault/Leaderboard clients non-executable. Listening gameplay, SRS/Review, scores, personal data, Gamification, Paid and Challenge runtimes remain parked; no database, provider, account or Production mutation occurred.
+- Preserved the frozen Tone Mobile Landscape files and cache binding byte-for-byte. Browser checks confirm no Login at 844×390 on all six games plus scoped non-game pages, no announcement on all 19 pages, and no automatic Login popup. Targeted regressions and the full `node scripts/check-site.js` gate pass across 1,019 files.
+
+**Prior update: 2026-08-28 Asia/Bangkok** — LOGIN-L8 combined Reading Preview Candidate
 
 ## 2026-08-28 — LOGIN-L8 combined Reading Preview Candidate (`PASS_LOCAL / PREVIEW_APPROVAL_PENDING / PRODUCTION_UNCHANGED`)
 

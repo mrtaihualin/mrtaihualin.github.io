@@ -49,7 +49,13 @@ const ANN_BLOCK_RE = new RegExp(
   '[\\s\\S]*?' +
   NAV.ANN_MARK_END.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 );
-const TONE_ANN_BLOCK = '<!--ANN-BAND:START--><!-- Tone is a Core game surface: no announcement strip. --><!--ANN-BAND:END-->';
+const NO_ANNOUNCEMENT_PAGES = new Set([
+  'games.html', 'games-practice.html', 'games-challenge.html',
+  'tone-finder.html', 'reading-game.html', 'listening-game.html', 'typing-game.html', 'word-order.html', 'lego.html',
+  'my-progress.html', 'vault.html', 'all-board.html', 'leaderboard.html', 'reading-board.html',
+  'listening-board.html', 'typing-board.html', 'word-order-board.html', 'lego-board.html', 'mix-board.html'
+]);
+const NO_ANNOUNCEMENT_BLOCK = '<!--ANN-BAND:START--><!-- Login UI scope: no announcement strip. --><!--ANN-BAND:END-->';
 // 🆕 2026-08-10 — nav responsive auto-fit inline script (ดู data/nav-template.js)
 const NAVFIT_RE = new RegExp(
   NAV.NAVFIT_MARK_START.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') +
@@ -125,7 +131,7 @@ SCOPE_PAGES.forEach((file) => {
   }
 
   const annMatch = text.match(ANN_BLOCK_RE);
-  const expectedAnn = file === 'tone-finder.html' ? TONE_ANN_BLOCK : NAV.renderAnnBandBlockHTML();
+  const expectedAnn = NO_ANNOUNCEMENT_PAGES.has(file) ? NO_ANNOUNCEMENT_BLOCK : NAV.renderAnnBandBlockHTML();
   if (!annMatch) {
     mismatches.push({ file, kind: 'ann-band ไม่พบ', detail: 'ไม่พบ ANN-BAND marker' });
   } else if (annMatch[0] !== expectedAnn) {

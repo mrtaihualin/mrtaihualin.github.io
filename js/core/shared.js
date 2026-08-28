@@ -201,6 +201,28 @@ window.GameResume = window.GameResume || (function () {
 //    ✏️ แก้ข้อความประกาศที่ data/nav-template.js เท่านั้น แล้วรัน `node scripts/generate-nav.js`
 //    ตรงนี้เหลือแค่ "อ่านค่ามาใช้" — หน้าไหนไม่ได้โหลด nav-template.js จะได้ array ว่าง (ไม่มีแถบ ไม่พัง)
 var ANN = (window.NAV_TEMPLATE && window.NAV_TEMPLATE.ANN) || [];
+var LOGIN_UI_SCOPE = /\/(?:games|games-practice|games-challenge|tone-finder|reading-game|listening-game|typing-game|word-order|lego|my-progress|vault|all-board|leaderboard|reading-board|listening-board|typing-board|word-order-board|lego-board|mix-board)\.html$/i;
+var suppressScopedAnnouncement = LOGIN_UI_SCOPE.test(String(window.location.pathname || ''));
+if (suppressScopedAnnouncement) {
+  var staleScopedAnnouncement = document.getElementById('ann-band');
+  if (staleScopedAnnouncement) staleScopedAnnouncement.remove();
+}
+
+// Login UI is a shared presentation layer. Reading remains the provider-flow owner.
+(function loadScopedLoginSurface() {
+  if (!LOGIN_UI_SCOPE.test(String(window.location.pathname || ''))) return;
+  if (!document.querySelector('link[href*="login-surface.css"]')) {
+    var stylesheet = document.createElement('link');
+    stylesheet.rel = 'stylesheet';
+    stylesheet.href = 'css/login-surface.css?v=1';
+    document.head.appendChild(stylesheet);
+  }
+  if (!document.querySelector('script[src*="login-surface.js"]')) {
+    var controller = document.createElement('script');
+    controller.src = 'js/core/login-surface.js?v=1';
+    document.head.appendChild(controller);
+  }
+})();
 
 // ===================================================================
 // [02.2] 🧭 SHARED NAV — edit here to update navigation on ALL pages
@@ -278,7 +300,7 @@ window.goHome = function() {
   //    = ตาเห็นเป็น "หน้ากระพริบ/โหลด 2 รอบ" ทุกครั้งที่เปลี่ยนหน้าบนมือถือ (Lin เจอจริง 2026-08-10)
   //    ตอนนี้ generate-nav.js เขียนแถบนี้ลง HTML ทุกหน้าแล้ว (พร้อมสไลด์แรก) → ไม่มีการขยับ layout อีก
   //    ตรงนี้เหลือหน้าที่แค่ "หมุนสไลด์ + ปุ่มลูกศร + ปุ่มปิด" เท่านั้น
-  if (typeof ANN !== 'undefined' && ANN.length && sessionStorage.getItem('annDismissed') !== '1') {
+  if (!suppressScopedAnnouncement && typeof ANN !== 'undefined' && ANN.length && sessionStorage.getItem('annDismissed') !== '1') {
     var annIdx = 0, annTimer;
     // ถ้ามีแถบ static จาก HTML อยู่แล้ว → ใช้ตัวนั้นเลย ห้ามสร้างใหม่/ห้ามแทรกซ้ำ
     var band = document.getElementById('ann-band');

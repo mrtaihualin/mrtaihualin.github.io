@@ -5,9 +5,8 @@
   'use strict';
 
   // OAuth may fall back to the Production Site URL when a preview redirect is
-  // not allow-listed. Minimum Guest mode deliberately does not initialize an
-  // Auth client, so remove any callback credential fragment before doing
-  // anything else. Normal page anchors remain untouched.
+  // not allow-listed. Keep the fragment cleaner for any future fail-closed
+  // configuration; Login Core currently remains the only public account entry.
   function clearAuthCallbackFragment() {
     var fragment = String(window.location.hash || '').replace(/^#/, '');
     var hasAuthPayload = /(?:^|&)(?:access_token|refresh_token|provider_token|provider_refresh_token|expires_at|expires_in|token_type|error|error_code|error_description)=/.test(fragment);
@@ -28,12 +27,23 @@
   window.MRT_MINIMUM_GUEST_LAUNCH = true;
   document.documentElement.classList.add('minimum-guest-launch');
 
+  // Load the presentation layer early enough to avoid a small-to-large Login flash.
+  if (!document.querySelector('link[href*="login-surface.css"]')) {
+    var loginStylesheet = document.createElement('link');
+    loginStylesheet.rel = 'stylesheet';
+    loginStylesheet.href = 'css/login-surface.css?v=1';
+    document.head.appendChild(loginStylesheet);
+  }
+  if (!document.querySelector('script[src*="login-surface.js"]')) {
+    var loginController = document.createElement('script');
+    loginController.src = 'js/core/login-surface.js?v=1';
+    loginController.defer = true;
+    document.head.appendChild(loginController);
+  }
+
   var path = String(window.location.pathname || '').toLowerCase();
   var parked = /\/(?:my-progress|vault|all-board|leaderboard|reading-board|listening-board|typing-board|word-order-board|lego-board|mix-board|games-challenge|mix)\.html$/;
-  if (parked.test(path)) {
-    window.location.replace('/games.html?guest_launch=1');
-    return;
-  }
+  window.MRT_PARKED_ACCOUNT_SURFACE = parked.test(path);
 
   var style = document.createElement('style');
   style.setAttribute('data-minimum-guest-launch', '1');
