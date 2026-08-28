@@ -2274,9 +2274,10 @@ node scripts/check-site.js
 - Added the missing Tone `tf-adv-sent-main` selector so 高級 question sentences now switch with the same `Standard = Sarabun` and `Modern = Noto Sans Thai` preference already used by 初級/中級 question words.
 - Kept the toolbar control icon-only and made no layout, gameplay, Database, Auth, Edge Function, user-data, Listening-availability, or Mobile Landscape change.
 
-# 2026-08-28 — Shared Desktop and Mobile Portrait game framework
+# 2026-08-28 — Shared Desktop and Mobile Portrait Core 5 framework
 
-- Consolidated the six game pages onto the existing shared UI runtime and CSS chain for one 640px Desktop / 370px Portrait axis, fixed header, Login, session, gameplay, question-row, and three-control geometry.
+- Consolidated Tone, Reading, Listening, Typing and Word Order onto the existing shared UI CSS chain for one 640px Desktop / 370px Portrait axis, fixed header, Login, session, gameplay, question-row, and three-control geometry.
 - Added fixed optional question rows so hidden reading or romanization content retains the same measurable four-row rhythm, while game-owned content, controls, scoring, and behavior remain in their existing runtimes.
+- Kept Lego's lower gameplay/layout and shared runtime byte-identical to the PR #98 checkpoint; this packet verifies only Lego's existing Login surface.
 - Kept the pre-existing Mobile Landscape CSS block byte-identical to the integration base and left the parked Listening runtime unbooted.
-- Verification: shared game tests passed 46 checks, owner-switch tests passed 12 checks, Tone Mobile Landscape tests passed 8 checks, responsive browser measurements found no horizontal overflow, and `node scripts/check-site.js` passed in the gated worktree.
+- Verification: targeted shared/owner/Landscape gates, responsive browser measurements, and the full `node scripts/check-site.js` gate cover the exact checkpoint before Human Preview.

@@ -1843,7 +1843,6 @@ window.deleteFBComment = function(postId, idx) {
       if (!gs) return; // เอาแค่หน้าเกมจริงๆ (มี #game-switcher) — หน้าอื่นในเว็บไม่กระทบ
       var currentGameId = gs.getAttribute('data-current') || '';
       var isCore5Surface = ['tone_finder', 'reading_game', 'listening_game', 'typing_game', 'word_order'].indexOf(currentGameId) > -1;
-      var isSharedFrameworkSurface = isCore5Surface || currentGameId === 'lego';
 
       // Lin 2026-07-12: ห่อชื่อเกมด้วย .gs-lbl (ให้จัดสไตล์ได้) — โชว์ชื่อเสมอทั้งคอม+มือถือ (เลิกโหมดไอคอนล้วนแล้ว)
       // Lin 2026-07-25: เปลี่ยนไอคอนนำหน้าให้เป็นวงกลมไล่สีทอง (.ico) ให้หน้าตาเหมือนการ์ด .grw-item ของเมนู 🪧
@@ -1961,7 +1960,7 @@ window.deleteFBComment = function(postId, idx) {
       fab.className = 'rg-ctl-fab';
       function renderFab() {
         fab.textContent = on ? '✕' : '⛶';
-        fab.title = isSharedFrameworkSurface
+        fab.title = isCore5Surface
           ? (on ? '離開專注模式' : '專注模式')
           : (on ? '離開全螢幕模式' : '全螢幕模式（隱藏其他選單）');
         fab.setAttribute('aria-label', fab.title);
@@ -2554,21 +2553,6 @@ window.deleteFBComment = function(postId, idx) {
       menu.appendChild(stubRow('💡', '提示'));
       menu.appendChild(stubRow('⌨️', '螢幕鍵盤'));
       menu.appendChild(fontRow);
-
-      // Shared Page Framework (Lin 2026-08-28): Desktop/Portrait owns exactly
-      // three physical slots. On Lego the existing report/review More menu is
-      // already the right slot, so merge the fallback learning rows into that
-      // same game-owned menu instead of creating a fourth floating button.
-      var sharedMoreMenu = document.getElementById('grw-feedback-menu');
-      var sharedMoreButton = wrap.querySelector('.rg-ctl-fab.grw-fab');
-      if (sharedMoreMenu && sharedMoreButton) {
-        while (menu.lastChild) sharedMoreMenu.insertBefore(menu.lastChild, sharedMoreMenu.firstChild);
-        if (sharedMoreButton.firstChild && sharedMoreButton.firstChild.nodeType === 3) sharedMoreButton.firstChild.nodeValue = '⋯';
-        sharedMoreButton.title = '更多功能';
-        sharedMoreButton.setAttribute('aria-label', '更多功能');
-        sharedMoreMenu.setAttribute('aria-label', '更多功能');
-        return;
-      }
 
       var trigger = document.createElement('button');
       trigger.type = 'button';
