@@ -111,7 +111,7 @@ test('Tone keeps one equal four-button Level and alphabet row on Desktop and Por
   assert.match(tone, /@media \(min-width:769px\) and \(min-height:601px\)[\s\S]{0,700}gsh-session-header > \.gsh-level-selector[\s\S]{0,180}grid-template-columns:repeat\(4,minmax\(0,1fr\)\)[\s\S]{0,120}max-width:640px !important/, 'Desktop must show four equal buttons in one full row');
   assert.match(tone, /#tf-session-counter:empty \{\s*display:none; min-height:0; line-height:0;/, 'Tone must remove the empty counter row before Result and detail cards');
   assert.match(tone, /@media \(max-width:768px\) and \(orientation:portrait\)[\s\S]{0,1900}\.tf-level-tabs \{[\s\S]{0,180}grid-template-columns:repeat\(4,minmax\(0,1fr\)\)[\s\S]{0,100}max-width:none !important/, 'Portrait must show four equal buttons across the available width');
-  assert.match(tone, /@media \(max-width:768px\) and \(orientation:portrait\)[\s\S]{0,1500}\.gsh-session-header \{ gap:7px; padding:0 0 7px; \}[\s\S]{0,100}\.gsh-gameplay \{ margin-top:0; \}/, 'Portrait top rows must keep one 7px vertical rhythm through the gameplay card');
+  assert.match(tone, /@media \(max-width:768px\) and \(orientation:portrait\)[\s\S]{0,1500}\.gsh-session-header \{[\s\S]{0,140}flex-direction:column; flex-wrap:nowrap; gap:10px; padding:0 0 10px;[\s\S]{0,180}\.gsh-session-header > \.gsh-level-selector \{ flex:none; \}[\s\S]{0,120}\.gsh-gameplay \{ margin-top:0; \}/, 'Tone Portrait round status must keep equal 10px gaps between Level and gameplay');
   assert.match(tone, /#tf-alpha-btn \{[\s\S]{0,180}font-size:11\.5px !important; white-space:nowrap;[\s\S]{0,100}#tf-alpha-btn \.tf-alpha-icon \{ display:none; \}/, 'Portrait alphabet label must fit without changing the four equal button widths');
   assert.match(tone, /@media \(orientation:landscape\) and \(max-width:1024px\) and \(max-height:600px\)[\s\S]{0,180}#tf-alpha-btn \{ display:none !important; \}/, 'Mobile Landscape must preserve the accepted three-level Switch surface');
   assert.doesNotMatch(tone.slice(tone.indexOf('<div class="tf-tools-row">'), tone.indexOf('<div class="gsh-session-header">')), /id="tf-alpha-btn"/, 'Account bar must no longer share width with the alphabet button');
@@ -233,6 +233,13 @@ test('Reading Desktop reuses the compatible Tone shell treatment without inventi
   assert.match(reading, /\.rg-ctl-wrap > #game-switcher \{[\s\S]{0,260}position:absolute !important;[\s\S]{0,120}bottom:calc\(100% \+ 8px\) !important;/, 'Reading Desktop game switcher must open above the horizontal row');
   assert.doesNotMatch(reading, /data-gsh-game="reading"\] \.rg-ctl-wrap > \.grw-menu/, 'Reading Desktop parity must not style an absent More menu');
   assert.doesNotMatch(reading, /@media \(max-width:768px\) and \(orientation:portrait\)[\s\S]{0,400}data-gsh-game="reading"\] \.rg-ctl-wrap/, 'Reading Mobile Portrait controls must remain untouched');
+});
+
+test('Reading and Tone Mobile Portrait centre round status between Level and gameplay', () => {
+  const reading = games.find((g) => g.id === 'reading').htmlText;
+  const tone = games.find((g) => g.id === 'tone').htmlText;
+  assert.match(reading, /@media \(max-width:768px\) and \(orientation:portrait\) \{[\s\S]{0,500}data-gsh-game="reading"\] \.gsh-session-header \{[\s\S]{0,180}flex-direction:column;[\s\S]{0,100}flex-wrap:nowrap;[\s\S]{0,100}gap:10px;[\s\S]{0,100}padding:4px 0 10px;[\s\S]{0,220}data-gsh-game="reading"\] \.gsh-gameplay \{ margin-top:0; \}/, 'Reading Portrait must use equal 10px edge gaps around the round status');
+  assert.match(tone, /@media \(max-width:768px\) and \(orientation:portrait\) \{[\s\S]{0,1500}data-gsh-game="tone"\] \.gsh-session-header \{[\s\S]{0,180}flex-direction:column; flex-wrap:nowrap; gap:10px; padding:0 0 10px;[\s\S]{0,220}data-gsh-game="tone"\] \.gsh-gameplay \{ margin-top:0; \}/, 'Tone Portrait must use equal 10px edge gaps around the round status');
 });
 
 test('Reading Desktop copies the complete Tone gold-band rhythm while retaining Reading tools', () => {
