@@ -12,7 +12,8 @@
 //   มี fallback: ถ้า SITE_AUTH โหลดไม่ทัน ยังมี client+listener สำรองของตัวเอง เกมไม่พัง)
 // ============================================================
 (function () {
-  if (window.MRT_MINIMUM_GUEST_LAUNCH === true) {
+  var publicLoginOnly = window.MRT_MINIMUM_GUEST_LAUNCH === true && window.LOGIN_CORE_PUBLIC_ENTRY === true;
+  if (window.MRT_MINIMUM_GUEST_LAUNCH === true && !publicLoginOnly) {
     window.READING_AUTH = {
       ready: true,
       user: null,
@@ -38,6 +39,7 @@
   // v16 (LIN 2026-07-26): startLineLink ให้หน้าอื่น (auth-widget.js ปุ่ม "連接 LINE 帳號") เรียกได้
   // v18 (LIN 2026-08-10, P7-02 C.5): openLoginGate ให้หน้าอื่น (game-content-client.js แถบแจ้ง
   //   "เนื้อหาฟรีหมดแล้ว") เปิด modal ล็อกอินเดียวกันนี้ได้ตรงๆ โดยไม่ต้องหาปุ่ม #rg-login-btn เอง
+  var loginUser = null;
   var API = { ready: true, user: null, saveScore: saveScore, render: render, startLineLink: function () { startLineLogin(true); }, openLoginGate: openGate };
   window.READING_AUTH = API;
 
@@ -131,7 +133,7 @@
   // ── ยังไม่ล็อกอิน: ปุ่ม Login-only ของหน้านี้เอง (เปิด modal OTP/Google ด้านล่าง) ──
   function render() {
     var el = slot(); if (!el) return;
-    if (API.user) {
+    if (loginUser) {
       // ล้างปุ่ม Login-only เดิม (ถ้ายังค้างจากตอนยังไม่ล็อกอิน) ก่อน — เหลือแค่ badge ของ SITE_AUTH
       // (กันโชว์ซ้อนกันสองอัน: ปุ่มเดิม + badge ใหม่) LIN 2026-07-03
       Array.prototype.slice.call(el.children).forEach(function (child) {
@@ -148,7 +150,7 @@
       // v2 (Lin 2026-07-10): หน้าเกม (reading/typing/word-order/lego/tone-finder) มีแบนเนอร์เหลือง "先玩玩看...登入解鎖"
       // อยู่เหนือแถบนี้แล้ว ซึ่งกดแล้ว proxy-click ปุ่มนี้อยู่ดี (ดู rgCtaLogin/woCtaLogin/legoCtaLogin/tfCtaLogin)
       // → โชว์ปุ่มนี้ซ้ำสองอันดูรก จึงซ่อนด้วย display:none แต่ยังคงอยู่ใน DOM ให้ปุ่มแบนเนอร์กดผ่านได้เหมือนเดิม
-      var hideDup = !!document.getElementById('rg-cta-login');
+      var hideDup = !publicLoginOnly && !!document.getElementById('rg-cta-login');
       el.innerHTML =
         '<button id="rg-login-btn" style="display:' + (hideDup ? 'none' : 'flex') + ';align-items:center;gap:6px;' +
         'background:linear-gradient(135deg,#8B6310,#C8973A);color:#fff;border:none;border-radius:20px;' +
@@ -557,8 +559,11 @@
   // ตอนนี้ sync/loadAdaptiveHistory จะรันแค่ตอน user id เปลี่ยนจริง (ล็อกอิน/สลับบัญชี/ล็อกเอาท์)
   var lastAdaptiveUserId = null;
   function setUser(u) {
-    API.user = u || null;
-    if (API.user) closeGate();   // เพิ่งล็อกอินสำเร็จ → ปิด modal
+    loginUser = u || null;
+    // Public Login is deliberately presentation/session-only while Minimum
+    // Guest owns the game runtime. Game clients continue to observe Guest.
+    API.user = publicLoginOnly ? null : loginUser;
+    if (loginUser) closeGate();   // เพิ่งล็อกอินสำเร็จ → ปิด modal
     render();
     // Lin 2026-07-12: auth เพิ่งเสร็จ/เปลี่ยน (getSession เป็น async) → สั่งเกม re-render แถบชวนล็อกอิน "登入解鎖"
     // แก้บั๊ก: ตอนโหลดหน้า auth ยังไม่เสร็จ การ์ดเลยโชว์ค้าง ทั้งที่จริงล็อกอินอยู่ (ผู้เล่นนึกว่าต้องล็อกอินใหม่ทุกครั้ง)
@@ -568,19 +573,20 @@
     // แต่ #rg-cta-login เองก็ไม่ถูกรีเฟรชให้โชว์ปุ่ม 登入解鎖 กลับมา (เพราะ tfRenderTopBanners ไม่ถูกเรียก)
     // → ทั้งสองจุดที่ควรมีปุ่มล็อกอินกลายเป็นว่างเปล่าพร้อมกัน = "แถบล็อคอินหายไปทั้งแถบ" หลังกด 登出
     ['rgRenderGameBar','legoRenderGameBar','woRerenderBar','mxRenderGameBar','tfRenderTopBanners'].forEach(function(fn){ if(typeof window[fn]==='function'){ try{ window[fn](); }catch(e){} } });
-    var uid = (API.user && API.user.id) || null;
+    var uid = (loginUser && loginUser.id) || null;
     if (uid === lastAdaptiveUserId) return; // user เดิม (หรือยังไม่ล็อกอินเหมือนเดิม) — ไม่ต้องยิงซ้ำ
     lastAdaptiveUserId = uid;
     // เพิ่งล็อกอินสำเร็จในแท็บนี้จริงๆ (ไม่ใช่แค่โหลดหน้าแล้วเจอ session เดิม) → ยิง login_success
     // ทน redirect ของ Google OAuth ได้ (markPendingLogin ใช้ sessionStorage ไม่ใช่ตัวแปรในหน่วยความจำ)
-    if (API.user) {
+    if (loginUser) {
       var pendingProvider = takePendingLogin();
       if (pendingProvider) trackLogin('login_success', pendingProvider);
       // จำวิธีล็อกอินไว้เตือนตอนกลับมาเปิด modal ใหม่ (LIN สั่ง 2026-07-25) — เอาจาก Supabase ก่อน (แม่นสุด)
       // ถ้ายังไม่มี (บาง edge case) ค่อย fallback ไปใช้ pendingProvider ที่เพิ่งกดไป
-      var actualProvider = (API.user.app_metadata && API.user.app_metadata.provider) || pendingProvider;
+      var actualProvider = (loginUser.app_metadata && loginUser.app_metadata.provider) || pendingProvider;
       saveLastProvider(actualProvider);
     }
+    if (publicLoginOnly) return;
     if (API.user && window.GAME_ACCOUNT && GAME_ACCOUNT.sync) {
       try { GAME_ACCOUNT.sync(sb, API.user.id); } catch (e) {}
     }
@@ -722,6 +728,7 @@
 
   // proof = {difficulty, items, roundBonus, srsBonus}; Edge derives private mirror items from validated evidence.
   function saveScore(score, games, game, wrongItems, proof) {
+    if (publicLoginOnly) return null;
     if (!API.user) return null; // ยังไม่ล็อกอิน → ไม่เซฟ (ไม่มีคิวค้าง — GA4 ยังนับภาพรวมให้)
     // Phase 1 fail-closed: Challenge is Paid-only and has no Leaderboard. Paid runtime is not launched.
     if (game === 'challenge' || pageGame() === 'challenge') return null;

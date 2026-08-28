@@ -21,7 +21,10 @@
     }
   }
 
-  clearAuthCallbackFragment();
+  // LOGIN-L8 opens only the Login Core entry. Minimum Guest continues to own
+  // gameplay, score, SRS, personal data, Leaderboard and Challenge isolation.
+  window.LOGIN_CORE_PUBLIC_ENTRY = true;
+  if (window.LOGIN_CORE_PUBLIC_ENTRY !== true) clearAuthCallbackFragment();
   window.MRT_MINIMUM_GUEST_LAUNCH = true;
   document.documentElement.classList.add('minimum-guest-launch');
 
@@ -35,7 +38,7 @@
   var style = document.createElement('style');
   style.setAttribute('data-minimum-guest-launch', '1');
   style.textContent = [
-    '#rg-login-slot,#rg-cta-login,#tf-cta-login,#tf-challenge-banner,',
+    '#rg-cta-login,#tf-cta-login,#tf-challenge-banner,',
     '#tf-streak-chip,#rg-streak-chip,[id*="vault-btn-slot"],',
     '[data-mgl-parked],a[href="/my-progress.html"],a[href="my-progress.html"],',
     'a[href="vault.html"],a[href="all-board.html"],a[href="leaderboard.html"],',

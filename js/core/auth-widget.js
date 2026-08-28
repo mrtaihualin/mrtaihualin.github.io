@@ -28,7 +28,7 @@
 (function () {
   'use strict';
 
-  if (window.MRT_MINIMUM_GUEST_LAUNCH === true) {
+  if (window.MRT_MINIMUM_GUEST_LAUNCH === true && window.LOGIN_CORE_PUBLIC_ENTRY !== true) {
     function clearGuestHost(containerId) {
       var host = document.getElementById(containerId);
       if (host) host.innerHTML = '';
