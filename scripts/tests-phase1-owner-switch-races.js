@@ -333,19 +333,19 @@ test('Tone SRS resets on logout and discards the late authenticated response', a
   assert.strictEqual(h.context.__tfSrsSyncPromise, null);
 });
 
-test('Minimum Guest pages park owner-safe account runtimes but preserve their source', async () => {
+test('Minimum Guest pages keep account runtime parked while exposing isolated Login Core', async () => {
   const corePages = ['tone-finder.html', 'reading-game.html', 'listening-game.html', 'typing-game.html', 'word-order.html'];
   for (const page of corePages) {
     const html = read(page);
     assert.doesNotMatch(html, /phase1-canonical-state\.js/, page + ' canonical runtime parked');
     assert.doesNotMatch(html, /game-account\.js/, page + ' GameAccount runtime parked');
-    assert.doesNotMatch(html, /reading-auth\.js/, page + ' reading-auth runtime parked');
+    assert.match(html, /reading-auth\.js\?v=29/, page + ' isolated Login Core runtime');
   }
   for (const page of ['my-progress.html', 'vault.html']) {
     assert.match(read(page), /phase1-canonical-state\.js\?v=2/, page + ' canonical cache');
   }
   for (const page of ['vault.html']) {
-    assert.match(read(page), /reading-auth\.js\?v=28/, page + ' reading-auth cache');
+    assert.match(read(page), /reading-auth\.js\?v=29/, page + ' reading-auth cache');
   }
   assert.doesNotMatch(read('lego.html'), /game-account\.js/);
   assert.match(read('tone-finder.html'), /tone-finder-game\.min\.js\?v=71/);

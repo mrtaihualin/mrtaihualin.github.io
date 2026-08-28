@@ -16,7 +16,7 @@ var parkedPages = [
 var staticParkedPages = [
   'my-progress.html', 'vault.html', 'all-board.html', 'leaderboard.html',
   'reading-board.html', 'listening-board.html', 'typing-board.html',
-  'word-order-board.html', 'lego-board.html', 'mix-board.html', 'line-callback.html'
+  'word-order-board.html', 'lego-board.html', 'mix-board.html'
 ];
 
 function read(file) { return fs.readFileSync(path.join(root, file), 'utf8'); }
@@ -40,6 +40,7 @@ staticParkedPages.forEach(function (file) {
 
 var gate = read('js/core/minimum-guest-launch.js');
 ok(gate.indexOf('MRT_MINIMUM_GUEST_LAUNCH = true') !== -1, 'launch flag is explicit');
+ok(gate.indexOf('LOGIN_CORE_PUBLIC_ENTRY = true') !== -1, 'Public Login entry flag is explicit');
 ok(gate.indexOf('window.location.replace') !== -1, 'parked direct routes fail closed');
 ok(gate.indexOf('my-progress') !== -1 && gate.indexOf('games-challenge') !== -1, 'account and Challenge routes are parked');
 ok(gate.indexOf('vault-btn-slot') !== -1, 'personal save controls are hidden');
@@ -70,8 +71,8 @@ function runGateAt(hash) {
   return replacedUrl;
 }
 
-ok(runGateAt('#access_token=redacted&refresh_token=redacted') === '/?guest_launch=1',
-  'OAuth credential fragments are removed before Guest launch continues');
+ok(runGateAt('#access_token=redacted&refresh_token=redacted') === null,
+  'Public Login callback remains available for the Auth client');
 ok(runGateAt('#articles') === null, 'normal page anchors remain untouched');
 
 var config = read('js/core/supabase-config.js');
@@ -81,16 +82,21 @@ ok(config.indexOf('getAnonymousSupabaseClient') !== -1 && config.indexOf('persis
   'isolated anonymous Supabase client cannot inherit browser auth');
 
 var sixGames = ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html','lego.html'];
-var parkedBundles = ['auth-widget.js','game-account.js','reading-auth.js','phase1-canonical-state.js','learning-summary.js','study-plan.js','tone-server.js','word-vault.js','sentence-vault.js','practice-events.js'];
+var parkedBundles = ['game-account.js','phase1-canonical-state.js','learning-summary.js','study-plan.js','tone-server.js','word-vault.js','sentence-vault.js','practice-events.js'];
 sixGames.forEach(function (file) {
   var html = read(file);
+  ok(html.indexOf('auth-widget.js?v=17') !== -1, file + ' loads exact Login Core widget');
+  ok(html.indexOf('reading-auth.js?v=29') !== -1, file + ' loads Login Core entry transport');
   parkedBundles.forEach(function (bundle) { ok(html.indexOf(bundle) === -1, file + ' does not execute parked ' + bundle); });
   ok(!/(?:reading|typing|listening|word-order|lego)-board\.html/.test(html), file + ' does not expose a leaderboard route');
 });
 
+var callback = read('line-callback.html');
+ok(callback.indexOf("var target='/games.html?guest_launch=1'") === -1, 'LINE callback is active for Public Login');
+ok(callback.indexOf('js/games/line-callback.js?v=5') !== -1, 'LINE callback keeps exact candidate client');
+
 var contentClient = read('js/games/game-content-client.js');
 ok(contentClient.indexOf('minimumGuest ? cfg.anonKey') !== -1, 'protected game content ignores stored Login token');
-ok(contentClient.indexOf('isAnon && !minimumGuest') !== -1, 'content cap exposes no Login CTA');
 
 var audioClient = read('js/games/protected-word-audio.js');
 ok(audioClient.indexOf('getAnonymousSupabaseClient') !== -1, 'protected audio uses isolated Guest client');
@@ -117,6 +123,10 @@ ok(report.indexOf('isMinimumGuestOnly') !== -1, 'Result stays in-memory without 
 
 var readingAuth = read('js/games/reading-auth.js');
 ok(readingAuth.indexOf('saveScore: function () { return null; }') !== -1, 'score persistence is disabled in launch mode');
+ok(readingAuth.indexOf('API.user = publicLoginOnly ? null : loginUser') !== -1,
+  'Public Login session is not exposed to game account runtime');
+ok(readingAuth.indexOf('if (publicLoginOnly) return null;') !== -1,
+  'Public Login cannot submit score');
 
 var gameAccount = read('js/games/game-account.js');
 ok(gameAccount.indexOf('sync: function () {}') !== -1, 'account sync is disabled in launch mode');
