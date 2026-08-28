@@ -179,6 +179,20 @@ html:not(.gc-ready) [onclick*="rgBackToEndFromMistakes("]{
   }
 }
 
+/* Mobile Portrait: keep the round-status row optically centred between the
+   level selector and the gameplay card. The equal 10px edge gaps remain
+   stable when the counter text grows or wraps; Desktop/Landscape are excluded. */
+@media (max-width:768px) and (orientation:portrait) {
+  body[data-gsh-game="reading"] .gsh-session-header {
+    flex-direction:column;
+    flex-wrap:nowrap;
+    gap:10px;
+    padding:4px 0 10px;
+  }
+  body[data-gsh-game="reading"] .gsh-session-header > .gsh-level-selector { flex:none; }
+  body[data-gsh-game="reading"] .gsh-gameplay { margin-top:0; }
+}
+
 .level-tabs{display:flex;gap:8px;margin-bottom:10px;width:100%;max-width:640px;}
 /* Phase C.1 (2026-08-10): level-tabs + top-bar ย้ายเข้า .gsh-session-header เดียวกัน (ดูบรรทัด ~476) —
    override width/margin เฉพาะตอนอยู่ในบริบทนี้ ให้ flex-wrap ของ .gsh-session-header ตัดสินใจว่าจะอยู่แถวเดียวกันหรือ wrap เอง
