@@ -44,12 +44,14 @@ test('the displayed score uses the first-check snapshot once available', () => {
 });
 
 test('refresh tolerates the Phase 1 HUD without removed reward elements', () => {
+  const counter = block('function rgRefreshSyllableCounter()', '// แถบบอกพยางค์');
   const refresh = block('function refreshUI()', 'function updateCombo()');
   const elements = {
     'rg-ws-fill': { style: {} },
     'rg-ws-num': { textContent: '' },
     pf: { style: {} },
     'prog-txt': { textContent: '' },
+    qn: { textContent: '' },
     qt: { textContent: '' },
   };
   const context = {
@@ -59,18 +61,25 @@ test('refresh tolerates the Phase 1 HUD without removed reward elements', () => 
     rgScoreBarColor: () => '#8B6310',
     cur: 0,
     roundQueue: [1, 2, 3, 4, 5],
+    sylList: [{}, {}, {}, {}, {}, {}, {}],
+    sylIdx: 0,
     Math,
     document: { getElementById: (id) => elements[id] || null },
   };
   vm.createContext(context);
+  vm.runInContext(counter, context);
   vm.runInContext(refresh, context);
   vm.runInContext('refreshUI()', context);
-  assert.strictEqual(elements.qt.textContent, 5);
+  assert.strictEqual(elements.qn.textContent, 1);
+  assert.strictEqual(elements.qt.textContent, 7);
+  vm.runInContext('sylIdx=4; refreshUI()', context);
+  assert.strictEqual(elements.qn.textContent, 5);
+  assert.strictEqual(elements.qt.textContent, 7);
   assert.doesNotMatch(refresh, /star-count|badge-count|badge-emoji/);
 });
 
 test('Reading loads the rebuilt crash-safe bundle with a fresh cache key', () => {
-  assert.match(html, /reading-game-app\.min\.js\?v=44/);
+  assert.match(html, /reading-game-app\.min\.js\?v=45/);
 });
 
 test('every Reading syllable uses the locked consonant-vowel-final-tone slot order', () => {

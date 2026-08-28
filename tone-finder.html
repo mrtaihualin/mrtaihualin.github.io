@@ -73,7 +73,7 @@ if (document.fonts && document.fonts.load) {
   document.fonts.load("400 14px 'Noto Sans Thai'", "◌่้๊๋").catch(function(){});
 }
 </script>
-<link rel="stylesheet" href="css/shared.css?v=29">
+<link rel="stylesheet" href="css/shared.css?v=30">
 <link rel="stylesheet" href="css/tone-mobile-landscape.css?v=2">
 <style>
   /* P6-28 (2026-08-08): ปุ่มเรียกฟังก์ชันเกม (TF.* มาจาก tone-finder-game.min.js โหลดแบบ async
@@ -795,7 +795,10 @@ if (document.fonts && document.fonts.load) {
     }
     body[data-gsh-game="tone"] #rg-cta-login { min-width:0 !important; }
     body[data-gsh-game="tone"] #tf-howto-btn { min-height:32px; padding:5px 8px; box-sizing:border-box; }
-    body[data-gsh-game="tone"] .gsh-session-header { gap:7px; padding:0 0 7px; }
+    body[data-gsh-game="tone"] .gsh-session-header {
+      flex-direction:column; flex-wrap:nowrap; gap:10px; padding:0 0 10px;
+    }
+    body[data-gsh-game="tone"] .gsh-session-header > .gsh-level-selector { flex:none; }
     body[data-gsh-game="tone"] .gsh-gameplay { margin-top:0; }
     body[data-gsh-game="tone"] #tf-session-counter:empty {
       display:none; min-height:0; line-height:0;

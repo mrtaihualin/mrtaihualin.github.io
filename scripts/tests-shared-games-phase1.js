@@ -111,7 +111,7 @@ test('Tone keeps one equal four-button Level and alphabet row on Desktop and Por
   assert.match(tone, /@media \(min-width:769px\) and \(min-height:601px\)[\s\S]{0,700}gsh-session-header > \.gsh-level-selector[\s\S]{0,180}grid-template-columns:repeat\(4,minmax\(0,1fr\)\)[\s\S]{0,120}max-width:640px !important/, 'Desktop must show four equal buttons in one full row');
   assert.match(tone, /#tf-session-counter:empty \{\s*display:none; min-height:0; line-height:0;/, 'Tone must remove the empty counter row before Result and detail cards');
   assert.match(tone, /@media \(max-width:768px\) and \(orientation:portrait\)[\s\S]{0,1900}\.tf-level-tabs \{[\s\S]{0,180}grid-template-columns:repeat\(4,minmax\(0,1fr\)\)[\s\S]{0,100}max-width:none !important/, 'Portrait must show four equal buttons across the available width');
-  assert.match(tone, /@media \(max-width:768px\) and \(orientation:portrait\)[\s\S]{0,1500}\.gsh-session-header \{ gap:7px; padding:0 0 7px; \}[\s\S]{0,100}\.gsh-gameplay \{ margin-top:0; \}/, 'Portrait top rows must keep one 7px vertical rhythm through the gameplay card');
+  assert.match(tone, /@media \(max-width:768px\) and \(orientation:portrait\)[\s\S]{0,1500}\.gsh-session-header \{[\s\S]{0,140}flex-direction:column; flex-wrap:nowrap; gap:10px; padding:0 0 10px;[\s\S]{0,180}\.gsh-session-header > \.gsh-level-selector \{ flex:none; \}[\s\S]{0,120}\.gsh-gameplay \{ margin-top:0; \}/, 'Tone Portrait round status must keep equal 10px gaps between Level and gameplay');
   assert.match(tone, /#tf-alpha-btn \{[\s\S]{0,180}font-size:11\.5px !important; white-space:nowrap;[\s\S]{0,100}#tf-alpha-btn \.tf-alpha-icon \{ display:none; \}/, 'Portrait alphabet label must fit without changing the four equal button widths');
   assert.match(tone, /@media \(orientation:landscape\) and \(max-width:1024px\) and \(max-height:600px\)[\s\S]{0,180}#tf-alpha-btn \{ display:none !important; \}/, 'Mobile Landscape must preserve the accepted three-level Switch surface');
   assert.doesNotMatch(tone.slice(tone.indexOf('<div class="tf-tools-row">'), tone.indexOf('<div class="gsh-session-header">')), /id="tf-alpha-btn"/, 'Account bar must no longer share width with the alphabet button');
@@ -143,7 +143,7 @@ test('all six games bind the locked two-hand mobile landscape layout', () => {
   };
   for (const [id, html] of Object.entries(expectedBodies)) {
     assert.match(html, new RegExp(`<body[^>]*data-gsh-game="${id}"[^>]*>`), `${id}: missing landscape scope marker`);
-    const sharedCssVersion = ['tone', 'reading', 'typing', 'word-order'].includes(id) ? 29 : 26;
+    const sharedCssVersion = 30;
     assert.match(html, new RegExp(`css/shared\\.css\\?v=${sharedCssVersion}`), `${id}: must load current landscape CSS`);
   }
   assert.match(sharedCss, /@media \(orientation:landscape\) and \(max-width:1024px\) and \(max-height:600px\)/);
@@ -235,6 +235,13 @@ test('Reading Desktop reuses the compatible Tone shell treatment without inventi
   assert.doesNotMatch(reading, /@media \(max-width:768px\) and \(orientation:portrait\)[\s\S]{0,400}data-gsh-game="reading"\] \.rg-ctl-wrap/, 'Reading Mobile Portrait controls must remain untouched');
 });
 
+test('Reading and Tone Mobile Portrait centre round status between Level and gameplay', () => {
+  const reading = games.find((g) => g.id === 'reading').htmlText;
+  const tone = games.find((g) => g.id === 'tone').htmlText;
+  assert.match(reading, /@media \(max-width:768px\) and \(orientation:portrait\) \{[\s\S]{0,500}data-gsh-game="reading"\] \.gsh-session-header \{[\s\S]{0,180}flex-direction:column;[\s\S]{0,100}flex-wrap:nowrap;[\s\S]{0,100}gap:10px;[\s\S]{0,100}padding:4px 0 10px;[\s\S]{0,220}data-gsh-game="reading"\] \.gsh-gameplay \{ margin-top:0; \}/, 'Reading Portrait must use equal 10px edge gaps around the round status');
+  assert.match(tone, /@media \(max-width:768px\) and \(orientation:portrait\) \{[\s\S]{0,1500}data-gsh-game="tone"\] \.gsh-session-header \{[\s\S]{0,180}flex-direction:column; flex-wrap:nowrap; gap:10px; padding:0 0 10px;[\s\S]{0,220}data-gsh-game="tone"\] \.gsh-gameplay \{ margin-top:0; \}/, 'Tone Portrait must use equal 10px edge gaps around the round status');
+});
+
 test('Reading Desktop copies the complete Tone gold-band rhythm while retaining Reading tools', () => {
   const reading = games.find((g) => g.id === 'reading').htmlText;
   assert.match(reading, /data-gsh-game="reading"\] \.gold-banner \{\s*padding:16px 22px 0;\s*border-bottom:0;/, 'Reading Desktop gold band must use Tone horizontal and top spacing');
@@ -247,6 +254,16 @@ test('Reading Desktop copies the complete Tone gold-band rhythm while retaining 
   assert.match(reading, /data-gsh-game="reading"\] #word-ctl-row \{[\s\S]{0,280}width:calc\(100% \+ 44px\);[\s\S]{0,120}margin:10px -22px 0 !important;[\s\S]{0,120}padding:0 22px 14px;[\s\S]{0,180}border-bottom:2px solid rgba\(184,134,40,\.50\);/, 'Reading-specific tools must occupy Tone\'s full-width gold tool row');
   assert.match(reading, /id="rg-en-toggle"/, 'Reading must retain its additional English-reading tool');
   assert.match(reading, /id="rg-particle-toggle"/, 'Reading must retain its additional politeness tool');
+});
+
+test('ordinary Desktop uses one six-game question-copy rhythm and retires the duplicate progress row', () => {
+  assert.match(sharedCss, /@media \(min-width:769px\) and \(min-height:601px\)\{[\s\S]*?data-gsh-game="tone"\] \.tf-banner-word,[\s\S]*?data-gsh-game="reading"\] \.word-th,[\s\S]*?data-gsh-game="typing"\] \.word-th,[\s\S]*?data-gsh-game="listening"\] \.lg-rev-th,[\s\S]*?data-gsh-game="word-order"\] \.wo-word-th,[\s\S]*?data-gsh-game="lego"\] \.out-th,[\s\S]*?line-height:1\.5 !important;/, 'all six Desktop games must share Tone primary question line height');
+  assert.match(sharedCss, /data-gsh-game="tone"\] \.tf-read-th,[\s\S]*?data-gsh-game="reading"\] \.rev-pron,[\s\S]*?data-gsh-game="typing"\] \.rev-pron,[\s\S]*?data-gsh-game="listening"\] \.lg-rev-pron,[\s\S]*?data-gsh-game="word-order"\] \.wo-read-th \{[\s\S]*?line-height:normal !important;[\s\S]*?margin-top:4px !important;/, 'Thai reading lines must use the exact Tone rhythm');
+  assert.match(sharedCss, /data-gsh-game="tone"\] \.tf-read-en,[\s\S]*?data-gsh-game="reading"\] \.rev-en,[\s\S]*?data-gsh-game="typing"\] \.rev-en,[\s\S]*?data-gsh-game="listening"\] \.lg-rev-en,[\s\S]*?data-gsh-game="word-order"\] \.wo-read-en \{[\s\S]*?margin-top:2px !important;/, 'romanization lines must use the shared Tone rhythm');
+  assert.match(sharedCss, /data-gsh-game="tone"\] \.word-zh,[\s\S]*?data-gsh-game="reading"\] \.word-zh,[\s\S]*?data-gsh-game="typing"\] \.word-zh,[\s\S]*?data-gsh-game="listening"\] \.lg-rev-zh,[\s\S]*?data-gsh-game="word-order"\] \.wo-read-zh,[\s\S]*?data-gsh-game="lego"\] \.out-zh,[\s\S]*?margin-top:6px !important;/, 'translation lines must use the shared Tone rhythm');
+  assert.match(sharedCss, /data-gsh-game\] \.gsh-progress > \.bar-row:first-child,[\s\S]*?data-gsh-game="tone"\] #tf-bars-wrap > \.bar-row:first-child \{\s*display:none !important;/, 'ordinary Desktop must hide the retired 進度 row in every active game while retaining its DOM/state');
+  assert.match(sharedCss, /@media \(orientation:landscape\) and \(max-width:1024px\) and \(max-height:600px\)/, 'Mobile Landscape must retain its separate boundary');
+  games.filter((g) => g.id !== 'challenge').forEach((g) => assert.match(g.htmlText, /css\/shared\.css\?v=30/, `${g.id}: shared Desktop rhythm cache key must be current`));
 });
 
 test('Reading exposes learning tools inline without the retired rice-bowl menu contract', () => {
@@ -427,7 +444,7 @@ test('mobile resume uses one compact shared-copy line and three horizontal actio
   assert.match(sharedCss, /@media\(max-width:480px\)[\s\S]{0,500}\.gsh-resume-actions \{ flex-direction:row; flex-wrap:nowrap;/, 'mobile resume actions must stay horizontal');
   assert.match(sharedCss, /\.gsh-resume-actions button \{ flex:1 1 0;[^}]*min-height:36px;/, 'mobile resume actions must stay compact');
   for (const g of games) {
-    const sharedCssVersion = ['tone', 'reading', 'typing', 'wordorder'].includes(g.id) ? 29 : 26;
+    const sharedCssVersion = 30;
     assert.match(g.htmlText, new RegExp(`css/shared\\.css\\?v=${sharedCssVersion}`), `${g.id}: must load current shared game CSS`);
     assert.match(g.htmlText, /js\/core\/shared\.min\.js\?v=42/, `${g.id}: must load shared resume copy`);
     assert.match(g.appText, /GameUiCopy\.resumeLine/, `${g.id}: resume detail must use shared semantic copy`);
@@ -641,7 +658,7 @@ test('active Desktop D4-D5 keeps manual question/result flow and optional Hint c
   const flow = fs.readFileSync(path.join(root, 'js/games/game-flow.js'), 'utf8');
 
   for (const game of [tone, reading, typing, wordOrder]) {
-    assert.match(game.htmlText, /css\/shared\.css\?v=29/, `${game.id}: must request the D4 Desktop CSS`);
+    assert.match(game.htmlText, /css\/shared\.css\?v=30/, `${game.id}: must request the current Desktop CSS`);
     assert.match(game.appText, /GameFlow\.enhanceResult/, `${game.id}: Result must keep the shared manual replay flow`);
   }
   assert.doesNotMatch(flow, /下一輪將在|game_auto_next_pause/, 'shared question/Result flow must not restore countdown copy or pause controls');

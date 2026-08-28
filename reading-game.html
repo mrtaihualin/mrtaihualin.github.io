@@ -85,7 +85,7 @@ if (document.fonts && document.fonts.load) {
   document.fonts.load("400 14px 'Noto Sans Thai'", "◌่้๊๋").catch(function(){});
 }
 </script>
-<link rel="stylesheet" href="css/shared.css?v=29">
+<link rel="stylesheet" href="css/shared.css?v=30">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="js/core/supabase-config.js?v=10"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script>
@@ -177,6 +177,20 @@ html:not(.gc-ready) [onclick*="rgBackToEndFromMistakes("]{
     background:#F8F0DE;
     border-bottom:2px solid rgba(184,134,40,.50);
   }
+}
+
+/* Mobile Portrait: keep the round-status row optically centred between the
+   level selector and the gameplay card. The equal 10px edge gaps remain
+   stable when the counter text grows or wraps; Desktop/Landscape are excluded. */
+@media (max-width:768px) and (orientation:portrait) {
+  body[data-gsh-game="reading"] .gsh-session-header {
+    flex-direction:column;
+    flex-wrap:nowrap;
+    gap:10px;
+    padding:4px 0 10px;
+  }
+  body[data-gsh-game="reading"] .gsh-session-header > .gsh-level-selector { flex:none; }
+  body[data-gsh-game="reading"] .gsh-gameplay { margin-top:0; }
 }
 
 .level-tabs{display:flex;gap:8px;margin-bottom:10px;width:100%;max-width:640px;}
@@ -750,7 +764,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/reading-game-app.min.js?v=44']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/reading-game-app.min.js?v=45']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 </div><!-- /.v3-page -->
