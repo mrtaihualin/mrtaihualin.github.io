@@ -618,7 +618,6 @@
   body[data-gsh-game="tone"].gsh-ml-active [data-gsh-ml-slot="question"] #tf-banner {
     flex: 0 1 auto;
     min-height: 0;
-    max-height: 58% !important;
     padding: clamp(3px, 1dvh, 6px) !important;
     overflow-y: auto !important;
     overscroll-behavior-y: contain;
@@ -636,6 +635,44 @@
   body[data-gsh-game="tone"].gsh-ml-active .tf-adv-sent-ctx-zh {
     line-height: 1.25 !important;
     margin-block: 0 var(--gsh-ml-gap) !important;
+  }
+  /* Guided deduction is a bottom-anchored three-card row: the prompt stays in
+     the centre and the choices stay in the two thumb columns. shared.css has
+     an older fixed top position for .tf-qbox; cancel it here so every prompt
+     participates in the live centre flow and can never paint over the word. */
+  body[data-gsh-game="tone"].gsh-ml-active
+  #gsh-ml-stage:has(#tf-body > .tf-qbox, #tf-body > .tf-helper-result)
+  [data-gsh-ml-slot="question"] #tf-body {
+    display: flex !important;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: var(--gsh-ml-gap);
+  }
+  body[data-gsh-game="tone"].gsh-ml-active
+  #gsh-ml-stage:has(#tf-body > .tf-qbox, #tf-body > .tf-helper-result)
+  #tf-body > * {
+    position: static !important;
+    inset: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: none !important;
+    flex: 0 0 auto;
+    margin: 0 !important;
+    transform: none !important;
+    box-sizing: border-box;
+  }
+  body[data-gsh-game="tone"].gsh-ml-active
+  #gsh-ml-stage:has(#tf-body > .tf-qbox, #tf-body > .tf-helper-result)
+  #tf-body > .tf-qbox {
+    overflow: visible !important;
+  }
+  /* The optional 活音／死音 helper is the overflow card: grow it upward while
+     keeping the main question on the bottom row marked by Lin. */
+  body[data-gsh-game="tone"].gsh-ml-active #tf-body > .tf-helper-trigger {
+    order: -1;
+  }
+  body[data-gsh-game="tone"].gsh-ml-active #tf-body > .tf-footer:empty {
+    display: none !important;
   }
   /* Tone: reserve the center column for the word and its explanation. Skip is
      the single bottom action and must never float into that content area. */
@@ -864,7 +901,7 @@
     border-radius: 50% !important;
   }
   body[data-gsh-game="tone"].gsh-ml-active .tf-options[data-gsh-ml-split="tone"] {
-    align-content: center !important;
+    align-content: end !important;
   }
   body[data-gsh-game="tone"].gsh-ml-active .tf-options:has(> .tf-opt-wrap:nth-child(2):last-child) > .tf-opt-wrap {
     grid-row: 1;

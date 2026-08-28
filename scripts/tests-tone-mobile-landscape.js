@@ -27,7 +27,7 @@ function test(name, fn) {
 
 test('Tone page binds only the Tone landscape assets and safe viewport', () => {
   assert.match(html, /viewport-fit=cover/);
-  assert.match(html, /css\/tone-mobile-landscape\.css\?v=2/);
+  assert.match(html, /css\/tone-mobile-landscape\.css\?v=3/);
   assert.match(html, /js\/games\/tone-mobile-landscape\.js\?v=1/);
   const scopedGames = [...(stage + css).matchAll(/data-gsh-game="([^"]+)"/g)].map((match) => match[1]);
   assert.ok(scopedGames.length > 0 && scopedGames.every((game) => game === 'tone'));
@@ -63,15 +63,22 @@ test('center owns the word, guidance and symmetric scrollable reveal content', (
   assert.match(css, /:has\(\[data-gsh-ml-split="tone"\] > \.sg-tone-btn\)[\s\S]{0,200}#tf-banner[\s\S]{0,240}flex: 1 1 auto/);
   assert.match(css, /question"\] #tf-body[\s\S]{0,340}overflow-y: auto !important[\s\S]{0,220}touch-action: pan-y/);
   assert.match(css, /\.tf-body \.result-v2 \{[\s\S]{0,260}display: flex[\s\S]{0,180}gap: var\(--gsh-ml-gap\)/);
-  assert.match(css, /\.tf-options\[data-gsh-ml-split="tone"\][\s\S]{0,120}align-content: center !important/);
+  assert.match(css, /\.tf-options\[data-gsh-ml-split="tone"\][\s\S]{0,120}align-content: end !important/);
   assert.match(css, /\.tf-options:has\(> \.tf-opt-wrap:nth-child\(3\):last-child\)[\s\S]{0,760}data-gsh-side="right"\]\[data-gsh-side-index="1"\][\s\S]{0,100}grid-row: 2/);
 });
 
 test('physical iPhone Safari keeps long guided sentences inside the center column', () => {
   assert.match(css, /#gsh-ml-stage \{[\s\S]{0,180}-webkit-text-size-adjust: 100%[\s\S]{0,80}text-size-adjust: 100%/);
-  assert.match(css, /question"\] #tf-banner \{[\s\S]{0,260}min-height: 0[\s\S]{0,120}max-height: 58% !important[\s\S]{0,180}overflow-y: auto !important/);
+  assert.match(css, /question"\] #tf-banner \{[\s\S]{0,260}min-height: 0[\s\S]{0,220}overflow-y: auto !important/);
   assert.match(css, /\.tf-adv-sent-main \{[\s\S]{0,220}font-size: clamp\(22px, 7\.2dvh, 30px\) !important[\s\S]{0,100}line-height: 1\.25 !important/);
   assert.match(css, /:has\(\[data-gsh-ml-split="tone"\] > \.sg-tone-btn\)[\s\S]{0,220}#tf-banner[\s\S]{0,220}max-height: none/);
+});
+
+test('guided deduction cards form a readable bottom row and grow upward', () => {
+  assert.match(css, /:has\(#tf-body > \.tf-qbox, #tf-body > \.tf-helper-result\)[\s\S]{0,180}#tf-body \{[\s\S]{0,180}display: flex !important[\s\S]{0,120}justify-content: flex-end/);
+  assert.match(css, /:has\(#tf-body > \.tf-qbox, #tf-body > \.tf-helper-result\)[\s\S]{0,180}#tf-body > \* \{[\s\S]{0,180}position: static !important[\s\S]{0,260}max-height: none !important/);
+  assert.match(css, /#tf-body > \.tf-helper-trigger \{[\s\S]{0,80}order: -1/);
+  assert.match(css, /\.tf-options\[data-gsh-ml-split="tone"\][\s\S]{0,120}align-content: end !important/);
 });
 
 test('reveal and summary replace the right-side controls without Switch Game', () => {
