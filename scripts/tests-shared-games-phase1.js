@@ -69,8 +69,8 @@ test('Tone ordinary Desktop main and secondary headers exactly match the Core ga
   assert.doesNotMatch(toneApp, /getElementById\('tf-hint'\)\.style\.display\s*=\s*(?:'none'|\(S\.step)/, 'Tone: source runtime must not hide the secondary header');
   assert.match(toneMin, /getElementById\("tf-hint"\)\.style\.display="block"/, 'Tone: deployed runtime must keep the secondary header visible');
   assert.doesNotMatch(toneMin, /getElementById\("tf-hint"\)\.style\.display=(?:"none"|"level-select")/, 'Tone: deployed runtime must not hide the secondary header');
-  assert.match(tone, /<!--ANN-BAND:START-->[\s\S]*?<div class="avail-band" id="ann-band"[\s\S]*?<!--ANN-BAND:END-->/, 'Tone must keep the generated announcement structure for nav consistency');
-  assert.match(tone, /body\[data-gsh-game="tone"\] > \.avail-band \{ display:none !important; \}/, 'Tone must hide the generated announcement strip');
+  assert.match(tone, /<!--ANN-BAND:START--><!-- Tone is a Core game surface: no announcement strip\. --><!--ANN-BAND:END-->/, 'Tone must not render the shared announcement strip');
+  assert.match(tone, /body\[data-gsh-game="tone"\] > \.avail-band \{ display:none !important; \}/, 'Tone must also hide any announcement fallback inserted by shared runtime');
   assert.match(tone, /@media \(min-width:1025px\), \(min-width:769px\) and \(min-height:601px\)[\s\S]{0,420}#tf-syl-strip\[style\*="display: flex"\] \+ \.tf-body\s*\{\s*padding-top:0;/, 'Tone syllable spacing must cover tall and wide-short Desktop without changing mobile landscape');
 });
 
@@ -578,16 +578,17 @@ test('Tone active-question guidance permanently locks that question to zero', ()
   assert.match(toneMin, /聲調選擇錯誤/, 'Tone: deployed minified bundle must charge a wrong initial tone answer');
   assert.match(toneMin, /開始練習/, 'Tone: deployed minified bundle must include the guided-question gate');
   assert.match(toneMin, /pageshow/, 'Tone: deployed minified bundle must include the page-return guard');
-  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=71/, 'Tone: page must request the rebuilt Result runtime version');
+  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=74/, 'Tone: page must request the rebuilt Result runtime version');
 });
 
-test('Tone Mobile Portrait keeps Desktop gameplay with compact touch-only controls', () => {
+test('Tone mobile touch surfaces keep Desktop gameplay free of keyboard-only copy', () => {
   const tone = games.find((g) => g.id === 'tone');
   assert.match(tone.appText, /function tfMobilePortrait\(\)[\s\S]{0,180}max-width: 768px[\s\S]{0,100}orientation: portrait/, 'Tone must identify only Portrait mobile');
-  assert.match(tone.appText, /function tfWireToneKeyboard\(\)[\s\S]{0,140}if \(tfMobilePortrait\(\)\) return;/, 'Portrait must ignore number-key gameplay');
-  assert.match(tone.appText, /function tfWireEnterNext\(\)[\s\S]{0,140}if \(tfMobilePortrait\(\)\) return;/, 'Portrait must ignore Enter gameplay');
-  assert.match(tone.appText, /\(tfMobilePortrait\(\) \? '' : '<div[\s\S]{0,220}電腦也可以直接按鍵盤 1–5/, 'Portrait must omit the computer keyboard hint');
-  assert.match(tone.appText, /body\.innerHTML \+= tfDesktopOrPortrait\(\)[\s\S]{0,240}>跳過<\/button>/, 'Portrait must use the neutral Skip action');
+  assert.match(tone.appText, /function tfTouchMobileSurface\(\)[\s\S]{0,120}tfMobilePortrait\(\) \|\| tfMobileLandscape\(\)/, 'Portrait and Landscape must share the touch-only boundary');
+  assert.match(tone.appText, /function tfWireToneKeyboard\(\)[\s\S]{0,140}if \(tfTouchMobileSurface\(\)\) return;/, 'mobile surfaces must ignore number-key gameplay');
+  assert.match(tone.appText, /function tfWireEnterNext\(\)[\s\S]{0,140}if \(tfTouchMobileSurface\(\)\) return;/, 'mobile surfaces must ignore Enter gameplay');
+  assert.match(tone.appText, /\(tfTouchMobileSurface\(\) \? '' : '<div[\s\S]{0,220}電腦也可以直接按鍵盤 1–5/, 'mobile surfaces must omit the computer keyboard hint');
+  assert.match(tone.appText, /body\.innerHTML \+= tfNeutralSkipSurface\(\)[\s\S]{0,240}>跳過<\/button>/, 'Portrait and Landscape must use the neutral Skip action');
   assert.match(tone.appText, /startGuidedQuestion:[\s\S]{0,300}if \(tfDesktopOrPortrait\(\)\)[\s\S]{0,180}navigateToInflection\(\)/, 'Portrait Hint must enter derivation directly');
   assert.match(tone.htmlText, /@media \(max-width:768px\) and \(orientation:portrait\)[\s\S]{0,12000}\.gsh-next-countdown,[\s\S]{0,220}\{ display:none !important; \}/, 'Portrait must render no countdown surface');
   assert.match(tone.htmlText, /\.sg-tone-btn \{[\s\S]{0,180}width:clamp\(44px,12vw,52px\)/, 'Portrait tone choices must stay compact and tappable');
