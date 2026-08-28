@@ -1108,17 +1108,32 @@
     try { pending = JSON.parse(raw); } catch (e) { return; }
     if (!pending) return;
     if (pending.user_id !== API.user.id) { showAccountSwitchedToast(); return; } // โดนสลับบัญชีเงียบๆ — ต้องเตือนดังๆ
-    var providersAfter = (API.user.identities || []).map(function (i) { return i.provider; });
-    if (providersAfter.indexOf('facebook') === -1) { showFbLinkFailToast(); return; } // เชื่อมไม่สำเร็จ — ต้องบอกผู้เล่นตรงๆ ห้ามเงียบ
-    // Audit writes cross the authenticated Edge boundary. The browser supplies only
-    // the requested event/provider; the server re-verifies the JWT owner and current
-    // provider identity, derives both states, and invokes the privileged RPC itself.
-    try {
-      callAccountFn('account-unlink', {
+    // getSession()/onAuthStateChange can briefly expose the pre-redirect user object,
+    // whose identities list does not yet include Facebook even though Auth has already
+    // completed the link. Verify against the Auth server before showing a result or
+    // writing the audit; never infer a failed/cross-account link from cached identities.
+    withClientTimeout(sb.auth.getUser(), '確認 Facebook 連接狀態', false).then(function (res) {
+      if (res && res.error) throw res.error;
+      var verifiedUser = res && res.data && res.data.user;
+      if (!verifiedUser) throw clientFailureError('無法確認 Facebook 連接狀態', 'verified_user_missing', false);
+      if (pending.user_id !== verifiedUser.id) { showAccountSwitchedToast(); return; }
+
+      API.user = verifiedUser;
+      fireChange();
+      var providersAfter = (verifiedUser.identities || []).map(function (i) { return i.provider; });
+      if (providersAfter.indexOf('facebook') === -1) { showFbLinkFailToast(); return; } // server ยืนยันว่าเชื่อมไม่สำเร็จ — ต้องบอกผู้เล่นตรงๆ
+
+      // Audit writes cross the authenticated Edge boundary. The browser supplies only
+      // the requested event/provider; the server re-verifies the JWT owner and current
+      // provider identity, derives both states, and invokes the privileged RPC itself.
+      return callAccountFn('account-unlink', {
         action: 'audit_link',
         provider: 'facebook'
       }).catch(function (e) { console.error('account audit failed (facebook link)', e); });
-    } catch (e) {}
+    }).catch(function (e) {
+      console.warn('[auth] Facebook link verification failed:', (e && e.message) || e);
+      showAuthActionFailure('⚠️ Facebook 已返回，但暫時無法確認連接狀態。請重新載入後查看，確認前請勿重複連接。');
+    });
   }
 
   // ── init: session เดียว ฟังเดียว (client กลาง) ใช้ร่วมกันทุกหน้าที่โหลดไฟล์นี้ ──
