@@ -663,7 +663,7 @@ if (document.readyState === 'loading') document.addEventListener('DOMContentLoad
 // ใช้เฉพาะหน้าเดา (session-guess) เท่านั้น + ปิดเมื่อกำลังพิมพ์ในช่อง input/textarea หรือมี popup เปิดอยู่ (กันชนกับ 開始聲調推導/我有問題)
 function tfWireToneKeyboard() {
   document.addEventListener('keydown', function (e) {
-    if (tfMobilePortrait()) return;
+    if (tfTouchMobileSurface()) return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     var tag = (document.activeElement && document.activeElement.tagName) || '';
     if (tag === 'INPUT' || tag === 'TEXTAREA') return;
@@ -690,11 +690,23 @@ function tfDesktopOrPortrait() {
   return tfOrdinaryDesktop() || tfMobilePortrait();
 }
 
+function tfMobileLandscape() {
+  return !!(window.matchMedia && window.matchMedia('(orientation: landscape) and (max-width: 1024px) and (max-height: 600px)').matches);
+}
+
+function tfTouchMobileSurface() {
+  return tfMobilePortrait() || tfMobileLandscape();
+}
+
+function tfNeutralSkipSurface() {
+  return tfDesktopOrPortrait() || tfMobileLandscape();
+}
+
 // Desktop Enter starts an explicit guided question or uses the visible Next action.
 // It must never activate the remembered/skip action or collide with editable controls.
 function tfWireEnterNext() {
   document.addEventListener('keydown', function (e) {
-    if (tfMobilePortrait()) return;
+    if (tfTouchMobileSurface()) return;
     if (e.key !== 'Enter' || e.defaultPrevented || e.repeat || e.isComposing) return;
     if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
     var active = e.target || document.activeElement;
@@ -974,7 +986,10 @@ function tfReadingLineHtml() {
   var html = '';
   // 讀音 ไทย: โชว์ทุกขั้น เต็มทั้งคำ ไม่ clip + โชว์ทุกคำแม้อ่านตรงกับตัวเขียน (Lin 2026-07-30 — กติกาเดียวกับเกมเรียงคำที่แก้รอบนี้ กันเข้าใจผิดว่าปุ่มเสีย)
   // Lin 2026-08-01: โหมดประโยค高級 ไม่โชว์คำอ่านรายคำ (tf-read-th) ตรงนี้แล้ว — ซ้อนกับคำอ่านยาวทั้งประโยค (sentReadingHtml/tf-adv-sent-reading) ที่โชว์อยู่ด้านล่างอยู่แล้ว (ซึ่งมีคำอ่านของคำนี้รวมอยู่ในนั้นแล้ว)
-  if (tfPronMode && !advSentenceCtx) { var _th = e.readingTH || ''; if (_th) html += '<div class="tf-read-th">' + _th + '</div>'; }
+  if (tfPronMode && !advSentenceCtx) {
+    var _th = e.readingTH || (tfMobileLandscape() ? e.word : '') || '';
+    if (_th) html += '<div class="tf-read-th">' + _th + '</div>';
+  }
   if (showEn)     { var _en = e.readingEN || '';           if (_en) html += '<div class="tf-read-en">' + _clip(_en) + '</div>'; }
   return html;
 }
@@ -2279,7 +2294,7 @@ function render() {
     // Lin 2026-07-04: อยู่ในโหมดพิสูจน์ (known-check) แล้ว → ซ่อนปุ่ม "已記得" (กันกดวน + ต้องพิสูจน์ให้จบก่อน)
     if (session.curWordIsKnownCheck) _hideKnown = true;
     if (!_hideKnown) {
-      body.innerHTML += tfDesktopOrPortrait()
+      body.innerHTML += tfNeutralSkipSurface()
         ? '<div class="tf-known-bar"><button type="button" class="tf-known-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_skip_click\',{category:\'game\'});}catch(e){}TF.skipCurrentWord()">跳過</button></div>'
         : '<div class="tf-known-bar"><button class="tf-known-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_mark_known_click\',{category:\'game\'});}catch(e){}TF.markKnown()">\u2713 \u5df2\u8a18\u5f97\u9019\u500b\u5b57</button></div>';
     }
@@ -3331,16 +3346,16 @@ function stepSessionGuess() {
     // 2026-07-31: คำพิเศษ (TONE_OVERRIDE) ไม่มีปุ่ม "ไม่มั่นใจ/ท้าทาย" ให้กด — ไม่มีกฎมาตรฐานให้推導 ต้องจำเสียงไว้ตรงๆ
     dontKnowHtml = '<div style="margin-top:8px;font-size:12px;color:#B07D00;">✨ 特殊詞（不按規則）— 答對得全部分數，答錯直接看答案，用背的就好</div>';
   } else {
-    dontKnowHtml = '<button class="sg-dontknow-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_dontknow_click\',{category:\'game\'});}catch(e){}'+dontKnowAct+'">🤷 我不太確定 / 我想挑戰</button>';
+    dontKnowHtml = '<button class="sg-dontknow-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_dontknow_click\',{category:\'game\'});}catch(e){}'+dontKnowAct+'">'+(tfMobileLandscape() ? '不確定' : '🤷 我不太確定 / 我想挑戰')+'</button>';
   }
 
   return '<div style="text-align:center;padding:4px 0 8px;">'+
     wordHtml+
     // Lin 2026-07-29: ลบแถบเฉลย 子音/母音/尾音 (breakdownHtml) ออกจากหน้าเดาวรรณยุกต์ทุกระดับ — โชว์คำตอบให้ก่อนเดาเลย
     '<div class="sg-divider"></div>'+
-    '<div class="sg-question">你覺得這個字是第幾聲？</div>'+
+    (tfMobileLandscape() ? '' : '<div class="sg-question">你覺得這個字是第幾聲？</div>')+
     '<div class="sg-tone-grid">'+toneBtns+'</div>'+
-    (tfMobilePortrait() ? '' : '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:11px;color:#a08a5a;margin-top:4px;">💡 電腦也可以直接按鍵盤 1–5</div>')+
+    (tfTouchMobileSurface() ? '' : '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:11px;color:#a08a5a;margin-top:4px;">💡 電腦也可以直接按鍵盤 1–5</div>')+
     dontKnowHtml+
   '</div>';
 }
@@ -3481,6 +3496,11 @@ function stepResult() {
   // ปุ่มลำโพงฟังเสียง — ข้างคำศัพท์ โชว์เฉพาะคำที่มีไฟล์เสียง (2026-07-16)
   // Lin 2026-07-30: เอาปุ่ม 🔖 (單字庫) ตรงหน้าเฉลยออกตามที่ Lin สั่ง — ซ้ำกับแถว 單字庫 ในเมนู 🍚 มุมขวาล่าง เหลือที่เมนูที่เดียว
   var audioBtnHtml = (window.WordAudio && dispWord) ? WordAudio.btnHtml(dispWord) : '';
+  if (tfMobileLandscape() && dispWord && !audioBtnHtml) {
+    var audioWordEsc = String(dispWord).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    audioBtnHtml = '<button type="button" class="word-audio-btn" title="聽發音" aria-label="聽發音" ' +
+      'onclick="event.stopPropagation();if(window.WordAudio){if(WordAudio.has(\'' + audioWordEsc + '\')){WordAudio.play(\'' + audioWordEsc + '\',this)}else if(WordAudio.soonToast){WordAudio.soonToast()}}">🔊</button>';
+  }
   // Lin 2026-07-30: ปุ่ม 英文讀音 (🔡/🔠) ย้ายจากเมนูมาอยู่ข้างปุ่ม 🔊 ในหน้าเฉลย — ใช้ได้จริงตรงจุดที่คำอ่านโรมันโผล่เท่านั้น
   var enBtnHtml = '<button type="button" id="tf-result-en-btn" class="word-ctl-btn" onclick="event.stopPropagation();try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_toggle_en_reading\',{category:\'game\'});}catch(e){}TF.toggleEn()">' +
     (tfEnMode ? '🔡' : '🔠') + '</button>';
@@ -3896,9 +3916,9 @@ var TF = {
     hist.push(S); histPos++;
     render();
   },
-  // Desktop and mobile Portrait neutral skip: no answer, score, Combo, SRS, or countdown.
+  // Neutral skip on all supported layouts: no answer, score, Combo, SRS, or countdown.
   skipCurrentWord: function() {
-    if (!session || !tfDesktopOrPortrait()) return;
+    if (!session || !tfNeutralSkipSurface()) return;
     var entry = session.words[session.index];
     if (!entry) return;
     var awarded = Math.max(0, Number(session.currentWordScore) || 0);

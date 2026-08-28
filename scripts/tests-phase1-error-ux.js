@@ -182,7 +182,7 @@ test('all Core 5 Guest pages park Auth and ship current isolated audio error han
 test('parked account and callback sources preserve current failure-handling clients', () => {
   ['leaderboard.html','listening-board.html','my-progress.html','reading-board.html',
     'typing-board.html','word-order-board.html','vault.html']
-    .forEach((page) => assert.match(read(page), /auth-widget\.js\?v=16/, page));
+    .forEach((page) => assert.match(read(page), /auth-widget\.js\?v=17/, page));
   ['lego.html','listening-game.html','reading-game.html','tone-finder.html','typing-game.html','word-order.html']
     .forEach((page) => assert.doesNotMatch(read(page), /auth-widget\.js/, page));
   assert.match(read('leaderboard.html'), /leaderboard\.js\?v=13/);

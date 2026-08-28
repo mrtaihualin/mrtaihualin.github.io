@@ -348,7 +348,7 @@ test('Minimum Guest pages park owner-safe account runtimes but preserve their so
     assert.match(read(page), /reading-auth\.js\?v=28/, page + ' reading-auth cache');
   }
   assert.doesNotMatch(read('lego.html'), /game-account\.js/);
-  assert.match(read('tone-finder.html'), /tone-finder-game\.min\.js\?v=71/);
+  assert.match(read('tone-finder.html'), /tone-finder-game\.min\.js\?v=74/);
   assert.match(read('reading-game.html'), /reading-game-app\.min\.js\?v=44/);
   assert.match(read('typing-game.html'), /typing-game-app\.min\.js\?v=42/);
   assert.match(read('word-order.html'), /word-order-app\.min\.js\?v=32/);

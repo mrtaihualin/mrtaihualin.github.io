@@ -49,6 +49,7 @@ const ANN_BLOCK_RE = new RegExp(
   '[\\s\\S]*?' +
   NAV.ANN_MARK_END.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 );
+const TONE_ANN_BLOCK = '<!--ANN-BAND:START--><!-- Tone is a Core game surface: no announcement strip. --><!--ANN-BAND:END-->';
 // 🆕 2026-08-10 — nav responsive auto-fit inline script (ดู data/nav-template.js)
 const NAVFIT_RE = new RegExp(
   NAV.NAVFIT_MARK_START.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') +
@@ -124,7 +125,7 @@ SCOPE_PAGES.forEach((file) => {
   }
 
   const annMatch = text.match(ANN_BLOCK_RE);
-  const expectedAnn = NAV.renderAnnBandBlockHTML();
+  const expectedAnn = file === 'tone-finder.html' ? TONE_ANN_BLOCK : NAV.renderAnnBandBlockHTML();
   if (!annMatch) {
     mismatches.push({ file, kind: 'ann-band ไม่พบ', detail: 'ไม่พบ ANN-BAND marker' });
   } else if (annMatch[0] !== expectedAnn) {

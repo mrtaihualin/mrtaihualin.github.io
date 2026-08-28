@@ -11,6 +11,15 @@ const path = require('path');
 const root = path.resolve(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
 const authWidget = read('js/core/auth-widget.js');
+const authWidgetConsumers = [
+  'leaderboard.html',
+  'listening-board.html',
+  'my-progress.html',
+  'reading-board.html',
+  'typing-board.html',
+  'vault.html',
+  'word-order-board.html',
+];
 const accountUnlink = read('supabase/functions/account-unlink/index.ts');
 const migrationName = fs.readdirSync(path.join(root, 'supabase/migrations'))
   .find((name) => name.endsWith('_phase1_account_audit_rpc_hardening.sql'));
@@ -33,6 +42,31 @@ check('browser audit request cannot choose owner, actor, or before/after state',
   const call = authWidget.match(/callAccountFn\('account-unlink',\s*\{\s*action: 'audit_link',[\s\S]*?\}\)\.catch\(function \(e\) \{ console\.error\('account audit failed/);
   assert.ok(call, 'trusted Edge audit call exists');
   assert.doesNotMatch(call[0], /user_id|actor|before_state|after_state|providers_before/);
+});
+
+check('Facebook callback verifies fresh Auth user before deciding link result', () => {
+  const callback = authWidget.match(/function checkPendingFacebookLinkAudit\(\) \{[\s\S]*?\n  \}\n\n  \/\/ ── init:/);
+  assert.ok(callback, 'Facebook pending-link callback exists');
+  assert.match(callback[0], /withClientTimeout\(sb\.auth\.getUser\(\), '確認 Facebook 連接狀態', false\)/);
+  assert.match(callback[0], /pending\.user_id !== verifiedUser\.id/);
+  assert.match(callback[0], /\(verifiedUser\.identities \|\| \[\]\)\.map/);
+  assert.doesNotMatch(callback[0], /var providersAfter = \(API\.user\.identities/);
+});
+
+check('fresh verified user replaces cached UI user before link audit', () => {
+  const callback = authWidget.match(/function checkPendingFacebookLinkAudit\(\) \{[\s\S]*?\n  \}\n\n  \/\/ ── init:/);
+  assert.ok(callback, 'Facebook pending-link callback exists');
+  const refreshAt = callback[0].indexOf('API.user = verifiedUser;');
+  const changeAt = callback[0].indexOf('fireChange();', refreshAt);
+  const auditAt = callback[0].indexOf("callAccountFn('account-unlink'", refreshAt);
+  assert.ok(refreshAt >= 0 && changeAt > refreshAt && auditAt > changeAt,
+    'verified user refreshes listeners before audit');
+});
+
+check('all existing Auth widget consumers load the fresh callback cache binding', () => {
+  for (const file of authWidgetConsumers) {
+    assert.match(read(file), /js\/core\/auth-widget\.js\?v=17/, file + ' uses auth-widget v17');
+  }
 });
 
 check('Edge recognizes only the locked Facebook link-audit provider', () => {

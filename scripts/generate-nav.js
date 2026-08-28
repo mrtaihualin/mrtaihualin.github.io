@@ -83,6 +83,7 @@ const ANN_BLOCK_RE = new RegExp(
   NAV.ANN_MARK_END.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 );
 const BODY_OPEN_RE = /<body[^>]*>/i;
+const TONE_ANN_BLOCK = '<!--ANN-BAND:START--><!-- Tone is a Core game surface: no announcement strip. --><!--ANN-BAND:END-->';
 
 // 🆕 2026-08-10 — nav responsive auto-fit script (ดูรายละเอียดใน data/nav-template.js)
 // ต้องวางทันทีหลัง </nav> ตัวจริง (sync, กันกระพริบตอนโหลดหน้าแรก) — ห่อ marker เหมือน ANN_BLOCK
@@ -147,7 +148,7 @@ PAGES.forEach(function (file) {
   }
 
   // ── แถบประกาศด้านบน (static) — มีอยู่แล้วให้พิมพ์ทับ · ยังไม่มีให้แทรกต่อจาก <body> ──
-  const annBlockHTML = NAV.renderAnnBandBlockHTML();
+  const annBlockHTML = file === 'tone-finder.html' ? TONE_ANN_BLOCK : NAV.renderAnnBandBlockHTML();
   if (ANN_BLOCK_RE.test(next)) {
     const beforeAnn = next;
     next = next.replace(ANN_BLOCK_RE, annBlockHTML);
