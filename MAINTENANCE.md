@@ -2278,6 +2278,7 @@ node scripts/check-site.js
 
 - Consolidated Tone, Reading, Listening, Typing and Word Order onto the existing shared UI CSS chain for one 640px Desktop / 370px Portrait axis, fixed header, Login, session, gameplay, question-row, and three-control geometry.
 - Added fixed optional question rows so hidden reading or romanization content retains the same measurable four-row rhythm, while game-owned content, controls, scoring, and behavior remain in their existing runtimes.
+- Added one fixed `48px` optional Skip slot after the shared learning-tools row in Core 5; Tone keeps its existing neutral Skip action at `73×40px`, Listening keeps its audio-error-only Skip action, and games without a Skip action reserve an empty slot without inventing behavior.
 - Kept Lego's lower gameplay/layout and shared runtime byte-identical to the PR #98 checkpoint; this packet verifies only Lego's existing Login surface.
 - Kept the pre-existing Mobile Landscape CSS block byte-identical to the integration base and left the parked Listening runtime unbooted.
 - Verification: targeted shared/owner/Landscape gates, responsive browser measurements, and the full `node scripts/check-site.js` gate cover the exact checkpoint before Human Preview.

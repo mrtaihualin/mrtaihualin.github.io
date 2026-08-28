@@ -839,6 +839,9 @@ body[data-gsh-game]:not([data-gsh-game="lego"]) {
   --gsh-copy-translation-height:28px;
   --gsh-progress-height:39px;
   --gsh-tools-height:56px;
+  --gsh-skip-slot-height:48px;
+  --gsh-skip-action-width:73px;
+  --gsh-skip-action-height:40px;
 }
 
 @media (min-width:1025px),
@@ -971,6 +974,22 @@ body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-question-surface .gsh-copy-
     height:var(--gsh-tools-height); min-height:var(--gsh-tools-height);
     margin:0 !important; padding:0 !important; box-sizing:border-box;
   }
+  body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-gameplay > .gsh-skip-slot {
+    width:100%; height:var(--gsh-skip-slot-height); min-height:var(--gsh-skip-slot-height);
+    margin:0 !important; padding:4px 0 !important; box-sizing:border-box;
+    display:flex; flex:0 0 var(--gsh-skip-slot-height); align-items:center; justify-content:center;
+  }
+  body[data-gsh-game][data-gsh-game="reading"] .gsh-gameplay > .gsh-skip-slot,
+  body[data-gsh-game][data-gsh-game="listening"] .gsh-gameplay > .gsh-skip-slot,
+  body[data-gsh-game][data-gsh-game="typing"] .gsh-gameplay > .gsh-skip-slot,
+  body[data-gsh-game][data-gsh-game="word-order"] .gsh-gameplay > .gsh-skip-slot {
+    width:calc(100% + 40px); max-width:none; margin-inline:-20px !important;
+  }
+  body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-skip-slot > .gsh-skip-action {
+    width:var(--gsh-skip-action-width); height:var(--gsh-skip-action-height);
+    min-width:var(--gsh-skip-action-width); min-height:var(--gsh-skip-action-height);
+    margin:0 !important; padding:0 !important; box-sizing:border-box;
+  }
   body[data-gsh-game="word-order"] .gsh-wordorder-content-slot {
     width:100%; height:136px; min-height:136px; overflow:auto;
     flex:0 0 136px; box-sizing:border-box;
@@ -1034,6 +1053,12 @@ body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-question-surface .gsh-copy-
   body[data-gsh-game="word-order"] .gsh-gameplay > #word-ctl-row.gsh-learning-tools {
     width:calc(100% + 37px) !important;
     margin:0 -18.5px !important;
+  }
+  body[data-gsh-game][data-gsh-game="reading"] .gsh-gameplay > .gsh-skip-slot,
+  body[data-gsh-game][data-gsh-game="listening"] .gsh-gameplay > .gsh-skip-slot,
+  body[data-gsh-game][data-gsh-game="typing"] .gsh-gameplay > .gsh-skip-slot,
+  body[data-gsh-game][data-gsh-game="word-order"] .gsh-gameplay > .gsh-skip-slot {
+    width:calc(100% + 37px); margin-inline:-18.5px !important;
   }
   body[data-gsh-game="listening"] .gsh-session-placeholder {
     position:relative; top:10px; margin-bottom:10px;

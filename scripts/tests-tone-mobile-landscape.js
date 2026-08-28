@@ -86,7 +86,7 @@ test('mobile runtime removes computer-only actions and keeps neutral scoring', (
   assert.match(app, /function tfTouchMobileSurface\(\)[\s\S]{0,140}tfMobilePortrait\(\) \|\| tfMobileLandscape\(\)/);
   assert.match(app, /function tfWireToneKeyboard\(\)[\s\S]{0,160}if \(tfTouchMobileSurface\(\)\) return/);
   assert.match(app, /function tfWireEnterNext\(\)[\s\S]{0,160}if \(tfTouchMobileSurface\(\)\) return/);
-  assert.match(app, /body\.innerHTML \+= tfNeutralSkipSurface\(\)[\s\S]{0,260}>跳過<\/button>/);
+  assert.match(app, /body\.innerHTML \+= neutralSkip[\s\S]{0,180}tf-known-bar[\s\S]{0,120}skipButtonHtml/, 'Landscape must keep the pre-existing neutral Skip branch outside the new fixed Desktop\/Portrait host');
   assert.match(app, /skipCurrentWord:\s*function\(\)[\s\S]{0,1500}is_skipped:\s*true[\s\S]{0,260}skip_reason:\s*'user_skip'/);
   assert.match(app, /var _th = e\.readingTH \|\| \(tfMobileLandscape\(\) \? e\.word : ''\) \|\| ''/);
   assert.match(app, /if \(tfMobileLandscape\(\) && dispWord && !audioBtnHtml\)[\s\S]{0,420}class="word-audio-btn"[\s\S]{0,460}WordAudio\.has\([\s\S]{0,320}WordAudio\.soonToast/);

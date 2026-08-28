@@ -2268,6 +2268,11 @@ function render() {
   // Main body
   var body = document.getElementById('tf-body');
   body.innerHTML = buildStep();
+  var fixedSkipSlot = document.getElementById('tf-skip-slot');
+  if (fixedSkipSlot) {
+    fixedSkipSlot.innerHTML = '';
+    fixedSkipSlot.setAttribute('aria-hidden', 'true');
+  }
   if (window.GameFlow) {
     GameFlow.cancel('tone-finder');
     if (S.step === 'result' && session) {
@@ -2299,9 +2304,16 @@ function render() {
     // Lin 2026-07-04: อยู่ในโหมดพิสูจน์ (known-check) แล้ว → ซ่อนปุ่ม "已記得" (กันกดวน + ต้องพิสูจน์ให้จบก่อน)
     if (session.curWordIsKnownCheck) _hideKnown = true;
     if (!_hideKnown) {
-      body.innerHTML += tfNeutralSkipSurface()
-        ? '<div class="tf-known-bar"><button type="button" class="tf-known-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_skip_click\',{category:\'game\'});}catch(e){}TF.skipCurrentWord()">跳過</button></div>'
-        : '<div class="tf-known-bar"><button class="tf-known-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_mark_known_click\',{category:\'game\'});}catch(e){}TF.markKnown()">\u2713 \u5df2\u8a18\u5f97\u9019\u500b\u5b57</button></div>';
+      var neutralSkip = tfNeutralSkipSurface();
+      var skipButtonHtml = '<button type="button" class="tf-known-btn gsh-skip-action" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_skip_click\',{category:\'game\'});}catch(e){}TF.skipCurrentWord()">跳過</button>';
+      if (neutralSkip && tfDesktopOrPortrait() && fixedSkipSlot) {
+        fixedSkipSlot.innerHTML = skipButtonHtml;
+        fixedSkipSlot.setAttribute('aria-hidden', 'false');
+      } else {
+        body.innerHTML += neutralSkip
+          ? '<div class="tf-known-bar">' + skipButtonHtml + '</div>'
+          : '<div class="tf-known-bar"><button class="tf-known-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_mark_known_click\',{category:\'game\'});}catch(e){}TF.markKnown()">\u2713 \u5df2\u8a18\u5f97\u9019\u500b\u5b57</button></div>';
+      }
     }
   }
 
