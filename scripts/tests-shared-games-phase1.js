@@ -234,6 +234,13 @@ test('Reading Desktop reuses the accepted Tone shell controls without changing m
   assert.doesNotMatch(reading, /@media \(max-width:768px\) and \(orientation:portrait\)[\s\S]{0,400}data-gsh-game="reading"\] \.rg-ctl-wrap/, 'Reading Mobile Portrait controls must remain untouched');
 });
 
+test('Reading exposes learning tools inline without the retired rice-bowl menu contract', () => {
+  const reading = games.find((g) => g.id === 'reading').htmlText;
+  assert.doesNotMatch(reading, /#wm-trigger|document\.getElementById\('wm-trigger'\)|點 🍚|ปุ่ม 🍚/, 'Reading help and tour must not depend on the retired rice-bowl menu');
+  assert.match(reading, /\{sel:'#word-ctl-row',[\s\S]{0,180}學習工具都在這裡/, 'Reading tour must point to the inline learning toolbar');
+  assert.match(reading, /toolsRow\.getAttribute\('data-wm-done'\)===\'1\'/, 'Reading tour must wait for the inline toolbar to finish binding');
+});
+
 test('all games omit the removed leave-game control and dialog', () => {
   const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
   assert.doesNotMatch(sharedJs, /要離開遊戲嗎？|繼續遊戲|離開遊戲/);
