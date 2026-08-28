@@ -837,8 +837,17 @@ function buildSyls(w){
   if(w.syls&&w.syls.length)return w.syls.map(function(s,i){return {th:s.th,read:((_reads.length===w.syls.length&&_reads[i])?_reads[i]:s.th),cons:s.cons,vowel:s.vowel,tone:s.tone,final:s.final,lead:s.lead,cluster:s.cluster,tone_name:s.tone_name,consRead:s.consRead,finalRead:s.finalRead,finalDisp:s.finalDisp,silent:s.silent};}); // 2026-07-30: พ่วงฟิลด์เฉลยเสียง (ตัวประกอบต้อง copy ทุกฟิลด์ที่เกมใช้)
   return [{th:w.th,read:(w.readingTH||w.th),cons:w.cons,vowel:w.vowel,tone:w.tone,final:w.final,lead:w.lead,cluster:w.cluster,tone_name:w.tone_name,consRead:w.consRead,finalRead:w.finalRead,finalDisp:w.finalDisp,silent:w.silent}];
 }
+// Lin 2026-08-28: the visible Reading counter follows the active syllable,
+// not the number of word/sentence records in the round.
+function rgRefreshSyllableCounter(){
+  var total=Math.max(1,sylList.length||0);
+  var current=Math.max(1,Math.min(total,(sylIdx||0)+1));
+  var qn=document.getElementById('qn');if(qn)qn.textContent=current;
+  var qt=document.getElementById('qt');if(qt)qt.textContent=total;
+}
 // แถบบอกพยางค์ (โชว์เฉพาะคำหลายพยางค์)
 function renderSylStrip(){
+  rgRefreshSyllableCounter();
   var strip=document.getElementById('syl-strip');
   if(!strip)return;
   if(sylList.length<=1){strip.style.display='none';strip.innerHTML='';updateNextSylBtn();return;}
@@ -878,7 +887,6 @@ function loadWord(){
   readingAttemptScore=null;readingCorrectionAttempts=0;readingFirstCheckDone=false;
   wordUsedGuide=false;curWordIsKnownCheck=false;    // งานที่3+7: ล้างสถานะต่อคำใหม่
   wordGolden=Math.random()<GOLDEN_WORD_CHANCE; // สุ่มคำทองใหม่ทุกคำ (Lin 2026-07-03)
-  document.getElementById('qn').textContent=cur+1;
   rgApplyParticleToTitle(); // Lin 2026-08-01: ตั้งชื่อประโยคเต็ม (#wth) + ต่อครับ/ค่ะ/คะ ถ้าเปิดปุ่มไว้ (เฉพาะ高級句子)
   rgSyncParticleBtn();
   document.getElementById('wzh').textContent=WORD.zh;
@@ -1598,7 +1606,7 @@ function refreshUI(){
   var wsNum=document.getElementById('rg-ws-num'); if(wsNum)wsNum.textContent=wsSc;
   document.getElementById('pf').style.width=(cur/Math.max(1,roundQueue.length)*100)+'%';
   document.getElementById('prog-txt').textContent=cur+'/'+roundQueue.length;
-  document.getElementById('qt').textContent=roundQueue.length;
+  rgRefreshSyllableCounter();
 }
 
 function updateCombo(){

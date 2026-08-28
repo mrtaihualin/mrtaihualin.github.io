@@ -349,7 +349,7 @@ test('Minimum Guest pages park owner-safe account runtimes but preserve their so
   }
   assert.doesNotMatch(read('lego.html'), /game-account\.js/);
   assert.match(read('tone-finder.html'), /tone-finder-game\.min\.js\?v=74/);
-  assert.match(read('reading-game.html'), /reading-game-app\.min\.js\?v=44/);
+  assert.match(read('reading-game.html'), /reading-game-app\.min\.js\?v=45/);
   assert.match(read('typing-game.html'), /typing-game-app\.min\.js\?v=42/);
   assert.match(read('word-order.html'), /word-order-app\.min\.js\?v=32/);
   assert.match(read('listening-game.html'), /Preserved paused runtime: js\/games\/listening-game-app\.js\?v=19/);
