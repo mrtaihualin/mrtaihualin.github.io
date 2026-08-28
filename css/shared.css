@@ -712,7 +712,7 @@ body .gsh-shell.tf-page { padding-top:8px; }
   body[data-gsh-game="word-order"] .wo-word-th,
   body[data-gsh-game="lego"] .out-th,
   body[data-gsh-game="lego"] .lego-flow-th {
-    line-height:1.25 !important;
+    line-height:1.5 !important;
     margin-top:0 !important;
     margin-bottom:0 !important;
     padding-top:0 !important;
@@ -723,7 +723,7 @@ body .gsh-shell.tf-page { padding-top:8px; }
   body[data-gsh-game="typing"] .rev-pron,
   body[data-gsh-game="listening"] .lg-rev-pron,
   body[data-gsh-game="word-order"] .wo-read-th {
-    line-height:1.25 !important;
+    line-height:normal !important;
     margin-top:4px !important;
     margin-bottom:0 !important;
   }
@@ -732,7 +732,7 @@ body .gsh-shell.tf-page { padding-top:8px; }
   body[data-gsh-game="typing"] .rev-en,
   body[data-gsh-game="listening"] .lg-rev-en,
   body[data-gsh-game="word-order"] .wo-read-en {
-    line-height:1.25 !important;
+    line-height:normal !important;
     margin-top:2px !important;
     margin-bottom:0 !important;
   }
@@ -744,7 +744,7 @@ body .gsh-shell.tf-page { padding-top:8px; }
   body[data-gsh-game="word-order"] .wo-read-zh,
   body[data-gsh-game="lego"] .out-zh,
   body[data-gsh-game="lego"] .lego-flow-zh {
-    line-height:1.25 !important;
+    line-height:normal !important;
     margin-top:6px !important;
     margin-bottom:0 !important;
   }

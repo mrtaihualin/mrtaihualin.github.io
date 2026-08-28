@@ -4,7 +4,7 @@
 
 ## 2026-08-28 — Six-game Desktop question rhythm / progress-row retirement (`PASS_LOCAL / PREVIEW_PASS / HUMAN_PENDING / PRODUCTION_UNCHANGED`)
 
-- Standardized the ordinary-Desktop question-copy line boxes across Tone, Reading, Listening, Typing, Word Order and Lego, with the same Tone-derived Thai-reading, romanization and translation spacing. Game-owned text, font sizes, controls and gameplay remain unchanged.
+- Standardized the ordinary-Desktop question-copy line boxes across Tone, Reading, Listening, Typing, Word Order and Lego with Tone's exact rendered rhythm: primary line-height `1.5`, normal reading-line metrics and `4px / 2px / 6px` Thai-reading, romanization and translation margins. Game-owned text, font sizes, controls and gameplay remain unchanged.
 - Retired the duplicate visible `進度` row on ordinary Desktop while preserving the session question counter, per-question score row and underlying progress state. Portrait and Mobile Landscape remain outside this change.
 - Corrected Reading's visible `第 n/N 字` counter to follow the active syllable and the actual syllable total of the current word or sentence (for example, `第 1/7 字`), instead of showing the current one-record round as `第 1/1 字`. The existing round queue, Resume detail and scoring remain unchanged.
 - Reading and shared-game regressions, the Tone Mobile Landscape boundary, secret scan, source whitespace validation and the full 1,018-file site gate pass. The Netlify Draft browser check at 1280×720 confirms zero visible `進度` rows and the expected rendered 4px / 2px / 6px reading gaps; Human visual acceptance remains pending. No Login/Auth, SRS/Review, provider/session/account, Personal Data or Production mutation is included.
