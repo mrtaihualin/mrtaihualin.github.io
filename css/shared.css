@@ -835,6 +835,8 @@ body[data-gsh-game] {
   --gsh-copy-reading-height:28px;
   --gsh-copy-roman-height:23px;
   --gsh-copy-translation-height:28px;
+  --gsh-progress-height:39px;
+  --gsh-tools-height:56px;
 }
 
 @media (min-width:1025px),
@@ -842,7 +844,8 @@ body[data-gsh-game] {
        (max-width:768px) and (orientation:portrait) {
 /* Tone 初級 supplies the measurable four-row rhythm. The slot remains even
    when game-owned content is unavailable or intentionally hidden. */
-body[data-gsh-game] .gsh-question-surface .gsh-question-stack {
+body[data-gsh-game] .gsh-question-surface .gsh-question-stack,
+body[data-gsh-game="word-order"] .gsh-question-stack {
   display:grid;
   grid-template-rows:
     var(--gsh-copy-main-height)
@@ -851,7 +854,8 @@ body[data-gsh-game] .gsh-question-surface .gsh-question-stack {
     var(--gsh-copy-translation-height);
   width:100%; height:136px; min-height:136px; overflow:hidden;
 }
-body[data-gsh-game] .gsh-question-surface .gsh-copy-slot {
+body[data-gsh-game] .gsh-question-surface .gsh-copy-slot,
+body[data-gsh-game="word-order"] .gsh-question-stack > .gsh-copy-slot {
   width:100%; min-width:0; min-height:0; margin:0 !important; padding:0;
   display:flex !important; align-items:center; justify-content:center;
   overflow:hidden; text-align:center; box-sizing:border-box;
@@ -859,7 +863,8 @@ body[data-gsh-game] .gsh-question-surface .gsh-copy-slot {
 body[data-gsh-game] .gsh-question-surface .gsh-question-stack > #tf-read-line {
   display:contents;
 }
-body[data-gsh-game] .gsh-question-surface .gsh-copy-slot[aria-hidden="true"] {
+body[data-gsh-game] .gsh-question-surface .gsh-copy-slot[aria-hidden="true"],
+body[data-gsh-game="word-order"] .gsh-question-stack > .gsh-copy-slot[aria-hidden="true"] {
   visibility:hidden;
 }
 body[data-gsh-game] .gsh-question-surface .gsh-copy-main > *,
@@ -927,16 +932,26 @@ body[data-gsh-game] .gsh-question-surface .gsh-copy-translation {
   }
   body[data-gsh-game="lego"] .page { padding-top:8px !important; }
   body[data-gsh-game] .gsh-session-header {
-    min-height:82px; margin-top:0; margin-bottom:0; padding:0 0 10px;
+    height:82px; min-height:82px; margin-top:0; margin-bottom:0; padding:0 0 10px;
     flex-direction:column; flex-wrap:nowrap; gap:10px;
   }
   body[data-gsh-game] .gsh-session-placeholder { visibility:hidden; pointer-events:none; }
-  body[data-gsh-game="lego"] .gsh-session-placeholder {
+  body[data-gsh-game="listening"] .gsh-session-placeholder {
+    position:relative; top:10px; margin-bottom:10px;
+  }
+  body[data-gsh-game="lego"] .gsh-session-header {
     position:relative; top:10px; margin-bottom:10px;
   }
   body[data-gsh-game] .gsh-gameplay {
-    margin-top:0; border-radius:var(--gsh-framework-card-radius);
+    margin-top:0; border-radius:var(--gsh-framework-card-radius); gap:0;
   }
+  body[data-gsh-game] .gsh-progress,
+  body[data-gsh-game] #tf-bars-wrap {
+    width:100%; height:var(--gsh-progress-height); min-height:var(--gsh-progress-height);
+    margin:6px 0 4px !important; box-sizing:border-box;
+  }
+  body[data-gsh-game] .gsh-progress-placeholder,
+  body[data-gsh-game] .gsh-tools-placeholder { visibility:hidden; pointer-events:none; }
   body[data-gsh-game] .gsh-gameplay > .gold-banner,
   body[data-gsh-game] .gsh-question-surface {
     padding-left:10px !important; padding-right:10px !important;
@@ -947,13 +962,39 @@ body[data-gsh-game] .gsh-question-surface .gsh-copy-translation {
   body[data-gsh-game="reading"] .gsh-gameplay > .gold-banner,
   body[data-gsh-game="typing"] .gsh-gameplay > .gold-banner,
   body[data-gsh-game="word-order"] .gsh-gameplay > .gold-banner {
-    width:calc(100% + 37px) !important;
-    margin-left:-18.5px !important; margin-right:-18.5px !important;
+    width:calc(100% + 40px) !important;
+    margin:-20px -20px 0 !important; padding:16px 10px 10px !important;
+    border-bottom:0 !important;
+  }
+  body[data-gsh-game="word-order"] .gsh-gameplay > .gold-banner {
+    margin-top:-22px !important;
+  }
+  body[data-gsh-game="lego"] .gsh-gameplay > .out-banner {
+    width:calc(100% - 3px) !important; margin:1.5px 1.5px 0 !important;
+    padding:16px 10px 10px !important;
+    box-sizing:border-box;
+  }
+  body[data-gsh-game] .gsh-gameplay > .gsh-learning-tools {
+    height:var(--gsh-tools-height); min-height:var(--gsh-tools-height);
+    margin:0 !important; padding:0 !important; box-sizing:border-box;
+  }
+  body[data-gsh-game="lego"] .gsh-gameplay > .gsh-tools-placeholder {
+    width:calc(100% - 3px); margin-inline:1.5px !important;
   }
   body[data-gsh-game="reading"] .gsh-gameplay > .gsh-learning-tools,
   body[data-gsh-game="typing"] .gsh-gameplay > .gsh-learning-tools,
   body[data-gsh-game="word-order"] .gsh-gameplay > .gsh-learning-tools {
-    width:calc(100% + 37px) !important; max-width:none;
+    width:calc(100% + 40px) !important; max-width:none;
+  }
+  body[data-gsh-game] .gsh-gameplay > #word-ctl-row.gsh-learning-tools {
+    width:calc(100% + 40px) !important; max-width:none;
+    margin:0 -20px !important; padding:0 !important;
+  }
+  body[data-gsh-game="word-order"] .gsh-gameplay > #word-ctl-row.gsh-learning-tools {
+    transform:translateY(35px); margin-bottom:35px !important;
+  }
+  body[data-gsh-game="tone"] .gsh-gameplay > #tf-word-ctl-row.gsh-learning-tools {
+    width:100% !important; margin:0 !important; padding:0 !important;
   }
   body[data-gsh-game] .gsh-level-selector { flex:none; }
 
@@ -986,7 +1027,29 @@ body[data-gsh-game] .gsh-question-surface .gsh-copy-translation {
   body[data-gsh-game] .mrt-login-surface {
     min-height:82px; margin-top:0; margin-bottom:22px;
   }
-  body[data-gsh-game] .gsh-session-header { min-height:84px; }
+  body[data-gsh-game] .gsh-session-header { height:84px; min-height:84px; }
+  body[data-gsh-game="reading"] .gsh-gameplay > .gold-banner,
+  body[data-gsh-game="typing"] .gsh-gameplay > .gold-banner,
+  body[data-gsh-game="word-order"] .gsh-gameplay > .gold-banner {
+    width:calc(100% + 37px) !important;
+    margin:-18.5px -18.5px 0 !important;
+    padding:10px 10px 6px !important;
+  }
+  body[data-gsh-game="word-order"] .gsh-gameplay > .gold-banner {
+    margin-top:-20.5px !important;
+  }
+  body[data-gsh-game="lego"] .gsh-gameplay > .out-banner {
+    padding:10px 10px 6px !important;
+  }
+  body[data-gsh-game="reading"] .gsh-gameplay > #word-ctl-row.gsh-learning-tools,
+  body[data-gsh-game="typing"] .gsh-gameplay > #word-ctl-row.gsh-learning-tools,
+  body[data-gsh-game="word-order"] .gsh-gameplay > #word-ctl-row.gsh-learning-tools {
+    width:calc(100% + 37px) !important;
+    margin:0 -18.5px !important;
+  }
+  body[data-gsh-game="word-order"] .gsh-gameplay > #word-ctl-row.gsh-learning-tools {
+    transform:translateY(-21px); margin-bottom:-21px !important;
+  }
   body[data-gsh-game="listening"] .gsh-session-placeholder {
     position:relative; top:10px; margin-bottom:10px;
   }

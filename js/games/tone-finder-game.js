@@ -1277,7 +1277,7 @@ function tfBarsHtml() {
   // Lin 2026-07-11: หลอด本題分數 ย้ายเข้ามาไว้ในการ์ดทอง (#tf-banner) เหมือนอีก 3 เกม — โชว์เฉพาะช่วงขั้น推導 (s1/s2) เหมือนของเดิม
   var wsHtml = '';
   if (/^s[12]/.test(S.step)) wsHtml = tfWordScoreBarRowHtml();
-  return '<div class="bars-wrap" id="tf-bars-wrap">'
+  return '<div class="bars-wrap gsh-progress" id="tf-bars-wrap">'
     + '<div class="bar-row"><span>進度</span><div class="bar-bg"><div class="bar-fill prog" id="tf-pf" style="width:' + progPct + '%"></div></div><span class="bar-label" id="tf-prog-txt">' + idx + '/' + total + '</span></div>'
     + wsHtml
     + '</div>';

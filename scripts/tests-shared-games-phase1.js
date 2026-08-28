@@ -290,11 +290,14 @@ test('Tone Beginner owns one measurable four-row superset rhythm without collaps
   assert.match(sharedCss, /--gsh-copy-main-height:57px;[\s\S]{0,160}--gsh-copy-reading-height:28px;[\s\S]{0,120}--gsh-copy-roman-height:23px;[\s\S]{0,120}--gsh-copy-translation-height:28px;/);
   assert.match(sharedCss, /grid-template-rows:[\s\S]{0,260}var\(--gsh-copy-main-height\)[\s\S]{0,100}var\(--gsh-copy-reading-height\)[\s\S]{0,100}var\(--gsh-copy-roman-height\)[\s\S]{0,100}var\(--gsh-copy-translation-height\)/);
   assert.match(sharedCss, /\.gsh-copy-slot\[aria-hidden="true"\] \{\s*visibility:hidden;/, 'hidden optional content must reserve its physical slot');
+  assert.match(sharedCss, /data-gsh-game="word-order"\] \.gsh-question-stack[\s\S]{0,220}height:136px/, 'Word Order word stacks must retain the same fixed optional rows');
+  assert.match(sharedCss, /--gsh-progress-height:39px;[\s\S]{0,100}--gsh-tools-height:56px;/, 'progress and tools must use fixed shared slots');
   assert.match(tone.appText, /gsh-question-stack[\s\S]{0,240}mainSlotHtml[\s\S]{0,240}readingSlotsHtml[\s\S]{0,240}translationSlotHtml/, 'Tone runtime must emit the golden stack in fixed order');
   for (const [id, html] of [['reading', reading], ['typing', typing], ['listening', listening], ['lego', lego]]) {
     assert.match(html, /gsh-question-surface/, `${id}: missing shared question-surface hook`);
   }
   assert.match(lego, /gsh-copy-reading" aria-hidden="true"[\s\S]{0,120}gsh-copy-roman" aria-hidden="true"/, 'Lego unavailable reading rows must retain fixed slots');
+  assert.match(lego, /gsh-session-header[\s\S]{0,120}id="levels" hidden/, 'Lego word-set menu must consume the shared session slot');
 });
 
 test('Reading and Tone Mobile Portrait centre round status between Level and gameplay', () => {

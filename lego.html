@@ -403,7 +403,9 @@ body.rg-modern-font .opt-custom input{font-family:'Noto Sans Thai','Sarabun',san
     <p>用學過的單字，組出你真正想說的泰語。</p>
   </header>
 
-  <div class="gsh-session-header gsh-session-placeholder" aria-hidden="true"></div>
+  <div class="gsh-session-header">
+    <div class="levels" id="levels" hidden aria-hidden="true"></div>
+  </div>
 
   <div class="gsh-resume-banner" id="lego-resume-banner" role="region" aria-label="繼續上次練習" style="display:none;max-width:640px;">
     <div class="gsh-resume-title">上次的安全進度還在</div>
@@ -415,7 +417,6 @@ body.rg-modern-font .opt-custom input{font-family:'Noto Sans Thai','Sarabun',san
     </div>
   </div>
 
-  <div class="levels" id="levels" hidden aria-hidden="true"></div>
   <div class="lv-intro hidden" id="lvIntro" aria-hidden="true"></div>
 
   <!-- PRE / TEACHING PANEL -->
@@ -441,6 +442,7 @@ body.rg-modern-font .opt-custom input{font-family:'Noto Sans Thai','Sarabun',san
   <div id="buildPanel" class="hidden">
     <div class="card out gsh-gameplay">
       <div class="out-banner gsh-question-surface">
+        <div class="gsh-progress gsh-progress-placeholder" aria-hidden="true"></div>
         <div class="gsh-question-stack" data-gsh-question-stack="v1">
           <div class="gsh-copy-slot gsh-copy-main"><div class="out-th th" id="sentTh"><span class="ph">從下方底板開始挑詞 ⌄</span></div></div>
           <div class="gsh-copy-slot gsh-copy-reading" aria-hidden="true"></div>
@@ -448,6 +450,7 @@ body.rg-modern-font .opt-custom input{font-family:'Noto Sans Thai','Sarabun',san
           <div class="gsh-copy-slot gsh-copy-translation"><div><div class="out-zh" id="sentZh"></div><div class="out-zh-full" id="sentZhFull"></div></div></div>
         </div>
       </div>
+      <div class="gsh-learning-tools gsh-tools-placeholder" aria-hidden="true"></div>
       <div class="out-actions">
         <button class="btn btn-gold" type="button" onclick="legoCompleteSentence()">完成句子</button>
         <button class="btn btn-line" type="button" onclick="legoEndGame()">結束遊戲</button>
@@ -460,12 +463,14 @@ body.rg-modern-font .opt-custom input{font-family:'Noto Sans Thai','Sarabun',san
   </div>
 
   <section id="lego-reveal" class="card lego-flow-card hidden gsh-question-surface" aria-live="polite">
+    <div class="gsh-progress gsh-progress-placeholder" aria-hidden="true"></div>
     <div class="gsh-question-stack" data-gsh-question-stack="v1">
       <div class="gsh-copy-slot gsh-copy-main"><div class="lego-flow-th" id="lego-reveal-th"></div></div>
       <div class="gsh-copy-slot gsh-copy-reading" aria-hidden="true"></div>
       <div class="gsh-copy-slot gsh-copy-roman" aria-hidden="true"></div>
       <div class="gsh-copy-slot gsh-copy-translation"><div class="lego-flow-zh" id="lego-reveal-zh"></div></div>
     </div>
+    <div class="gsh-learning-tools gsh-tools-placeholder" aria-hidden="true"></div>
     <div class="lego-flow-note hidden" id="lego-reveal-disclaimer">自訂內容由玩家自行輸入，系統不會檢查或修正內容。</div>
     <div class="lego-flow-actions">
       <button class="btn btn-gold" type="button" onclick="legoContinueBuilding()">繼續造句</button>

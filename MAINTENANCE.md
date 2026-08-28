@@ -2279,4 +2279,4 @@ node scripts/check-site.js
 - Consolidated the six game pages onto the existing shared UI runtime and CSS chain for one 640px Desktop / 370px Portrait axis, fixed header, Login, session, gameplay, question-row, and three-control geometry.
 - Added fixed optional question rows so hidden reading or romanization content retains the same measurable four-row rhythm, while game-owned content, controls, scoring, and behavior remain in their existing runtimes.
 - Kept the pre-existing Mobile Landscape CSS block byte-identical to the integration base and left the parked Listening runtime unbooted.
-- Verification: shared game tests passed 46 checks, owner-switch tests passed 12 checks, Tone Mobile Landscape tests passed 8 checks, responsive browser measurements found no horizontal overflow, and `node scripts/check-site.js` passed across all 1,019 project files.
+- Verification: shared game tests passed 46 checks, owner-switch tests passed 12 checks, Tone Mobile Landscape tests passed 8 checks, responsive browser measurements found no horizontal overflow, and `node scripts/check-site.js` passed in the gated worktree.
