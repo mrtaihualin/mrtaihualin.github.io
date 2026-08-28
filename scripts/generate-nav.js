@@ -127,7 +127,7 @@ PAGES.forEach(function (file) {
     /js\/core\/shared\.min\.js\?v=\d+/g,
     NO_ANNOUNCEMENT_PAGES.has(file) ? 'js/core/shared.min.js?v=45' : 'js/core/shared.min.js?v=42'
   );
-  next = next.replace(/js\/core\/minimum-guest-launch\.js\?v=\d+/g, 'js/core/minimum-guest-launch.js?v=4');
+  next = next.replace(/js\/core\/minimum-guest-launch\.js\?v=\d+/g, 'js/core/minimum-guest-launch.js?v=5');
 
   // ── nav responsive auto-fit script — มีอยู่แล้วให้พิมพ์ทับ · ยังไม่มีให้แทรกทันทีหลัง </nav> ──
   const navFitHTML = NAV.renderNavFitScriptHTML();

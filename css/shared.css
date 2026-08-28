@@ -858,6 +858,23 @@ body .gsh-shell.tf-page { padding-top:8px; }
 }
 
 @media (max-width:768px) and (orientation:portrait) {
+  /* Lin 2026-08-29: Portrait already has the bottom game selector. Remove the
+     duplicate floating game-menu action completely and centre only the real
+     remaining actions. Desktop and the separate Landscape layout do not enter
+     this media query. */
+  html body[data-gsh-game] .rg-ctl-wrap {
+    left:50% !important;
+    right:auto !important;
+    width:max-content !important;
+    transform:translateX(-50%) !important;
+    flex-direction:row !important;
+    align-items:center !important;
+    justify-content:center !important;
+    gap:8px !important;
+  }
+  html body[data-gsh-game] .rg-ctl-wrap > .rg-ctl-fab[aria-label="遊戲選單"] {
+    display:none !important;
+  }
   body[data-gsh-game]:not([data-gsh-game="lego"]) .rg-ctl-wrap {
     bottom:calc(68px + env(safe-area-inset-bottom,0px)) !important;
   }

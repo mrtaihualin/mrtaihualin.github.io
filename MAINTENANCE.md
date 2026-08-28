@@ -2281,3 +2281,10 @@ node scripts/check-site.js
 - Preserved each game Login host's original inline dimensions while continuing to use the Reading-owned Login flow and shared placement controller.
 - Kept Lego lower gameplay, the pre-existing Mobile Landscape CSS block, and parked runtimes outside this correction.
 - Verification covers the no-resize source contract, original Skip behavior, responsive placement, and full site gate before a replacement Human Preview.
+
+# 2026-08-29 — Reading-owned Login header and Portrait control delta
+
+- Replaced page-specific Login/header approximations with one Reading-owned runtime template across the six game pages; the other scoped Login pages reuse the same template without the `玩法` action.
+- Kept every game page's content and gameplay below the Login surface intact, including Lego's lower gameplay. Mobile Landscape still restores each game's pre-existing header and floating-control structure.
+- On Mobile Portrait only, removed the duplicate floating `遊戲選單` action and centered the remaining real controls without reserving a placeholder; Desktop remains unchanged.
+- Verification: targeted shared/auth/recovery/Landscape gates passed, browser geometry matched at Desktop, 390×844 and 768×1024, and `node scripts/check-site.js` passed across 1,020 project files.

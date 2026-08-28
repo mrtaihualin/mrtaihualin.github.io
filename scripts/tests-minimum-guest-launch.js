@@ -27,20 +27,20 @@ function ok(value, message) {
 
 activePages.concat(['games-challenge.html']).forEach(function (file) {
   var html = read(file);
-  ok(html.indexOf('js/core/minimum-guest-launch.js?v=1') !== -1, file + ' loads the launch gate');
-  ok(html.indexOf('js/core/minimum-guest-launch.js?v=1') < html.indexOf('</head>'), file + ' loads the launch gate in head');
+  ok(html.indexOf('js/core/minimum-guest-launch.js?v=5') !== -1, file + ' loads the current Login-entry launch gate');
+  ok(html.indexOf('js/core/minimum-guest-launch.js?v=5') < html.indexOf('</head>'), file + ' loads the launch gate in head');
 });
 
-staticParkedPages.forEach(function (file) {
+staticParkedPages.filter(function (file) { return file !== 'line-callback.html'; }).forEach(function (file) {
   var html = read(file);
-  var gateAt = html.indexOf("var target='/games.html?guest_launch=1'");
-  var authAt = html.indexOf('auth-widget.js');
-  ok(gateAt !== -1 && (authAt === -1 || gateAt < authAt), file + ' fails closed before personal runtime');
+  ok(html.indexOf('js/core/minimum-guest-launch.js?v=5') !== -1, file + ' keeps the parked runtime gate with public Login visible');
 });
+ok(read('line-callback.html').indexOf('minimum-guest-launch.js') === -1,
+  'LINE callback remains owned by the provider return flow');
 
 var gate = read('js/core/minimum-guest-launch.js');
 ok(gate.indexOf('MRT_MINIMUM_GUEST_LAUNCH = true') !== -1, 'launch flag is explicit');
-ok(gate.indexOf('window.location.replace') !== -1, 'parked direct routes fail closed');
+ok(gate.indexOf('MRT_PARKED_ACCOUNT_SURFACE = parked.test(path)') !== -1, 'parked account surfaces remain fail-closed');
 ok(gate.indexOf('my-progress') !== -1 && gate.indexOf('games-challenge') !== -1, 'account and Challenge routes are parked');
 ok(gate.indexOf('vault-btn-slot') !== -1, 'personal save controls are hidden');
 
@@ -64,14 +64,15 @@ function runGateAt(hash) {
     documentElement: { classList: { add: function () {} } },
     head: { appendChild: function () {} },
     createElement: function () { return { setAttribute: function () {}, textContent: '' }; },
+    querySelector: function () { return null; },
     querySelectorAll: function () { return []; }
   };
   vm.runInNewContext(gate, { window: windowStub, document: documentStub });
   return replacedUrl;
 }
 
-ok(runGateAt('#access_token=redacted&refresh_token=redacted') === '/?guest_launch=1',
-  'OAuth credential fragments are removed before Guest launch continues');
+ok(runGateAt('#access_token=redacted&refresh_token=redacted') === null,
+  'public Login Core preserves the callback fragment for the Reading provider flow');
 ok(runGateAt('#articles') === null, 'normal page anchors remain untouched');
 
 var config = read('js/core/supabase-config.js');
@@ -81,16 +82,18 @@ ok(config.indexOf('getAnonymousSupabaseClient') !== -1 && config.indexOf('persis
   'isolated anonymous Supabase client cannot inherit browser auth');
 
 var sixGames = ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html','lego.html'];
-var parkedBundles = ['auth-widget.js','game-account.js','reading-auth.js','phase1-canonical-state.js','learning-summary.js','study-plan.js','tone-server.js','word-vault.js','sentence-vault.js','practice-events.js'];
+var parkedBundles = ['game-account.js','phase1-canonical-state.js','learning-summary.js','study-plan.js','tone-server.js','word-vault.js','sentence-vault.js','practice-events.js'];
 sixGames.forEach(function (file) {
   var html = read(file);
   parkedBundles.forEach(function (bundle) { ok(html.indexOf(bundle) === -1, file + ' does not execute parked ' + bundle); });
   ok(!/(?:reading|typing|listening|word-order|lego)-board\.html/.test(html), file + ' does not expose a leaderboard route');
 });
+ok(read('reading-game.html').indexOf('reading-auth.js') !== -1,
+  'Reading remains the direct provider-flow owner while other pages reuse it through the shared Login controller');
 
 var contentClient = read('js/games/game-content-client.js');
 ok(contentClient.indexOf('minimumGuest ? cfg.anonKey') !== -1, 'protected game content ignores stored Login token');
-ok(contentClient.indexOf('isAnon && !minimumGuest') !== -1, 'content cap exposes no Login CTA');
+ok(!/登入解鎖|rg-login-btn|openLogin/.test(contentClient), 'content cap exposes no Login CTA');
 
 var audioClient = read('js/games/protected-word-audio.js');
 ok(audioClient.indexOf('getAnonymousSupabaseClient') !== -1, 'protected audio uses isolated Guest client');
