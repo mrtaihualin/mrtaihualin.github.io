@@ -255,7 +255,7 @@ async function test(label, fn) {
     assert.ok(/res\.data\.session\.user/.test(verifyFlow));
     assert.ok(!/location\.(?:href|replace|assign)/.test(verifyFlow));
     assert.ok(/window\.SITE_AUTH\.onChange\(setUser\)/.test(otpSource));
-    assert.ok(/if \(loginUser\) closeGate\(\)/.test(otpSource));
+    assert.ok(/if \(API\.user\) closeGate\(\)/.test(otpSource));
   });
 
   if (!process.exitCode) console.log('\n✅ Phase 1 auth session verification passed (' + passed + ' checks)');

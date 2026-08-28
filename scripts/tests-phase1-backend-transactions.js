@@ -116,16 +116,16 @@ test('Lego client reuses uncertain request id and rejects stale owner completion
   assert.match(legoClient, /if\(quota\._owner&&!legoQuotaSameOwner\(quota\._owner\)\) quota=\{ok:false,reason:'owner_changed'\}/);
 });
 
-test('Minimum Guest pages park personal transactions while exposing isolated Login Core', () => {
+test('Minimum Guest pages park personal transaction clients while preserving source contracts', () => {
   for (const page of ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html']) {
     const html = read(page);
     assert.doesNotMatch(html, /tone-server\.js/, page);
-    assert.match(html, /reading-auth\.js\?v=29/, page);
+    assert.doesNotMatch(html, /reading-auth\.js/, page);
   }
   const lego = read('lego.html');
   assert.match(lego, /network-guard\.js\?v=1[\s\S]+lego-game-app\.js\?v=12/);
-  assert.match(lego, /reading-auth\.js\?v=29/);
-  assert.match(read('vault.html'), /reading-auth\.js\?v=29/);
+  assert.doesNotMatch(lego, /reading-auth\.js/);
+  assert.match(read('vault.html'), /reading-auth\.js\?v=28/);
 });
 
 if (!process.exitCode) console.log('\n✅ Phase 1 backend transaction contracts passed (' + passed + ' checks)');
