@@ -84,7 +84,7 @@ if (document.fonts && document.fonts.load) {
   document.fonts.load("400 14px 'Noto Sans Thai'", "◌่้๊๋").catch(function(){});
 }
 </script>
-<link rel="stylesheet" href="css/shared.css?v=29">
+<link rel="stylesheet" href="css/shared.css?v=31">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="js/core/supabase-config.js?v=10"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script>
@@ -573,16 +573,20 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
         <span class="bar-label"><span id="tg-ws-num">10</span>/10</span>
       </div>
     </div>
-    <div class="word-area">
-      <div style="display:inline-flex;align-items:center;gap:6px;justify-content:center;">
+    <div class="word-area gsh-question-surface">
+      <div class="gsh-question-stack" data-gsh-question-stack="v1">
+      <div class="gsh-copy-slot gsh-copy-main"><div style="display:inline-flex;align-items:center;gap:6px;justify-content:center;">
         <div class="word-th" id="wth">—</div>
-      </div>
+      </div></div>
       <!-- Lin 2026-07-16: ย้ายคำอ่านขึ้นมาอยู่เหนือแถวปุ่ม ให้เด้งด้านบนคู่กับคำแปลเหมือนกัน (เดิมอยู่ใต้แถวปุ่ม)
            Lin 2026-07-30 (รอบ 2): สลับให้ 讀音 → 英文讀音 → 翻譯 เรียงเหมือนกันทุกเกม (เดิมคำแปลอยู่บนสุด) -->
-      <div class="rev-pron" id="rev-pron"></div>
+      <div class="gsh-copy-slot gsh-copy-reading"><div class="rev-pron" id="rev-pron"></div></div>
       <!-- Lin 2026-07-25: คำอ่านโรมัน (英文讀音) — แถวของตัวเอง เปิด/ปิดแยกจากคำอ่านไทย -->
-      <div class="rev-en" id="rev-en"></div>
-      <div class="word-zh" id="wzh"></div>
+      <div class="gsh-copy-slot gsh-copy-roman"><div class="rev-en" id="rev-en"></div></div>
+      <div class="gsh-copy-slot gsh-copy-translation"><div class="word-zh" id="wzh"></div></div>
+      </div>
+    </div>
+  </div>
       <!-- แถวปุ่ม 4 อันใต้คำศัพท์: 🔊กด1ที=ฟังเสียงคำ1ที · 🐣คำอ่าน · 🍙คำแปล(shared.js ย้ายมาใส่เอง) · 🔖เซฟ — Lin 2026-07-16 -->
       <div id="word-ctl-row" style="display:flex;align-items:center;justify-content:center;gap:8px;margin:6px 0 2px;flex-wrap:wrap;">
         <button id="rg-sound-toggle" class="word-ctl-btn" type="button"></button>
@@ -612,8 +616,6 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
         {id:'rg-particle-toggle', label:'禮貌詞',   state:'particle'}
       ]});});</script>
       <div id="word-golden-badge" style="display:none;font-size:12px;color:#C8973A;font-weight:800;margin-top:2px;"><img src="assets/icons/golden-grain-plain.svg" alt="" style="width:14px;height:14px;vertical-align:-2px;margin-right:2px;">黃金字 ×2</div>
-    </div>
-  </div>
 
   <!-- แถบพยางค์ (中級 หลายพยางค์) — โชว์เฉพาะคำที่มีหลายพยางค์ -->
   <div class="syl-strip" id="syl-strip" style="display:none"></div>
@@ -764,7 +766,7 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
 </script>
 </div><!-- /.v3-page -->
 <script src="data/nav-template.js?v=4"></script>
-<script src="js/core/shared.min.js?v=43"></script>
+<script src="js/core/shared.min.js?v=44"></script>
 <script src="js/games/game-flow.js?v=11"></script>
 
 <!-- ── Game Switcher (fixed pill) ── -->

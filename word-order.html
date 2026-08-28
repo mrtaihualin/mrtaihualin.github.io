@@ -77,7 +77,7 @@ gtag("config","G-DKVQE30982");window.GA_CATEGORY="game";</script>
 <meta name="twitter:image" content="https://mrtaihualin.com/assets/share-card.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><!-- Lin 2026-07-26: เปิดสายไปที่เซิร์ฟเวอร์ฟอนต์ล่วงหน้า ลดเวลารอบนมือถือ -->
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700&family=Sarabun:wght@400;600;700&family=Noto+Sans+Thai:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/shared.css?v=29">
+<link rel="stylesheet" href="css/shared.css?v=31">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="js/core/supabase-config.js?v=10"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script>
@@ -358,6 +358,17 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   </div>
 </div>
 
+<!-- Shared Page Framework: Word Order has no Level. Preserve the game-owned
+     round/score + Hint controls inside the same fixed Session slot. -->
+<div class="gsh-session-header">
+  <div class="top-bar">
+    <div class="score-bar">
+      <div>第 <span id="wo-qn">1</span>/<span id="wo-qt">10</span> 句</div>
+      <div>分數：<span id="wo-score">0</span></div>
+    </div>
+    <button class="btn btn-secondary" id="wo-hint-btn" onclick="woHint()" style="padding:6px 14px;font-size:12.5px;">💡 提示 (-2)</button>
+  </div>
+</div>
 
 <!-- Local-device resume banner — ซ่อนไว้ก่อนเสมอ โชว์เฉพาะ init() เจอรอบค้างจริงใน localStorage (window.GameResume) -->
 <div class="gsh-resume-banner" id="wo-resume-banner" role="region" aria-label="繼續上次練習" style="display:none;">
@@ -373,18 +384,6 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 <!-- GAME -->
 <div id="game" class="card gsh-gameplay">
   <div class="gold-banner">
-    <!-- Phase C.1 (2026-08-10): เพิ่ม Session Header ใหม่ (เดิมไม่มีเลย) — ดึงจาก state จริงที่มีอยู่แล้วเท่านั้น
-         (wo-score = คะแนนรวม, wo-qn/wo-qt = ตำแหน่งประโยคปัจจุบัน ใช้ idx/SET.length ตัวเดียวกับ #prog-txt)
-         ไม่มี difficulty (เกมนี้ไม่มีระบบระดับ ไม่ได้สร้างเพิ่ม) · ปุ่ม提示 (-2) ไม่ใส่ใน header เพราะเป็น action ไม่ใช่สถานะ -->
-    <div class="top-bar">
-      <div class="gsh-session-header">
-        <div class="score-bar">
-          <div>第 <span id="wo-qn">1</span>/<span id="wo-qt">10</span> 句</div>
-          <div>分數：<span id="wo-score">0</span></div>
-        </div>
-      </div>
-      <button class="btn btn-secondary" id="wo-hint-btn" onclick="woHint()" style="padding:6px 14px;font-size:12.5px;">💡 提示 (-2)</button>
-    </div>
     <div class="bars-wrap gsh-progress" id="bars-wrap">
       <div class="bar-row">
         <span>進度</span>
@@ -487,7 +486,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 </footer>
 
 <script src="data/nav-template.js?v=4"></script>
-<script src="js/core/shared.min.js?v=43"></script>
+<script src="js/core/shared.min.js?v=44"></script>
 <script src="js/games/game-flow.js?v=11"></script>
 
 <div id="gt-tour-overlay">
@@ -532,7 +531,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/word-order-app.min.js?v=32']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/word-order-app.min.js?v=33']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 

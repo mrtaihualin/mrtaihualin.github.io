@@ -272,18 +272,21 @@
   }
   // HTML คำอ่าน+คำแปลที่แปะใต้คำแต่ละคำ (ใช้ทั้งไทล์ในกองและช่องที่วางแล้ว → เลื่อนตามคำเสมอ)
   function woReadHtml(wordIndex){
-    if (!woPronMode && !woEnMode && !woZhWordOn) return '';
     var s = curSentence();
     var r = woWordReads(s)[wordIndex];
-    if (!r) return '';
-    var h = '';
+    if (!r) return '<div class="gsh-copy-slot gsh-copy-reading" aria-hidden="true"></div><div class="gsh-copy-slot gsh-copy-roman" aria-hidden="true"></div><div class="gsh-copy-slot gsh-copy-translation" aria-hidden="true"></div>';
+    var thai = '';
+    var roman = '';
+    var translation = '';
     // Lin 2026-07-30: 讀音 โชว์ทุกคำเสมอ (เดิมซ่อนคำที่อ่านตรงกับตัวเขียน — ยกเลิกแล้วตามที่ Lin สั่ง)
-    if (woPronMode && r.th) h += '<div class="wo-read-th">' + r.th + '</div>';
-    if (woEnMode   && r.en) h += '<div class="wo-read-en">' + r.en + '</div>';
+    if (woPronMode && r.th) thai = '<div class="wo-read-th">' + r.th + '</div>';
+    if (woEnMode   && r.en) roman = '<div class="wo-read-en">' + r.en + '</div>';
     // Lin 2026-07-30: คำแปลจีนรายคำ — โชว์ได้ตั้งแต่ยังไม่ตอบ (Lin ยืนยัน ไม่ถือเป็นสปอยล์)
     var wz = (s.words[wordIndex] && s.words[wordIndex].zh) || '';
-    if (woZhWordOn && wz) h += '<div class="wo-read-zh">' + wz + '</div>';
-    return h;
+    if (woZhWordOn && wz) translation = '<div class="wo-read-zh">' + wz + '</div>';
+    return '<div class="gsh-copy-slot gsh-copy-reading"' + (thai ? '' : ' aria-hidden="true"') + '>' + thai + '</div>'
+      + '<div class="gsh-copy-slot gsh-copy-roman"' + (roman ? '' : ' aria-hidden="true"') + '>' + roman + '</div>'
+      + '<div class="gsh-copy-slot gsh-copy-translation"' + (translation ? '' : ' aria-hidden="true"') + '>' + translation + '</div>';
   }
   function woRepaintWords(){
     var s = curSentence();
@@ -954,7 +957,7 @@
       } else {
         slot.className = 'wo-slot filled';
         // Lin 2026-07-25: คำอ่านติดไปกับคำ → ย้ายไปวางช่องไหน คำอ่านก็ตามไปด้วย
-        slot.innerHTML = '<div class="wo-word-th">' + s.words[filledOrig].th + '</div>' + woReadHtml(filledOrig);
+        slot.innerHTML = '<div class="gsh-question-stack" data-gsh-question-stack="v1"><div class="gsh-copy-slot gsh-copy-main"><div class="wo-word-th">' + s.words[filledOrig].th + '</div></div>' + woReadHtml(filledOrig) + '</div>';
         slot.title = '點一下移回下面';
         (function(slotIndex){
           slot.onclick = function(){ if (!locked) removeFromAnswer(slotIndex); };
@@ -976,7 +979,7 @@
       var el = document.createElement('div');
       el.className = 'wo-tile' + (used[tile.orig] ? ' used' : '');
       // Lin 2026-07-25: คำอ่านแปะใต้คำในกองด้วย (กองสลับที่แล้ว คำอ่านก็ยังตรงกับคำของตัวเอง ไม่เฉลยลำดับ)
-      el.innerHTML = '<div class="wo-word-th">' + tile.th + '</div>' + woReadHtml(tile.orig);
+      el.innerHTML = '<div class="gsh-question-stack" data-gsh-question-stack="v1"><div class="gsh-copy-slot gsh-copy-main"><div class="wo-word-th">' + tile.th + '</div></div>' + woReadHtml(tile.orig) + '</div>';
       el.onclick = function(){ if (!locked && !used[tile.orig]) addToAnswer(tile.orig); };
       el.setAttribute('role','button');
       el.setAttribute('tabindex','0');

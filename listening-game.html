@@ -77,7 +77,7 @@ gtag("config","G-DKVQE30982");window.GA_CATEGORY="game";</script>
 <meta name="twitter:image" content="https://mrtaihualin.com/assets/share-card.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700&family=Sarabun:wght@400;600;700&family=Noto+Sans+Thai:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/shared.css?v=26">
+<link rel="stylesheet" href="css/shared.css?v=31">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="js/core/supabase-config.js?v=10"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script>
@@ -251,6 +251,7 @@ body.rg-modern-font .lg-rev-th { font-family:'Noto Sans Thai','Sarabun',sans-ser
   <div class="page-header gsh-page-header">
     <h1 class="page-title" style="margin:0;">🎧 聽力練習室</h1>
   </div>
+  <div class="gsh-session-header gsh-session-placeholder" aria-hidden="true"></div>
   <div class="card lg-coming-soon-card" role="status" aria-label="聽力練習室即將開幕">
     <div class="lg-coming-soon-icon" aria-hidden="true">🎧</div>
     <div class="lg-coming-soon-title">即將開幕</div>
@@ -365,7 +366,7 @@ body.rg-modern-font .lg-rev-th { font-family:'Noto Sans Thai','Sarabun',sans-ser
   </div>
 
   <div class="result-banner gsh-feedback-slot" id="lg-result-banner"></div>
-  <div class="lg-reveal" id="lg-reveal"></div>
+  <div class="lg-reveal gsh-question-surface" id="lg-reveal"></div>
 
   <div class="btn-row">
     <button class="btn btn-secondary" id="lg-skip-btn" type="button" style="display:none;">跳過此題</button>
@@ -420,7 +421,7 @@ document.addEventListener('DOMContentLoaded', function () {
 </footer>
 
 <script src="data/nav-template.js?v=4"></script>
-<script src="js/core/shared.min.js?v=43"></script>
+<script src="js/core/shared.min.js?v=44"></script>
 <script src="js/games/game-flow.js?v=11"></script>
 
 <!-- ── Game Switcher (fixed pill) — 跟其他遊戲共用同一套樣式 ── -->
