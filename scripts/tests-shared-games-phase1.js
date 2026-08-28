@@ -313,35 +313,25 @@ test('Lego consumes the shared two-mode font path without a particle control', (
   assert.doesNotMatch(legoHtml + legoApp, /games_particle_mode|rg-particle-toggle|ToggleParticle/, 'Lego must not receive the particle control');
 });
 
-test('Lego exposes only the locked minimum-release presentation', () => {
+test('Lego exposes only the locked Set 1 presentation', () => {
   const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
   const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
   assert.match(legoHtml, /id="lego-set1-app"/);
   assert.match(legoHtml, /SET 1 · 現在未來式/);
   for (const mode of ['肯定句','否定句','問句']) assert.match(legoHtml, new RegExp(mode));
-  assert.doesNotMatch(legoApp, /第二級|第三級|Set 2/, 'Set 2 and legacy levels must not be loaded');
+  assert.doesNotMatch(legoHtml, /id="(?:levels|teachPanel|buildPanel|testOverlay|badge-modal|star-modal|gt-tour-overlay|lego-reveal|lego-result)"/, 'the replaced level/test interface must not remain in HTML');
+  assert.doesNotMatch(legoApp, /第二級|第三級|Set 2/, 'Set 2 and superseded level logic must not be loaded');
   assert.match(legoApp, /state\.confirmed\.push\(item\)/, 'confirmed sentences need one session collection');
-  assert.match(legoApp, /自訂內容由玩家自行輸入，系統不會檢查或修正內容。/);
+  assert.match(legoHtml, /自訂內容由玩家自行輸入，系統不會檢查或修正內容。/);
   assert.match(legoApp, /showFirstCorrect:\s*false/, 'non-applicable first-attempt proof must be omitted from Lego Result');
-  return;
-  assert.doesNotMatch(legoHtml, /id="rg-challenge-banner"/, 'Weekly Challenge must stay out of the minimum release');
-  assert.doesNotMatch(legoHtml, /lego_freebie_banner_click|免費領取「泰語聲調速查表」/, 'removed lead magnet must not interrupt Lego gameplay');
-  assert.match(legoHtml, /onclick="legoCompleteSentence\(\)">完成句子<\/button>/);
+  assert.doesNotMatch(legoHtml, /id="rg-challenge-banner"|lego_freebie_banner_click|免費領取「泰語聲調速查表」/);
   assert.match(legoHtml, /onclick="legoEndGame\(\)">結束遊戲<\/button>/);
   assert.match(legoHtml, /onclick="legoContinueBuilding\(\)">繼續造句<\/button>/);
-  assert.match(legoHtml, /id="lego-reveal-th"[\s\S]{0,180}id="lego-reveal-zh"/, 'reveal must contain only the full sentence and zh-TW translation before actions');
-  assert.match(legoHtml, /js\/games\/game-flow\.js\?v=11/, 'Lego Result must use the countdown-free shared flow runtime');
-  for (const role of ['replay','print','detail-action','switch','cta','home']) {
-    assert.match(legoHtml, new RegExp(`data-game-result-${role}="v1"`), `Lego Result missing ${role}`);
-  }
-  assert.match(legoApp, /let legoCompletedSentences=\[\]/, 'confirmed sentences need one session collection');
-  assert.match(legoApp, /legoCompletedSentences\.push\(sentence\)/, '完成句子 must retain the confirmed sentence');
-  assert.match(legoApp, /missingCustomTranslation\?'':buildZhFull\(\)/, 'custom input without player translation must not receive inferred translation');
-  assert.match(legoApp, /自訂內容由玩家自行輸入，系統不會檢查或修正內容。/);
-  assert.match(legoApp, /showFirstCorrect:false/, 'non-applicable first-attempt proof must be omitted from Lego Result');
+  assert.match(legoHtml, /id="set1-reveal-th"[\s\S]{0,180}id="set1-reveal-zh"/);
+  assert.match(legoHtml, /js\/games\/game-flow\.js\?v=11/);
 });
 
-test('Lego exposes only the locked word sets and branch grammar', () => {
+test('Lego exposes only the locked Set 1 word sets and rough grammar surface', () => {
   const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
   const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
   for (const word of ['อยาก','จะ','กำลังจะ','กำลัง','ต้อง','ชอบ','ต้องการ','อยากได้','เอา','ใช้文法 หลัง']) assert.match(legoApp, new RegExp(word));
@@ -349,36 +339,8 @@ test('Lego exposes only the locked word sets and branch grammar', () => {
   assert.match(legoApp, /state\.verbs\.push\(\{ verb: null, object: null \}\)/, 'Set 1 must add repeatable verb/object blocks');
   assert.match(legoApp, /destination:\s*true/, 'ไป must route destination into the object slot');
   assert.doesNotMatch(legoApp, /第二級|第三級|Set 2/);
-  return;
-  const block = (start, end) => {
-    const from = legoApp.indexOf(start);
-    const to = legoApp.indexOf(end, from + start.length);
-    assert.ok(from >= 0 && to > from, `missing Lego block ${start}`);
-    return legoApp.slice(from, to);
-  };
-  const words = block('const WORDS={', '// ════════ SESSION POOL');
-  const locations = block('const LOCATION_WORDS=[', 'const SLEEP_LOCATION');
-  for (const th of ['ตอนนี้','วันนี้','พรุ่งนี้','เรา','ผม','พี่','อยาก','จะ','กำลัง','กิน','ไป','ไปกิน','นอน','ไปนอน','ซื้อ','ไปซื้อ','ข้าว','ขนม','ผลไม้','ไก่ย่าง','ก๋วยเตี๋ยว','ของกิน','เสื้อ','รองเท้า','กระเป๋า','กางเกง','ตั๋ว','อยู่','พ่อ','แม่','เพื่อน','แฟน','นะ','นะครับ','นะคะ','อะ','ครับ','ค่ะ']) {
-    assert.match(words, new RegExp(`th:'${th}'`), `locked word ${th} is missing`);
-  }
-  for (const th of ['ห้าง','บ้านเพื่อน','เซเว่น','ร้านอาหาร']) {
-    assert.match(locations, new RegExp(`th:'${th}'`), `locked location ${th} is missing`);
-  }
-  const active = block('function activeSlots(){', '// ════════ CSS VARS');
-  assert.match(active, /verb==='ไป'\|\|verb==='นอน'/, 'only ไป/นอน may expose a location branch');
-  assert.match(active, /verb==='ไป'&&!!state\.advObj/, 'Who must follow a selected ไป location');
-  const renderBaseplate = block('function renderBaseplate(){', 'function applyOpen(){');
-  assert.match(renderBaseplate, /sessionPool\.obj\|\|\[\]\)\.filter\(isObjCompatible\)/, 'Eat and buy branches must show only compatible objects');
-  const actions = block('function pickWord(id,th){', 'function addCustomSubj(){');
-  assert.match(actions, /word\.th==='กำลัง'\?WORDS\.prog\[0\]:null/, 'กำลัง must default to rear อยู่');
-  assert.match(actions, /id==='prog'&&!state\.modal/, 'rear อยู่ must not be removable without front grammar');
-  const output = block('function renderOut(){', 'function render(){');
-  assert.match(output, /thParts\.push\('กับ'\+w\.th\)/, 'Who must use กับ after ไป and a location');
-  assert.doesNotMatch(output, /thParts\.push\('ที่'/, 'ไป location must not insert ที่');
   assert.doesNotMatch(legoApp, /title="加入我的造句單字庫/, 'word saving must not interrupt the build surface');
-  assert.match(legoHtml, /沒有前置文法時，句尾的 อยู่ 會保留/);
   assert.match(legoHtml, /只有按過「完成句子」的內容會進入本輪結果；未完成的草稿不會儲存/);
-  assert.doesNotMatch(legoApp.slice(legoApp.indexOf('var GT_TOUR_STEPS=[')), /loadExample\(\)|startTest\(\)|#levels/, 'active tour must describe only the locked flow');
 });
 
 test('Lego custom fields stay inside the locked slots and translation boundary', () => {
@@ -389,29 +351,9 @@ test('Lego custom fields stay inside the locked slots and translation boundary',
   assert.match(legoApp, /\['subject', 'verb', 'object', 'adverbObject', 'time'\]\.includes\(type\)/);
   assert.match(legoApp, /W\(th, \$\('#lego-custom-zh'\)\.value\.trim\(\), \{ custom: true \}\)/);
   assert.match(legoApp, /filter\(Boolean\)\.join\('・'\)/, 'blank player translation must not be inferred');
-  return;
-  const renderStart = legoApp.indexOf('function renderBaseplate(){');
-  const renderEnd = legoApp.indexOf('function applyOpen(){', renderStart);
-  const render = legoApp.slice(renderStart, renderEnd);
-  const customStart = legoApp.indexOf('function addCustomSubj(){');
-  const customEnd = legoApp.indexOf('function clearAll(){', customStart);
-  const custom = legoApp.slice(customStart, customEnd);
-  assert.match(render, /\['time','subj','adv'\]\.includes\(s\.id\)/, 'custom input must be limited to Time, Subject and Who by default');
-  assert.match(render, /s\.id==='advObj'&&state\.verb&&state\.verb\.th==='ไป'/, 'custom Location must exist only in the ไป branch');
-  assert.match(render, /<span>ชื่อ<\/span>/, 'Subject must preserve the player-name field');
-  assert.match(render, /<span>ใส่เอง<\/span>/, 'locked custom-input label must be visible');
-  assert.match(custom, /\['time','subj','adv','advObj'\]\.includes\(id\)/);
-  assert.match(custom, /id==='advObj'&&\(!state\.verb\|\|state\.verb\.th!=='ไป'\)/, 'custom Location must fail closed outside ไป');
-  assert.match(custom, /const w=\{th:name,zh:name,custom:true,customType:'name'\}/, 'a proper name may stay Thai in the translated sentence');
-  assert.match(custom, /state\[id\]=\{th:th,zh:zh,custom:true,customType:'custom'\}/, 'player translation must remain player-owned data');
-  assert.doesNotMatch(custom, /WORDS\.(?:time|subj|adv)\.push|sessionPool\.(?:time|subj|adv)\.push/, 'custom input must not expand the locked candidate pools');
-  assert.match(legoApp, /missingCustomTranslation=customWords\.some\(word=>word\.customType!=='name'&&!String\(word\.zh\|\|''\)\.trim\(\)\)/);
-  assert.match(legoApp, /customType:word\.customType\|\|''/, 'Resume must preserve custom-input typing');
-  assert.match(legoHtml, /中文翻譯可選填，未填時系統不會推測/);
-  assert.match(legoHtml, /input\.lego-custom-zh\{font-family:'Noto Sans TC'/, 'translation input must use the current zh-TW font path');
 });
 
-test('Lego Resume preserves confirmed sentences and validates its game-owned builder payload', () => {
+test('Lego Resume preserves confirmed sentences and validates its Set 1 builder payload', () => {
   const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
   const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
   assert.match(legoHtml, /id="set1-resume-banner"[^>]+aria-label="繼續上次練習"/);
@@ -420,20 +362,6 @@ test('Lego Resume preserves confirmed sentences and validates its game-owned bui
   assert.match(legoApp, /Array\.isArray\(parsed\.verbs\)/);
   assert.match(legoApp, /Array\.isArray\(parsed\.confirmed\)/);
   assert.match(legoApp, /state\.confirmed = confirmed/);
-  return;
-  assert.match(legoHtml, /onclick="legoResumeContinue\(\)"[^>]*>▶ 繼續上次/);
-  assert.match(legoHtml, /onclick="legoResumeRestartCurrent\(\)"[^>]*>↺ 重新開始/);
-  assert.match(legoHtml, /onclick="legoResumeNewSession\(\)"[^>]*>＋ 開始新一輪/);
-  assert.match(legoApp, /GameResume\.save\('lego',[\s\S]{0,260}completed:legoCompletedSentences\.map/);
-  assert.match(legoApp, /version:1,view:view==='reveal'\?'reveal':'build',builder:builder/);
-  assert.match(legoApp, /function legoNormalizeBuilder\(saved\)/);
-  assert.match(legoApp, /if\(saved\.view==='reveal'&&!completed\.length\)return null/);
-  assert.match(legoApp, /legoCompletedSentences=pending\.completed/);
-  assert.match(legoApp, /legoCompletedSentences=pending\?pending\.completed:\[\]/, 'restart current sentence must retain prior confirmed sentences');
-  assert.match(legoApp, /function legoResumeNewSession\(\)[\s\S]{0,180}legoCompletedSentences=\[\]/, 'new round must clear the saved session');
-  assert.match(legoApp, /GameUiCopy\.resumeLine\(LEGO_UI_COPY\.resume\.game,LEGO_UI_COPY\.resume\.mode,progress\)/);
-  assert.match(legoApp, /function legoShowLockedError\(\)[\s\S]{0,260}legoSaveResume\('build'\)/, 'error recovery must retain confirmed data');
-  assert.match(legoApp, /GameFlow\.enhanceResult\([\s\S]{0,260}legoClearResume\(\)/, 'only a successfully rendered Result may clear Resume');
 });
 
 test('learning helpers remain inline and do not create the fallback rice menu', () => {

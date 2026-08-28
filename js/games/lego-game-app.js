@@ -1,4 +1,4 @@
-// Lego Game Set 1 — 現在未來式. Legacy levels and future sets are not loaded.
+// Lego Game Set 1 — 現在未來式 only.
 (function () {
   'use strict';
 
@@ -12,8 +12,6 @@
   const MODE_NAMES = { positive: '肯定句', negative: '否定句', question: '問句' };
   const $ = (selector) => document.querySelector(selector);
   if (!$('#lego-set1-app')) return;
-  document.querySelectorAll('body > .page, body > .test-overlay, body > #badge-modal, body > #star-modal, body > #gt-tour-overlay, body > #gt-tour-card').forEach((node) => node.remove());
-
   const W = (th, zh, extra) => Object.assign({ th, zh: zh || '' }, extra || {});
   const POOLS = {
     subject: [

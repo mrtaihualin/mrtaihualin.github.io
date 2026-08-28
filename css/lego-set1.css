@@ -12,12 +12,6 @@
 }
 
 body { background: #f5f0e8; }
-body > .page,
-body > .test-overlay,
-body > #gt-tour-overlay,
-body > #gt-tour-card,
-body > #badge-modal,
-body > #star-modal { display: none !important; }
 
 .lego-page,
 .lego-page * { box-sizing: border-box; }
