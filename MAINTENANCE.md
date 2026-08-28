@@ -1,6 +1,16 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-28 Asia/Bangkok** — Reading Desktop Tone-shell parity
+**Updated: 2026-08-28 Asia/Bangkok** — LOGIN-L8 combined Reading Preview Candidate
+
+## 2026-08-28 — LOGIN-L8 combined Reading Preview Candidate (`PASS_LOCAL / PREVIEW_APPROVAL_PENDING / PRODUCTION_UNCHANGED`)
+
+- Reconciled the Public Login activation onto the exact accepted Reading PR #90 head without changing its UI intent: `reading-game.html` differs from PR #90 only by the two authorized `auth-widget.js?v=17` and `reading-auth.js?v=29` tags at the preserved Supabase head seam.
+- Minimum Guest still owns gameplay, score, SRS, Personal Data, Leaderboard and Challenge. The Login client keeps its authenticated identity internal while `READING_AUTH.user` stays Guest, score submission returns before any request, and no GameAccount/personal-learning client is loaded. Tone, Listening, Typing, Word Order, Lego and Vault remain byte-unchanged.
+- Enabled the existing LINE callback source required by the Login entry; no Supabase schema/config, provider, account, session or user-data mutation is part of this source candidate. Current Supabase browser-Auth guidance remains compatible and the current changelog contains no applicable hosted browser-Auth breaking change.
+- Reading 16/16, shared games 43/43, Auth/session/account/audit/error/owner 87/87, transaction/save isolation 20/20, Email OTP 23/23, secret scan and the full 1,016-file site gate pass. Desktop local smoke confirms the neutral Login modal and all four provider controls; Desktop and Mobile Portrait both keep the Login entry, no horizontal overflow and parked-feature isolation. The local protected-content failure/recovery banner is intentionally not treated as deploy evidence.
+- The standalone legacy `tests-minimum-guest-launch.js` remains read-only. Current main and PR #90 both reproduce its pre-existing removed-cap assertion failure; this activation candidate also reaches its now-obsolete pre-activation LINE-callback assertion earlier. Neither assertion was edited or used to mask the passing candidate-specific and required gates.
+
+**Prior update: 2026-08-28 Asia/Bangkok** — Reading Desktop Tone-shell parity
 
 ## 2026-08-28 — Reading Desktop Tone-shell parity (`PASS_LOCAL / PREVIEW_PASS / HUMAN_PASS / PRODUCTION_UNCHANGED`)
 
