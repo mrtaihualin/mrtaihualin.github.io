@@ -11,6 +11,7 @@ const source = fs.readFileSync(path.join(root, 'js/games/typing-game-app.js'), '
 const html = fs.readFileSync(path.join(root, 'typing-game.html'), 'utf8');
 const listeningHtml = fs.readFileSync(path.join(root, 'listening-game.html'), 'utf8');
 const legoSource = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
+const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
 const scoreSource = fs.readFileSync(path.join(root, 'js/games/typing-score.js'), 'utf8');
 let passed = 0;
 
@@ -120,9 +121,9 @@ test('mobile landscape Typing uses only its equivalent in-game keyboard', () => 
 test('free-text inputs without an equivalent in-game keyboard remain native', () => {
   assert.match(listeningHtml, /<input type="text" id="lg-type-input"/);
   assert.doesNotMatch(listeningHtml, /id="lg-type-input"[^>]+(?:readonly|inputmode="none")/);
-  assert.match(legoSource, /<input type="text" id="legoCustomTh-/);
-  assert.match(legoSource, /<input class="lego-custom-zh" type="text" id="legoCustomZh-/);
-  assert.doesNotMatch(legoSource, /legoCustom(?:Th|Zh)[^\n]+(?:readOnly|inputmode=['"]none)/);
+  assert.match(legoHtml, /<input id="lego-custom-th"/);
+  assert.match(legoHtml, /<input id="lego-custom-zh"/);
+  assert.doesNotMatch(legoHtml, /id="lego-custom-(?:th|zh)"[^>]+(?:readonly|inputmode=['"]none)/i);
 });
 
 test('refresh tolerates the Phase 1 HUD without removed reward elements', () => {

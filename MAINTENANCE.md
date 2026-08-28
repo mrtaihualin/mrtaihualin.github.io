@@ -2264,3 +2264,9 @@ node scripts/check-site.js
 - Audited the Thai question-word and question-sentence selectors across the game set. Reading, Typing, Word Order, Lego, and Challenge already use selectors covered by their Standard/Modern rules.
 - Added the missing Tone `tf-adv-sent-main` selector so 高級 question sentences now switch with the same `Standard = Sarabun` and `Modern = Noto Sans Thai` preference already used by 初級/中級 question words.
 - Kept the toolbar control icon-only and made no layout, gameplay, Database, Auth, Edge Function, user-data, Listening-availability, or Mobile Landscape change.
+
+# 2026-08-29 — Lego Set 1 replacement surface
+
+- Replaced the learner-visible legacy Lego level surface with one Set 1 `現在未來式` builder: `肯定句 / 否定句 / 問句`, repeatable `動詞–受詞`, custom `動詞/受詞`, `副詞 ที่/กับ`, rear grammar, `語助詞`, and `禮貌語助詞`.
+- Kept the Guest quota fail-closed/idempotency boundary, shared font control, Resume, Result, print report, and Study Plan lifecycle integration. No Mobile Landscape, Database, Auth, Edge Function, Production data, or future-set source changed.
+- Updated Lego-specific regressions to the Set 1 contract. Verification: visual browser render, `git diff --check`, and `node scripts/check-site.js` passed across 1,018 project files.

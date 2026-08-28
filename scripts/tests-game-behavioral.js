@@ -78,21 +78,21 @@ GAME_PAGES.forEach((page) => {
 }
 
 // ════════════════════════════════════════════════════════════
-// B-1) เกมเลโก้: legoCheckDailyQuota() ต้องถูกเรียกก่อน startTest ทำงานจริง + ต้อง fail-closed
+// B-1) เกมเลโก้ Set 1: ต้องเช็คโควต้าก่อนยืนยันประโยค + fail-closed
 // ════════════════════════════════════════════════════════════
 {
   const legoApp = read('js/games/lego-game-app.js');
   if (legoApp === null) fail('B-1: lego-game-app.js', 'ไม่พบไฟล์');
   else {
-    const startTestMatch = legoApp.match(/async function startTest\(\)\s*{([\s\S]*?)\n}\n/);
-    if (!startTestMatch) fail('B-1: lego-game-app.js', 'หา startTest() ไม่เจอ (โครงสร้างไฟล์เปลี่ยนไป — ต้องตรวจด้วยตา)');
+    const completeMatch = legoApp.match(/#lego-complete'\)\.addEventListener\('click', async \(\) => \{([\s\S]*?)\n  \}\);/);
+    if (!completeMatch) fail('B-1: lego-game-app.js', 'หา Set 1 complete handler ไม่เจอ');
     else {
-      const body = startTestMatch[1];
+      const body = completeMatch[1];
       const callsQuota = /await\s+legoCheckDailyQuota\(\)/.test(body);
       const gatesOnNotOk = /if\s*\(\s*!quota\.ok\s*\)\s*{[\s\S]*?return;/.test(body);
-      if (!callsQuota) fail('B-1: lego-game-app.js', 'startTest() ไม่เรียก legoCheckDailyQuota()');
-      if (!gatesOnNotOk) fail('B-1: lego-game-app.js', 'startTest() ไม่มีด่าน "if(!quota.ok){...return;}" ก่อนเริ่มทำโจทย์ — อาจเล่นได้ทั้งที่โควตาหมด');
-      if (callsQuota && gatesOnNotOk) ok('B-1: lego-game-app.js startTest() เช็คโควตาก่อนเริ่ม + บล็อกจริงถ้าไม่ผ่าน');
+      if (!callsQuota) fail('B-1: lego-game-app.js', 'complete handler ไม่เรียก legoCheckDailyQuota()');
+      if (!gatesOnNotOk) fail('B-1: lego-game-app.js', 'complete handler ไม่มีด่านปฏิเสธเมื่อโควต้าไม่ผ่าน');
+      if (callsQuota && gatesOnNotOk) ok('B-1: Lego Set 1 เช็คโควต้าก่อนยืนยันประโยคและบล็อกจริง');
     }
 
     // fail-closed: ฟังก์ชัน legoCheckDailyQuota เจอ error/no client ต้องคืน ok:false ไม่ใช่ ok:true (เผลอปล่อยผ่าน)

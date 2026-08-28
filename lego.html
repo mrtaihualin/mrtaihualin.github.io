@@ -38,13 +38,13 @@ gtag("config","G-DKVQE30982");window.GA_CATEGORY="game";</script>
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
 <title>泰語造句練習室 | 泰華眼裡的泰語教學</title>
-<meta name="description" content="免費泰語造句練習室：像積木一樣挑詞組成完整泰語句子，還能拆句測驗檢查自己排得對不對，邊玩邊練泰語語序。專為台灣人設計的泰語學習遊戲。">
+<meta name="description" content="泰語造句練習室 Set 1：選擇肯定句、否定句或問句，再用主詞、文法、動詞、受詞與可選語助詞組出完整泰語句子。">
 <link rel="canonical" href="https://mrtaihualin.com/lego.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="泰華眼裡的泰語教學">
 <meta property="og:locale" content="zh_TW">
 <meta property="og:title" content="泰語造句練習室 | 泰華眼裡的泰語教學">
-<meta property="og:description" content="像積木一樣挑詞組成完整泰語句子，還能拆句測驗檢查自己排得對不對。">
+<meta property="og:description" content="泰語造句練習室 Set 1：像積木一樣組出肯定句、否定句或問句。">
 <meta property="og:url" content="https://mrtaihualin.com/lego.html">
 <meta property="og:image" content="https://mrtaihualin.com/assets/share-card.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -54,7 +54,7 @@ gtag("config","G-DKVQE30982");window.GA_CATEGORY="game";</script>
   "@type": "WebApplication",
   "additionalType": "https://schema.org/LearningResource",
   "name": "泰語造句練習室",
-  "description": "免費泰語造句練習室：像積木一樣挑詞組成完整泰語句子，還能拆句測驗檢查自己排得對不對，邊玩邊練泰語語序。專為台灣人設計的泰語學習遊戲。",
+  "description": "泰語造句練習室 Set 1：選擇肯定句、否定句或問句，再像積木一樣組出完整泰語句子。",
   "url": "https://mrtaihualin.com/lego.html",
   "applicationCategory": "EducationalApplication",
   "operatingSystem": "Web",
@@ -73,7 +73,7 @@ gtag("config","G-DKVQE30982");window.GA_CATEGORY="game";</script>
 }
 </script>
 <meta name="twitter:title" content="泰語造句練習室 | 泰華眼裡的泰語教學">
-<meta name="twitter:description" content="像積木一樣挑詞組成完整泰語句子，還能拆句測驗檢查自己排得對不對。">
+<meta name="twitter:description" content="泰語造句練習室 Set 1：像積木一樣組出肯定句、否定句或問句。">
 <meta name="twitter:image" content="https://mrtaihualin.com/assets/share-card.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><!-- Lin 2026-07-26: เปิดสายไปที่เซิร์ฟเวอร์ฟอนต์ล่วงหน้า ลดเวลารอบนมือถือ -->
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700;900&family=Sarabun:wght@400;700&family=Noto+Sans+Thai:wght@400;500;700&display=swap" rel="stylesheet">
@@ -82,6 +82,7 @@ gtag("config","G-DKVQE30982");window.GA_CATEGORY="game";</script>
 <script defer src="js/core/supabase-config.js?v=10"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script>
 <script defer src="js/core/network-guard.js?v=1"></script>
+<link rel="stylesheet" href="css/lego-set1.css?v=1">
 <style>
 /* Lin 2026-07-11 สั่งกลับ: ให้แถบ page-strip ติดจอด้านล่างเหมือนหน้าอื่นทั้งหมด (ยกเลิก override วันที่ 2026-07-10) */
 :root{
@@ -396,6 +397,84 @@ body.rg-modern-font .opt-custom input{font-family:'Noto Sans Thai','Sarabun',san
   <span class="tf-streak-chip" id="lego-howto-btn" style="cursor:pointer;" onclick="try{if(window.gtag)gtag('event','lego_howto_modal_open',{category:'game'});}catch(e){}dismissHowtoHint('lego');document.getElementById('lego-howto-modal').style.display='flex'">📖 怎麼玩</span>
 </div>
 
+<main class="lego-page" id="lego-set1-app">
+  <header class="lego-hero">
+    <span class="lego-set-badge">SET 1 · 現在未來式</span>
+    <h1>泰語造句練習室</h1>
+    <p>選一種句型，再像拼積木一樣組出你想說的泰語。</p>
+  </header>
+
+  <section class="lego-resume hidden" id="set1-resume-banner" aria-label="繼續上次練習">
+    <div><strong>上次的句子還在</strong><span id="set1-resume-detail"></span></div>
+    <div class="lego-inline-actions">
+      <button type="button" class="lego-btn lego-btn-primary" onclick="legoResumeContinue()">繼續上次</button>
+      <button type="button" class="lego-btn" onclick="legoResumeRestartCurrent()">重新開始</button>
+    </div>
+  </section>
+
+  <section class="lego-mode-card" aria-labelledby="lego-mode-title">
+    <div><span class="lego-step-kicker">STEP 1</span><h2 id="lego-mode-title">先選要造哪一種句子</h2></div>
+    <div class="lego-mode-switch" id="lego-mode-switch">
+      <button type="button" data-mode="positive" aria-pressed="true"><strong>肯定句</strong><small>ค่าเริ่มต้น</small></button>
+      <button type="button" data-mode="negative" aria-pressed="false"><strong>否定句</strong><small>ประโยคปฏิเสธ</small></button>
+      <button type="button" data-mode="question" aria-pressed="false"><strong>問句</strong><small>ประโยคคำถาม</small></button>
+    </div>
+  </section>
+
+  <section class="lego-builder-card" id="lego-build-screen">
+    <div class="lego-sentence-head">
+      <div><span class="lego-step-kicker">STEP 2 · <span id="lego-mode-name">肯定句</span></span><h2>組裝句子</h2></div>
+      <div class="lego-session-count" id="lego-session-count">本輪已完成 0 句</div>
+    </div>
+    <div class="lego-sentence-preview" aria-live="polite">
+      <span class="lego-preview-label">ประโยคปัจจุบัน</span>
+      <div class="lego-token-line" id="lego-token-line"><span class="lego-placeholder">從「主詞」開始選詞</span></div>
+      <div class="lego-translation" id="lego-translation"></div>
+    </div>
+    <div class="lego-workspace">
+      <section class="lego-structure-panel" aria-labelledby="lego-structure-title">
+        <div class="lego-panel-heading"><h3 id="lego-structure-title">句子結構</h3><button class="lego-text-button" type="button" id="lego-clear">清空</button></div>
+        <div class="lego-core-row" id="lego-core-row"></div>
+        <div class="lego-verb-blocks" id="lego-verb-blocks"></div>
+        <button class="lego-add-verb" type="button" id="lego-add-verb">＋ เพิ่ม 動詞</button>
+        <div class="lego-extra-title">ตัวเลือกเสริม</div>
+        <div class="lego-extra-row" id="lego-extra-row"></div>
+      </section>
+      <section class="lego-picker-panel" aria-labelledby="lego-picker-title">
+        <div class="lego-picker-heading">
+          <div><span class="lego-step-kicker">STEP 3</span><h3 id="lego-picker-title">選詞</h3></div>
+          <span class="lego-picker-rule" id="lego-picker-rule"></span>
+        </div>
+        <div class="lego-choice-grid" id="lego-choice-grid"></div>
+        <form class="lego-custom-form hidden" id="lego-custom-form">
+          <label>ภาษาไทย<input id="lego-custom-th" maxlength="40" autocomplete="off"></label>
+          <label>中文翻譯（選填）<input id="lego-custom-zh" maxlength="60" autocomplete="off"></label>
+          <button class="lego-btn lego-btn-primary" type="submit">加入</button>
+        </form>
+      </section>
+    </div>
+    <div class="lego-builder-actions">
+      <button class="lego-btn" type="button" onclick="legoEndGame()">結束遊戲</button>
+      <button class="lego-btn lego-btn-primary" type="button" id="lego-complete">完成句子</button>
+    </div>
+  </section>
+
+  <section class="lego-flow-card hidden" id="set1-reveal" aria-live="polite">
+    <span class="lego-step-kicker">完成句子</span>
+    <div class="lego-flow-th" id="set1-reveal-th"></div>
+    <div class="lego-flow-zh" id="set1-reveal-zh"></div>
+    <div class="lego-flow-note hidden" id="set1-reveal-disclaimer">自訂內容由玩家自行輸入，系統不會檢查或修正內容。</div>
+    <div class="lego-inline-actions lego-center"><button class="lego-btn lego-btn-primary" type="button" onclick="legoContinueBuilding()">繼續造句</button><button class="lego-btn" type="button" onclick="legoEndGame()">結束遊戲</button></div>
+  </section>
+
+  <section class="lego-flow-card hidden" id="set1-result">
+    <span class="lego-step-kicker">本輪結果</span>
+    <h2 id="set1-result-count">完成 0 句</h2>
+    <div class="lego-result-list" id="set1-result-list"></div>
+    <div class="lego-inline-actions lego-center"><button class="lego-btn lego-btn-primary" type="button" onclick="legoStartNewSession()">再玩一輪</button><button class="lego-btn" type="button" onclick="legoPrintResult()">列印／儲存</button><a class="lego-btn" href="games.html">換個遊戲</a></div>
+  </section>
+</main>
+
 <div class="page">
 
   <header class="head">
@@ -548,9 +627,12 @@ body.rg-modern-font .opt-custom input{font-family:'Noto Sans Thai','Sarabun',san
     <div style="font-size:22px;font-weight:900;color:#8B6310;margin-bottom:4px;">🧱 怎麼玩？</div>
     <p style="font-size:14px;color:#444;line-height:1.7;margin:12px 0 8px;">從下方欄位選詞，組出你想說的泰語句子。</p>
     <ul style="font-size:14px;color:#444;line-height:1.7;margin:0 0 12px;padding-left:20px;">
-      <li>依序選擇時間、主語、文法、動詞及目前動詞適用的後續欄位。</li>
-      <li>時間、主語、地點與「誰」可用 ใส่เอง 輸入自訂泰文；中文翻譯可選填，未填時系統不會推測。</li>
-      <li>沒有前置文法時，句尾的 อยู่ 會保留；選擇 กำลัง 時也會先帶入 อยู่，你仍可移除。</li>
+      <li>先選肯定句、否定句或問句；預設是肯定句。</li>
+      <li>依序選主詞、文法、動詞與受詞；動詞和受詞都能用 ใส่เอง。</li>
+      <li>文法不使用「ไม่ใช้」按鈕；若不用前置文法，請選「ใช้文法 หลัง」。</li>
+      <li>需要更多動作時可一直เพิ่ม 動詞；每個動詞都會帶自己的受詞欄位。</li>
+      <li>副詞先選 ที่ 或 กับ，再選名詞或用 ใส่เอง。</li>
+      <li>語助詞有 นะ／อะ；禮貌語助詞有 ครับ／ครับผม／ค่ะ／คะ。</li>
       <li>按「完成句子」確認並保留目前句子，再選「繼續造句」或「結束遊戲」。</li>
       <li>只有按過「完成句子」的內容會進入本輪結果；未完成的草稿不會儲存。</li>
     </ul>
@@ -584,7 +666,7 @@ body.rg-modern-font .opt-custom input{font-family:'Noto Sans Thai','Sarabun',san
 </div>
 
 <script src="js/games/round-report.js?v=3"></script>
-<script src="js/games/lego-game-app.js?v=12"></script>
+<script src="js/games/lego-game-app.js?v=13"></script>
 
 <!-- ── Game Switcher (fixed pill) — 跟其他遊戲共用同一套樣式 — Lin 2026-07-08: เลโก้ขาดแถบนี้ไปเดิม เพิ่มให้ครบเหมือนเกมอื่น ── -->
 <style>

@@ -200,7 +200,7 @@ await test('server-only RPC least privilege closes browser execute without touch
 
 await test('rollout bridge remains preserved while Minimum Guest parks the personal Tone client', () => {
   assert.doesNotMatch(read('tone-finder.html'), /tone-server\.js/);
-  assert.match(read('lego.html'), /lego-game-app\.js\?v=12/);
+  assert.match(read('lego.html'), /lego-game-app\.js\?v=13/);
   assert.match(legoEdge, /compatibility: request\.legacyCompatibility \? 'legacy-no-id' : 'explicit-id'/);
 });
 
