@@ -30,7 +30,7 @@ test('all six pages bind one shared landscape system', () => {
   for (const [game, file] of pages) {
     const html = read(file);
     assert.match(html, new RegExp(`<body[^>]*data-gsh-game="${game}"`), `${file}: missing game marker`);
-    assert.match(html, /css\/mobile-landscape\.css\?v=23/, `${file}: missing shared CSS`);
+    assert.match(html, /css\/mobile-landscape\.css\?v=24/, `${file}: missing shared CSS`);
     assert.match(html, /js\/core\/mobile-landscape\.js\?v=18/, `${file}: missing shared controller`);
     assert.match(html, /js\/games\/thai-keyboard\.js\?v=2/, `${file}: missing shared split keyboard`);
   }
@@ -69,6 +69,9 @@ test('Tone preserves three left, three right and reveal actions in the right slo
   assert.match(stage, /mountExistingNode\(uncertain, container\)/);
   assert.match(stage, /function syncToneRevealActions\([\s\S]{0,900}result-audio[\s\S]{0,260}result-english[\s\S]{0,260}result-next/);
   assert.match(toneApp, /skipCurrentWord:\s*function\(\)[\s\S]{0,1500}is_skipped:\s*true/);
+  assert.match(css, /data-gsh-game="tone"[^}]+--gsh-ml-tone-choice:\s*clamp\(56px, 20dvh, 76px\)/);
+  assert.match(css, /data-gsh-ml-split="tone"[^}]+align-content:\s*center/);
+  assert.match(css, /data-gsh-ml-role="skip"[\s\S]{0,900}background:\s*#242322 !important/);
 });
 
 test('Reading, Typing and Word Order keep game-owned actions in fixed right-side slots', () => {
