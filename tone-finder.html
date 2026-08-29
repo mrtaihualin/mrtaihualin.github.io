@@ -73,7 +73,7 @@ if (document.fonts && document.fonts.load) {
   document.fonts.load("400 14px 'Noto Sans Thai'", "◌่้๊๋").catch(function(){});
 }
 </script>
-<link rel="stylesheet" href="css/shared.css?v=29">
+<link rel="stylesheet" href="css/shared.css?v=35">
 <link rel="stylesheet" href="css/tone-mobile-landscape.css?v=2">
 <style>
   /* P6-28 (2026-08-08): ปุ่มเรียกฟังก์ชันเกม (TF.* มาจาก tone-finder-game.min.js โหลดแบบ async
@@ -190,8 +190,13 @@ if (document.fonts && document.fonts.load) {
     font-weight: 600;
     color: #8B6310;
     letter-spacing: 0.3px;
-    margin-top: 2px;
+    margin-top: 5px;
   }
+  #tf-banner > #tf-read-line { margin-top:5px; }
+  #tf-banner > #tf-read-line .tf-read-th { margin-top:0; }
+  #tf-banner > .word-zh { margin-top:5px; }
+  #tf-banner > .tf-adv-sent-reading,
+  #tf-banner > .tf-adv-sent-ctx-zh { margin-top:5px; }
   body.tf-modern-font .tf-read-th { font-family: 'Noto Sans Thai', 'Sarabun', sans-serif !important; }
   /* Lin 2026-07-25: ป้ายบอกว่ากำลังอยู่โหมด 提示 (ไม่คิดคะแนน) + ไฮไลต์ตัวเลือกที่ถูกในขั้น推導 */
   .tf-guide-note {
@@ -629,9 +634,6 @@ if (document.fonts && document.fonts.load) {
   .tf-alpha-entry:hover { border-color: rgba(184,134,40,0.65); background: linear-gradient(180deg, #F0E0A8 0%, #FDFAF2 100%); }
 
   .tf-desktop-skip-copy { display:none; }
-
-  /* Desktop Core-game contract: Tone never renders the shared site announcement. */
-  body[data-gsh-game="tone"] > .avail-band { display:none !important; }
 
   /* Tone Desktop + Mobile Portrait: keep the three floating controls on one row,
      with both popup menus anchored above it. The short-screen landscape surface
@@ -1711,13 +1713,12 @@ if (document.fonts && document.fonts.load) {
   .tf-badge-link:active { transform:scale(.97); }
   .tf-badge-tier-title { font-size:13px; font-weight:800; color:#8B6310; margin:14px 0 8px; }
   .tf-badge-card.locked { opacity:.45; filter:grayscale(1); }
-  /* 進度/⚡ bars — เพิ่ม 2026-07-03, สไตล์เดียวกับ reading-game.html/typing-game.html (bars-wrap/bar-row/bar-fill) */
+  /* 本題分數 bar — shared score row styling */
   /* หมายเหตุ: scope ด้วย #tf-banner (ตัว element จริงคือ id="tf-banner" class="tf-word-banner" — ใช้ id ให้ชัวร์ที่สุด) */
   #tf-banner .bars-wrap { width:100%; max-width:640px; margin:6px 0 4px; display:flex; flex-direction:column; gap:6px; }
   #tf-banner .bar-row { display:flex; align-items:center; gap:8px; font-family:'Noto Sans TC',sans-serif; font-size:12px; color:#a08050; }
   #tf-banner .bar-bg { flex:1; height:7px; background:#ede0c8; border-radius:4px; overflow:hidden; }
   #tf-banner .bar-fill { height:100%; border-radius:4px; transition:width .4s ease; }
-  #tf-banner .bar-fill.prog { background:linear-gradient(90deg,#e8a020,#d85a30); }
   #tf-banner .bar-fill.power { background:linear-gradient(90deg,#66bb6a,#43a047); }
   #tf-banner .bar-label { min-width:52px; text-align:right; font-size:11px; }
   /* Lin 2026-07-24: 逐步導覽（滑鼠一格一格指出功能）— 第一次進遊戲自動播放，用完就不再自動跳出 */
@@ -1818,10 +1819,9 @@ document.addEventListener('contextmenu', function(e){
   ]
 }
 </script>
-<script src="js/core/minimum-guest-launch.js?v=1"></script>
+<script src="js/core/minimum-guest-launch.js?v=5"></script>
 </head>
 <body data-gsh-game="tone">
-<!--ANN-BAND:START--><!-- Tone is a Core game surface: no announcement strip. --><!--ANN-BAND:END-->
 
 <!-- ── NAV ── -->
 <nav class="site-nav"><div class="nav-logo" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_nav_logo_click',{category:'game'});}catch(e){}goHome()"><span class="logo-accent">泰華</span><span class="logo-dim">眼裡的</span><span class="logo-main">泰語教學</span></div><ul class="nav-links"><li><a href="/games.html" class="nav-cta-secondary">🎮 遊戲</a></li><li><a href="javascript:void(0)" class="has-drop">學習資源</a><div class="nav-drop"><span class="nav-drop-label">泰語學習資源</span><a href="/content.html">📚 泰語學習資源</a><a href="/blog.html#articles">📝 泰語學習文章</a><a href="/resources.html#video-learning">🎬 影音學習</a><a href="/blog.html#selfstudy">📖 自學資源</a><span class="nav-drop-label">其他學習入口</span><a href="javascript:void(0)" onclick="openModal('modal-quiz')">程度測驗</a><a href="/index.html#problems">學習困境</a><a href="/community.html">🇹🇭 泰語學習心聲與提問</a></div></li><li><a href="javascript:void(0)" class="has-drop">更多</a><div class="nav-drop"><span class="nav-drop-label">課程與老師</span><a href="/index.html#teacher">關於老師</a><a href="/pricing.html#testimonials">學生回饋</a><a href="/pricing.html#pricing">費用方案</a><a href="/pricing.html#how">上課方式</a><span class="nav-drop-label">常見資訊</span><a href="/faq.html#faq">FAQ</a><a href="/faq.html#rules">上課須知</a><a href="/faq.html#feedback-section">分享經驗</a><span class="nav-drop-label">其他服務</span><a href="/page-services.html#tour-guide">🗺️ 導遊</a><a href="/page-services.html#drama">🎬 字幕翻譯</a><a href="/page-services.html#interpret">🎙️ 口譯</a><a href="/page-services.html#quote-form">📋 報價</a><div class="nav-drop-divider"></div><a href="javascript:void(0)" onclick="openModal('modal-contact')">聯絡我們</a></div></li><li><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="nav-cta">免費試聽</a></li></ul><button class="nav-mobile-cta" onclick="openModal('modal-line-qr')">免費試聽</button><div class="hamburger" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_nav_menu_toggle',{category:'game'});}catch(e){}toggleMenu()"><span></span><span></span><span></span></div></nav><!--NAV-FIT:START--><script>(function(){try{function f(){var n=document.querySelector("nav.site-nav");if(!n)return;var l=n.querySelector(".nav-logo"),k=n.querySelector(".nav-links");if(!l||!k)return;n.classList.remove("nav-compact");k.style.cssText="";var cs=window.getComputedStyle(n);var pl=parseFloat(cs.paddingLeft)||0,pr=parseFloat(cs.paddingRight)||0;var avail=n.clientWidth-pl-pr;var need=l.scrollWidth+k.scrollWidth+12;if(need>avail){n.classList.add("nav-compact");}}window.__navFit=f;f();}catch(e){}})();</script><!--NAV-FIT:END-->
@@ -1943,7 +1943,7 @@ document.addEventListener('contextmenu', function(e){
   <div class="gsh-resume-banner" id="tf-resume-banner" role="region" aria-label="繼續上次練習" style="display:none;"></div>
 
   <div class="tf-card gsh-gameplay">
-    <div class="tf-word-banner" id="tf-banner"></div>
+    <div class="tf-word-banner gsh-question-surface" id="tf-banner"></div>
     <!-- แถวปุ่มใต้คำศัพท์: 🐣คำอ่านไทย · 🔡คำอ่านโรมัน · 🍙คำแปล(shared.js ย้ายมาใส่เอง) · 🔖เซฟ
          Lin 2026-07-25: ถอดปุ่ม 發音 (🔊) ออกตามที่ Lin สั่ง — ฟังเสียงแล้วรู้วรรณยุกต์ทันที = เฉลยก่อนตอบ
          แทนด้วยปุ่ม 讀音 (🐣) + 英文讀音 (🔡) ซึ่ง "โชว์เฉพาะหลังผู้เล่นตอบวรรณยุกต์ไปแล้ว" เท่านั้น
@@ -2024,7 +2024,7 @@ document.addEventListener('contextmenu', function(e){
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/tone-finder-game.min.js?v=74']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/tone-finder-game.min.js?v=78']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 
@@ -2048,7 +2048,7 @@ document.addEventListener('contextmenu', function(e){
           → หน้านี้เป็นหน้าเดียวที่ผิดแถว = ของค้างจากตอนอัปโหลดชุดแรก (git: 6a10c58)
      ถ้าวันหลังหน้านี้จะมีหน้าต่างบทความ/โพสต์จริงๆ ค่อยใส่ 2 บรรทัดนี้กลับมา -->
 <script src="data/nav-template.js?v=4"></script>
-<script src="js/core/shared.min.js?v=42"></script>
+<script src="js/core/shared.min.js?v=46"></script>
 <script src="js/games/game-flow.js?v=11"></script>
 <script src="js/games/tone-mobile-landscape.js?v=1"></script>
 <script>

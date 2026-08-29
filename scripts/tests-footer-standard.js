@@ -8,7 +8,7 @@ const ROOT = path.resolve(__dirname, '..');
 const ROOT_PAGES = [
   'all-board.html', 'blog.html', 'community.html', 'content.html', 'faq.html',
   'games-challenge.html', 'games-practice.html', 'games.html', 'index.html', 'leaderboard.html',
-  'lego-board.html', 'lego.html', 'listening-game.html', 'mix-board.html',
+  'lego.html', 'listening-game.html',
   'my-progress.html', 'new-student.html', 'page-services.html', 'pricing.html',
   'privacy.html', 'reading-board.html', 'reading-game.html', 'resources.html', 'sns.html',
   'terms.html', 'thank-you.html', 'tone-finder.html', 'trial.html',

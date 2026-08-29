@@ -128,22 +128,31 @@ test('free-text inputs without an equivalent in-game keyboard remain native', ()
 test('refresh tolerates the Phase 1 HUD without removed reward elements', () => {
   const refresh = functionBlock('refreshUI', 'updateCombo');
   const elements = {
-    pf: { style: {} },
-    'prog-txt': { textContent: '' },
-    qt: { textContent: '' },
   };
   const context = {
     tgUpdateScoreBar() {},
-    cur: 0,
-    roundQueue: [1, 2, 3, 4, 5],
     Math,
     document: { getElementById: (id) => elements[id] || null },
   };
   vm.createContext(context);
   vm.runInContext(refresh, context);
   vm.runInContext('refreshUI()', context);
-  assert.strictEqual(elements.qt.textContent, 5);
+  assert.doesNotMatch(refresh, /pf|prog-txt|roundQueue/);
   assert.doesNotMatch(refresh, /star-count|badge-count|badge-emoji/);
+});
+
+test('Typing counter follows active syllables including High continuous segments', () => {
+  const helper = functionBlock('updateSyllableCounter', 'loadWord');
+  const elements = { qn: { textContent: '' }, qt: { textContent: '' }, qu: { textContent: '' } };
+  const context = { sylIdx: 5, sylList: [{}, {}, {}, {}, {}, {}], Math, document: { getElementById: (id) => elements[id] || null } };
+  vm.createContext(context);
+  vm.runInContext(helper, context);
+  vm.runInContext('updateSyllableCounter()', context);
+  assert.deepStrictEqual([elements.qn.textContent, elements.qt.textContent, elements.qu.textContent], [6, 6, '音節']);
+  context.sylIdx = 0; context.sylList = [{}];
+  vm.runInContext('updateSyllableCounter()', context);
+  assert.deepStrictEqual([elements.qn.textContent, elements.qt.textContent, elements.qu.textContent], [1, 1, '字']);
+  assert.doesNotMatch(helper, /roundQueue|roundScore|okC|badC/);
 });
 
 test('Typing loads the rebuilt crash-safe bundle with a fresh cache key', () => {

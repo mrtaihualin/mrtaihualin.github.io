@@ -77,7 +77,7 @@ gtag("config","G-DKVQE30982");window.GA_CATEGORY="game";</script>
 <meta name="twitter:image" content="https://mrtaihualin.com/assets/share-card.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700&family=Sarabun:wght@400;600;700&family=Noto+Sans+Thai:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/shared.css?v=26">
+<link rel="stylesheet" href="css/shared.css?v=35">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="js/core/supabase-config.js?v=10"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script>
@@ -107,16 +107,10 @@ gtag("config","G-DKVQE30982");window.GA_CATEGORY="game";</script>
 
 /* ── gold banner (คะแนน/ความคืบหน้า) — เหมือน tone-finder/typing-game ── */
 .gold-banner{width:calc(100% + 40px);margin:-22px -20px 12px;padding:14px 20px 12px;background:linear-gradient(180deg,var(--gold-light) 0%,var(--cream) 100%);border-bottom:2px solid rgba(139,99,16,.5);}
-.gold-banner .bars-wrap{margin-bottom:0;}
 .top-bar{display:flex;align-items:center;justify-content:center;width:100%;margin-bottom:10px;}
 .score-bar{display:flex;gap:12px;font-size:13px;color:var(--gold);font-family:'Noto Sans TC',sans-serif;}
 .score-bar span{font-weight:700;color:var(--gold-deep);}
 
-.bars-wrap{width:100%;max-width:640px;margin-bottom:12px;display:flex;flex-direction:column;gap:6px;}
-.bar-row{display:flex;align-items:center;gap:8px;font-family:'Noto Sans TC',sans-serif;font-size:12px;color:var(--ink-muted);}
-.bar-bg{flex:1;height:7px;background:var(--gold-light);border-radius:4px;overflow:hidden;}
-.bar-fill{height:100%;border-radius:4px;transition:width .4s ease;background:linear-gradient(90deg,var(--gold-bright),var(--gold-deep));}
-.bar-label{min-width:52px;text-align:right;font-size:11px;}
 
 .lg-pool-note{width:100%;text-align:center;font-family:'Noto Sans TC',sans-serif;font-size:12.5px;color:var(--amber-dark);background:rgba(120,53,15,.08);border:1px solid rgba(120,53,15,.3);border-radius:10px;padding:8px 12px;margin-bottom:10px;display:none;}
 
@@ -151,8 +145,9 @@ gtag("config","G-DKVQE30982");window.GA_CATEGORY="game";</script>
 .lg-reveal{width:100%;margin-top:6px;background:var(--cream);border:1.5px dashed var(--gold-bright);border-radius:12px;padding:10px 14px;text-align:center;display:none;}
 .lg-reveal.show{display:block;}
 .lg-rev-th{font-family:'Sarabun',sans-serif;font-size:26px;font-weight:700;color:var(--ink);}
-.lg-rev-pron{font-family:'Noto Sans TC',sans-serif;font-size:14px;color:var(--gold-deep);margin-top:4px;}
-.lg-rev-en{font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:600;color:var(--gold);margin-top:2px;letter-spacing:0.3px;}
+.lg-reveal > div + div{margin-top:5px;}
+.lg-rev-pron{font-family:'Noto Sans TC',sans-serif;font-size:14px;color:var(--gold-deep);}
+.lg-rev-en{font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:600;color:var(--gold);letter-spacing:0.3px;}
 .lg-rev-zh{font-family:'Noto Sans TC',sans-serif;font-size:13px;color:var(--ink-muted);margin-top:2px;}
 
 .btn-row{display:flex;gap:8px;justify-content:center;width:100%;margin-top:14px;flex-wrap:wrap;}
@@ -230,10 +225,9 @@ body.rg-modern-font .lg-rev-th { font-family:'Noto Sans Thai','Sarabun',sans-ser
   ]
 }
 </script>
-<script src="js/core/minimum-guest-launch.js?v=1"></script>
+<script src="js/core/minimum-guest-launch.js?v=5"></script>
 </head>
 <body data-gsh-game="listening" data-listening-availability="coming-soon">
-<!--ANN-BAND:START--><script>try{if(sessionStorage.getItem('annDismissed')==='1')document.documentElement.classList.add('ann-off');}catch(e){}</script><div class="avail-band" id="ann-band" style="position:relative"><div class="avail-row"><span class="avail-dot"></span><span class="avail-text">🎁 首堂 30 分鐘體驗課免費・中文授課</span><button class="avail-cta" onclick="openModal('modal-line-qr')">立即預約</button></div><div style="display:flex;justify-content:center;align-items:center;gap:10px;margin-top:4px;"><button onclick="annPrev()" aria-label="上一則公告" style="background:none;border:none;color:var(--gold-deep);font-size:15px;line-height:1;cursor:pointer;padding:2px 4px;min-width:32px;min-height:32px;display:inline-flex;align-items:center;justify-content:center;">‹</button><div style="display:flex;align-items:center;gap:6px;"><span onclick="annGoTo(0)" style="width:7px;height:7px;border-radius:50%;cursor:pointer;background:var(--gold);transition:background 0.2s;"></span><span onclick="annGoTo(1)" style="width:7px;height:7px;border-radius:50%;cursor:pointer;background:rgba(139,99,16,0.30);transition:background 0.2s;"></span><span onclick="annGoTo(2)" style="width:7px;height:7px;border-radius:50%;cursor:pointer;background:rgba(139,99,16,0.30);transition:background 0.2s;"></span><span onclick="annGoTo(3)" style="width:7px;height:7px;border-radius:50%;cursor:pointer;background:rgba(139,99,16,0.30);transition:background 0.2s;"></span><span onclick="annGoTo(4)" style="width:7px;height:7px;border-radius:50%;cursor:pointer;background:rgba(139,99,16,0.30);transition:background 0.2s;"></span></div><button onclick="annNext()" aria-label="下一則公告" style="background:none;border:none;color:var(--gold-deep);font-size:15px;line-height:1;cursor:pointer;padding:2px 4px;min-width:32px;min-height:32px;display:inline-flex;align-items:center;justify-content:center;">›</button></div><button onclick="annDismiss()" aria-label="關閉公告" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--gold-deep);font-size:17px;line-height:1;cursor:pointer;padding:4px;min-width:32px;min-height:32px;display:flex;align-items:center;justify-content:center;">✕</button></div><!--ANN-BAND:END-->
 
 <nav class="site-nav"><div class="nav-logo" onclick="goHome()"><span class="logo-accent">泰華</span><span class="logo-dim">眼裡的</span><span class="logo-main">泰語教學</span></div><ul class="nav-links"><li><a href="/games.html" class="nav-cta-secondary">🎮 遊戲</a></li><li><a href="javascript:void(0)" class="has-drop">學習資源</a><div class="nav-drop"><span class="nav-drop-label">泰語學習資源</span><a href="/content.html">📚 泰語學習資源</a><a href="/blog.html#articles">📝 泰語學習文章</a><a href="/resources.html#video-learning">🎬 影音學習</a><a href="/blog.html#selfstudy">📖 自學資源</a><span class="nav-drop-label">其他學習入口</span><a href="javascript:void(0)" onclick="openModal('modal-quiz')">程度測驗</a><a href="/index.html#problems">學習困境</a><a href="/community.html">🇹🇭 泰語學習心聲與提問</a></div></li><li><a href="javascript:void(0)" class="has-drop">更多</a><div class="nav-drop"><span class="nav-drop-label">課程與老師</span><a href="/index.html#teacher">關於老師</a><a href="/pricing.html#testimonials">學生回饋</a><a href="/pricing.html#pricing">費用方案</a><a href="/pricing.html#how">上課方式</a><span class="nav-drop-label">常見資訊</span><a href="/faq.html#faq">FAQ</a><a href="/faq.html#rules">上課須知</a><a href="/faq.html#feedback-section">分享經驗</a><span class="nav-drop-label">其他服務</span><a href="/page-services.html#tour-guide">🗺️ 導遊</a><a href="/page-services.html#drama">🎬 字幕翻譯</a><a href="/page-services.html#interpret">🎙️ 口譯</a><a href="/page-services.html#quote-form">📋 報價</a><div class="nav-drop-divider"></div><a href="javascript:void(0)" onclick="openModal('modal-contact')">聯絡我們</a></div></li><li><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="nav-cta">免費試聽</a></li></ul><button class="nav-mobile-cta" onclick="openModal('modal-line-qr')">免費試聽</button><div class="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></div></nav><!--NAV-FIT:START--><script>(function(){try{function f(){var n=document.querySelector("nav.site-nav");if(!n)return;var l=n.querySelector(".nav-logo"),k=n.querySelector(".nav-links");if(!l||!k)return;n.classList.remove("nav-compact");k.style.cssText="";var cs=window.getComputedStyle(n);var pl=parseFloat(cs.paddingLeft)||0,pr=parseFloat(cs.paddingRight)||0;var avail=n.clientWidth-pl-pr;var need=l.scrollWidth+k.scrollWidth+12;if(need>avail){n.classList.add("nav-compact");}}window.__navFit=f;f();}catch(e){}})();</script><!--NAV-FIT:END-->
 
@@ -327,13 +321,6 @@ body.rg-modern-font .lg-rev-th { font-family:'Noto Sans Thai','Sarabun',sans-ser
         <span id="lg-ok" hidden>0</span><span id="lg-bad" hidden>0</span><span id="lg-listens" hidden>0</span>
       </div>
     </div>
-    <div class="bars-wrap gsh-progress">
-      <div class="bar-row">
-        <span>進度</span>
-        <div class="bar-bg"><div class="bar-fill" id="lg-prog-fill" style="width:0%"></div></div>
-        <span class="bar-label" id="lg-prog-txt">0/10</span>
-      </div>
-    </div>
   </div>
 
   <div class="lg-word-area">
@@ -420,7 +407,7 @@ document.addEventListener('DOMContentLoaded', function () {
 </footer>
 
 <script src="data/nav-template.js?v=4"></script>
-<script src="js/core/shared.min.js?v=42"></script>
+<script src="js/core/shared.min.js?v=46"></script>
 <script src="js/games/game-flow.js?v=11"></script>
 
 <!-- ── Game Switcher (fixed pill) — 跟其他遊戲共用同一套樣式 ── -->

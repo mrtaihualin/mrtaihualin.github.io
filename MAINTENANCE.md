@@ -1,6 +1,15 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-28 Asia/Bangkok** — LOGIN-L8 combined Reading Preview Candidate
+**Updated: 2026-08-28 Asia/Bangkok** — Shared Login surfaces across games and parked account pages
+
+## 2026-08-28 — Shared Login surfaces / announcement removal (`PASS_LOCAL / PRODUCTION_UNCHANGED`)
+
+- Standardized one centered cream/gold Login surface across Tone, Reading, Listening, Typing, Word Order and Lego, reusing Reading's existing provider/modal flow. Tone and Reading measure identically at Desktop (640×92 at the same coordinates); all six use the same surface dimensions and `登入 / 玩法` controls, while Hub, Practice, Challenge, Learning Center, Vault and all leaderboard/result routes use Login only.
+- Removed the static announcement strip from all 19 scoped pages and added generator plus shared-runtime guards so it cannot be recreated. Removed Tone's duplicate Result Login card; the fixed top surface persists, and the Login modal remains absent until the player clicks Login.
+- Replaced parked-route redirects with safe visible surfaces while leaving Learning/Personal/Vault/Leaderboard clients non-executable. Listening gameplay, SRS/Review, scores, personal data, Gamification, Paid and Challenge runtimes remain parked; no database, provider, account or Production mutation occurred.
+- Preserved the frozen Tone Mobile Landscape files and cache binding byte-for-byte. Browser checks confirm no Login at 844×390 on all six games plus scoped non-game pages, no announcement on all 19 pages, and no automatic Login popup. Targeted regressions and the full `node scripts/check-site.js` gate pass across 1,019 files.
+
+**Prior update: 2026-08-28 Asia/Bangkok** — LOGIN-L8 combined Reading Preview Candidate
 
 ## 2026-08-28 — LOGIN-L8 combined Reading Preview Candidate (`PASS_LOCAL / PREVIEW_APPROVAL_PENDING / PRODUCTION_UNCHANGED`)
 
@@ -2264,3 +2273,33 @@ node scripts/check-site.js
 - Audited the Thai question-word and question-sentence selectors across the game set. Reading, Typing, Word Order, Lego, and Challenge already use selectors covered by their Standard/Modern rules.
 - Added the missing Tone `tf-adv-sent-main` selector so 高級 question sentences now switch with the same `Standard = Sarabun` and `Modern = Noto Sans Thai` preference already used by 初級/中級 question words.
 - Kept the toolbar control icon-only and made no layout, gameplay, Database, Auth, Edge Function, user-data, Listening-availability, or Mobile Landscape change.
+
+# 2026-08-28 — Shared Desktop and Mobile Portrait positioning correction
+
+- Reused the original Tone dimensions as immutable visual authority. The shared layer now changes only the Desktop/Portrait axis, block anchoring, and floating-menu placement; it does not assign new card, row, copy, Login-button, help-button, or floating-control sizes.
+- Preserved each game's original natural question stack and Skip placement. Removed synthetic fixed-height question/Skip rows that would enlarge Tone or reserve new vertical space.
+- Preserved each game Login host's original inline dimensions while continuing to use the Reading-owned Login flow and shared placement controller.
+- Kept Lego lower gameplay, the pre-existing Mobile Landscape CSS block, and parked runtimes outside this correction.
+- Verification covers the no-resize source contract, original Skip behavior, responsive placement, and full site gate before a replacement Human Preview.
+
+# 2026-08-29 — Reading-owned Login header and Portrait control delta
+
+- Replaced page-specific Login/header approximations with one Reading-owned runtime template across the six game pages; the other scoped Login pages reuse the same template without the `玩法` action.
+- Kept every game page's content and gameplay below the Login surface intact, including Lego's lower gameplay. Mobile Landscape still restores each game's pre-existing header and floating-control structure.
+- On Mobile Portrait only, removed the duplicate floating `遊戲選單` action and centered the remaining real controls without reserving a placeholder; Desktop remains unchanged.
+- Verification: targeted shared/auth/recovery/Landscape gates passed, browser geometry matched at Desktop, 390×844 and 768×1024, and `node scripts/check-site.js` passed across 1,020 project files.
+
+# 2026-08-29 — Five-game question/status correction
+
+- Removed the obsolete visual `進度` row and its DOM/runtime/CSS hooks from Tone, Reading, Listening, Typing, and Word Order while preserving each game-owned item-score HUD, scoring, round queue, and gameplay behavior.
+- Kept the original horizontal score-row order. Reading and Typing now preserve the existing total vertical space with equal top/bottom gaps: Desktop `8px/8px`, Reading Portrait `10px/10px`, and Typing Portrait `6.5px/6.5px`.
+- Set visible four-line question boundaries to `5px/5px/5px` without changing text sizes or outer geometry. Reading Portrait converts its prior `6px` word padding plus `5px` tool margin into those row gaps so the gold-band height remains unchanged. Multi-syllable active items use a syllable counter only where semantically applicable; Listening remains a whole-word counter and Word Order remains a whole-sentence counter.
+- Removed the unused `lego-board.html` and `mix-board.html` placeholder routes and their stale navigation/runtime references.
+- Verification: affected game/Login/security tests and `node scripts/check-site.js` passed across 1,018 project files; Mobile Landscape and Lego lower gameplay remain unchanged.
+
+# 2026-08-29 — Remove announcement bands from six game pages
+
+- Removed the announcement placeholder DOM, page-specific hide rules, and game-surface cache bindings from Tone, Reading, Listening, Typing, Word Order, and Lego.
+- The shared runtime no longer creates a fallback announcement, replaces a legacy placeholder, or binds announcement listeners on a `data-gsh-game` body. Shared announcement styling is scoped to non-game body surfaces so non-game pages retain their existing capability.
+- Updated the navigation generator and read-only checker so generated game output contains no announcement marker, DOM, listener, or style hook, while non-game output remains unchanged.
+- Verification: generator idempotence, static six-page scan, shared/Login/game/Landscape checks, Desktop plus `390×844`, `768×1024`, and `844×390` browser checks, secret scan, and `node scripts/check-site.js` across 1,018 source files.

@@ -244,8 +244,6 @@
     el.badCount = qs('lg-bad');
     el.scoreCount = qs('lg-score');
     el.listenCount = qs('lg-listens');
-    el.progFill = qs('lg-prog-fill');
-    el.progTxt = qs('lg-prog-txt');
     el.soundBtn = qs('lg-sound-btn');
     el.mcWrap = qs('lg-mc-wrap');
     el.typeWrap = qs('lg-type-wrap');
@@ -582,14 +580,6 @@
     return state.round[state.idx];
   }
 
-  function updateProgress() {
-    var n = state.round.length;
-    var doneCount = state.idx; // จำนวนข้อที่ทำเสร็จแล้วก่อนข้อนี้
-    var pct = n ? Math.round((doneCount / n) * 100) : 0;
-    el.progFill.style.width = pct + '%';
-    el.progTxt.textContent = doneCount + '/' + n;
-  }
-
   function showQuestion(options) {
     if (window.GameFlow) window.GameFlow.cancel('listening-game');
     options = options || {};
@@ -608,7 +598,6 @@
     var w = currentWord();
 
     el.qn.textContent = String(state.idx + 1);
-    updateProgress();
 
     el.resultBanner.className = 'result-banner';
     el.resultBanner.textContent = '';
@@ -660,7 +649,6 @@
     closeTypeKeyboard();
     renderModeTabs(null);
     el.qn.textContent = String(state.idx + 1);
-    updateProgress();
     el.mcWrap.innerHTML = '';
     el.mcWrap.style.display = 'none';
     el.typeWrap.style.display = 'none';
@@ -1169,8 +1157,6 @@
 
   function showEnd() {
     closeTypeKeyboard();
-    el.progFill.style.width = '100%';
-    el.progTxt.textContent = state.round.length + '/' + state.round.length;
     el.gameScreen.style.display = 'none';
     el.endScreen.style.display = 'flex';
     if (window.GameFlow) window.GameFlow.markResult(el.endScreen);

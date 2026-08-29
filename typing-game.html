@@ -84,7 +84,7 @@ if (document.fonts && document.fonts.load) {
   document.fonts.load("400 14px 'Noto Sans Thai'", "◌่้๊๋").catch(function(){});
 }
 </script>
-<link rel="stylesheet" href="css/shared.css?v=29">
+<link rel="stylesheet" href="css/shared.css?v=35">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="js/core/supabase-config.js?v=10"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script>
@@ -130,7 +130,6 @@ html:not(.gc-ready) [onclick*="openStar("]{
 .bar-row{display:flex;align-items:center;gap:8px;font-family:'Noto Sans TC',sans-serif;font-size:12px;color:#a08050;}
 .bar-bg{flex:1;height:7px;background:#ede0c8;border-radius:4px;overflow:hidden;}
 .bar-fill{height:100%;border-radius:4px;transition:width .4s ease;}
-.bar-fill.prog{background:linear-gradient(90deg,#e8a020,#d85a30);}
 .bar-fill.power{background:linear-gradient(90deg,#66bb6a,#43a047);}
 .bar-label{min-width:52px;text-align:right;font-size:11px;}
 
@@ -150,6 +149,9 @@ html:not(.gc-ready) [onclick*="openStar("]{
 .word-area{text-align:center;margin:4px 0 0;}
 .word-th{font-size:38px;font-weight:700;color:#3a2a0a;line-height:1.5;padding-top:6px;}/* Lin 2026-07-12: ย่อให้เท่าเกมเสียง (เดิม 62px ใหญ่ไป) */
 .word-zh{font-size:15px;color:#888;font-family:'Noto Sans TC',sans-serif;margin-top:4px;}
+.gsh-four-row-stack > .gsh-copy-row{margin-top:5px !important;}
+.gsh-four-row-stack > .gsh-copy-row:first-child{margin-top:0 !important;}
+.gsh-four-row-stack > .gsh-copy-row > .rev-pron,.gsh-four-row-stack > .gsh-copy-row > .rev-en{margin-top:0 !important;}
 /* มือถือแนวนอน (landscape): ตรึงเฉพาะโซนคำศัพท์ไว้บนสุด ไม่ต้องเลื่อนตามหน้า — ปุ่ม/ช่อง/คีย์บอร์ดด้านล่างเลื่อนปกติ — Lin 2026-07-12 */
 @media (orientation:landscape) and (hover:none) and (pointer:coarse){
   .word-area{position:sticky;top:var(--nav-h,60px);z-index:50;background:#F5F0E8;padding-bottom:4px;}
@@ -340,7 +342,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 /* Lin 2026-07-12: มือถือ無顯示 → แตะกล่องคำเรียกคีย์บอร์ดเครื่องเอง */
 .type-target{cursor:pointer;}
 /* Lin 2026-07-12: ตอนคีย์บอร์ดเครื่องขึ้นมาพิมพ์ → ซ่อนหัวเว็บ/แถบชื่อ ไม่ให้กินพื้นที่จอ */
-body.tg-kbd-typing .page-header,body.tg-kbd-typing .page-strip,body.tg-kbd-typing .site-nav,body.tg-kbd-typing .avail-band{display:none !important;}
+body.tg-kbd-typing .page-header,body.tg-kbd-typing .page-strip,body.tg-kbd-typing .site-nav{display:none !important;}
 body.tg-kbd-typing{padding-top:0 !important;}
 /* 電腦版本不需要「用手機鍵盤打字」這個按鈕 — 用滑鼠的裝置(有滑鼠指標)才隱藏，觸控裝置照常顯示 — Lin 2026-07-07 */
 @media (hover:hover) and (pointer:fine){ #rg-mobile-kbd-btn{display:none !important;} }
@@ -419,10 +421,9 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
   ]
 }
 </script>
-<script src="js/core/minimum-guest-launch.js?v=1"></script>
+<script src="js/core/minimum-guest-launch.js?v=5"></script>
 </head>
 <body data-gsh-game="typing">
-<!--ANN-BAND:START--><script>try{if(sessionStorage.getItem('annDismissed')==='1')document.documentElement.classList.add('ann-off');}catch(e){}</script><div class="avail-band" id="ann-band" style="position:relative"><div class="avail-row"><span class="avail-dot"></span><span class="avail-text">🎁 首堂 30 分鐘體驗課免費・中文授課</span><button class="avail-cta" onclick="openModal('modal-line-qr')">立即預約</button></div><div style="display:flex;justify-content:center;align-items:center;gap:10px;margin-top:4px;"><button onclick="annPrev()" aria-label="上一則公告" style="background:none;border:none;color:var(--gold-deep);font-size:15px;line-height:1;cursor:pointer;padding:2px 4px;min-width:32px;min-height:32px;display:inline-flex;align-items:center;justify-content:center;">‹</button><div style="display:flex;align-items:center;gap:6px;"><span onclick="annGoTo(0)" style="width:7px;height:7px;border-radius:50%;cursor:pointer;background:var(--gold);transition:background 0.2s;"></span><span onclick="annGoTo(1)" style="width:7px;height:7px;border-radius:50%;cursor:pointer;background:rgba(139,99,16,0.30);transition:background 0.2s;"></span><span onclick="annGoTo(2)" style="width:7px;height:7px;border-radius:50%;cursor:pointer;background:rgba(139,99,16,0.30);transition:background 0.2s;"></span><span onclick="annGoTo(3)" style="width:7px;height:7px;border-radius:50%;cursor:pointer;background:rgba(139,99,16,0.30);transition:background 0.2s;"></span><span onclick="annGoTo(4)" style="width:7px;height:7px;border-radius:50%;cursor:pointer;background:rgba(139,99,16,0.30);transition:background 0.2s;"></span></div><button onclick="annNext()" aria-label="下一則公告" style="background:none;border:none;color:var(--gold-deep);font-size:15px;line-height:1;cursor:pointer;padding:2px 4px;min-width:32px;min-height:32px;display:inline-flex;align-items:center;justify-content:center;">›</button></div><button onclick="annDismiss()" aria-label="關閉公告" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--gold-deep);font-size:17px;line-height:1;cursor:pointer;padding:4px;min-width:32px;min-height:32px;display:flex;align-items:center;justify-content:center;">✕</button></div><!--ANN-BAND:END-->
 
 
 <!-- 2026-07-13: เมนู 🪧แจ้งปัญหา/รีวิว ย้ายไปทำใน shared.js แล้ว (ให้ขึ้นเหมือนกันทุกเกมอัตโนมัติ) ไม่ต้องมีโค้ดซ้ำในไฟล์นี้อีก -->
@@ -540,7 +541,7 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
   </div>
   <div class="top-bar">
     <div class="score-bar">
-      <div>第 <span id="qn">1</span>/<span id="qt">10</span> 字</div>
+      <div>第 <span id="qn">1</span>/<span id="qt">10</span> <span id="qu">字</span></div>
       <div>✓ <span id="ok">0</span></div>
       <div>✗ <span id="bad">0</span></div>
     </div>
@@ -563,26 +564,21 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
   <div class="gold-banner">
     <div class="bars-wrap gsh-progress" id="bars-wrap">
       <div class="bar-row">
-        <span>進度</span>
-        <div class="bar-bg"><div class="bar-fill prog" id="pf" style="width:0%"></div></div>
-        <span class="bar-label" id="prog-txt">0/10</span>
-      </div>
-      <div class="bar-row">
         <span>本題分數</span>
         <div class="bar-bg"><div class="bar-fill power" id="tg-ws-fill" style="width:100%"></div></div>
         <span class="bar-label"><span id="tg-ws-num">10</span>/10</span>
       </div>
     </div>
-    <div class="word-area">
-      <div style="display:inline-flex;align-items:center;gap:6px;justify-content:center;">
+    <div class="word-area gsh-four-row-stack">
+      <div class="gsh-copy-row" style="display:inline-flex;align-items:center;gap:6px;justify-content:center;">
         <div class="word-th" id="wth">—</div>
       </div>
       <!-- Lin 2026-07-16: ย้ายคำอ่านขึ้นมาอยู่เหนือแถวปุ่ม ให้เด้งด้านบนคู่กับคำแปลเหมือนกัน (เดิมอยู่ใต้แถวปุ่ม)
            Lin 2026-07-30 (รอบ 2): สลับให้ 讀音 → 英文讀音 → 翻譯 เรียงเหมือนกันทุกเกม (เดิมคำแปลอยู่บนสุด) -->
-      <div class="rev-pron" id="rev-pron"></div>
+      <div class="rev-pron gsh-copy-row" id="rev-pron"></div>
       <!-- Lin 2026-07-25: คำอ่านโรมัน (英文讀音) — แถวของตัวเอง เปิด/ปิดแยกจากคำอ่านไทย -->
-      <div class="rev-en" id="rev-en"></div>
-      <div class="word-zh" id="wzh"></div>
+      <div class="rev-en gsh-copy-row" id="rev-en"></div>
+      <div class="word-zh gsh-copy-row" id="wzh"></div>
       <!-- แถวปุ่ม 4 อันใต้คำศัพท์: 🔊กด1ที=ฟังเสียงคำ1ที · 🐣คำอ่าน · 🍙คำแปล(shared.js ย้ายมาใส่เอง) · 🔖เซฟ — Lin 2026-07-16 -->
       <div id="word-ctl-row" style="display:flex;align-items:center;justify-content:center;gap:8px;margin:6px 0 2px;flex-wrap:wrap;">
         <button id="rg-sound-toggle" class="word-ctl-btn" type="button"></button>
@@ -764,7 +760,7 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
 </script>
 </div><!-- /.v3-page -->
 <script src="data/nav-template.js?v=4"></script>
-<script src="js/core/shared.min.js?v=42"></script>
+<script src="js/core/shared.min.js?v=46"></script>
 <script src="js/games/game-flow.js?v=11"></script>
 
 <!-- ── Game Switcher (fixed pill) ── -->

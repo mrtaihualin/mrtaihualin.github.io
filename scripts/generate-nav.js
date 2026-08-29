@@ -26,7 +26,7 @@ const ROOT = path.join(__dirname, '..');
 const ROOT_PAGES = [
   'all-board.html', 'blog.html', 'community.html', 'content.html', 'faq.html',
   'games-challenge.html', 'games-practice.html', 'games.html', 'index.html', 'leaderboard.html',
-  'lego-board.html', 'lego.html', 'listening-board.html', 'listening-game.html', 'mix-board.html',
+  'lego.html', 'listening-board.html', 'listening-game.html',
   'my-progress.html', 'new-student.html', 'page-services.html', 'pricing.html',
   'privacy.html',
   'reading-board.html', 'reading-game.html', 'resources.html', 'sns.html',
@@ -83,7 +83,17 @@ const ANN_BLOCK_RE = new RegExp(
   NAV.ANN_MARK_END.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 );
 const BODY_OPEN_RE = /<body[^>]*>/i;
-const TONE_ANN_BLOCK = '<!--ANN-BAND:START--><!-- Tone is a Core game surface: no announcement strip. --><!--ANN-BAND:END-->';
+const GAME_PAGES = new Set([
+  'tone-finder.html', 'reading-game.html', 'listening-game.html',
+  'typing-game.html', 'word-order.html', 'lego.html'
+]);
+const NO_ANNOUNCEMENT_PAGES = new Set([
+  'games.html', 'games-practice.html', 'games-challenge.html',
+  'tone-finder.html', 'reading-game.html', 'listening-game.html', 'typing-game.html', 'word-order.html', 'lego.html',
+  'my-progress.html', 'vault.html', 'all-board.html', 'leaderboard.html', 'reading-board.html',
+  'listening-board.html', 'typing-board.html', 'word-order-board.html'
+]);
+const NO_ANNOUNCEMENT_BLOCK = '<!--ANN-BAND:START--><!-- Login UI scope: no announcement strip. --><!--ANN-BAND:END-->';
 
 // 🆕 2026-08-10 — nav responsive auto-fit script (ดูรายละเอียดใน data/nav-template.js)
 // ต้องวางทันทีหลัง </nav> ตัวจริง (sync, กันกระพริบตอนโหลดหน้าแรก) — ห่อ marker เหมือน ANN_BLOCK
@@ -117,7 +127,13 @@ PAGES.forEach(function (file) {
   const navBlockHTML = '<nav class="site-nav">' + NAV.renderNavHTML(file) + '</nav>';
   let next = original.replace(NAV_RE, navBlockHTML);
   next = next.replace(/data\/nav-template\.js\?v=\d+/g, 'data/nav-template.js?v=4');
-  next = next.replace(/js\/core\/shared\.min\.js\?v=\d+/g, 'js/core/shared.min.js?v=42');
+  next = next.replace(
+    /js\/core\/shared\.min\.js\?v=\d+/g,
+    GAME_PAGES.has(file)
+      ? 'js/core/shared.min.js?v=46'
+      : (NO_ANNOUNCEMENT_PAGES.has(file) ? 'js/core/shared.min.js?v=45' : 'js/core/shared.min.js?v=42')
+  );
+  next = next.replace(/js\/core\/minimum-guest-launch\.js\?v=\d+/g, 'js/core/minimum-guest-launch.js?v=5');
 
   // ── nav responsive auto-fit script — มีอยู่แล้วให้พิมพ์ทับ · ยังไม่มีให้แทรกทันทีหลัง </nav> ──
   const navFitHTML = NAV.renderNavFitScriptHTML();
@@ -148,15 +164,15 @@ PAGES.forEach(function (file) {
   }
 
   // ── แถบประกาศด้านบน (static) — มีอยู่แล้วให้พิมพ์ทับ · ยังไม่มีให้แทรกต่อจาก <body> ──
-  const annBlockHTML = file === 'tone-finder.html' ? TONE_ANN_BLOCK : NAV.renderAnnBandBlockHTML();
+  const annBlockHTML = NO_ANNOUNCEMENT_PAGES.has(file) ? NO_ANNOUNCEMENT_BLOCK : NAV.renderAnnBandBlockHTML();
   if (ANN_BLOCK_RE.test(next)) {
     const beforeAnn = next;
-    next = next.replace(ANN_BLOCK_RE, annBlockHTML);
+    next = next.replace(ANN_BLOCK_RE, GAME_PAGES.has(file) ? '' : annBlockHTML);
     if (next !== beforeAnn) annBandUpdated++;
-  } else if (BODY_OPEN_RE.test(next)) {
+  } else if (!GAME_PAGES.has(file) && BODY_OPEN_RE.test(next)) {
     next = next.replace(BODY_OPEN_RE, function (m) { return m + '\n' + annBlockHTML; });
     annBandAdded++;
-  } else {
+  } else if (!GAME_PAGES.has(file)) {
     problems.push(file + '  ← ไม่พบ <body> — แทรกแถบประกาศอัตโนมัติไม่ได้ ต้องตรวจมือ');
   }
 

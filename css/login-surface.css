@@ -1,0 +1,131 @@
+/* Reading is the sole code and geometry authority for the scoped Login header.
+   Every Desktop/Portrait page receives the same template from login-surface.js. */
+html body [data-reading-login-component="host"] {
+  position: relative;
+  left: 50%;
+  width: min(100vw, 688px);
+  max-width: none;
+  margin: 0;
+  padding: 8px 16px 0 !important;
+  box-sizing: border-box;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: 'Sarabun', sans-serif;
+}
+
+/* Exact Reading header rules. Only the page-owned text/icon changes. */
+[data-reading-login-component="header"] {
+  width: 100%;
+  max-width: 640px;
+  min-height: 62px;
+  margin: 0 auto 10px;
+  text-align: center;
+}
+[data-reading-login-component="header"] > .page-title {
+  margin: 0 !important;
+  font-family: 'Noto Serif TC', serif;
+  font-size: clamp(20px, 4vw, 28px) !important;
+  font-weight: 900;
+  line-height: normal;
+  color: #8B6310;
+  letter-spacing: 2px;
+}
+[data-reading-login-component="header"] > .page-sub {
+  font-family: 'Noto Sans TC', sans-serif;
+  font-size: 12px;
+  line-height: normal;
+  color: #b08040;
+  margin-top: 3px;
+}
+
+/* Exact Reading Account Bar rules. */
+[data-reading-login-component="row"] {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+  max-width: 640px;
+  padding-bottom: 2px;
+}
+html body [data-reading-login-component="row"] > #rg-profile-wrap {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  width: 100% !important;
+  max-width: 640px !important;
+  min-height: 0 !important;
+  margin: 0 auto !important;
+  padding: 10px 12px !important;
+  box-sizing: border-box !important;
+  background: #FAF4E8 !important;
+  border: 1.5px solid #C8973A !important;
+  border-radius: 16px !important;
+  font-family: 'Noto Sans TC', sans-serif !important;
+  font-size: 12.5px !important;
+}
+[data-reading-login-component="row"] #rg-login-slot {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 !important;
+  flex: 0 0 auto !important;
+}
+[data-reading-login-component="row"] .tf-streak-chip {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  padding: 5px 12px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: rgba(139, 99, 16, 0.10) !important;
+  color: #7a5510 !important;
+  box-shadow: none !important;
+  font-family: 'Noto Sans TC', sans-serif !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+}
+
+/* These are part of Reading's exact Account Bar DOM, but remain parked in the
+   public Login-only surface exactly as they did in PR #98. */
+[data-reading-login-component="row"] .rg-stat-row,
+[data-reading-login-component="row"] #rg-cta-login {
+  display: none !important;
+}
+
+/* Non-game pages differ only by omitting Help; Login remains centered. */
+[data-reading-login-component="row"] > #rg-profile-wrap:not(:has(.mrt-login-howto)) {
+  justify-content: center !important;
+}
+
+.mrt-login-safe-state {
+  width: min(100%, 640px);
+  margin: -6px auto 24px;
+  color: #74664d;
+  font: 500 13px/1.7 'Noto Sans TC', sans-serif;
+  text-align: center;
+}
+
+/* Splitting the shared header from the lower game root must not add a second
+   top inset. No lower gameplay sizing or component style is changed. */
+[data-reading-login-lower-root] {
+  padding-top: 0 !important;
+}
+
+/* Locked contract: Mobile Landscape keeps the separate Switch layout/no Login. */
+@media (orientation: landscape) and (max-width: 1024px) and (max-height: 600px) {
+  [data-reading-login-component="host"],
+  .mrt-login-surface,
+  .mrt-login-safe-state {
+    display: none !important;
+  }
+}

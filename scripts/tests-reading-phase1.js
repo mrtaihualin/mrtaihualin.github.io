@@ -48,25 +48,35 @@ test('refresh tolerates the Phase 1 HUD without removed reward elements', () => 
   const elements = {
     'rg-ws-fill': { style: {} },
     'rg-ws-num': { textContent: '' },
-    pf: { style: {} },
-    'prog-txt': { textContent: '' },
-    qt: { textContent: '' },
   };
   const context = {
     SYL_SCORE: [10, 7, 4, 1],
     wordUsedGuide: false,
     rgCurSyllableScore: () => 10,
     rgScoreBarColor: () => '#8B6310',
-    cur: 0,
-    roundQueue: [1, 2, 3, 4, 5],
     Math,
     document: { getElementById: (id) => elements[id] || null },
   };
   vm.createContext(context);
   vm.runInContext(refresh, context);
   vm.runInContext('refreshUI()', context);
-  assert.strictEqual(elements.qt.textContent, 5);
+  assert.strictEqual(elements['rg-ws-num'].textContent, 10);
+  assert.doesNotMatch(refresh, /pf|prog-txt|roundQueue/);
   assert.doesNotMatch(refresh, /star-count|badge-count|badge-emoji/);
+});
+
+test('Reading counter follows active syllables without changing the round queue', () => {
+  const helper = block('function updateSyllableCounter()', 'function loadWord()');
+  const elements = { qn: { textContent: '' }, qt: { textContent: '' }, qu: { textContent: '' } };
+  const context = { sylIdx: 1, sylList: [{}, {}, {}], Math, document: { getElementById: (id) => elements[id] || null } };
+  vm.createContext(context);
+  vm.runInContext(helper, context);
+  vm.runInContext('updateSyllableCounter()', context);
+  assert.deepStrictEqual([elements.qn.textContent, elements.qt.textContent, elements.qu.textContent], [2, 3, '音節']);
+  context.sylIdx = 0; context.sylList = [{}];
+  vm.runInContext('updateSyllableCounter()', context);
+  assert.deepStrictEqual([elements.qn.textContent, elements.qt.textContent, elements.qu.textContent], [1, 1, '字']);
+  assert.doesNotMatch(helper, /roundQueue|roundScore|okC|badC/);
 });
 
 test('Reading loads the rebuilt crash-safe bundle with a fresh cache key', () => {
