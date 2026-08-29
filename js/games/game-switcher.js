@@ -15,6 +15,7 @@
   var CORE6_TABS = CORE5_TABS.concat([
     { id: 'lego',           href: 'lego.html',            label: '🧱 造句練習室', selfFrom: 'lego' }
   ]);
+  var VAULT_TAB = { id: 'vault', href: 'vault.html', label: '🔖 泰語單字庫', activeLabel: '🔖 泰語單字庫' };
 
   // Preserve the pre-Phase-1 switcher on non-Core-5 pages; this worker does not
   // redefine navigation or gameplay for Lego/Vault.
@@ -25,8 +26,20 @@
     { id: 'word_order',     href: 'word-order.html',      label: '🧩 語序練習室', selfFrom: 'word_order' },
     { id: 'lego',           href: 'lego.html',            label: '🧱 造句練習室', selfFrom: 'lego' },
     { id: 'listening_game', href: 'listening-game.html',  label: '🎧 聽力練習室', selfFrom: 'listening_game' },
-    { id: 'vault',          href: 'vault.html',           label: '<img src="assets/icons/kratip-plain.svg" alt="" style="width:14px;height:18px;vertical-align:-4px;margin-right:3px;">單字庫', activeLabel: '🔖 單字庫' }
+    VAULT_TAB
   ];
+
+  function addPortraitVaultEntry(container) {
+    if (container.getAttribute('data-current') === 'vault') return;
+    var nav = document.getElementById('bottom-nav');
+    if (!nav || nav.querySelector('[data-vault-portrait-entry]')) return;
+    var link = document.createElement('a');
+    link.href = 'vault.html';
+    link.className = 'bn-item';
+    link.setAttribute('data-vault-portrait-entry', '1');
+    link.innerHTML = '<span class="bn-icon">🔖</span><span class="bn-label">泰語單字庫</span>';
+    nav.appendChild(link);
+  }
 
   function render(container) {
     container.setAttribute('role', 'menu');
@@ -37,6 +50,8 @@
       && window.matchMedia && window.matchMedia('(min-width: 769px) and (min-height: 601px)').matches;
     var includeLego = container.getAttribute('data-include-lego') === '1' || includeLegoDesktop;
     var tabs = core5 ? (includeLego ? CORE6_TABS : CORE5_TABS) : LEGACY_TABS;
+    if (core5) tabs = tabs.concat([VAULT_TAB]);
+    if (current === 'vault') tabs = tabs.filter(function (tab) { return tab.id !== 'vault'; });
     var track = container.getAttribute('data-track') !== '0'; // vault.html ตั้ง data-track="0"
     var currentTab = null;
     tabs.forEach(function (t) { if (t.id === current) currentTab = t; });
@@ -54,11 +69,17 @@
       }
     });
     container.innerHTML = html;
+    addPortraitVaultEntry(container);
   }
 
   function init() {
     var els = document.querySelectorAll('#game-switcher[data-current]');
     Array.prototype.forEach.call(els, render);
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function () {
+        Array.prototype.forEach.call(els, addPortraitVaultEntry);
+      }, { once: true });
+    }
   }
   init();
 })();

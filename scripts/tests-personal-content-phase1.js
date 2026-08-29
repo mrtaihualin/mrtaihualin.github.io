@@ -17,21 +17,22 @@ const legoApp = read('js/games/lego-game-app.js');
 const exportFn = read('supabase/functions/account-export/index.ts');
 const failures = [];
 let passes = 0;
-const practiceBody = (ui.match(/function practiceSection\(item, games, kind\) \{([\s\S]*?)\n  \}/) || [])[1] || '';
+const practiceBody = (ui.match(/function practiceSection\(item, kind\) \{([\s\S]*?)\n  \}/) || [])[1] || '';
 const savedInfoBody = (ui.match(/function savedInfo\(item\) \{([\s\S]*?)\n  \}/) || [])[1] || '';
 function check(label, condition) {
   if (condition) { passes++; console.log('✓ ' + label); }
   else failures.push(label);
 }
 
-check('Login Free word limit = 20', /var MAX_WORDS = 20;/.test(word));
-check('Login Free sentence limit = 10', /var MAX_SENTENCES = 10;/.test(sentence));
+check('Login Free word limit = 50', /var MAX_WORDS = 50;/.test(word));
+check('Login Free sentence limit = 50', /var MAX_SENTENCES = 50;/.test(sentence));
 check('Guest cannot add word/sentence personal content', /if \(!_accountReady\(\)\) \{ _requireLogin\(\); return false; \}/.test(word) && /if \(!ready\(\)\) \{ requireLogin\(\); return false; \}/.test(sentence));
 check('sentence library reuses account-backed saved-items table', /var TABLE = 'learning_saved_items'/.test(sentence) && /var VAULT_KEY = 'sentence_vault'/.test(sentence));
-check('Minimum Guest parks personal clients on games while preserving current Vault clients',
-  ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html','lego.html']
-    .every((name) => !/(?:word|sentence)-vault\.js/.test(read(name))) &&
-  /word-vault\.js\?v=7/.test(read('vault.html')) && /sentence-vault\.js\?v=3/.test(read('vault.html')));
+check('authorized games load only the required personal clients and Vault activates both',
+  ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html']
+    .every((name) => /word-vault\.js\?v=8/.test(read(name)) && /sentence-vault\.js\?v=4/.test(read(name))) &&
+  ['word-order.html','lego.html'].every((name) => !/word-vault\.js/.test(read(name)) && /sentence-vault\.js\?v=4/.test(read(name))) &&
+  /word-vault\.js\?v=8/.test(read('vault.html')) && /sentence-vault\.js\?v=4/.test(read('vault.html')));
 check('same content merges provenance instead of duplicating', /_mergeMetaIntoWord\(existing, meta\)/.test(word) && /mergeMeta\(existing, meta\)/.test(sentence));
 check('Save from a new surface adds provenance before delete behavior', /!_hasSource\(th, meta\.source\)/.test(word) && /!hasSource\(th, meta\.source\)/.test(sentence));
 check('delete uses tombstone and does not touch SRS/history tables', /deleted_at: new Date\(\)\.toISOString\(\)/.test(sentence) && !/tone_srs_state|learning_memory|practice_events/.test(sentence));
@@ -52,12 +53,12 @@ check('one page has word and sentence tabs', /personal-content-root/.test(page) 
 check('direct links open the requested personal-content tab', /location\.hash === '#sentences'/.test(ui) && /history\.replaceState\(null, '', '#' \+ tab\)/.test(ui));
 check('old tag filter UI is superseded and not executable', /type="text\/plain" data-superseded="phase1-personal-content"/.test(page) && !/currentFilter|vtag-btn/.test(ui));
 check('Personal Search stays inside the account render path', /function renderAccount\(\)[\s\S]*searchControls\(update\)/.test(ui) && !/function renderGuest\(\)[\s\S]{0,600}searchControls/.test(ui));
-check('near-limit and full-gate messages exist', /remaining <= 3/.test(ui) && /已達免費儲存上限/.test(ui));
-check('full gate offers management and disabled upgrade', /管理已儲存內容/.test(ui) && /升級方案/.test(ui) && /upgrade\.disabled = true/.test(ui));
-check('item detail exposes three optional information fields', /คำอ่านไทย/.test(ui) && /Romanization/.test(ui) && /中文翻譯/.test(ui));
-check('practice actions and save provenance stay separated per item', /練習紀錄/.test(practiceBody) && /儲存資訊/.test(savedInfoBody) && /provenance\(item\)/.test(savedInfoBody));
-check('Save provenance alone never labels an item as Played or re-practice', /開始練習/.test(practiceBody) && !/provenance\(item\)/.test(practiceBody) && /playedFor\(item, kind\)/.test(practiceBody));
-check('verified gameplay evidence alone enables Played and re-practice copy', /evidence && evidence\.played/.test(practiceBody) && /已練習/.test(practiceBody) && /再練習/.test(practiceBody));
+check('near-limit and exact full-gate messages exist', /remaining <= 3/.test(ui) && /單字庫已滿，請先刪除不需要的內容/.test(ui));
+check('full gate has no Paid or upgrade branch', !/升級方案|付費/.test(ui) && !/upgrade\.disabled/.test(ui));
+check('item detail exposes three Chinese-labeled optional information fields', /泰語讀音/.test(ui) && /羅馬拼音/.test(ui) && /中文翻譯/.test(ui));
+check('practice actions and save provenance stay separated per item', /練習紀錄/.test(practiceBody) && /來源與儲存時間/.test(savedInfoBody) && /provenance\(item\)/.test(savedInfoBody));
+check('Save provenance alone never labels an item as Played', /尚無已練習紀錄/.test(practiceBody) && /playedFor\(item, kind\)/.test(practiceBody));
+check('verified gameplay evidence alone enables Played copy', /evidence && evidence\.played/.test(practiceBody) && /已練習/.test(practiceBody));
 check('Played status has an explicit retry path without changing saved provenance', /playedRequestFailed/.test(practiceBody) && /重新載入練習紀錄/.test(practiceBody) && !/savedInfo\(/.test(practiceBody));
 check('word-order Save writes sentence library', /SentenceVault\.createSaveBtn/.test(wordOrder) && !/WordVault\.createSaveBtn\(s\.th/.test(wordOrder));
 check('Lego Login Result alone exposes sentence-library selection',

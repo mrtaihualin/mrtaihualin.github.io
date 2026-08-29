@@ -2326,7 +2326,7 @@ function tgCloseMobileKeyboard(){
 }
 function tgInitKeyboardDismissControls(){
   document.addEventListener('click',function(event){
-    var target=event.target&&event.target.closest?event.target.closest('#wm-trigger, #rg-howto-btn'):null;
+    var target=event.target&&event.target.closest?event.target.closest('#word-ctl-row, #rg-howto-btn'):null;
     if(target)tgCloseMobileKeyboard();
   },true);
 }
@@ -2375,8 +2375,8 @@ rgApplyTypeModeUI();
 // (rgHookBonusOpts()/ตัวดักโฟกัสปุ่มวรรณยุกต์ ถูกลบแล้ว — เอา猜聲調ออก 2026-07-30)
 try{
   rgNoFocusSteal(document.getElementById('rg-webkbd-toggle')); // Lin 2026-07-18: กดปุ่มเปิด/ปิดคีย์บอร์ดในเกม แล้วคีย์บอร์ดเครื่องต้องไม่หุบ
-  // Lin 2026-07-25: ลบตัวดัก mousedown ของ #word-ctl-row ออก — ปุ่มทั้งแถวถูกย้ายเข้าเมนู 🍚 หมดแล้ว แถวนี้ว่างเปล่า
-  // (word-menu.js ดัก mousedown ให้ทั้งปุ่ม 🍚 และแผงเมนูอยู่แล้ว คีย์บอร์ดยังไม่หุบเหมือนเดิม)
+  // The inline tool row owns its existing controls; capture click above closes
+  // the native mobile keyboard before a learning tool acts.
 }catch(e){}
 
 // ════════════════════════════════════════════
@@ -2541,7 +2541,7 @@ try { rgRenderGameBar(); } catch(e){}
 
 // ── ฟ้อนต์โมเดิร์น (เหมือนเกมเสียง) ──
 function rgToggleFont() {
-  // Lin 2026-07-25: ลบโค้ดอัปเดตปุ่มเก่า #rg-font-btn ออก — ปุ่มนั้นไม่มีในหน้าแล้วตั้งแต่ย้ายเข้าเมนู 🍚 (shared.js สร้างปุ่มจริงเอง อ่านสถานะจาก class บน <body>)
+  // Lin 2026-07-25: ลบโค้ดอัปเดตปุ่มเก่า #rg-font-btn ออก — shared.js สร้างปุ่มในแถวเครื่องมือและอ่านสถานะจาก class บน <body>
   var on = document.body.classList.toggle('rg-modern-font');
   try { localStorage.setItem('rg_modern_font', on ? '1' : '0'); } catch(e){}
   try{ if(typeof gtag==='function') gtag('event','typing_game_font_toggle',{category:'game', on: on}); }catch(e){}
@@ -2610,7 +2610,7 @@ try {
 } catch(e){}
 
 // ── Shared Game UI: ลงทะเบียน modal ของเกมนี้กับ registerGameModal (shared.js) ──
-// กันเปิดซ้อนกับเมนู 🎮/🍚/🪧 ของ shared.js — ไม่เปลี่ยนกลไกเดิมของ modal เลย แค่ให้ shared.js
+// กันเปิดซ้อนกับเมนู 🎮/🪧 ของ shared.js — ไม่เปลี่ยนกลไกเดิมของ modal เลย แค่ให้ shared.js
 // รู้จักปิด modal เหล่านี้ได้เมื่อมีอย่างอื่นเปิดพร้อมกัน · registerGameModal อาจยังไม่ถูกโหลด (เป็นของเสริม) จึงห่อ try/catch
 try {
   if (window.registerGameModal) {

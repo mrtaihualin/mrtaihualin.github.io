@@ -146,7 +146,7 @@ test('all six games bind the locked two-hand mobile landscape layout', () => {
   };
   for (const [id, html] of Object.entries(expectedBodies)) {
     assert.match(html, new RegExp(`<body[^>]*data-gsh-game="${id}"[^>]*>`), `${id}: missing landscape scope marker`);
-    assert.match(html, /css\/shared\.css\?v=35/, `${id}: must load current shared CSS without changing the Landscape rules`);
+    assert.match(html, /css\/shared\.css\?v=36/, `${id}: must load current shared CSS without changing the Landscape rules`);
   }
   assert.match(sharedCss, /@media \(orientation:landscape\) and \(max-width:1024px\) and \(max-height:600px\)/);
   assert.match(sharedCss, /\.rg-ctl-wrap \{[\s\S]{0,260}top:var\(--gsh-safe-t\); left:50%/);
@@ -191,6 +191,11 @@ test('shared switcher contains exactly the Phase 1 Core 5 in canonical order', (
   assert.doesNotMatch(core5Block, /href: '(?:lego|vault|games-challenge)\.html'/);
   assert.match(switcherJs, /var CORE6_TABS = CORE5_TABS\.concat\([\s\S]{0,180}id: 'lego'/, 'Tone Desktop switcher variant must include Lego');
   assert.match(switcherJs, /includeLego \? CORE6_TABS : CORE5_TABS/, 'Core 5 pages without the opt-in must keep the original switcher');
+  assert.match(switcherJs, /var VAULT_TAB = \{ id: 'vault', href: 'vault\.html', label: '🔖 泰語單字庫'/, 'all game switchers must append the approved Vault route');
+  assert.match(switcherJs, /if \(core5\) tabs = tabs\.concat\(\[VAULT_TAB\]\)/, 'Core game menus must append exactly one Vault route');
+  assert.match(switcherJs, /data-vault-portrait-entry/, 'Portrait bottom navigation must expose the additional Vault route');
+  assert.match(switcherJs, /DOMContentLoaded[\s\S]{0,180}addPortraitVaultEntry/, 'Portrait Vault route must wait for late bottom-navigation markup');
+  assert.match(switcherJs, /if \(current === 'vault'\) tabs = tabs\.filter/, 'Vault must not render a self entry');
   assert.match(games.find((g) => g.id === 'tone').htmlText, /data-include-lego="1"/, 'Tone must opt into the six-game switcher on every viewport');
   assert.match(switcherJs, /role="menuitem" aria-current="page"/);
 });
@@ -203,7 +208,7 @@ test('floating controls use the locked switcher, focus and More Menu copy', () =
   assert.match(sharedJs, /fitMenuToViewport\(\)/);
   assert.match(sharedJs, /fitMoreMenuToViewport\(\)/);
   assert.match(sharedJs, /path\.indexOf\('listening-game'\) > -1\) GAME_ID = 'listening'/, 'Listening must use the shared More mapping');
-  assert.match(games.find((g) => g.id === 'listening').htmlText, /shared\.min\.js\?v=46/, 'Listening must load the announcement-free shared mapping version');
+  assert.match(games.find((g) => g.id === 'listening').htmlText, /shared\.min\.js\?v=47/, 'Listening must load the announcement-free shared mapping version');
 });
 
 test('all game pages permanently omit the automatic Login cap popup', () => {
@@ -237,14 +242,14 @@ test('all scoped pages use one fail-closed Login surface and game pages permanen
   for (const file of gamePages) {
     const html = fs.readFileSync(path.join(root, file), 'utf8');
     assert.doesNotMatch(html, /ANN-BAND|ann-band|avail-band|annDismissed|annGoTo|annPrev|annNext/, `${file}: announcement DOM/marker/script/style hook must be removed`);
-    assert.match(html, /minimum-guest-launch\.js\?v=5/, `${file}: must load the Reading-authority Login gate`);
-    assert.match(html, /shared\.min\.js\?v=46/, `${file}: must load the announcement-free game runtime`);
+    assert.match(html, /minimum-guest-launch\.js\?v=6/, `${file}: must load the Reading-authority Login gate`);
+    assert.match(html, /shared\.min\.js\?v=47/, `${file}: must load the announcement-free game runtime`);
   }
   for (const file of nonGameScopedPages) {
     const html = fs.readFileSync(path.join(root, file), 'utf8');
     assert.match(html, /<!--ANN-BAND:START--><!-- Login UI scope: no announcement strip\. --><!--ANN-BAND:END-->/, `${file}: existing non-game announcement capability boundary must remain`);
-    assert.match(html, /minimum-guest-launch\.js\?v=5/, `${file}: must load the Reading-authority Login gate`);
-    assert.match(html, /shared\.min\.js\?v=45/, `${file}: non-game cache binding must remain unchanged`);
+    assert.match(html, /minimum-guest-launch\.js\?v=6/, `${file}: must load the Reading-authority Login gate`);
+    assert.match(html, file === 'vault.html' ? /shared\.min\.js\?v=47/ : /shared\.min\.js\?v=45/, `${file}: non-game cache binding must stay on its current runtime`);
   }
   assert.doesNotMatch(sharedJs, /suppressScopedAnnouncement|staleScopedAnnouncement|avail-band-placeholder/);
   assert.doesNotMatch(sharedMin, /suppressScopedAnnouncement|staleScopedAnnouncement|avail-band-placeholder/);
@@ -281,25 +286,34 @@ test('all scoped pages use one fail-closed Login surface and game pages permanen
     const html = fs.readFileSync(path.join(root, file), 'utf8');
     assert.doesNotMatch(html, /document\.open\(\)|location\.replace\(target\)/, `${file}: direct Login surface must not redirect`);
   }
-  for (const file of ['my-progress.html', 'vault.html', 'leaderboard.html', 'reading-board.html', 'listening-board.html', 'typing-board.html', 'word-order-board.html']) {
+  for (const file of ['my-progress.html', 'leaderboard.html', 'reading-board.html', 'listening-board.html', 'typing-board.html', 'word-order-board.html']) {
     const html = fs.readFileSync(path.join(root, file), 'utf8');
     assert.match(html, /type="text\/plain" data-mrt-parked-runtime/, `${file}: data runtime must remain parked`);
   }
+  const vaultHtml = fs.readFileSync(path.join(root, 'vault.html'), 'utf8');
+  assert.match(vaultHtml, /<script src="js\/score\/personal-search\.js\?v=2"><\/script>[\s\S]*<script src="js\/score\/personal-content\.js\?v=5"><\/script>/, 'Vault Personal Search runtime must be active');
+  assert.doesNotMatch(vaultHtml, /data-mrt-parked-runtime src="js\/score\/(?:personal-search|personal-content)/, 'Vault Personal Search runtime must not stay parked');
+  assert.doesNotMatch(vaultHtml, /id="game-switcher"[^>]+data-current="vault"[^>]+data-wm-done=/, 'Vault must not need a page-local fallback-menu suppression marker');
 });
 
-test('Desktop keeps Tone floating geometry while all six Portrait games remove the duplicate game action', () => {
+test('all six games keep the right-side vertical control stack on Desktop and Portrait', () => {
   const lego = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
+  const tone = games.find((g) => g.id === 'tone').htmlText;
   for (const game of games) {
-    assert.match(game.htmlText, /css\/shared\.css\?v=35/, `${game.id}: must bind the current shared positioning layer`);
+    assert.match(game.htmlText, /css\/shared\.css\?v=36/, `${game.id}: must bind the current shared positioning layer`);
   }
-  assert.match(lego, /css\/shared\.css\?v=35/, 'Lego must bind the Portrait-only duplicate-game-action removal');
+  assert.match(lego, /css\/shared\.css\?v=36/, 'Lego must bind the current shared positioning layer');
   assert.match(sharedCss, /SHARED PAGE POSITIONING — Tone-authoritative Desktop \+ Portrait/);
-  assert.match(sharedCss, /body\[data-gsh-game\]:not\(\[data-gsh-game="lego"\]\) \.rg-ctl-wrap \{[\s\S]{0,220}right:12px !important;[\s\S]{0,180}bottom:calc\(60px \+ env\(safe-area-inset-bottom,0px\)\) !important;[\s\S]{0,120}z-index:100000 !important;/);
+  assert.match(sharedCss, /body\[data-gsh-game\] \.rg-ctl-wrap \{[\s\S]{0,220}right:12px !important;[\s\S]{0,180}bottom:calc\(60px \+ env\(safe-area-inset-bottom,0px\)\) !important;[\s\S]{0,320}flex-direction:column !important;[\s\S]{0,120}align-items:flex-end !important;/);
   assert.doesNotMatch(sharedCss, /SHARED PAGE POSITIONING[\s\S]*?(?:width:148px|height:44px|grid-template-columns:repeat\(3,44px\))[\s\S]*?Locked Phase 1\.2 playability/, 'shared positioning must not resize Tone floating controls');
-  assert.match(sharedCss, /body\[data-gsh-game\]:not\(\[data-gsh-game="lego"\]\) \.rg-ctl-wrap > #game-switcher,[\s\S]{0,260}bottom:calc\(100% \+ 8px\) !important;/);
-  assert.match(sharedCss, /@media \(max-width:768px\) and \(orientation:portrait\)[\s\S]{0,1000}html body\[data-gsh-game\] \.rg-ctl-wrap \{[\s\S]{0,360}left:50% !important;[\s\S]{0,100}width:max-content !important;[\s\S]{0,220}justify-content:center !important;[\s\S]{0,120}gap:8px !important;/, 'Portrait remaining floating actions must centre as a real-count group');
-  assert.match(sharedCss, /html body\[data-gsh-game\] \.rg-ctl-wrap > \.rg-ctl-fab\[aria-label="遊戲選單"\] \{\s*display:none !important;/, 'Portrait must remove the duplicate floating game action without a placeholder');
+  assert.match(sharedCss, /body\[data-gsh-game\] \.rg-ctl-wrap > #game-switcher,[\s\S]{0,260}bottom:calc\(100% \+ 8px\) !important;/);
+  assert.match(sharedCss, /@media \(max-width:768px\) and \(orientation:portrait\)[\s\S]{0,1000}html body\[data-gsh-game\] \.rg-ctl-wrap \{[\s\S]{0,240}right:12px !important;[\s\S]{0,160}width:max-content !important;[\s\S]{0,220}flex-direction:column !important;[\s\S]{0,180}align-items:flex-end !important;[\s\S]{0,160}gap:10px !important;/, 'Portrait must keep all controls in one right-side vertical stack');
+  assert.doesNotMatch(sharedCss, /html body\[data-gsh-game\] \.rg-ctl-wrap > \.rg-ctl-fab\[aria-label="遊戲選單"\][\s\S]{0,120}display:none !important;/, 'Portrait must keep the floating game action visible');
+  assert.doesNotMatch(tone, /data-gsh-game="tone"\] \.rg-ctl-wrap \{/, 'Tone must not fork the shared control axis');
+  assert.doesNotMatch(tone, /data-gsh-game="tone"\] \.rg-ctl-wrap > #game-switcher/, 'Tone must not fork the shared menu anchor');
   assert.match(sharedCss, /@media \(orientation:landscape\) and \(max-width:1024px\) and \(max-height:600px\)/, 'separate Mobile Landscape boundary must remain');
+  assert.match(sharedJs, /fab\.className = 'rg-ctl-fab rg-focus-fab'/, 'focus control needs one stable shared hook');
+  assert.match(sharedJs, /@media\(orientation:landscape\) and \(max-width:1024px\) and \(max-height:600px\)\{body\[data-gsh-game\] \.rg-focus-fab\{display:none !important;\}\}/, 'Mobile Landscape must hide only the floating focus control');
 });
 
 test('Core 5 retain original skip placement and game-owned dimensions', () => {
@@ -321,21 +335,21 @@ test('Core 5 retain original skip placement and game-owned dimensions', () => {
 test('Lego keeps PR98 lower gameplay and participates only through Login', () => {
   const lego = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
   assert.match(lego, /id="rg-login-slot"/, 'Lego must retain the PR98 Login host');
-  assert.match(lego, /css\/shared\.css\?v=35/);
-  assert.match(lego, /js\/core\/shared\.min\.js\?v=46/);
+  assert.match(lego, /css\/shared\.css\?v=36/);
+  assert.match(lego, /js\/core\/shared\.min\.js\?v=47/);
   assert.doesNotMatch(lego, /gsh-session-placeholder|gsh-question-surface|gsh-wordorder-content-slot/);
   assert.match(lego, /<div class="card out">[\s\S]{0,220}<div class="out-banner">[\s\S]{0,220}id="sentTh"[\s\S]{0,160}id="sentZh"[\s\S]{0,160}id="sentZhFull"/);
   assert.match(lego, /id="lego-reveal" class="card lego-flow-card hidden"[\s\S]{0,160}id="lego-reveal-th"[\s\S]{0,160}id="lego-reveal-zh"/);
 });
 
-test('Reading Desktop reuses the compatible Tone shell treatment without inventing retired controls', () => {
+test('Reading Desktop reuses the shared vertical controls without a page-specific fork', () => {
   const reading = games.find((g) => g.id === 'reading').htmlText;
   assert.doesNotMatch(reading, /ANN-BAND|ann-band|avail-band/, 'Reading must contain no announcement DOM, marker, or CSS-hide hook');
   assert.match(reading, /data-gsh-game="reading"\]\.rg-fake-fullscreen \.page-header \{ display:block !important; \}/, 'Reading Desktop focus mode must keep the game title and subtitle visible');
   assert.match(reading, /data-gsh-game="reading"\] #cookieConsentBanner \{ z-index:100100 !important; \}/, 'Reading cookie consent must stay above the floating controls and menus');
-  assert.match(reading, /data-gsh-game="reading"\] \.rg-ctl-wrap \{[\s\S]{0,140}flex-direction:row !important;[\s\S]{0,100}align-items:center !important;/, 'Reading Desktop must keep its existing switcher and focus controls in one row');
-  assert.match(reading, /\.rg-ctl-wrap > #game-switcher \{[\s\S]{0,260}position:absolute !important;[\s\S]{0,120}bottom:calc\(100% \+ 8px\) !important;/, 'Reading Desktop game switcher must open above the horizontal row');
-  assert.match(sharedCss, /body\[data-gsh-game\]:not\(\[data-gsh-game="lego"\]\) \.rg-ctl-wrap > #game-switcher,[\s\S]{0,140}body\[data-gsh-game\]:not\(\[data-gsh-game="lego"\]\) \.rg-ctl-wrap > \.grw-menu/, 'Reading must inherit the shared menu anchors without a page-specific fork');
+  assert.doesNotMatch(reading, /data-gsh-game="reading"\] \.rg-ctl-wrap \{/, 'Reading must not fork the shared control axis');
+  assert.doesNotMatch(reading, /data-gsh-game="reading"\] \.rg-ctl-wrap > #game-switcher/, 'Reading must not fork the shared menu anchor');
+  assert.match(sharedCss, /body\[data-gsh-game\] \.rg-ctl-wrap > #game-switcher,[\s\S]{0,140}body\[data-gsh-game\] \.rg-ctl-wrap > \.grw-menu/, 'Reading must inherit the shared menu anchors');
 });
 
 test('Tone-authority four-row stacks use exact 5px boundaries without resizing text', () => {
@@ -433,8 +447,19 @@ test('all games omit the removed leave-game control and dialog', () => {
   const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
   assert.doesNotMatch(sharedJs, /要離開遊戲嗎？|繼續遊戲|離開遊戲/);
   assert.doesNotMatch(sharedJs, /data-act="exit"|openGameExit|gsh-game-exit-dialog/);
-  for (const g of games) assert.match(g.htmlText, /shared\.min\.js\?v=46/, `${g.id}: must load the exit-free shared runtime`);
-  assert.match(legoHtml, /shared\.min\.js\?v=46/, 'Lego must load the exit-free shared runtime');
+  for (const g of games) assert.match(g.htmlText, /shared\.min\.js\?v=47/, `${g.id}: must load the exit-free shared runtime`);
+  assert.match(legoHtml, /shared\.min\.js\?v=47/, 'Lego must load the exit-free shared runtime');
+});
+
+test('the sitewide exit-intent survey and its submission path stay removed', () => {
+  const forbiddenSurvey = /exit-survey-bar|exit_survey_(?:shown|show|dismiss|submit)|ES_WEB3FORMS_KEY|花 3 秒告訴老師為什麼/;
+  assert.doesNotMatch(sharedJs, forbiddenSurvey, 'shared source must not create or submit the retired exit-intent survey');
+  assert.doesNotMatch(sharedMin, forbiddenSurvey, 'deployed shared runtime must not create or submit the retired exit-intent survey');
+  for (const file of fs.readdirSync(root).filter((name) => name.endsWith('.html'))) {
+    const html = fs.readFileSync(path.join(root, file), 'utf8');
+    assert.doesNotMatch(html, forbiddenSurvey, `${file}: retired exit-intent survey must not be defined inline`);
+  }
+  assert.match(sharedJs, /GA4 ARTICLE TRACKING/, 'unrelated article analytics must remain intact');
 });
 
 test('completed rounds no longer interrupt play with the removed VocabPopup lead flow', () => {
@@ -469,7 +494,7 @@ test('Tone question words and advanced sentences both follow the shared font mod
 test('Lego consumes the shared two-mode font path without a particle control', () => {
   const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
   const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
-  assert.match(legoHtml, /shared\.min\.js\?v=46/, 'Lego must load the current shared game runtime');
+  assert.match(legoHtml, /shared\.min\.js\?v=47/, 'Lego must load the current shared game runtime');
   assert.match(legoHtml, /lego-game-app\.js\?v=12/, 'Lego must load its Guest-only quota runtime');
   assert.match(legoApp, /window\.rgToggleFont\s*=\s*function/, 'Lego must expose the shared font adapter API');
   assert.match(legoApp, /classList\.toggle\('rg-modern-font'\)/, 'Lego must preserve the existing standard/modern modes');
@@ -578,11 +603,33 @@ test('Lego Resume preserves confirmed sentences and validates its game-owned bui
   assert.match(legoApp, /GameFlow\.enhanceResult\([\s\S]{0,260}legoClearResume\(\)/, 'only a successfully rendered Result may clear Resume');
 });
 
-test('learning helpers remain inline and do not create the fallback rice menu', () => {
+test('all six games keep learning helpers without any rice-button contract', () => {
+  const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
+  const vaultHtml = fs.readFileSync(path.join(root, 'vault.html'), 'utf8');
+  const listeningApp = games.find((g) => g.id === 'listening').appText;
+  const readingApp = games.find((g) => g.id === 'reading').appText;
+  const typingApp = games.find((g) => g.id === 'typing').appText;
   assert.match(wordMenuJs, /row\.classList\.add\('gsh-learning-tools'\)/);
-  assert.match(wordMenuJs, /row\.setAttribute\('data-wm-done', '1'\);[\s\S]{0,120}return;/);
-  assert.match(sharedJs, /querySelector\('\[data-wm-done="1"\]'\)\) return/);
+  assert.match(wordMenuJs, /row\.setAttribute\('role', 'toolbar'\)/);
+  assert.match(wordMenuJs, /row\.setAttribute\('data-wm-done', '1'\)/);
+  assert.doesNotMatch(wordMenuJs, /wm-trigger|textContent\s*=\s*['"]🍚['"]/);
+  assert.doesNotMatch(sharedJs, /wm-trigger|textContent\s*=\s*['"]🍚['"]/);
+  assert.doesNotMatch(sharedMin, /wm-trigger|textContent\s*=\s*['"]🍚['"]/);
+  for (const g of games) {
+    assert.match(g.htmlText, /js\/games\/word-menu\.js\?v=10/, `${g.id}: must load the inline learning-tool binder`);
+    assert.match(g.htmlText, /js\/core\/shared\.min\.js\?v=47/, `${g.id}: must load the rice-button-free shared runtime`);
+    assert.doesNotMatch(g.htmlText, /wm-trigger|點 🍚|<button[^>]*>[^<]*🍚/, `${g.id}: retired rice-button source contract remains`);
+  }
+  assert.match(legoHtml, /js\/core\/shared\.min\.js\?v=47/);
+  assert.doesNotMatch(legoHtml, /wm-trigger|點 🍚|<button[^>]*>[^<]*🍚/);
+  for (const app of [readingApp, typingApp, listeningApp]) assert.doesNotMatch(app, /#wm-trigger/);
   assert.match(games.find((g) => g.id === 'listening').htmlText, /id="zh-toggle-slot"/, 'Listening: translation control ต้องอยู่ใน inline learning tools');
+  assert.match(sharedJs, /fab\.id = 'zh-fab-standalone'/, 'Lego must retain its existing non-rice translation control');
+  assert.match(sharedJs, /GAME_ID === 'lego'[\s\S]{0,260}document\.getElementById\('zh-fab-standalone'\)[\s\S]{0,800}menu\.insertBefore\(legoTranslationRow, menu\.firstChild\)/, 'Lego translation must move inside its existing More menu instead of adding a fourth floating button');
+  assert.match(sharedJs, /var controlPage = String\(location\.pathname \|\| ''\)\.split\('\/'\)\.pop\(\)\.toLowerCase\(\);[\s\S]{0,120}if \(controlPage === 'vault\.html'\) return;/, 'Vault must stop before shared game translation controls are created');
+  assert.doesNotMatch(vaultHtml, /wm-trigger|zh-fab-standalone|<button[^>]*>[^<]*(?:🍚|🍙)/, 'Vault source must not define a floating rice control');
+  assert.match(vaultHtml, /@media\(max-width:768px\) and \(orientation:portrait\)\{[\s\S]{0,500}html body \.rg-ctl-wrap\{[\s\S]{0,320}right:12px!important;[\s\S]{0,320}flex-direction:row!important;/, 'Vault Portrait controls must stay in one row at the right corner');
+  assert.match(vaultHtml, /html body \.rg-ctl-wrap > #game-switcher\{[\s\S]{0,260}position:absolute!important;[\s\S]{0,180}right:0!important;[\s\S]{0,180}bottom:calc\(100% \+ 8px\)!important;/, 'Vault Portrait game menu must open above the right-corner controls');
 });
 
 test('all five games provide recoverable round resume UI', () => {
@@ -600,9 +647,9 @@ test('mobile resume uses one compact shared-copy line and three horizontal actio
   assert.match(sharedCss, /@media\(max-width:480px\)[\s\S]{0,500}\.gsh-resume-actions \{ flex-direction:row; flex-wrap:nowrap;/, 'mobile resume actions must stay horizontal');
   assert.match(sharedCss, /\.gsh-resume-actions button \{ flex:1 1 0;[^}]*min-height:36px;/, 'mobile resume actions must stay compact');
   for (const g of games) {
-    const sharedCssVersion = 35;
+    const sharedCssVersion = 36;
     assert.match(g.htmlText, new RegExp(`css/shared\\.css\\?v=${sharedCssVersion}`), `${g.id}: must load current shared game CSS`);
-    assert.match(g.htmlText, /js\/core\/shared\.min\.js\?v=46/, `${g.id}: must load shared resume copy`);
+    assert.match(g.htmlText, /js\/core\/shared\.min\.js\?v=47/, `${g.id}: must load shared resume copy`);
     assert.match(g.appText, /GameUiCopy\.resumeLine/, `${g.id}: resume detail must use shared semantic copy`);
   }
 });
@@ -802,7 +849,7 @@ test('Tone mobile touch surfaces keep Desktop gameplay free of keyboard-only cop
   assert.match(tone.htmlText, /\.tf-page \{[\s\S]{0,100}padding-top:10px;/, 'Portrait must not count the fixed navigation height twice above the Tone title');
   assert.match(tone.htmlText, /\.tf-result-login-card \{[\s\S]{0,180}padding-top:12px !important; padding-bottom:12px !important;[\s\S]{0,100}line-height:1\.5 !important;/, 'Portrait Result login card must keep equal top and bottom spacing');
   assert.match(tone.htmlText, /\.tf-result-login-card button \{[\s\S]{0,100}display:block; margin:9px auto 0 !important;/, 'Portrait Result login button must stay visibly separated from its copy');
-  assert.match(tone.htmlText, /game-switcher\.js\?v=4/, 'Tone must request the Lego-capable switcher');
+  assert.match(tone.htmlText, /game-switcher\.js\?v=6/, 'Tone must request the Vault-capable switcher');
   assert.match(tone.htmlText, /點選 1–5 就可以。/, 'Portrait Tour must not advertise computer keyboard controls');
 });
 
@@ -814,7 +861,7 @@ test('active Desktop D4-D5 keeps manual question/result flow and optional Hint c
   const flow = fs.readFileSync(path.join(root, 'js/games/game-flow.js'), 'utf8');
 
   for (const game of [tone, reading, typing, wordOrder]) {
-    assert.match(game.htmlText, /css\/shared\.css\?v=35/, `${game.id}: must request the current Desktop CSS`);
+    assert.match(game.htmlText, /css\/shared\.css\?v=36/, `${game.id}: must request the current Desktop CSS`);
     assert.match(game.appText, /GameFlow\.enhanceResult/, `${game.id}: Result must keep the shared manual replay flow`);
   }
   assert.doesNotMatch(flow, /下一輪將在|game_auto_next_pause/, 'shared question/Result flow must not restore countdown copy or pause controls');

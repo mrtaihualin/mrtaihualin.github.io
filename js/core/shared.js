@@ -30,7 +30,7 @@
 
 // ===================================================================
 // [01.2] 📦 GAME PANEL REGISTRY — ให้ popup ทุกชนิดในหน้าเกม "รู้จักกัน"
-//   Lin 2026-07-24: เจอปัญหาเปิดพร้อมกันได้ 2 กล่อง (เช่น 🍚 เมนูคำศัพท์ + 🎮 เมนูเกม) ทับกันบนจอ
+//   Lin 2026-07-24: เจอปัญหาเปิดพร้อมกันได้ 2 กล่อง (เช่นเครื่องมือคำศัพท์ + 🎮 เมนูเกม) ทับกันบนจอ
 //   → กติกาใหม่: ก่อนกล่องไหนจะเปิด ต้องเรียก closeOthers(ตัวเอง) ก่อนเสมอ → กล่องอื่นที่เปิดอยู่จะถูกปิดหมด เหลือเปิดได้ทีละกล่อง
 //   ใช้ pattern "window.GamePanels = window.GamePanels || ..." กันปัญหาลำดับโหลดไฟล์ (shared.js/word-menu.js ใครโหลดก่อนก็สร้างอันเดียวกันได้)
 window.GamePanels = window.GamePanels || (function () {
@@ -92,7 +92,7 @@ window.GameUiCopy = window.GameUiCopy || (function () {
 // ===================================================================
 // [01.3] 🪟 GAME MODAL REGISTRY HELPER — Shared Game UI Phase B1 (Lin 2026-08-10)
 //   Audit 2026-08-10 เจอว่า modal ของแต่ละเกมเอง (howto/star/badge/ask ฯลฯ) ไม่เคยลงทะเบียนกับ
-//   window.GamePanels ด้านบน ([01.2]) → เปิดซ้อนกับเมนู 🎮/🍚/🪧 ของ shared.js ได้ (เคยเป็นบั๊กจริงมาแล้วกับ 🪧 เอง)
+//   window.GamePanels ด้านบน ([01.2]) → เปิดซ้อนกับเมนู 🎮/🪧 ของ shared.js ได้ (เคยเป็นบั๊กจริงมาแล้วกับ 🪧 เอง)
 //   ฟังก์ชันนี้ "ห่อ" ของเดิมไว้เฉยๆ — ไม่แตะ HTML/CSS/เนื้อหา modal เดิมเลย แต่ละเกมยังเปิด/ปิด modal
 //   ด้วยฟังก์ชันเดิมของตัวเอง (style.display / classList / remove()) เหมือนเดิมทุกอย่าง แค่เพิ่ม 2 จุด:
 //     1) เรียก registerGameModal({...}) ครั้งเดียวตอน DOM พร้อม (ได้ handle กลับมา)
@@ -1563,94 +1563,6 @@ window.deleteFBComment = function(postId, idx) {
 };
 
 // ════════════════════════════════════════════════════════════════════
-// [04.1] 📋 EXIT-INTENT SURVEY — ทุกหน้า ยกเว้นหน้าเกม 5 ไฟล์ + หน้าดาวน์โหลดชีต
-//   Desktop: mouseout ขอบบน (exit-intent มาตรฐาน)
-//   มือถือ/สำรอง: idle timer 45 วิ (จับ exit-intent มือถือไม่ได้จริง)
-//   โชว์เป็นแถบเล็กด้านล่าง ไม่บล็อกจอ · โชว์ครั้งเดียวตลอดไปต่อเบราว์เซอร์ (localStorage)
-//   ส่งคำตอบ: web3forms (เข้าอีเมล Lin) + GA4 — ไม่ต้องสร้างตาราง Supabase (ตามที่ Lin เคาะ)
-// ════════════════════════════════════════════════════════════════════
-(function(){
-  var SHOWN_KEY = 'exit_survey_shown_v1';
-  var EXCLUDE = ['tone-finder.html','reading-game.html','typing-game.html','word-order.html','lego.html',
-                 'vocab-thank-you.html','thank-you.html','vocab-cheatsheet.html'];
-  var page = (location.pathname.split('/').pop() || 'index.html');
-  if (EXCLUDE.indexOf(page) !== -1) return;
-
-  function shown(){ try{ return localStorage.getItem(SHOWN_KEY)==='1'; }catch(e){ return false; } }
-  function markShown(){ try{ localStorage.setItem(SHOWN_KEY,'1'); }catch(e){} }
-  if (shown()) return;
-
-  var ES_WEB3FORMS_KEY = 'b3bfdb97-19dd-4910-bd15-89720be846c2'; // key เดียวกับ WEB3FORMS_KEY ด้านบน
-  var armed = false, triggered = false;
-
-  function showBar(){
-    if (triggered || shown() || document.getElementById('exit-survey-bar')) return;
-    triggered = true; markShown();
-    try{ if (typeof gtag === 'function') gtag('event','exit_survey_show',{category:window.GA_CATEGORY||'unknown', source_page: location.pathname }); }catch(e){}
-
-    var bar = document.createElement('div');
-    bar.id = 'exit-survey-bar';
-    bar.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:99998;background:#fff;border-top:2px solid #C8973A;box-shadow:0 -6px 24px rgba(0,0,0,.14);padding:14px 18px;font-family:"Noto Sans TC",sans-serif;transform:translateY(110%);transition:transform .3s ease;';
-    var opts = ['還在比較','時間喬不攏','想先自己練習','價格考量','其他'];
-    var optsHTML = opts.map(function(t){
-      return '<button class="es-opt" data-v="'+t+'" style="background:#FBF6EA;border:1px solid #EADFBF;border-radius:999px;padding:6px 13px;font-size:12.5px;color:#5C4410;cursor:pointer;">'+t+'</button>';
-    }).join('');
-    bar.innerHTML =
-      '<div style="max-width:720px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:10px;">'+
-        '<button id="es-x" aria-label="關閉" style="order:9;margin-left:auto;border:none;background:none;font-size:16px;color:#B0A080;cursor:pointer;line-height:1;">✕</button>'+
-        '<span style="font-size:13.5px;font-weight:700;color:#5C4410;flex:1 1 100%;">要離開了嗎？花 3 秒告訴老師為什麼 🙏</span>'+
-        '<div id="es-opts" style="display:flex;flex-wrap:wrap;gap:6px;flex:1 1 100%;">'+optsHTML+'</div>'+
-      '</div>';
-    document.body.appendChild(bar);
-    requestAnimationFrame(function(){ bar.style.transform='translateY(0)'; });
-
-    function closeBar(){ bar.style.transform='translateY(110%)'; setTimeout(function(){ try{ bar.remove(); }catch(e){} }, 320); }
-
-    var xBtn = bar.querySelector('#es-x');
-    if (xBtn) xBtn.onclick = function(){
-      try{ if (typeof gtag === 'function') gtag('event','exit_survey_dismiss',{category:window.GA_CATEGORY||'unknown', source_page: location.pathname }); }catch(e){}
-      closeBar();
-    };
-    bar.querySelectorAll('.es-opt').forEach(function(btn){
-      btn.onclick = function(){
-        var val = btn.getAttribute('data-v');
-        try{ if (typeof gtag === 'function') gtag('event','exit_survey_submit',{category:window.GA_CATEGORY||'unknown', reason: val, source_page: location.pathname }); }catch(e){}
-        try{
-          fetch('https://api.web3forms.com/submit', {
-            method:'POST', keepalive:true,
-            headers:{'Content-Type':'application/json','Accept':'application/json'},
-            body: JSON.stringify({ access_key: ES_WEB3FORMS_KEY, subject:'【離站調查】來自泰華網站', from_name:'泰華網站・離站調查', email:'exit-survey@mrtaihualin.com', '原因':val, '頁面':location.pathname })
-          }).then(function(r){ return r.json(); }).then(function(data){
-            if(!data || !data.success) console.error('[exit-survey] web3forms送出失敗:', data);
-          }).catch(function(e){ console.error('[exit-survey] 網路錯誤:', e); });
-        }catch(e){}
-        bar.innerHTML = '<div style="max-width:720px;margin:0 auto;text-align:center;font-size:13.5px;color:#5C4410;padding:4px 0;">✅ 謝謝你的回饋！</div>';
-        setTimeout(closeBar, 1600);
-      };
-    });
-  }
-
-  function armTriggers(){
-    if (armed) return;
-    armed = true;
-    // Desktop: exit-intent — เมาส์ออกทางขอบบนจอ (มาตรฐาน exit-intent)
-    document.addEventListener('mouseout', function(e){
-      if (e.clientY <= 0 && !e.relatedTarget && !e.toElement) showBar();
-    });
-    // สำรอง/มือถือ: idle timer (จับ mouse-leave บนมือถือไม่ได้จริง)
-    var idleTimer;
-    function resetIdle(){ clearTimeout(idleTimer); idleTimer = setTimeout(showBar, 45000); }
-    ['scroll','touchstart','click','keydown'].forEach(function(ev){
-      window.addEventListener(ev, resetIdle, {passive:true});
-    });
-    resetIdle();
-  }
-
-  // รอ engagement ขั้นต่ำ 8 วิ ก่อนเริ่มจับ (กัน bounce ไว โชว์ทันทีจนน่ารำคาญ)
-  setTimeout(armTriggers, 8000);
-})();
-
-// ════════════════════════════════════════════════════════════════════
 // [04.2] 📊 GA4 ARTICLE TRACKING — scroll depth + time on page
 //   ยิง article_scroll_depth (25/50/75/100%) + article_time_on_page (15/30/60/120 วิ)
 // ════════════════════════════════════════════════════════════════════
@@ -1864,6 +1776,7 @@ window.deleteFBComment = function(postId, idx) {
         // Lin 2026-07-25: กดเต็มจอแล้ว "ชุดปุ่มขวาห้ามขยับที่" ในคอม — เดิมเลื่อนลงขอบล่าง (6px) ทุกขนาดจอ
         //   ตอนนี้ให้เลื่อนเฉพาะมือถือ (≤768px) ที่แถบล่างหายไปจริงและพื้นที่จอน้อย · คอม (>768px) อยู่ที่เดิมตลอด ไม่กระโดด
         '@media(max-width:768px){.rg-ctl-wrap.rg-ctl-fs,body.rg-fake-fullscreen .rg-ctl-wrap{bottom:calc(6px + env(safe-area-inset-bottom,0px)) !important;}}' +
+        '@media(orientation:landscape) and (max-width:1024px) and (max-height:600px){body[data-gsh-game] .rg-focus-fab{display:none !important;}}' +
         '.rg-ctl-fab{width:44px;height:44px;border-radius:50%;background:rgba(17,17,17,0.9);border:1px solid rgba(200,151,58,0.5);color:#C8973A;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.3);user-select:none;flex-shrink:0;}' +
         '.rg-ctl-fab:active{transform:scale(.92);}' +
         // ── ดรอปดาวน์เมนูเกม (แนวตั้ง) — ซ่อนไว้ กดปุ่ม 🎮 ถึงเปิด · ทับสไตล์แถบเดิมของทุกเกมด้วย !important ──
@@ -1940,7 +1853,7 @@ window.deleteFBComment = function(postId, idx) {
       // ปุ่มเต็มจอ ⛶
       var fab = document.createElement('button');
       fab.type = 'button';
-      fab.className = 'rg-ctl-fab';
+      fab.className = 'rg-ctl-fab rg-focus-fab';
       function renderFab() {
         fab.textContent = on ? '✕' : '⛶';
         fab.title = isCore5Surface
@@ -1975,10 +1888,10 @@ window.deleteFBComment = function(postId, idx) {
 // ⚠️ กล่องที่ "ซ้อนอยู่ในปุ่ม/เมนูที่มี onclick อื่นของเกม" (เช่น .ozh/.szh ในเกมเลโก้, .tf-level-sub ในเมนูเลือกประโยค高級)
 //    เปิด/ปิดได้เฉพาะจากปุ่ม default เท่านั้น — ไม่ผูกคลิกรายจุดให้ เพราะจะไปชนกับฟังก์ชันเลือกคำ/เปิดเมนูของเกมเอง
 // Lin 2026-07-25 v2: ปุ่ม 🍙/🌾 = กดสลับคำแปลทันที (เหมือนเดิม) · ปุ่มสลับฟอนต์ "換現代字體/換回標準字體" ย้ายจากเมนู 🎮
-//    มาเป็น "อีกแถวหนึ่งในเมนู 🍚 (WordMenu)" ผ่านช่อง #font-toggle-slot ในหน้า (ตามที่ Lin สั่ง)
-//    ⚠️ v1 เคยทำ 🍙 เป็นดรอปดาวน์ซ้อนในเมนู 🍚 → กดแล้วเมนูปิดเฉยๆ สลับไม่ได้ (บั๊ก) แก้เป็น v2 นี้แล้ว
+//    มาอยู่ในแถวเครื่องมือใต้คำผ่านช่อง #font-toggle-slot ในหน้า
+//    ⚠️ v1 เคยทำ 🍙 เป็นดรอปดาวน์ซ้อน → กดแล้วเมนูปิดเฉยๆ สลับไม่ได้ (บั๊ก) แก้เป็น v2 นี้แล้ว
 // Lin 2026-07-25 v3: หน้าเกมเรียงลำดับคำ (word-order) ไม่มีปุ่ม 🍙 (บั๊กเดิม: กล่องคำแปลไม่ตอบสนอง) → ย้ายปุ่มสลับฟอนต์ของหน้านี้
-//    ไปอยู่ในเมนู 🍚 stub ตัวใหม่แทน (ดูบล็อก "🍚 เมนูตัวเลือกใต้คำ สำหรับหน้าที่ยังไม่มี WordMenu" ท้ายไฟล์นี้) ไม่ต้องมีซ้ำ 2 ที่ (เดิมอยู่ในเมนู 🎮)
+//    ไปอยู่ในแถวเครื่องมือใต้คำ ไม่ต้องมีซ้ำ 2 ที่ (เดิมอยู่ในเมนู 🎮)
 // ===================================================================
 (function () {
   function ready(fn) {
@@ -1989,6 +1902,8 @@ window.deleteFBComment = function(postId, idx) {
     try {
       var gs = document.getElementById('game-switcher');
       if (!gs) return; // เอาแค่หน้าเกมจริงๆ
+      var controlPage = String(location.pathname || '').split('/').pop().toLowerCase();
+      if (controlPage === 'vault.html') return; // Vault has no game translation tool; keep only 🎮 and focus controls.
 
       function callFontToggle() {
         if (typeof window.rgToggleFont === 'function') { window.rgToggleFont(); return true; }
@@ -1997,9 +1912,9 @@ window.deleteFBComment = function(postId, idx) {
       }
       // rg-modern-font = word-order/typing/reading, tf-modern-font = ทำนอง/เกมเสียง — เช็คทั้งคู่ เพราะแต่ละเกมตั้งชื่อ class เองคนละอัน
       function isFontOn() { return document.body.classList.contains('rg-modern-font') || document.body.classList.contains('tf-modern-font'); }
-      // ── ✍️ ปุ่มสลับฟอนต์ = อีกแถวหนึ่งในเมนู 🍚 (ช่อง #font-toggle-slot ในหน้า) — Lin 2026-07-25 v2
-      //    ย้ายมาจากเมนู 🎮 เดิม (ตามที่ Lin สั่ง) — ใส่เป็นแถวปกติในเมนู ไม่ทำดรอปดาวน์ซ้อน
-      //    Lin 2026-07-25 v4: ย้ายขึ้นมาไว้ "ก่อนด่าน isWordOrder return" — เกมเรียงคำมีเมนู 🍚 ของตัวเองแล้ว
+      // ── ✍️ ปุ่มสลับฟอนต์อยู่ในแถวเครื่องมือใต้คำ (ช่อง #font-toggle-slot ในหน้า)
+      //    ย้ายมาจากเมนู 🎮 เดิมและคงเป็นปุ่มกดตรง ไม่ทำดรอปดาวน์ซ้อน
+      //    Lin 2026-07-25 v4: ย้ายขึ้นมาไว้ "ก่อนด่าน isWordOrder return" เพื่อให้เกมเรียงคำมีปุ่มนี้ด้วย
       //    ต้องได้ปุ่ม 字體 ด้วย แต่ยังไม่เอาปุ่ม 翻譯 (คำแปลคุมด้วยปุ่ม 🍙 ใต้คำที่เฉลยแทน)
       // Phase 1.2: Core 5 game bundles load asynchronously after DOM ready. Retry only this
       // shared adapter until the existing game-owned font API is ready; do not add a font mode.
@@ -2055,7 +1970,7 @@ window.deleteFBComment = function(postId, idx) {
       var isWordOrder = (location.pathname || '').toLowerCase().indexOf('word-order') > -1;
 
       // Lin 2026-07-16: ปุ่ม 🍙/🌾 กดแล้วไม่มีผลในเกมเรียงคำ (กล่องคำแปล .zh-hint#wo-zh ไม่ได้อยู่ในลิสต์ ZH_ALL) → ไม่มีปุ่ม 🍙 ในหน้านี้
-      // ปุ่มสลับฟอนต์ของหน้านี้ย้ายไปอยู่ในเมนู 🍚 stub ตัวใหม่แล้ว (Lin 2026-07-25 v3) → จบงานของบล็อกนี้แค่นี้พอ ไม่ต้องสร้างอะไรเพิ่ม
+      // ปุ่มสลับฟอนต์ของหน้านี้อยู่ในแถวเครื่องมือใต้คำแล้ว → จบงานของบล็อกนี้แค่นี้พอ ไม่ต้องสร้างอะไรเพิ่ม
       if (isWordOrder) return;
 
       var KEY = 'games_hide_zh';
@@ -2097,7 +2012,7 @@ window.deleteFBComment = function(postId, idx) {
       }
 
       // ── ปุ่ม 🍙/🌾 = กดสลับคำแปลทันที (ไม่มีดรอปดาวน์ซ้อน) — Lin 2026-07-25 v2
-      //    (v1 เคยทำเป็นดรอปดาวน์ซ้อนในเมนู 🍚 → กดแล้วเมนูปิดเฉยๆ สลับไม่ได้ = บั๊ก · v2 คืนเป็นกดสลับตรงๆ เหมือนเดิม)
+      //    (v1 เคยทำเป็นดรอปดาวน์ซ้อน → กดแล้วเมนูปิดเฉยๆ สลับไม่ได้ = บั๊ก · v2 คืนเป็นกดสลับตรงๆ เหมือนเดิม)
       var fab = document.createElement('button');
       fab.type = 'button';
       fab.className = 'rg-ctl-fab';
@@ -2117,7 +2032,7 @@ window.deleteFBComment = function(postId, idx) {
         inlineSlot.appendChild(fab);
       } else {
         // lego (ไม่มีช่องแถวปุ่มใต้คำ + ไม่มีสลับฟอนต์) → ต่อ 🍙 เข้าชุดปุ่มลอยเดิมไปก่อน (.rg-ctl-wrap)
-        // Lin 2026-07-25 v3: ตั้ง id ไว้ให้บล็อก "🍚 เมนูตัวเลือกใต้คำ สำหรับหน้าที่ยังไม่มี WordMenu" (ท้ายไฟล์นี้) มาย้ายปุ่มนี้เข้าไปเป็นแถว "翻譯" แทนที่จะลอยเดี่ยว
+        // Lego คงปุ่มแปลเดี่ยว 🍙 ไว้ในชุดปุ่มลอยเดิม เพราะไม่มีแถวเครื่องมือใต้คำ
         fab.id = 'zh-fab-standalone';
         var wrap2 = document.querySelector('.rg-ctl-wrap');
         if (wrap2) { wrap2.appendChild(fab); } else { document.body.appendChild(fab); }
@@ -2222,6 +2137,19 @@ window.deleteFBComment = function(postId, idx) {
         (hasAsk ? '<div class="grw-item" data-act="ask"><span class="ico">💬</span>有問題想問老師</div>' : '') +
         '<div class="grw-item" data-act="report"><span class="ico">🔧</span>回報問題</div>' +
         '<div class="grw-item" data-act="review"><span class="ico">💭</span>心得 / 學到了什麼</div>';
+      // Lego keeps its existing translation toggle inside the game-owned More menu,
+      // so every game has the same floating control count without losing translation.
+      if (GAME_ID === 'lego') {
+        var legoTranslationButton = document.getElementById('zh-fab-standalone');
+        if (legoTranslationButton) {
+          var legoTranslationRow = document.createElement('div');
+          legoTranslationRow.className = 'grw-item';
+          legoTranslationRow.dataset.act = 'translation';
+          legoTranslationRow.appendChild(legoTranslationButton);
+          legoTranslationRow.appendChild(document.createTextNode('翻譯'));
+          menu.insertBefore(legoTranslationRow, menu.firstChild);
+        }
+      }
       menu.addEventListener('click', function (e) {
         var it = e.target.closest('.grw-item');
         if (!it) return;
@@ -2231,7 +2159,7 @@ window.deleteFBComment = function(postId, idx) {
         else if (it.dataset.act === 'report') grwOpenReport(GAME_ID, FN_URL);
         else if (it.dataset.act === 'review') grwOpenReview(GAME_ID, FN_URL);
       });
-      // Lin 2026-07-25: เมนูนี้ไม่เคยลงทะเบียนกับ GamePanels กลางมาก่อน → เปิด 🪧 พร้อม 🎮/🍚 ค้างไว้ได้ ซ้อนทับกันบนจอ (บั๊กจริงที่ Lin เจอ)
+      // Lin 2026-07-25: เมนูนี้ไม่เคยลงทะเบียนกับ GamePanels กลางมาก่อน → เปิด 🪧 พร้อม 🎮 ค้างไว้ได้ ซ้อนทับกันบนจอ (บั๊กจริงที่ Lin เจอ)
       // แก้: ลงทะเบียนเหมือนกล่องอื่น กันซ้อนทั้ง 2 ทาง (เปิด 🪧 ต้องปิดกล่องอื่นก่อน + กล่องอื่นเปิดต้องปิด 🪧 ได้ด้วย)
       function fitMoreMenuToViewport() {
         var wrap = document.querySelector('.rg-ctl-wrap');
@@ -2454,112 +2382,5 @@ window.deleteFBComment = function(postId, idx) {
   document.head.appendChild(style);
 })();
 
-// ════════════════════════════════════════════════════════════
-// [06.4] 🍚 FALLBACK WORD MENU — สำหรับเกมที่ยังไม่มี WordMenu ของตัวเอง
-// Lin สั่ง: "ทุกเกมต้องมีเมนูแบบนี้ ใส่มาก่อน ถ้ายังทำงานไม่ได้ไม่เป็นไร ให้เป็นปุ่มเปล่าๆ"
-// → ทุกหน้าเกมโชว์เมนู 🍚 เหมือนกันหมด 8 แถว (發音/讀音/英文讀音/翻譯/單字庫/提示/螢幕鍵盤/字體) — เพิ่ม 英文讀音 2026-07-25
-//   แถวไหนมีฟังก์ชันจริงอยู่แล้วในหน้านั้น (翻譯/字體) ผูกให้ทำงานจริง — ที่เหลือเป็นปุ่มเปล่า (จางลง กดไม่มีผล) รอเพิ่มฟีเจอร์ทีหลัง
-// หน้าที่มี WordMenu ของตัวเองแล้ว (typing/reading/tone-finder ผ่าน word-menu.js) → บล็อกนี้ข้ามไปเลย ไม่ทำซ้ำ
-// ════════════════════════════════════════════════════════════
-(function () {
-  function ready(fn) {
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
-    else fn();
-  }
-  ready(function () {
-    try {
-      if (!document.getElementById('game-switcher')) return;
-      if (document.querySelector('[data-wm-done="1"]')) return; // หน้านี้มี inline WordMenu อยู่แล้ว
-
-      function callFontToggle() {
-        if (typeof window.rgToggleFont === 'function') { window.rgToggleFont(); return true; }
-        if (window.TF && typeof window.TF.toggleFont === 'function') { window.TF.toggleFont(); return true; }
-        return false;
-      }
-      function isFontOn() { return document.body.classList.contains('rg-modern-font') || document.body.classList.contains('tf-modern-font'); }
-      var hasFontToggle = typeof window.rgToggleFont === 'function' || (window.TF && typeof window.TF.toggleFont === 'function');
-
-      var wrap = document.querySelector('.rg-ctl-wrap');
-      if (!wrap) return; // ไม่ควรเกิด (ทุกหน้าเกมมีชุดปุ่มลอยนี้อยู่แล้ว) แต่กันพังไว้
-
-      function stubRow(icon, label) {
-        var d = document.createElement('div');
-        d.className = 'grw-item stub';
-        d.innerHTML = '<span class="ico">' + icon + '</span>' + label;
-        d.title = '這個功能這頁還沒開放';
-        return d;
-      }
-
-      var menu = document.createElement('div');
-      menu.className = 'grw-menu';
-
-      // ── 翻譯 ── ถ้าหน้านี้มีปุ่ม 🍙/🌾 ลอยเดี่ยวอยู่แล้ว (เช่นเกมเลโก้) → ย้ายเข้ามาเป็นแถวในเมนูนี้แทน (ทำงานจริง ไม่ใช่ปุ่มเปล่า)
-      var existingZhFab = document.getElementById('zh-fab-standalone');
-      var zhRow;
-      if (existingZhFab) {
-        zhRow = document.createElement('div');
-        zhRow.className = 'grw-item';
-        zhRow.appendChild(existingZhFab);
-        var zhLbl = document.createElement('span');
-        zhLbl.textContent = '翻譯';
-        zhRow.appendChild(zhLbl);
-        zhRow.addEventListener('click', function (e) {
-          if (e.target === existingZhFab || existingZhFab.contains(e.target)) return; // ปุ่มจริงจัดการคลิกของตัวเองอยู่แล้ว กันสั่งซ้ำ
-          existingZhFab.click();
-        });
-      } else {
-        zhRow = stubRow('🍙', '翻譯'); // เช่นหน้าเกมเรียงคำ — บั๊กเดิมทำให้ยังไม่มีปุ่มจริงให้ย้าย (ดูคอมเมนต์ 2026-07-16 ด้านบนไฟล์นี้)
-      }
-
-      // ── 字體 ── ถ้าหน้านี้มีฟังก์ชันสลับฟอนต์จริง (เช่นเกมเรียงคำ) → ผูกให้ทำงานจริง ไม่งั้นเป็นปุ่มเปล่า (เช่นเกมเลโก้ ยังไม่มีฟีเจอร์นี้)
-      var fontRow;
-      if (hasFontToggle) {
-        var fontOn = isFontOn();
-        fontRow = document.createElement('div');
-        fontRow.className = 'grw-item';
-        function renderFontRow() {
-          fontRow.innerHTML = '<span class="ico">' + (fontOn ? '✅' : '✍️') + '</span>' + (fontOn ? '換回標準字體' : '換現代字體');
-        }
-        renderFontRow();
-        fontRow.addEventListener('click', function () {
-          if (callFontToggle()) { fontOn = isFontOn(); renderFontRow(); }
-        });
-      } else {
-        fontRow = stubRow('✍️', '字體');
-      }
-
-      menu.appendChild(stubRow('🔊', '發音'));
-      menu.appendChild(stubRow('🐣', '讀音'));
-      menu.appendChild(stubRow('🔡', '英文讀音')); // Lin 2026-07-25: 2 เกมนี้ยังไม่มีระบบโชว์คำอ่าน → ใส่แถวเปล่าไว้ก่อนให้เมนูเหมือนกันทุกเกม
-      menu.appendChild(zhRow);
-      menu.appendChild(stubRow('🔖', '單字庫'));
-      menu.appendChild(stubRow('💡', '提示'));
-      menu.appendChild(stubRow('⌨️', '螢幕鍵盤'));
-      menu.appendChild(fontRow);
-
-      var trigger = document.createElement('button');
-      trigger.type = 'button';
-      trigger.className = 'rg-ctl-fab';
-      trigger.textContent = '🍚';
-      trigger.title = '更多功能';
-      trigger.setAttribute('aria-label', '更多功能');
-
-      var panel = { isOpen: function () { return menu.classList.contains('gs-open'); }, close: function () { menu.classList.remove('gs-open'); } };
-      if (window.GamePanels) window.GamePanels.add(panel);
-      trigger.onclick = function (e) {
-        e.stopPropagation();
-        var opening = !menu.classList.contains('gs-open');
-        if (opening && window.GamePanels) window.GamePanels.closeOthers(panel);
-        menu.classList.toggle('gs-open');
-      };
-      document.addEventListener('click', function (e) {
-        if (e.target !== trigger && !trigger.contains(e.target) && !menu.contains(e.target)) menu.classList.remove('gs-open');
-      });
-
-      // Lin 2026-07-25: ปุ่ม 🍚 ต้องอยู่ "ติดกลุ่มปุ่ม บนสุด" เหมือนเกมอื่น (เดิม appendChild = ไปอยู่ล่างสุดใต้ปุ่มอื่นหมด)
-      var _menuBtn = wrap.querySelector('.rg-ctl-fab[aria-label="遊戲選單"]'); // ปุ่ม 🎮 — จุดอ้างอิงเดียวกับ word-menu.js
-      wrap.insertBefore(trigger, _menuBtn || null);
-      wrap.insertBefore(menu, trigger);
-    } catch (e) {}
-  });
-})();
+// Learning tools stay in their game-owned inline toolbars. No shared fallback
+// creates a second control surface on game or non-game pages.

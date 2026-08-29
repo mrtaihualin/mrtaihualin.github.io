@@ -1,6 +1,16 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-28 Asia/Bangkok** — Shared Login surfaces across games and parked account pages
+**Updated: 2026-08-29 Asia/Bangkok** — Login Free Personal Data/Search candidate
+
+## 2026-08-29 — Login Free Personal Data/Search (`PASS_LOCAL / REPLACEMENT_HUMAN_GATE_PENDING / PRODUCTION_UNCHANGED`)
+
+- Activated the existing account-owned word and sentence vault clients on `vault.html` without changing their storage schema, provider/session implementation or closed P1-B-05/P1-E-05 fixtures. The Chinese `泰語單字庫` surface has one combined zero-write search above `我的單字` and `我的句子`, grouped cross-type results, approved Thai/reading/romanization/Chinese/source matching and the closed `คุณ / คุน / คุร / 你 / 您 / khun / kun` alias group.
+- Raised the existing independent caps to 50 words plus 50 sentences, kept no-auto-delete and delete recovery, and uses the exact full-state copy `單字庫已滿，請先刪除不需要的內容`. Source display uses the six full practice-room names; Tone, Reading, Listening and Typing can save exact supplied sentence records, while Sentence Building and Word Order remain sentence-only.
+- Added the Vault route to the existing six-game switcher, Portrait bottom navigation, both game-hub card grids and scoped non-game Login bars. Vault renders no self-link, My Progress remains a separate progress-only destination, and short-screen Mobile Landscape keeps the bottom navigation hidden. The shared Login transition reuses the existing owner-scoped sync clients; Guest Vault reads no personal content.
+- Removed the retired `🍚` More/word-menu control from the shared fallback and game binder, and removed its stale help, tour, analytics and keyboard-dismiss dependencies. The five applicable games keep their existing inline learning tools; Lego keeps translation inside its existing `其他／回報` menu instead of adding a fourth floating control. All six games now use the same visible floating-control contract: Desktop and Portrait show right-side vertical `遊戲／專注／其他`, while short Landscape keeps `遊戲／其他`. Vault retains the reserved full-width account band plus only its game-switcher and focus controls, with no floating `🍚` or `🍙`; on Portrait those two controls form one separate right-corner row and the game menu opens above it. Its cache binding guarantees the retired control cannot return from an older shared runtime.
+- Targeted Personal Search, Personal Content, practice-event, Minimum Guest, shared-game, owner-race and vault-sync suites pass, including the 50-local + 25-remote over-limit fixture. The full site gate, syntax and whitespace checks pass across the current 1,017-file tree. Rendered browser checks cover all six games at 1280×900, 390×844 and 844×390 with zero `🍚` controls, preserved game/focus surfaces and Lego translation; Vault Desktop/Portrait/Landscape checks preserve the accepted account-band behavior and show no fresh console warning/error. No merge, deploy, Production, Supabase, schema/config/RLS, provider, session, account or application-data mutation occurred.
+
+**Prior update: 2026-08-28 Asia/Bangkok** — Shared Login surfaces across games and parked account pages
 
 ## 2026-08-28 — Shared Login surfaces / announcement removal (`PASS_LOCAL / PRODUCTION_UNCHANGED`)
 
@@ -23,7 +33,7 @@
 
 ## 2026-08-28 — Reading Desktop Tone-shell parity (`PASS_LOCAL / PREVIEW_PASS / HUMAN_PASS / PRODUCTION_UNCHANGED`)
 
-- Reused the accepted Tone shell treatment that is compatible with Reading ordinary Desktop: the Reading title/subtitle remain visible in focus mode, the site announcement stays out of the game surface, and the existing game-switcher and focus controls form one horizontal row with the switcher opening above it. No retired `🍚` or absent More control was added.
+- Reused the accepted Tone shell treatment that is compatible with Reading ordinary Desktop: the Reading title/subtitle remain visible in focus mode, the site announcement stays out of the game surface, and Reading inherits the shared right-side vertical `遊戲／專注／其他` stack without a page-specific control fork. No retired `🍚` control was added.
 - Copied Tone's complete gold question-band presentation on Reading Desktop: progress spacing, inner padding, Thai/roman/Chinese reading rhythm, translation color, and the full-width gold learning-tool row with its closing border. Reading's additional learning tools and gameplay remain intact; Portrait and Mobile Landscape are unchanged.
 - Corrected Reading's stale help and first-visit tour so they point to the existing inline learning toolbar instead of the retired `🍚` menu. Reading gameplay, First Check score, Hint zero-lock, component order, option generation, font/particle behavior and mobile layouts remain unchanged.
 - Reading and shared-game regressions, Login/Auth compatibility checks, source whitespace validation, secret scan and the full 1,018-file gate pass. The Draft browser check at Desktop 1280×720 loads protected Guest content and confirms the retained Reading menu, inline learning toolbar, no `🍚` trigger and Tone-matched question band; Lin accepted this Draft visually.

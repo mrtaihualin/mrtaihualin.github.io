@@ -25,7 +25,7 @@
     'typing-board.html': '.section-wrap > div:first-child',
     'word-order-board.html': '.section-wrap > div:first-child'
   };
-  var parkedPages = /^(?:games-challenge|my-progress|vault|all-board|leaderboard|reading-board|listening-board|typing-board|word-order-board)\.html$/;
+  var parkedPages = /^(?:games-challenge|my-progress|all-board|leaderboard|reading-board|listening-board|typing-board|word-order-board)\.html$/;
   var landscapeQuery = window.matchMedia && window.matchMedia('(orientation: landscape) and (max-width: 1024px) and (max-height: 600px)');
   var activeSurface = null;
   var gameState = null;
@@ -93,6 +93,10 @@
 
   // Exact Reading Account Bar template. Every scoped page calls this one
   // function; the only structural variant is omitting Help on non-game pages.
+  function showsVaultCompanion() {
+    return !gamePages[filename] && filename !== 'vault.html' && filename !== 'my-progress.html';
+  }
+
   function readingSurface(slot, withHelp, originalHelp) {
     var row = document.createElement('div');
     row.className = 'rg-tools-row';
@@ -126,6 +130,13 @@
         }
       });
       surface.appendChild(help);
+    } else if (showsVaultCompanion()) {
+      var vault = document.createElement('a');
+      vault.className = 'tf-streak-chip mrt-login-vault';
+      vault.href = 'vault.html';
+      vault.title = '開啟泰語單字庫';
+      vault.textContent = '🔖 字庫';
+      surface.appendChild(vault);
     }
     var stats = document.createElement('div');
     stats.className = 'rg-stat-row';
@@ -305,6 +316,22 @@
     status.textContent = copy[state];
   }
 
+  function syncPersonalLibraries(user) {
+    var client = window.getSupabaseClient ? window.getSupabaseClient() : null;
+    var uid = user && user.id ? String(user.id) : null;
+    if (window.WordVault && typeof WordVault.sync === 'function') {
+      try { WordVault.sync(client, uid); } catch (error) {}
+    }
+    if (window.SentenceVault && typeof SentenceVault.sync === 'function') {
+      try { SentenceVault.sync(client, uid); } catch (error) {}
+    }
+  }
+
+  function bindPersonalLibraries() {
+    if (!window.SITE_AUTH || typeof SITE_AUTH.onChange !== 'function') return;
+    SITE_AUTH.onChange(syncPersonalLibraries);
+  }
+
   function init() {
     var surface = gamePages[filename] ? syncGameSurface() : singleSurface();
     if (!surface) return;
@@ -314,7 +341,7 @@
       if (landscapeQuery.addEventListener) landscapeQuery.addEventListener('change', onChange);
       else if (landscapeQuery.addListener) landscapeQuery.addListener(onChange);
     }
-    authDependencies().catch(function () { setState('error'); });
+    authDependencies().then(bindPersonalLibraries).catch(function () { setState('error'); });
   }
 
   window.MRT_LOGIN_SURFACE = { setState: setState };

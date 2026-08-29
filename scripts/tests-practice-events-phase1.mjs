@@ -76,7 +76,7 @@ check('Minimum Guest Launch parks the recorder on all Core 5 pages', ['tone-find
   const html = read(name);
   return !/practice-events\.js/.test(html) && /game-flow\.js\?v=11/.test(html);
 }));
-check('personal content loads authenticated status evidence before its UI', /practice-events\.js\?v=2[\s\S]*personal-content\.js\?v=4/.test(read('vault.html')));
+check('personal content loads authenticated status evidence before its UI', /practice-events\.js\?v=2[\s\S]*personal-content\.js\?v=5/.test(read('vault.html')));
 
 function deferred() {
   let resolve;
