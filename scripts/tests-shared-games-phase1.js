@@ -248,7 +248,7 @@ test('all scoped pages use one fail-closed Login surface and game pages permanen
   for (const file of nonGameScopedPages) {
     const html = fs.readFileSync(path.join(root, file), 'utf8');
     assert.match(html, /<!--ANN-BAND:START--><!-- Login UI scope: no announcement strip\. --><!--ANN-BAND:END-->/, `${file}: existing non-game announcement capability boundary must remain`);
-    assert.match(html, /minimum-guest-launch\.js\?v=6/, `${file}: must load the Reading-authority Login gate`);
+    assert.match(html, file === 'games.html' ? /minimum-guest-launch\.js\?v=7/ : /minimum-guest-launch\.js\?v=6/, `${file}: must load the Reading-authority Login gate`);
     assert.match(html, file === 'vault.html' ? /shared\.min\.js\?v=47/ : /shared\.min\.js\?v=45/, `${file}: non-game cache binding must stay on its current runtime`);
   }
   assert.doesNotMatch(sharedJs, /suppressScopedAnnouncement|staleScopedAnnouncement|avail-band-placeholder/);

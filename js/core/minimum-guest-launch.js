@@ -63,7 +63,6 @@
 
   function hideParkedUi() {
     var selectors = [
-      '#gameSearchGate',
       '.gh-main-card.gh-disabled',
       '#tf-challenge-banner',
       '.tf-challenge-banner',

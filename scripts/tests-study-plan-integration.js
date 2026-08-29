@@ -120,9 +120,11 @@ function harness(options={}){
 }
 
 async function main(){
-  await test('Minimum Guest hub parks Search and Time Plan UI',()=>{
+  await test('Minimum Guest hub restores Game Search while Time Plan stays parked',()=>{
     const html=read('games.html');
-    assert.doesNotMatch(html,/id="gameSearchGate"|id="gameSearchInput"|id="timePlanTitle"|id="timePlanMinutes"|id="timePlanBtn"/);
+    assert.match(html,/id="gameSearchGate"/);
+    assert.match(html,/js\/games\/games-search-ui\.js\?v=5/);
+    assert.doesNotMatch(html,/id="gameSearchInput"|id="timePlanTitle"|id="timePlanMinutes"|id="timePlanBtn"|js\/games\/study-plan(?:-core)?\.js/);
   });
 
   await test('all six Guest games park personal lifecycle listeners',()=>{

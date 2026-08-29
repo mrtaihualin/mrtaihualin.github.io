@@ -219,7 +219,11 @@
   ]
 }
 </script>
-<script src="js/core/minimum-guest-launch.js?v=6"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer src="js/core/supabase-config.js?v=10"></script>
+<script defer src="js/core/supabase-fetch-cache.js?v=1"></script>
+<script defer src="js/core/auth-widget.js?v=17"></script>
+<script src="js/core/minimum-guest-launch.js?v=7"></script>
 </head>
 <body>
 <!--ANN-BAND:START--><!-- Login UI scope: no announcement strip. --><!--ANN-BAND:END-->
@@ -234,6 +238,10 @@
 <main class="gh-wrap">
   <h1>🎮 泰語遊戲中心</h1>
   <p class="gh-sub">五款免費遊戲直接開始，聽力練習室即將開幕。</p>
+
+  <div id="gameSearchGate" class="gh-search-wrap" aria-live="polite">
+    <div class="gh-search-auth-message">正在確認登入狀態…</div>
+  </div>
 
   <!-- 🆕 2026-08-10 — IA 重整：3 การ์ดหลักแทน 5 เกมเล็กแยกกัน (5 เกมย้ายไปอยู่ใน games-practice.html)
        ตามที่ Lin สั่ง: 泰語遊戲練習室 / 綜合挑戰 / 造句練習 — เท่ากันทุกมิติ ห้ามให้ใบไหนเด่นกว่าใบอื่น -->
@@ -278,6 +286,11 @@
 </footer>
 
 <script src="data/nav-template.js?v=4"></script>
+<script src="data/search-index.js?v=1"></script>
+<script src="data/game-problem-corpus-v2_3.js?v=1"></script>
+<script src="js/core/search-engine.js?v=3"></script>
+<script src="js/games/game-problem-search.js?v=2"></script>
+<script src="js/games/games-search-ui.js?v=5"></script>
 <script src="js/core/shared.min.js?v=45"></script>
 
 <!-- Cookie consent banner (Google Consent Mode v2) — แทรกอัตโนมัติโดย scripts/apply-cookie-consent.js ห้ามแก้มือ ให้แก้ที่ต้นฉบับแล้วรันสคริปต์ใหม่ -->

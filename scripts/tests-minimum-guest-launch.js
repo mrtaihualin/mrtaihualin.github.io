@@ -31,8 +31,9 @@ function ok(value, message) {
 
 activePages.concat(['vault.html', 'games-challenge.html']).forEach(function (file) {
   var html = read(file);
-  ok(html.indexOf('js/core/minimum-guest-launch.js?v=6') !== -1, file + ' loads the current Login-entry launch gate');
-  ok(html.indexOf('js/core/minimum-guest-launch.js?v=6') < html.indexOf('</head>'), file + ' loads the launch gate in head');
+  var binding = file === 'games.html' ? 'js/core/minimum-guest-launch.js?v=7' : 'js/core/minimum-guest-launch.js?v=6';
+  ok(html.indexOf(binding) !== -1, file + ' loads the current Login-entry launch gate');
+  ok(html.indexOf(binding) < html.indexOf('</head>'), file + ' loads the launch gate in head');
 });
 
 staticParkedPages.filter(function (file) { return file !== 'line-callback.html'; }).forEach(function (file) {
@@ -49,6 +50,7 @@ ok(gate.indexOf('my-progress') !== -1 && gate.indexOf('games-challenge') !== -1,
 ok(gate.indexOf('vault-btn-slot') === -1 && gate.indexOf('a[href="vault.html"]') === -1,
   'authorized Personal Data controls and Vault routes are not hidden');
 ok(!/\(\?:my-progress\|vault\|/.test(gate), 'Vault is removed from the parked route matcher');
+ok(gate.indexOf("'#gameSearchGate'") === -1, 'authorized Game Search gate is not hidden');
 
 function runGateAt(hash) {
   var replacedUrl = null;
