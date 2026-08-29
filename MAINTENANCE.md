@@ -1,6 +1,15 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-29 Asia/Bangkok** — Login Free Personal Data/Search candidate
+**Updated: 2026-08-29 Asia/Bangkok** — Restore Game Search candidate
+
+## 2026-08-29 — Restore Game Search (`PASS_LOCAL / PROTECTED_PREVIEW_PENDING / PRODUCTION_UNCHANGED`)
+
+- Restored the previously released Login Free Game Search gate on `games.html` from the current committed Search engine/index/corpus/UI/auth clients. Guest receives only the locked Login message; authenticated Search remains one successful Search per account/Taipei day, claims the existing server quota before local analysis, sends only `request_id`, covers six games and excludes Challenge.
+- Removed only `#gameSearchGate` from the Minimum Guest hide list and bound the hub to the new cache revision. Time Auto Plan DOM and runtime stay absent; current Login, Vault, cards and control layout remain unchanged.
+- Regressions require the Search gate/runtime chain while continuing to reject Time Auto Plan restoration. No provider, session, account, application-data, fixture, quota, Supabase, schema/config/RLS or Edge action is part of this source Delta.
+- Search static, entitlement and behavioral suites, Minimum Guest, Study Plan integration, shared-game regression, syntax and whitespace checks pass; the full site gate passes across the current 1,018-file tree. Isolated browser checks cover Guest and simulated Login Free at Desktop and Mobile Portrait with no external network, provider, session, account data or Search/quota invocation; the restored Search has one input/button, existing cards stay present, Time Auto Plan stays absent, horizontal overflow is zero and no fresh console warning/error appears.
+
+**Prior update: 2026-08-29 Asia/Bangkok** — Login Free Personal Data/Search candidate
 
 ## 2026-08-29 — Login Free Personal Data/Search (`PASS_LOCAL / REPLACEMENT_HUMAN_GATE_PENDING / PRODUCTION_UNCHANGED`)
 
