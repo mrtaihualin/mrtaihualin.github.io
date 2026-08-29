@@ -904,10 +904,7 @@
     var gb = document.getElementById('wo-golden-badge'); if (gb) gb.style.display = sentenceGolden ? '' : 'none';
     updateHintWarning();
 
-    // 進度條：目前已完成幾句／全部幾句
-    document.getElementById('pf').style.width = (idx / SET.length * 100) + '%';
-    document.getElementById('prog-txt').textContent = idx + '/' + SET.length;
-    // Phase C.1 (2026-08-10): #wo-qn/#wo-qt ใน Session Header (第X/Y句) — เลขเดียวกับ idx/SET.length ข้างบน
+    // Phase C.1 (2026-08-10): #wo-qn/#wo-qt ใน Session Header (第X/Y句)
     // เปลี่ยนมุมมองจาก "ทำไปแล้วกี่ข้อ" (idx) เป็น "กำลังทำข้อที่เท่าไหร่" (idx+1) ให้ตรงกับรูปแบบ 第X/Y字 ของเกมอื่น
     // (ข้อมูลจริงชุดเดียวกัน ไม่ได้สร้างใหม่ — ไม่แตะ life/hint/scoring logic เลย)
     var _woQn = document.getElementById('wo-qn'); if (_woQn) _woQn.textContent = idx + 1;
@@ -1321,8 +1318,6 @@
     document.getElementById('game').style.display = 'none';
     document.getElementById('end').style.display = 'flex';
     if(window.GameFlow)GameFlow.markResult('#end');
-    document.getElementById('pf').style.width = '100%';
-    document.getElementById('prog-txt').textContent = SET.length + '/' + SET.length;
     var _woQnEnd = document.getElementById('wo-qn'); if (_woQnEnd) _woQnEnd.textContent = SET.length;
     var _woQtEnd = document.getElementById('wo-qt'); if (_woQtEnd) _woQtEnd.textContent = SET.length;
 

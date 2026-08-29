@@ -183,9 +183,7 @@ for (const page of ['leaderboard.html', 'reading-board.html', 'listening-board.h
   assert.match(boardHub, new RegExp(page.replace('.', '\\.')));
 }
 for (const page of ['mix-board.html', 'lego-board.html']) {
-  const legacyBoard = read(page);
-  assert.match(legacyBoard, /data-phase1-access="no-(?:challenge|lego)-leaderboard"/);
-  assert.doesNotMatch(legacyBoard, /<script[^>]+reading-leaderboard\.js/);
+  assert.equal(fs.existsSync(path.join(root, page)), false, `${page} placeholder page must not exist`);
 }
 console.log('NO_CROSS_GAME_TOTAL=PASS (PD-SCORE-01)');
 

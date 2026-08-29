@@ -42,7 +42,7 @@
   }
 
   var path = String(window.location.pathname || '').toLowerCase();
-  var parked = /\/(?:my-progress|vault|all-board|leaderboard|reading-board|listening-board|typing-board|word-order-board|lego-board|mix-board|games-challenge|mix)\.html$/;
+  var parked = /\/(?:my-progress|vault|all-board|leaderboard|reading-board|listening-board|typing-board|word-order-board|games-challenge|mix)\.html$/;
   window.MRT_PARKED_ACCOUNT_SURFACE = parked.test(path);
 
   var style = document.createElement('style');
@@ -53,7 +53,7 @@
     '[data-mgl-parked],a[href="/my-progress.html"],a[href="my-progress.html"],',
     'a[href="vault.html"],a[href="all-board.html"],a[href="leaderboard.html"],',
     'a[href="reading-board.html"],a[href="listening-board.html"],a[href="typing-board.html"],',
-    'a[href="word-order-board.html"],a[href="lego-board.html"],a[href="mix-board.html"],',
+    'a[href="word-order-board.html"],',
     'a[href="games-challenge.html"]{display:none!important}',
     '.minimum-guest-launch .gh-main-grid{grid-template-columns:repeat(2,minmax(0,1fr))}',
     '@media(max-width:760px){.minimum-guest-launch .gh-main-grid{grid-template-columns:1fr}}'

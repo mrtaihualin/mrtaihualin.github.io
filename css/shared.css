@@ -667,6 +667,11 @@ body .gsh-shell.tf-page { padding-top:8px; }
   body[data-gsh-game="typing"] .gsh-session-header {
     flex-direction:column; flex-wrap:nowrap; gap:6px;
   }
+  body[data-gsh-game="reading"] .gsh-session-header,
+  body[data-gsh-game="typing"] .gsh-session-header {
+    gap:8px;
+    padding-bottom:8px;
+  }
   body[data-gsh-game="tone"] .gsh-session-header > .gsh-level-selector,
   body[data-gsh-game="reading"] .gsh-session-header > .gsh-level-selector,
   body[data-gsh-game="typing"] .gsh-session-header > .gsh-level-selector {
@@ -700,6 +705,13 @@ body .gsh-shell.tf-page { padding-top:8px; }
   body[data-gsh-game] .gsh-learning-tools > #rg-vault-btn-slot { order:9; }
   body[data-gsh-game="typing"] .gsh-learning-tools > #rg-webkbd-toggle { display:none !important; }
   body[data-gsh-game] .gsh-desktop-hint-off[data-visible="true"] { display:inline-flex !important; }
+}
+
+@media (max-width:768px) and (orientation:portrait) {
+  body[data-gsh-game="typing"] .gsh-session-header {
+    gap:6.5px;
+    padding-bottom:6.5px;
+  }
 }
 
 .gsh-progress { width:100%; max-width:640px; margin:0 0 12px; }

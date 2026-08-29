@@ -11,12 +11,12 @@ var activePages = [
 var parkedPages = [
   'my-progress.html', 'vault.html', 'all-board.html', 'leaderboard.html',
   'reading-board.html', 'listening-board.html', 'typing-board.html',
-  'word-order-board.html', 'lego-board.html', 'mix-board.html', 'games-challenge.html'
+  'word-order-board.html', 'games-challenge.html'
 ];
 var staticParkedPages = [
   'my-progress.html', 'vault.html', 'all-board.html', 'leaderboard.html',
   'reading-board.html', 'listening-board.html', 'typing-board.html',
-  'word-order-board.html', 'lego-board.html', 'mix-board.html', 'line-callback.html'
+  'word-order-board.html', 'line-callback.html'
 ];
 
 function read(file) { return fs.readFileSync(path.join(root, file), 'utf8'); }
@@ -24,6 +24,10 @@ function ok(value, message) {
   if (!value) throw new Error(message);
   process.stdout.write('PASS ' + message + '\n');
 }
+
+['lego-board.html', 'mix-board.html'].forEach(function (file) {
+  ok(!fs.existsSync(path.join(root, file)), file + ' is removed instead of exposing a placeholder page');
+});
 
 activePages.concat(['games-challenge.html']).forEach(function (file) {
   var html = read(file);

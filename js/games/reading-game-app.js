@@ -867,6 +867,12 @@ function updateNextSylBtn(){
   var show=sylList.length>1 && !typingMode && !checked && sylIdx<sylList.length-1;
   b.style.display=show?'':'none';
 }
+function updateSyllableCounter(){
+  var qn=document.getElementById('qn'),qt=document.getElementById('qt'),qu=document.getElementById('qu');
+  if(qn)qn.textContent=sylIdx+1;
+  if(qt)qt.textContent=Math.max(1,sylList.length);
+  if(qu)qu.textContent=sylList.length>1?'音節':'字';
+}
 function loadWord(){
   rememberStep=0;clearTimeout(rememberTimer);
   var rb=document.getElementById('btn-remember');
@@ -878,7 +884,6 @@ function loadWord(){
   readingAttemptScore=null;readingCorrectionAttempts=0;readingFirstCheckDone=false;
   wordUsedGuide=false;curWordIsKnownCheck=false;    // งานที่3+7: ล้างสถานะต่อคำใหม่
   wordGolden=Math.random()<GOLDEN_WORD_CHANCE; // สุ่มคำทองใหม่ทุกคำ (Lin 2026-07-03)
-  document.getElementById('qn').textContent=cur+1;
   rgApplyParticleToTitle(); // Lin 2026-08-01: ตั้งชื่อประโยคเต็ม (#wth) + ต่อครับ/ค่ะ/คะ ถ้าเปิดปุ่มไว้ (เฉพาะ高級句子)
   rgSyncParticleBtn();
   document.getElementById('wzh').textContent=WORD.zh;
@@ -906,6 +911,7 @@ function loadWord(){
 }
 // โหลด "1 พยางค์" — ใช้ logic ช่อง/ตัวเลือก/โบนัส เดิมทั้งหมด
 function loadSyl(){
+  updateSyllableCounter();
   var SY=sylList[sylIdx];
   W={th:SY.th,read:SY.read,zh:WORD.zh,en:WORD.en,cons:SY.cons,vowel:SY.vowel,tone:SY.tone,final:SY.final,lead:SY.lead,cluster:SY.cluster,tone_name:SY.tone_name,consRead:SY.consRead,finalRead:SY.finalRead,finalDisp:SY.finalDisp,silent:SY.silent}; // 2026-07-30: พ่วงฟิลด์เฉลยเสียง
   checked=false;picks=[]; // wrongCount ย้ายไปนับระดับ "ทั้งคำ" แล้ว (reset ที่ loadWord)
@@ -1382,8 +1388,6 @@ function endRound(){
   document.getElementById('game').style.display='none';
   document.getElementById('end').style.display='flex';
   if(window.GameFlow)GameFlow.markResult('#end');
-  document.getElementById('pf').style.width='100%';
-  document.getElementById('prog-txt').textContent=roundQueue.length+'/'+roundQueue.length;
   // กฎ MASTER: คำใบ้เป็น "รายคำ" แล้ว (คำที่ใช้ใบ้ได้ 0 แต้ม เอง) — ไม่มี void ทั้งรอบอีกต่อไป
   // ?word= (ฝึกคำเดียวจากคลัง) = ไม่ให้โบนัสจบรอบ/ไม่ส่งลีก/ไม่นับชาเลนจ์ (กันปั๊ม) — G
   var practiceMode=isWordPractice;
@@ -1596,9 +1600,6 @@ function refreshUI(){
   var wsFill=document.getElementById('rg-ws-fill');
   if(wsFill){ wsFill.style.width=Math.max(0,Math.min(100,wsSc/wsMax*100))+'%'; wsFill.style.background=rgScoreBarColor(wsSc,wsMax); }
   var wsNum=document.getElementById('rg-ws-num'); if(wsNum)wsNum.textContent=wsSc;
-  document.getElementById('pf').style.width=(cur/Math.max(1,roundQueue.length)*100)+'%';
-  document.getElementById('prog-txt').textContent=cur+'/'+roundQueue.length;
-  document.getElementById('qt').textContent=roundQueue.length;
 }
 
 function updateCombo(){
@@ -1978,6 +1979,7 @@ function rgGotoSyl(idx){
   if(idx===sylIdx || checked)return; // เช็คคำตอบไปแล้ว ไม่ให้สลับอีก (กันงง)
   sylCache[sylIdx]=rgCaptureSylState();
   sylIdx=idx;
+  updateSyllableCounter();
   var target=sylCache[idx];
   document.getElementById('banner').className='result-banner';
   document.getElementById('retry-hint').className='retry-hint';
@@ -2007,6 +2009,7 @@ function rgFinalizeAllBonuses(){
 // สลับไปพยางค์ idx อย่างปลอดภัย ใช้ตอนกด 檢查 (เจอ syllable ที่ยังไม่เคยแวะ/ไม่มี cache ก็ไม่พัง)
 function rgJumpForCheck(idx){
   sylIdx=idx;
+  updateSyllableCounter();
   var st=sylCache[idx];
   if(st){ rgRestoreSylState(st); } else { loadSyl(); }
   renderSylStrip();

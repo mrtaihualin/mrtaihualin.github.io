@@ -104,8 +104,7 @@
   //   เพิ่มแค่ branch นี้ให้ badge/🏆 ลิงก์ถูกที่ ไม่กระทบ 4 เกมเดิม
   // v7 (LIN 2026-07-31): เพิ่ม 'mix' (綜合遊戲/mix.html) — ให้ล็อกอิน+เซฟคะแนนใช้ระบบเดียวกับ 5 เกมเดิม
   // v8 (LIN 2026-08-01): เปลี่ยนชื่อไฟล์ mix.html → games-challenge.html + เปลี่ยน id 'mix' → 'challenge'
-  //   คะแนนเกมรวมเก็บใน reading_sessions.game='challenge' (คนละแถวจาก reading/typing/lego/word_order เดิม แยกกระดานของตัวเอง
-  //   mix-board.html) — ไม่กระทบ 5 เกมเดิมเลย (เพิ่ม branch ใหม่เฉยๆ ไม่แก้ของเดิม)
+  //   คะแนนเกมรวมเก็บใน reading_sessions.game='challenge' (คนละแถวจาก reading/typing/lego/word_order เดิม)
   function pageGame() {
     var p = location.pathname || '';
     if (/tone-finder/i.test(p)) return 'tone_finder';
@@ -123,8 +122,8 @@
     if (g === 'listening') return 'listening-board.html';
     if (g === 'typing') return 'typing-board.html';
     if (g === 'word_order') return 'word-order-board.html';
-    if (g === 'lego') return 'lego-board.html';
-    if (g === 'challenge') return 'mix-board.html';
+    if (g === 'lego') return 'all-board.html';
+    if (g === 'challenge') return 'games.html';
     if (g === 'vault') return 'games.html'; // ไม่มีกระดานคะแนนของตัวเอง ส่งไปหน้าเลือกเกมแทน
     return 'reading-board.html';
   }

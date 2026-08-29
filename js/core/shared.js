@@ -201,7 +201,7 @@ window.GameResume = window.GameResume || (function () {
 //    ✏️ แก้ข้อความประกาศที่ data/nav-template.js เท่านั้น แล้วรัน `node scripts/generate-nav.js`
 //    ตรงนี้เหลือแค่ "อ่านค่ามาใช้" — หน้าไหนไม่ได้โหลด nav-template.js จะได้ array ว่าง (ไม่มีแถบ ไม่พัง)
 var ANN = (window.NAV_TEMPLATE && window.NAV_TEMPLATE.ANN) || [];
-var LOGIN_UI_SCOPE = /\/(?:games|games-practice|games-challenge|tone-finder|reading-game|listening-game|typing-game|word-order|lego|my-progress|vault|all-board|leaderboard|reading-board|listening-board|typing-board|word-order-board|lego-board|mix-board)\.html$/i;
+var LOGIN_UI_SCOPE = /\/(?:games|games-practice|games-challenge|tone-finder|reading-game|listening-game|typing-game|word-order|lego|my-progress|vault|all-board|leaderboard|reading-board|listening-board|typing-board|word-order-board)\.html$/i;
 var suppressScopedAnnouncement = LOGIN_UI_SCOPE.test(String(window.location.pathname || ''));
 if (suppressScopedAnnouncement) {
   var staleScopedAnnouncement = document.getElementById('ann-band');

@@ -2288,3 +2288,11 @@ node scripts/check-site.js
 - Kept every game page's content and gameplay below the Login surface intact, including Lego's lower gameplay. Mobile Landscape still restores each game's pre-existing header and floating-control structure.
 - On Mobile Portrait only, removed the duplicate floating `遊戲選單` action and centered the remaining real controls without reserving a placeholder; Desktop remains unchanged.
 - Verification: targeted shared/auth/recovery/Landscape gates passed, browser geometry matched at Desktop, 390×844 and 768×1024, and `node scripts/check-site.js` passed across 1,020 project files.
+
+# 2026-08-29 — Five-game question/status correction
+
+- Removed the obsolete visual `進度` row and its DOM/runtime/CSS hooks from Tone, Reading, Listening, Typing, and Word Order while preserving each game-owned item-score HUD, scoring, round queue, and gameplay behavior.
+- Kept the original horizontal score-row order. Reading and Typing now preserve the existing total vertical space with equal top/bottom gaps: Desktop `8px/8px`, Reading Portrait `10px/10px`, and Typing Portrait `6.5px/6.5px`.
+- Set visible four-line question boundaries to `5px/5px/5px` without changing text sizes or outer geometry. Multi-syllable active items use a syllable counter only where semantically applicable; Listening remains a whole-word counter and Word Order remains a whole-sentence counter.
+- Removed the unused `lego-board.html` and `mix-board.html` placeholder routes and their stale navigation/runtime references.
+- Verification: affected game/Login/security tests and `node scripts/check-site.js` passed across 1,018 project files; Mobile Landscape and Lego lower gameplay remain unchanged.

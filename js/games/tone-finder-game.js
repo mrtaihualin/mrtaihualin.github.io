@@ -1196,7 +1196,7 @@ function tfLockCurrentWordForGuide() {
   session.curWordAllFirstTry = false;
   session.currentWordGuideUsed = true;
   session.combo = 0;
-  try { tfUpdateScoreHud(); tfUpdateBarsHud(); } catch (e) {}
+  try { tfUpdateScoreHud(); } catch (e) {}
 }
 
 // คำปัจจุบันเป็นหลายพยางค์ไหม (readingTH มี '-')
@@ -1231,7 +1231,6 @@ function tfScorePop(points, opts) {
   } catch (e) { /* ignore */ }
   // อัปเดต HUD คะแนนรวม
   tfUpdateScoreHud();
-  tfUpdateBarsHud();
   if (opts.confetti) tfConfetti();
 }
 
@@ -1261,25 +1260,22 @@ function tfUpdateScoreHud() {
   if (el && session) el.textContent = '🏆 ' + session.score + ' 分';
 }
 
+function tfSessionCounterState() {
+  var hasActiveSyllables = !!(S && S.syllables && S.syllables.length > 1 && S.selectedSyl != null);
+  return hasActiveSyllables
+    ? { current: S.selectedSyl + 1, total: S.syllables.length, unit: '音節' }
+    : { current: (session ? session.index : 0) + 1, total: session && session.words ? session.words.length : 1, unit: '字' };
+}
+
 // ════════════════════════════════════════════════════════════
-// 進度/⚡ bars — เพิ่ม 2026-07-03 (ไม่แตะ scoring/streak/badge/star logic เดิม แค่โชว์ผลลัพธ์เพิ่ม)
-// 進度 = session.index/session.words.length (คำตอบที่ตอบแล้ว/จำนวนคำในชุดนี้ — ชุดยาวไม่คงที่ อ่านจาก session.words.length สดทุกครั้ง)
-// ⚡ = session.score ของชุดนี้ (แคปที่ 100 ตอนวาดหลอด เหมือน reading-game/typing-game ที่ clamp roundScore ไว้ที่ 100 ไม่ normalize)
+// 本題分數 bar — แสดงเฉพาะคะแนนของคำปัจจุบัน ไม่แตะ scoring/streak/badge/star logic
 // ════════════════════════════════════════════════════════════
 function tfBarsHtml() {
   if (!session || !session.words || !session.words.length) return '';
-  var total = session.words.length;
-  var idx = Math.min(session.index || 0, total);
-  var score = session.score || 0;
-  var progPct = Math.min(100, (idx / total) * 100);
-  var powerPct = Math.min(100, score);
   // Lin 2026-07-11: หลอด本題分數 ย้ายเข้ามาไว้ในการ์ดทอง (#tf-banner) เหมือนอีก 3 เกม — โชว์เฉพาะช่วงขั้น推導 (s1/s2) เหมือนของเดิม
   var wsHtml = '';
   if (/^s[12]/.test(S.step)) wsHtml = tfWordScoreBarRowHtml();
-  return '<div class="bars-wrap gsh-progress" id="tf-bars-wrap">'
-    + '<div class="bar-row"><span>進度</span><div class="bar-bg"><div class="bar-fill prog" id="tf-pf" style="width:' + progPct + '%"></div></div><span class="bar-label" id="tf-prog-txt">' + idx + '/' + total + '</span></div>'
-    + wsHtml
-    + '</div>';
+  return wsHtml ? '<div class="bars-wrap gsh-progress" id="tf-bars-wrap">' + wsHtml + '</div>' : '';
 }
 
 // Lin 2026-07-11: หลอด本題分數 แบบ bar-row เดียวกับ進度 (ย้ายมาจาก tfWordScoreGaugeHtml เดิมที่โชว์แยกอยู่ใน body) — คงไอดี tf-ws-fill/tf-ws-num/tf-ws-lab เดิมไว้ ไม่กระทบ tfUpdateWordScoreGauge()
@@ -1291,18 +1287,6 @@ function tfWordScoreBarRowHtml() {
   var dead = (sc === 0);
   var fill = tfScoreBarColor(sc, max);
   return '<div class="bar-row"><span>本題分數</span><div class="bar-bg"><div class="bar-fill power" id="tf-ws-fill" style="width:' + pct + '%;background:' + fill + ';"></div></div><span class="bar-label" id="tf-ws-lab" style="color:' + (dead ? '#c0392b' : '#5a3e0a') + ';"><span id="tf-ws-num">' + sc + '</span>/10</span></div>';
-}
-
-// อัปเดตหลอด 進度/⚡ สดระหว่างคำถาม (ไม่ต้องรอ render() รอบใหม่) — เรียกคู่กับ tfUpdateScoreHud()
-function tfUpdateBarsHud() {
-  if (!session || !session.words) return;
-  var total = session.words.length || 0;
-  var idx = Math.min(session.index || 0, total);
-  var score = session.score || 0;
-  var pf = document.getElementById('tf-pf');
-  if (pf) pf.style.width = (total ? Math.min(100, (idx / total) * 100) : 0) + '%';
-  var pt = document.getElementById('tf-prog-txt');
-  if (pt) pt.textContent = idx + '/' + total;
 }
 
 // ตัวคูณคำทอง (สเตจ 2 จะเปิดใช้ — ตอนนี้คืน 1)
@@ -1600,7 +1584,7 @@ function tfCommitWordAndAdvance(opts) {
     var wordScore = session.currentWordGuideUsed ? 0 : Math.round(avgBase * goldM * comboM);
     session.currentWordScore = wordScore;
     session.score += wordScore;                                   // บวกเข้าคะแนนรวมครั้งเดียว (รายพยางค์ไม่บวกแล้ว)
-    tfUpdateScoreHud(); tfUpdateBarsHud();
+    tfUpdateScoreHud();
   }
     session.results.push({
     entry: entry,
@@ -2138,11 +2122,12 @@ function render() {
   var noBannerSteps = ['result'];
   if (S.word && !isSelectScreen && noBannerSteps.indexOf(S.step) === -1) {
     banner.style.display = 'block';
-    // Phase C.1 (2026-08-10): counterHtml (第X/Y字＋🏆分數＋🔥combo＋黃金米題) แยกออกจาก banner.innerHTML
+    // Phase C.1 (2026-08-10): counterHtml (active syllable for multi-syllable items; otherwise session word)
     // ไปฉีดใส่ #tf-session-counter (อยู่แถวเดียวกับปุ่มระดับ初/中/高 — ดู tone-finder.html) แทน
-    // barsHtml (หลอด進度/⚡) ยังอยู่ใน banner เหมือนเดิมทุกประการ — ไม่แตะ scoring/session logic เลย แค่ตำแหน่งแสดงผล
+    // barsHtml เก็บเฉพาะหลอด本題分數เดิมไว้ใน banner — ไม่แตะ scoring/session logic
+    var counterState = tfSessionCounterState();
     var counterHtml = (session && session.words && session.words.length)
-      ? '<div class="tf-banner-counter">第 ' + (session.index + 1) + ' / ' + session.words.length + ' 字'
+      ? '<div class="tf-banner-counter">第 ' + counterState.current + ' / ' + counterState.total + ' ' + counterState.unit
         + '<span id="tf-score-hud" class="tf-score-hud">🏆 ' + (session.score || 0) + ' 分</span>'
         + (session.combo >= 3 ? '<span class="tf-combo-hud">🔥 ×' + TF_SCORE.comboMultiplier(session.combo) + '</span>' : '')
         + (session.currentWordGolden ? '<span class="tf-golden-hud"><img src="assets/icons/golden-grain-plain.svg" alt="" style="width:14px;height:14px;vertical-align:-2px;margin-right:2px;">黃金米題 ×' + TF_GAME_CFG.GOLDEN_WORD_MULT + '</span>' : '')

@@ -630,6 +630,12 @@ function setRgEnMode(on){
   rgRenderEnLine();
 }
 setRgEnMode(rgEnMode); // ตั้งไอคอนปุ่มตามค่าที่จำไว้ ตั้งแต่โหลดหน้า
+function updateSyllableCounter(){
+  var qn=document.getElementById('qn'),qt=document.getElementById('qt'),qu=document.getElementById('qu');
+  if(qn)qn.textContent=sylIdx+1;
+  if(qt)qt.textContent=Math.max(1,sylList.length);
+  if(qu)qu.textContent=sylList.length>1?'音節':'字';
+}
 function loadWord(){
   rememberStep=0;clearTimeout(rememberTimer);curWordIsKnownCheck=false;
   var rb=document.getElementById('btn-remember');
@@ -641,7 +647,6 @@ function loadWord(){
   if(_tgParticle && TG_PARTICLE_SYLS[_tgParticle]) sylList=sylList.concat([TG_PARTICLE_SYLS[_tgParticle]]);
   sylIdx=0;wordHadWrong=false;wordFailed=false;wrongCount=0;wordWrongTotal=0;wordUsedGuide=false;sylCache=[]; // sylCache: เก็บ state แต่ละพยางค์ ให้เลือกพยางค์ไหนก่อนก็ได้ (คำใหม่ = ล้าง)
   wordGolden=Math.random()<GOLDEN_WORD_CHANCE; // สุ่มคำทองใหม่ทุกคำ (Lin 2026-07-03)
-  document.getElementById('qn').textContent=cur+1;
   document.getElementById('wth').textContent=WORD.th+(_tgParticle||''); // ต้องตรงกับ sylList จริง (รวมครับ/ค่ะ/คะ ถ้ามี) — ไม่งั้นข้อความเห็นกับสิ่งที่ต้องพิมพ์ไม่ตรงกัน
   document.getElementById('wzh').textContent=WORD.zh;
   tgSyncParticleBtn();
@@ -668,6 +673,7 @@ function loadWord(){
 }
 // โหลด "1 พยางค์" — ใช้ logic ช่อง/ตัวเลือก/โบนัส เดิมทั้งหมด
 function loadSyl(){
+  updateSyllableCounter();
   var SY=sylList[sylIdx];
   W={th:SY.th,read:SY.read,zh:WORD.zh,en:SY.en||WORD.en,cons:SY.cons,vowel:SY.vowel,tone:SY.tone,final:SY.final,lead:SY.lead,cluster:SY.cluster,tone_name:SY.tone_name,consRead:SY.consRead,finalRead:SY.finalRead,finalDisp:SY.finalDisp,silent:SY.silent}; // 2026-07-30: พ่วงฟิลด์เฉลยเสียง
   checked=false;picks=[]; // wrongCount ย้ายไปนับระดับ "ทั้งคำ" แล้ว (reset ที่ loadWord)
@@ -1120,8 +1126,6 @@ function endRound(){
   document.getElementById('game').style.display='none';
   document.getElementById('end').style.display='flex';
   if(window.GameFlow)GameFlow.markResult('#end');
-  document.getElementById('pf').style.width='100%';
-  document.getElementById('prog-txt').textContent=roundQueue.length+'/'+roundQueue.length;
   // กฎ MASTER: ดาวเงินแจกตอน mastered ใน finalizeWord() แล้ว (มี toast ของตัวเอง) — endRound() ไม่แจกดาวซ้ำอีก
   // โบนัสจบรอบ: +20 ทุกครั้งที่จบ · +50 เพิ่มถ้า perfect — แต่ถ้ารอบนี้มีคำที่ใช้ 提示 แม้ครั้งเดียว = โหมดฝึกฝน ไม่แจกโบนัส (กฎ MASTER ข้อ 9)
   var roundBonus=0;
@@ -1424,9 +1428,6 @@ function trackToneLink(){try{if(typeof gtag==='function')gtag('event','game_link
 // ════════════════════════════════════════════
 function refreshUI(){
   tgUpdateScoreBar(); // Lin 2026-07-06: หลอด 本題分數 (แทนหลอด ⚡ เดิม) ไล่สีทอง→แดง
-  document.getElementById('pf').style.width=(cur/Math.max(1,roundQueue.length)*100)+'%';
-  document.getElementById('prog-txt').textContent=cur+'/'+roundQueue.length;
-  document.getElementById('qt').textContent=roundQueue.length;
 }
 
 function updateCombo(){
@@ -2214,6 +2215,7 @@ function rgContAdvanceSegment(isLast){
   }
   RG_CONT_SEG++; // RG_CONT_WRONG ไม่รีเซ็ตแล้ว — นับสะสมทั้งคำตั้งแต่ rgContStart()
   sylIdx=RG_CONT_SEG; // แค่ให้แถบ syl-strip ไล่ตามพยางค์ที่พิมพ์อยู่ (cosmetic เท่านั้น ไม่กระทบ finalize/คะแนน)
+  updateSyllableCounter();
   renderSylStrip();
   rgTypeHighlightNextKey(); // ไม่มี banner/หน่วง — พิมพ์พยางค์ถัดไปต่อได้ทันที
 }
@@ -2224,6 +2226,7 @@ function rgContFinish(){
   checked=true;
   RG_CONT_ON=false;
   sylIdx=sylList.length-1;
+  updateSyllableCounter();
   var SY=sylList[sylIdx];
   W={th:SY.th,read:SY.read,zh:WORD.zh,en:SY.en||WORD.en,cons:SY.cons,vowel:SY.vowel,tone:SY.tone,final:SY.final,lead:SY.lead,cluster:SY.cluster,tone_name:SY.tone_name,consRead:SY.consRead,finalRead:SY.finalRead,finalDisp:SY.finalDisp,silent:SY.silent}; // 2026-07-30: พ่วงฟิลด์เฉลยเสียง
   var sec=document.getElementById('bonus-section');
@@ -2434,6 +2437,7 @@ function rgGotoSyl(idx){
   if(idx===sylIdx || checked)return; // เช็คคำตอบไปแล้ว ไม่ให้สลับอีก (กันงง)
   sylCache[sylIdx]=rgCaptureSylState();
   sylIdx=idx;
+  updateSyllableCounter();
   var target=sylCache[idx];
   document.getElementById('banner').className='gsh-feedback-slot result-banner';
   document.getElementById('retry-hint').className='retry-hint';
@@ -2450,6 +2454,7 @@ function rgFinalizeAllBonuses(){
 // สลับไปพยางค์ idx อย่างปลอดภัย ใช้ตอนกด 檢查 (เจอ syllable ที่ยังไม่เคยแวะ/ไม่มี cache ก็ไม่พัง)
 function rgJumpForCheck(idx){
   sylIdx=idx;
+  updateSyllableCounter();
   var st=sylCache[idx];
   if(st){ rgRestoreSylState(st); } else { loadSyl(); }
   renderSylStrip();

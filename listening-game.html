@@ -77,7 +77,7 @@ gtag("config","G-DKVQE30982");window.GA_CATEGORY="game";</script>
 <meta name="twitter:image" content="https://mrtaihualin.com/assets/share-card.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700&family=Sarabun:wght@400;600;700&family=Noto+Sans+Thai:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/shared.css?v=34">
+<link rel="stylesheet" href="css/shared.css?v=35">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="js/core/supabase-config.js?v=10"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script>
@@ -107,16 +107,10 @@ gtag("config","G-DKVQE30982");window.GA_CATEGORY="game";</script>
 
 /* ── gold banner (คะแนน/ความคืบหน้า) — เหมือน tone-finder/typing-game ── */
 .gold-banner{width:calc(100% + 40px);margin:-22px -20px 12px;padding:14px 20px 12px;background:linear-gradient(180deg,var(--gold-light) 0%,var(--cream) 100%);border-bottom:2px solid rgba(139,99,16,.5);}
-.gold-banner .bars-wrap{margin-bottom:0;}
 .top-bar{display:flex;align-items:center;justify-content:center;width:100%;margin-bottom:10px;}
 .score-bar{display:flex;gap:12px;font-size:13px;color:var(--gold);font-family:'Noto Sans TC',sans-serif;}
 .score-bar span{font-weight:700;color:var(--gold-deep);}
 
-.bars-wrap{width:100%;max-width:640px;margin-bottom:12px;display:flex;flex-direction:column;gap:6px;}
-.bar-row{display:flex;align-items:center;gap:8px;font-family:'Noto Sans TC',sans-serif;font-size:12px;color:var(--ink-muted);}
-.bar-bg{flex:1;height:7px;background:var(--gold-light);border-radius:4px;overflow:hidden;}
-.bar-fill{height:100%;border-radius:4px;transition:width .4s ease;background:linear-gradient(90deg,var(--gold-bright),var(--gold-deep));}
-.bar-label{min-width:52px;text-align:right;font-size:11px;}
 
 .lg-pool-note{width:100%;text-align:center;font-family:'Noto Sans TC',sans-serif;font-size:12.5px;color:var(--amber-dark);background:rgba(120,53,15,.08);border:1px solid rgba(120,53,15,.3);border-radius:10px;padding:8px 12px;margin-bottom:10px;display:none;}
 
@@ -151,8 +145,9 @@ gtag("config","G-DKVQE30982");window.GA_CATEGORY="game";</script>
 .lg-reveal{width:100%;margin-top:6px;background:var(--cream);border:1.5px dashed var(--gold-bright);border-radius:12px;padding:10px 14px;text-align:center;display:none;}
 .lg-reveal.show{display:block;}
 .lg-rev-th{font-family:'Sarabun',sans-serif;font-size:26px;font-weight:700;color:var(--ink);}
-.lg-rev-pron{font-family:'Noto Sans TC',sans-serif;font-size:14px;color:var(--gold-deep);margin-top:4px;}
-.lg-rev-en{font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:600;color:var(--gold);margin-top:2px;letter-spacing:0.3px;}
+.lg-reveal > div + div{margin-top:5px;}
+.lg-rev-pron{font-family:'Noto Sans TC',sans-serif;font-size:14px;color:var(--gold-deep);}
+.lg-rev-en{font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:600;color:var(--gold);letter-spacing:0.3px;}
 .lg-rev-zh{font-family:'Noto Sans TC',sans-serif;font-size:13px;color:var(--ink-muted);margin-top:2px;}
 
 .btn-row{display:flex;gap:8px;justify-content:center;width:100%;margin-top:14px;flex-wrap:wrap;}
@@ -325,13 +320,6 @@ body.rg-modern-font .lg-rev-th { font-family:'Noto Sans Thai','Sarabun',sans-ser
         <div>第 <span id="lg-qn">1</span> / <span id="lg-qt">10</span> 字</div>
         <div>🏆 <span id="lg-score">0</span> คะแนน</div>
         <span id="lg-ok" hidden>0</span><span id="lg-bad" hidden>0</span><span id="lg-listens" hidden>0</span>
-      </div>
-    </div>
-    <div class="bars-wrap gsh-progress">
-      <div class="bar-row">
-        <span>進度</span>
-        <div class="bar-bg"><div class="bar-fill" id="lg-prog-fill" style="width:0%"></div></div>
-        <span class="bar-label" id="lg-prog-txt">0/10</span>
       </div>
     </div>
   </div>

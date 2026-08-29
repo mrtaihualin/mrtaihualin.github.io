@@ -73,7 +73,7 @@ if (document.fonts && document.fonts.load) {
   document.fonts.load("400 14px 'Noto Sans Thai'", "◌่้๊๋").catch(function(){});
 }
 </script>
-<link rel="stylesheet" href="css/shared.css?v=34">
+<link rel="stylesheet" href="css/shared.css?v=35">
 <link rel="stylesheet" href="css/tone-mobile-landscape.css?v=2">
 <style>
   /* P6-28 (2026-08-08): ปุ่มเรียกฟังก์ชันเกม (TF.* มาจาก tone-finder-game.min.js โหลดแบบ async
@@ -190,8 +190,13 @@ if (document.fonts && document.fonts.load) {
     font-weight: 600;
     color: #8B6310;
     letter-spacing: 0.3px;
-    margin-top: 2px;
+    margin-top: 5px;
   }
+  #tf-banner > #tf-read-line { margin-top:5px; }
+  #tf-banner > #tf-read-line .tf-read-th { margin-top:0; }
+  #tf-banner > .word-zh { margin-top:5px; }
+  #tf-banner > .tf-adv-sent-reading,
+  #tf-banner > .tf-adv-sent-ctx-zh { margin-top:5px; }
   body.tf-modern-font .tf-read-th { font-family: 'Noto Sans Thai', 'Sarabun', sans-serif !important; }
   /* Lin 2026-07-25: ป้ายบอกว่ากำลังอยู่โหมด 提示 (ไม่คิดคะแนน) + ไฮไลต์ตัวเลือกที่ถูกในขั้น推導 */
   .tf-guide-note {
@@ -1711,13 +1716,12 @@ if (document.fonts && document.fonts.load) {
   .tf-badge-link:active { transform:scale(.97); }
   .tf-badge-tier-title { font-size:13px; font-weight:800; color:#8B6310; margin:14px 0 8px; }
   .tf-badge-card.locked { opacity:.45; filter:grayscale(1); }
-  /* 進度/⚡ bars — เพิ่ม 2026-07-03, สไตล์เดียวกับ reading-game.html/typing-game.html (bars-wrap/bar-row/bar-fill) */
+  /* 本題分數 bar — shared score row styling */
   /* หมายเหตุ: scope ด้วย #tf-banner (ตัว element จริงคือ id="tf-banner" class="tf-word-banner" — ใช้ id ให้ชัวร์ที่สุด) */
   #tf-banner .bars-wrap { width:100%; max-width:640px; margin:6px 0 4px; display:flex; flex-direction:column; gap:6px; }
   #tf-banner .bar-row { display:flex; align-items:center; gap:8px; font-family:'Noto Sans TC',sans-serif; font-size:12px; color:#a08050; }
   #tf-banner .bar-bg { flex:1; height:7px; background:#ede0c8; border-radius:4px; overflow:hidden; }
   #tf-banner .bar-fill { height:100%; border-radius:4px; transition:width .4s ease; }
-  #tf-banner .bar-fill.prog { background:linear-gradient(90deg,#e8a020,#d85a30); }
   #tf-banner .bar-fill.power { background:linear-gradient(90deg,#66bb6a,#43a047); }
   #tf-banner .bar-label { min-width:52px; text-align:right; font-size:11px; }
   /* Lin 2026-07-24: 逐步導覽（滑鼠一格一格指出功能）— 第一次進遊戲自動播放，用完就不再自動跳出 */

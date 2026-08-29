@@ -199,7 +199,7 @@ GAME_PAGES.forEach((page) => {
 // D) Known issue ที่บันทึกไว้ใน P2 — ตรวจซ้ำว่ายังไม่ได้แก้จริง (กันรายงานเก่ากับของจริงไม่ตรงกัน)
 // ════════════════════════════════════════════════════════════
 {
-  const boardPages = ['leaderboard.html', 'all-board.html', 'reading-board.html', 'listening-board.html', 'typing-board.html', 'word-order-board.html', 'lego-board.html'];
+  const boardPages = ['leaderboard.html', 'all-board.html', 'reading-board.html', 'listening-board.html', 'typing-board.html', 'word-order-board.html'];
   boardPages.forEach((page) => {
     const text = read(page);
     if (text === null) return; // ไม่ fail — บางไฟล์อาจไม่มีจริงแล้วก็ได้ ให้ known-issue เช็คเท่าที่เจอ

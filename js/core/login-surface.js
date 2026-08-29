@@ -23,11 +23,9 @@
     'reading-board.html': '.section-wrap > div:first-child',
     'listening-board.html': '.section-wrap > div:first-child',
     'typing-board.html': '.section-wrap > div:first-child',
-    'word-order-board.html': '.section-wrap > div:first-child',
-    'lego-board.html': '[data-phase1-access] h1',
-    'mix-board.html': '[data-phase1-access] h1'
+    'word-order-board.html': '.section-wrap > div:first-child'
   };
-  var parkedPages = /^(?:games-challenge|my-progress|vault|all-board|leaderboard|reading-board|listening-board|typing-board|word-order-board|lego-board|mix-board)\.html$/;
+  var parkedPages = /^(?:games-challenge|my-progress|vault|all-board|leaderboard|reading-board|listening-board|typing-board|word-order-board)\.html$/;
   var landscapeQuery = window.matchMedia && window.matchMedia('(orientation: landscape) and (max-width: 1024px) and (max-height: 600px)');
   var activeSurface = null;
   var gameState = null;

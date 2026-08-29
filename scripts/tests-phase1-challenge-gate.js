@@ -22,7 +22,6 @@ function check(condition, label) {
 }
 
 const page = read('games-challenge.html');
-const board = read('mix-board.html');
 const hub = read('games.html');
 const switcher = read('js/games/game-switcher.js');
 const search = read('data/search-index.js');
@@ -50,9 +49,7 @@ check(!/<script[^>]+games-challenge-app\.js/i.test(page), 'Challenge gameplay bu
 check(!/GameContentLoader\.boot\s*\(/.test(page), 'Challenge content boot cannot run');
 check(!/<div id="game-switcher"/.test(page), 'locked Challenge page exposes no game switcher');
 
-check(/data-phase1-access="no-challenge-leaderboard"/.test(board), 'direct legacy board URL renders recovery state');
-check(!/reading-leaderboard\.js/.test(board), 'legacy Challenge leaderboard runtime is not loaded');
-check(!/window\.READING_BOARD_GAME\s*=\s*['"]challenge/.test(board), 'legacy board does not request Challenge scores');
+check(!fs.existsSync(path.join(root, 'mix-board.html')), 'Challenge leaderboard placeholder page is removed');
 
 check(!/href=["']games-challenge\.html["']/.test(switcher), 'Free game switcher exposes no Challenge link');
 check(!/id:\s*['"]game-challenge['"]/.test(search), 'local Search index excludes Challenge');
