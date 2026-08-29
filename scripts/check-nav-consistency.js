@@ -49,6 +49,10 @@ const ANN_BLOCK_RE = new RegExp(
   '[\\s\\S]*?' +
   NAV.ANN_MARK_END.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 );
+const GAME_PAGES = new Set([
+  'tone-finder.html', 'reading-game.html', 'listening-game.html',
+  'typing-game.html', 'word-order.html', 'lego.html'
+]);
 const NO_ANNOUNCEMENT_PAGES = new Set([
   'games.html', 'games-practice.html', 'games-challenge.html',
   'tone-finder.html', 'reading-game.html', 'listening-game.html', 'typing-game.html', 'word-order.html', 'lego.html',
@@ -131,11 +135,20 @@ SCOPE_PAGES.forEach((file) => {
   }
 
   const annMatch = text.match(ANN_BLOCK_RE);
-  const expectedAnn = NO_ANNOUNCEMENT_PAGES.has(file) ? NO_ANNOUNCEMENT_BLOCK : NAV.renderAnnBandBlockHTML();
-  if (!annMatch) {
-    mismatches.push({ file, kind: 'ann-band ไม่พบ', detail: 'ไม่พบ ANN-BAND marker' });
-  } else if (annMatch[0] !== expectedAnn) {
-    mismatches.push({ file, kind: 'ann-band เนื้อหาไม่ตรง', detail: '' });
+  if (GAME_PAGES.has(file)) {
+    if (annMatch || /ANN-BAND|ann-band|avail-band|annDismissed|annGoTo|annPrev|annNext/.test(text)) {
+      mismatches.push({ file, kind: 'game announcement code ยังค้าง', detail: 'เกมต้องไม่มี DOM/marker/script/style hook ของ announcement' });
+    }
+    if (!/js\/core\/shared\.min\.js\?v=46/.test(text)) {
+      mismatches.push({ file, kind: 'game shared runtime cache ไม่ตรง', detail: 'ต้องใช้ shared.min.js?v=46' });
+    }
+  } else {
+    const expectedAnn = NO_ANNOUNCEMENT_PAGES.has(file) ? NO_ANNOUNCEMENT_BLOCK : NAV.renderAnnBandBlockHTML();
+    if (!annMatch) {
+      mismatches.push({ file, kind: 'ann-band ไม่พบ', detail: 'ไม่พบ ANN-BAND marker' });
+    } else if (annMatch[0] !== expectedAnn) {
+      mismatches.push({ file, kind: 'ann-band เนื้อหาไม่ตรง', detail: '' });
+    }
   }
 
   const bnMatches = text.match(new RegExp(BOTTOM_NAV_RE.source, 'g'));

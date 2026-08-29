@@ -202,11 +202,6 @@ window.GameResume = window.GameResume || (function () {
 //    ตรงนี้เหลือแค่ "อ่านค่ามาใช้" — หน้าไหนไม่ได้โหลด nav-template.js จะได้ array ว่าง (ไม่มีแถบ ไม่พัง)
 var ANN = (window.NAV_TEMPLATE && window.NAV_TEMPLATE.ANN) || [];
 var LOGIN_UI_SCOPE = /\/(?:games|games-practice|games-challenge|tone-finder|reading-game|listening-game|typing-game|word-order|lego|my-progress|vault|all-board|leaderboard|reading-board|listening-board|typing-board|word-order-board)\.html$/i;
-var suppressScopedAnnouncement = LOGIN_UI_SCOPE.test(String(window.location.pathname || ''));
-if (suppressScopedAnnouncement) {
-  var staleScopedAnnouncement = document.getElementById('ann-band');
-  if (staleScopedAnnouncement) staleScopedAnnouncement.remove();
-}
 
 // Login UI is a shared presentation layer. Reading remains the provider-flow owner.
 (function loadScopedLoginSurface() {
@@ -298,20 +293,16 @@ window.goHome = function() {
   //    เดิม JS สร้าง <div class="avail-band"> แล้ว insertBefore เข้าเป็นลูกตัวแรกของ body
   //    → พอ shared.min.js (~115KB) โหลดเสร็จ เนื้อหาทั้งหน้าถูกดันลงมาทีเดียว
   //    = ตาเห็นเป็น "หน้ากระพริบ/โหลด 2 รอบ" ทุกครั้งที่เปลี่ยนหน้าบนมือถือ (Lin เจอจริง 2026-08-10)
-  //    ตอนนี้ generate-nav.js เขียนแถบนี้ลง HTML ทุกหน้าแล้ว (พร้อมสไลด์แรก) → ไม่มีการขยับ layout อีก
+  //    ตอนนี้ generate-nav.js เขียนแถบนี้ลง HTML เฉพาะหน้าที่เป็นเจ้าของ announcement
+  //    (พร้อมสไลด์แรก) → ไม่มีการขยับ layout อีก
   //    ตรงนี้เหลือหน้าที่แค่ "หมุนสไลด์ + ปุ่มลูกศร + ปุ่มปิด" เท่านั้น
-  if (!suppressScopedAnnouncement && typeof ANN !== 'undefined' && ANN.length && sessionStorage.getItem('annDismissed') !== '1') {
+  var band = document.body && !document.body.hasAttribute('data-gsh-game')
+    ? document.getElementById('ann-band')
+    : null;
+  if (band && typeof ANN !== 'undefined' && ANN.length && sessionStorage.getItem('annDismissed') !== '1') {
     var annIdx = 0, annTimer;
-    // ถ้ามีแถบ static จาก HTML อยู่แล้ว → ใช้ตัวนั้นเลย ห้ามสร้างใหม่/ห้ามแทรกซ้ำ
-    var band = document.getElementById('ann-band');
-    var bandIsStatic = !!band;
-    if (!band) {
-      // ทางสำรอง: หน้าที่ยังไม่ได้ผ่าน generate-nav.js (เช่นหน้าใหม่ที่เพิ่งสร้าง) — พฤติกรรมเดิมทุกอย่าง
-      band = document.createElement('div');
-      band.className = 'avail-band';
-      band.id = 'ann-band';
-      band.style.position = 'relative';
-    }
+    // Hydrate only the static band generated for pages that own announcements.
+    // Game pages contain no announcement DOM, so this runtime mounts no listeners there.
 
     function annRender(i) {
       // ใช้ตัว render ตัวเดียวกับที่ generate-nav.js ใช้ตอนเขียน HTML → ผลลัพธ์ตรงกันเป๊ะ ไม่มีกระตุกตอนสไลด์เปลี่ยน
@@ -329,11 +320,6 @@ window.goHome = function() {
     window.annNext = function() { annIdx = (annIdx + 1) % ANN.length; annRender(annIdx); annStart(); };
     window.annDismiss = function() { try { sessionStorage.setItem('annDismissed', '1'); } catch(e){} band.remove(); };
 
-    // แถบ static มีสไลด์แรกวาดไว้แล้ว — ไม่ต้อง render ซ้ำ (กันการเขียนทับ DOM โดยไม่จำเป็น)
-    if (!bandIsStatic) {
-      annRender(0);
-      document.body.insertBefore(band, document.body.firstChild);
-    }
     annStart();
   }
 
@@ -1011,8 +997,6 @@ window.renderSoftCTA = function(containerId, pageKey, message){
     requestAnimationFrame(function(){ el.style.opacity='1'; el.style.transform='translate(-50%,-50%) scale(1)'; });
     setTimeout(function(){ if(el){ el.style.opacity='0'; el.style.transform='translate(-50%,-50%) scale(0.85)'; setTimeout(function(){if(el)el.remove();},200); } }, 4000);
   };
-
-document.querySelectorAll('.avail-band-placeholder').forEach(el => { el.outerHTML = '<div class="avail-band"><div class="avail-row"><div class="avail-dot"></div><span class="avail-text">🎁 首堂 30 分鐘體驗課免費・中文授課</span><a class="avail-cta" href="javascript:void(0)" onclick="openModal(\'modal-line-qr\')">立即預約</a></div></div>'; });
 
 // ----- [03.1] 📬 Contact / LINE QR / Social Modal Injection -----
 (function injectSharedModals() {
@@ -1896,7 +1880,6 @@ window.deleteFBComment = function(postId, idx) {
         // ── โหมดเหมือน fullscreen: ซ่อนทุกอย่างที่ไม่ใช่ตัวเกม (ชุดปุ่มลอย .rg-ctl-wrap ไม่โดนซ่อน = เมนู+เต็มจอกดได้ตลอด) ──
         'body.rg-fake-fullscreen .site-nav,' +
         'body.rg-fake-fullscreen #bottom-nav,' +
-        'body.rg-fake-fullscreen .avail-band,' +
         'body.rg-fake-fullscreen .page-strip,' +
         'body.rg-fake-fullscreen .page-header,' +
         'body.rg-fake-fullscreen #vault-hero,' +

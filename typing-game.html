@@ -342,7 +342,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 /* Lin 2026-07-12: มือถือ無顯示 → แตะกล่องคำเรียกคีย์บอร์ดเครื่องเอง */
 .type-target{cursor:pointer;}
 /* Lin 2026-07-12: ตอนคีย์บอร์ดเครื่องขึ้นมาพิมพ์ → ซ่อนหัวเว็บ/แถบชื่อ ไม่ให้กินพื้นที่จอ */
-body.tg-kbd-typing .page-header,body.tg-kbd-typing .page-strip,body.tg-kbd-typing .site-nav,body.tg-kbd-typing .avail-band{display:none !important;}
+body.tg-kbd-typing .page-header,body.tg-kbd-typing .page-strip,body.tg-kbd-typing .site-nav{display:none !important;}
 body.tg-kbd-typing{padding-top:0 !important;}
 /* 電腦版本不需要「用手機鍵盤打字」這個按鈕 — 用滑鼠的裝置(有滑鼠指標)才隱藏，觸控裝置照常顯示 — Lin 2026-07-07 */
 @media (hover:hover) and (pointer:fine){ #rg-mobile-kbd-btn{display:none !important;} }
@@ -424,7 +424,6 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
 <script src="js/core/minimum-guest-launch.js?v=5"></script>
 </head>
 <body data-gsh-game="typing">
-<!--ANN-BAND:START--><!-- Login UI scope: no announcement strip. --><!--ANN-BAND:END-->
 
 
 <!-- 2026-07-13: เมนู 🪧แจ้งปัญหา/รีวิว ย้ายไปทำใน shared.js แล้ว (ให้ขึ้นเหมือนกันทุกเกมอัตโนมัติ) ไม่ต้องมีโค้ดซ้ำในไฟล์นี้อีก -->
@@ -761,7 +760,7 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
 </script>
 </div><!-- /.v3-page -->
 <script src="data/nav-template.js?v=4"></script>
-<script src="js/core/shared.min.js?v=45"></script>
+<script src="js/core/shared.min.js?v=46"></script>
 <script src="js/games/game-flow.js?v=11"></script>
 
 <!-- ── Game Switcher (fixed pill) ── -->

@@ -258,23 +258,23 @@
 
   /* AVAILABILITY BAND */
 
-  .avail-band { background:var(--gold-light); border-top:3px solid var(--gold); border-bottom:3px solid var(--gold); padding:10px 16px; display:flex; flex-direction:column; gap:8px; }
+  body:not([data-gsh-game]) > .avail-band { background:var(--gold-light); border-top:3px solid var(--gold); border-bottom:3px solid var(--gold); padding:10px 16px; display:flex; flex-direction:column; gap:8px; }
   /* 🔴 2026-08-10: แถบประกาศเป็น static HTML แล้ว (มาพร้อมหน้าตั้งแต่แรก ไม่ต้องรอ JS)
      คนที่เคยกดปิดประกาศไปแล้วในเซสชันนี้ ต้องไม่เห็นมันแวบขึ้นมาอีกก่อน JS จะมาลบทิ้ง
      → มี <script> เล็กๆ อยู่ก่อนแถบใน HTML ทุกหน้า คอยเช็ค sessionStorage แล้วติดคลาสนี้ให้ทันทีตอน parse
      (เขียนโดย scripts/generate-nav.js · ต้นฉบับอยู่ใน data/nav-template.js → renderAnnBandBlockHTML) */
-  html.ann-off #ann-band { display:none; }
-  .avail-row { display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:nowrap; overflow:hidden; }
-  .avail-row + .avail-row { padding-top:8px; border-top:1px solid rgba(139,99,16,0.18); }
-  a.avail-row { text-decoration:none; cursor:pointer; transition:opacity 0.2s; }
-  a.avail-row:hover { opacity:0.78; }
-  @media(max-width:600px){ .avail-band { gap:6px; padding:8px 12px; } .avail-row + .avail-row { padding-top:6px; } .avail-text { font-size:11px; letter-spacing:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } .avail-cta { font-size:11px; padding:7px 12px; flex-shrink:0; } }
-  .avail-dot { width:10px; height:10px; background:#4CAF50; border-radius:50%; animation:blink 1.8s infinite; flex-shrink:0; }
+  html.ann-off body:not([data-gsh-game]) > #ann-band { display:none; }
+  body:not([data-gsh-game]) > #ann-band .avail-row { display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:nowrap; overflow:hidden; }
+  body:not([data-gsh-game]) > #ann-band .avail-row + .avail-row { padding-top:8px; border-top:1px solid rgba(139,99,16,0.18); }
+  body:not([data-gsh-game]) > #ann-band a.avail-row { text-decoration:none; cursor:pointer; transition:opacity 0.2s; }
+  body:not([data-gsh-game]) > #ann-band a.avail-row:hover { opacity:0.78; }
+  @media(max-width:600px){ body:not([data-gsh-game]) > .avail-band { gap:6px; padding:8px 12px; } body:not([data-gsh-game]) > #ann-band .avail-row + .avail-row { padding-top:6px; } body:not([data-gsh-game]) > #ann-band .avail-text { font-size:11px; letter-spacing:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } body:not([data-gsh-game]) > #ann-band .avail-cta { font-size:11px; padding:7px 12px; flex-shrink:0; } }
+  body:not([data-gsh-game]) > #ann-band .avail-dot { width:10px; height:10px; background:#4CAF50; border-radius:50%; animation:blink 1.8s infinite; flex-shrink:0; }
   @keyframes blink { 0%,100%{opacity:1;}50%{opacity:0.3;} }
-  .avail-text { font-family:'Noto Sans TC',sans-serif; font-size:14px; color:var(--ink); letter-spacing:1px; }
-  .avail-text strong { color:var(--gold); }
-  .avail-cta { background:var(--gold-bright); color:var(--ink); font-family:'Noto Sans TC',sans-serif; font-weight:900; font-size:12px; padding:8px 18px; border:none; cursor:pointer; letter-spacing:1px; white-space:nowrap; transition:background 0.2s; text-decoration:none; display:inline-block; flex-shrink:0; }
-  .avail-cta:hover { background:#b07820; }
+  body:not([data-gsh-game]) > #ann-band .avail-text { font-family:'Noto Sans TC',sans-serif; font-size:14px; color:var(--ink); letter-spacing:1px; }
+  body:not([data-gsh-game]) > #ann-band .avail-text strong { color:var(--gold); }
+  body:not([data-gsh-game]) > #ann-band .avail-cta { background:var(--gold-bright); color:var(--ink); font-family:'Noto Sans TC',sans-serif; font-weight:900; font-size:12px; padding:8px 18px; border:none; cursor:pointer; letter-spacing:1px; white-space:nowrap; transition:background 0.2s; text-decoration:none; display:inline-block; flex-shrink:0; }
+  body:not([data-gsh-game]) > #ann-band .avail-cta:hover { background:#b07820; }
 
   /* QUIZ MODAL */
   .quiz-wrap { padding:8px 0; }
@@ -541,7 +541,7 @@
   .stats-band { background:linear-gradient(180deg,#F8EFD6 0%,#F1E0BA 100%); }
   #cta { background:linear-gradient(180deg,#FBF5E7 0%,#F1E0BA 100%); }
   .line-strip { background:linear-gradient(180deg,#FBF5E7 0%,#F3E4C2 100%); }
-  .avail-band { background:linear-gradient(180deg,#FBF5E7 0%,#F3E4C2 100%); }
+  body:not([data-gsh-game]) > .avail-band { background:linear-gradient(180deg,#FBF5E7 0%,#F3E4C2 100%); }
 
   /* Gold accent bar under section headings for a refined highlight */
   .eyebrow { background:linear-gradient(90deg,#A8780F,#8B6310); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; color:transparent; }
@@ -907,7 +907,6 @@ body .gsh-shell.tf-page { padding-top:8px; }
     --gsh-safe-b:max(8px,env(safe-area-inset-bottom));
     position:fixed; inset:0; min-height:0; padding:0 !important;
   }
-  body[data-gsh-game] > .avail-band,
   body[data-gsh-game] > .site-nav,
   body[data-gsh-game] > .page-strip,
   body[data-gsh-game] > #bottom-nav,

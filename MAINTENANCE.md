@@ -2296,3 +2296,10 @@ node scripts/check-site.js
 - Set visible four-line question boundaries to `5px/5px/5px` without changing text sizes or outer geometry. Reading Portrait converts its prior `6px` word padding plus `5px` tool margin into those row gaps so the gold-band height remains unchanged. Multi-syllable active items use a syllable counter only where semantically applicable; Listening remains a whole-word counter and Word Order remains a whole-sentence counter.
 - Removed the unused `lego-board.html` and `mix-board.html` placeholder routes and their stale navigation/runtime references.
 - Verification: affected game/Login/security tests and `node scripts/check-site.js` passed across 1,018 project files; Mobile Landscape and Lego lower gameplay remain unchanged.
+
+# 2026-08-29 — Remove announcement bands from six game pages
+
+- Removed the announcement placeholder DOM, page-specific hide rules, and game-surface cache bindings from Tone, Reading, Listening, Typing, Word Order, and Lego.
+- The shared runtime no longer creates a fallback announcement, replaces a legacy placeholder, or binds announcement listeners on a `data-gsh-game` body. Shared announcement styling is scoped to non-game body surfaces so non-game pages retain their existing capability.
+- Updated the navigation generator and read-only checker so generated game output contains no announcement marker, DOM, listener, or style hook, while non-game output remains unchanged.
+- Verification: generator idempotence, static six-page scan, shared/Login/game/Landscape checks, Desktop plus `390×844`, `768×1024`, and `844×390` browser checks, secret scan, and `node scripts/check-site.js` across 1,018 source files.
