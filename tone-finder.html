@@ -1242,6 +1242,146 @@ if (document.fonts && document.fonts.load) {
     margin-top: 10px;
   }
 
+  /* ── 5.4: state-preserving phonics manual / alphabet overlay ── */
+  .tf-tip-manual-action {
+    display:block; width:calc(100% - 44px); margin:16px 22px 20px; padding:12px 16px;
+    border:1.5px solid #C8973A; border-radius:10px;
+    background:#FFF9EC; color:#6A490D; font-weight:900; cursor:pointer;
+  }
+  .tf-tip-manual-action:hover { background:#F3E4C2; }
+  .tf-alpha-overlay {
+    position:fixed; inset:0; z-index:4100; display:flex; align-items:center; justify-content:center;
+    padding:20px; background:rgba(45,32,12,.62);
+  }
+  .tf-alpha-dialog {
+    --tf-alpha-font-scale:.85;
+    display:flex; flex-direction:column; width:min(748px,100%); height:min(612px,calc(100vh - 40px));
+    font-size:85%;
+    overflow:hidden; background:#FFFEFB; border:1px solid rgba(139,99,16,.28); border-radius:22px;
+    box-shadow:0 24px 70px rgba(45,32,12,.28);
+  }
+  .tf-alpha-overlay-head {
+    display:grid; grid-template-columns:54px 1fr 54px; align-items:center; min-height:74px;
+    padding:10px 22px; border-bottom:1px solid rgba(139,99,16,.18); background:#FFFEFB;
+  }
+  .tf-alpha-overlay-title {
+    margin:0; color:#7A5208; font-family:'Noto Serif TC',serif; font-size:calc(25px * var(--tf-alpha-font-scale));
+    font-weight:900; letter-spacing:1px; text-align:center;
+  }
+  .tf-alpha-icon-btn {
+    display:inline-flex; align-items:center; justify-content:center; width:48px; height:48px;
+    border:1px solid rgba(139,99,16,.28); border-radius:13px; background:#FFFDF8;
+    color:#5A3E0A; font-size:calc(26px * var(--tf-alpha-font-scale)); line-height:1; cursor:pointer;
+  }
+  .tf-alpha-icon-btn:hover { background:#F7EBD1; }
+  .tf-alpha-back[hidden] { visibility:hidden; display:inline-flex !important; }
+  .tf-alpha-overlay-body { flex:1; overflow:auto; padding:20px; overscroll-behavior:contain; }
+  .tf-alpha-menu {
+    display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px;
+    max-width:900px; margin:0 auto;
+  }
+  .tf-alpha-menu-card {
+    display:flex; flex-direction:column; justify-content:center; align-items:flex-start; gap:8px;
+    min-height:136px; padding:20px; border:1px solid rgba(139,99,16,.28); border-radius:17px;
+    background:linear-gradient(180deg,#FFFFFF,#FFFBF3); color:#5A3E0A; text-align:left;
+    box-shadow:0 8px 24px rgba(90,62,10,.06); cursor:pointer;
+  }
+  .tf-alpha-menu > .tf-alpha-menu-card:first-child {
+    grid-column:1 / -1; min-height:153px; border-color:#C8973A;
+    border-left:7px solid #A97818; background:linear-gradient(135deg,#FFFDF8,#FAEDCF);
+  }
+  .tf-alpha-menu-card strong { font-family:'Noto Serif TC',serif; font-size:calc(25px * var(--tf-alpha-font-scale)); font-weight:900; }
+  .tf-alpha-menu-card span { color:#806D4E; font-size:calc(15px * var(--tf-alpha-font-scale)); font-weight:700; line-height:1.6; }
+  .tf-alpha-menu-card:hover { border-color:#B6811E; transform:translateY(-1px); }
+  .tf-alpha-tabs { display:flex; flex-wrap:wrap; gap:9px; margin:0 0 22px; }
+  .tf-alpha-tab {
+    padding:10px 16px; border:1px solid rgba(139,99,16,.32); border-radius:999px;
+    background:#FFFDF8; color:#74500D; font-weight:900; cursor:pointer;
+  }
+  .tf-alpha-tab.is-active { background:#8B6310; color:#FFF; border-color:#8B6310; }
+  .tf-alpha-section-title {
+    margin:24px 0 12px; color:#815709; font-family:'Noto Serif TC',serif;
+    font-size:calc(19px * var(--tf-alpha-font-scale)); font-weight:900;
+  }
+  .tf-alpha-note { margin:16px 0; padding:13px 15px; border-radius:10px; background:#FBF4E7; color:#725D39; line-height:1.75; }
+  .tf-alpha-tile-grid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:11px; }
+  .tf-alpha-tile {
+    position:relative; display:flex; min-height:112px; flex-direction:column; align-items:center;
+    justify-content:center; gap:5px; padding:12px 7px; border:1px solid rgba(139,99,16,.25);
+    border-radius:13px; background:#FFF9EC; color:#493719; cursor:pointer;
+  }
+  .tf-alpha-tile:hover { background:#F5E6C7; border-color:#C8973A; }
+  .tf-alpha-tile-th { font-family:'Noto Sans Thai',sans-serif; font-size:calc(35px * var(--tf-alpha-font-scale)); font-weight:800; }
+  .tf-alpha-tile-read { color:#806D4E; font-size:calc(12px * var(--tf-alpha-font-scale)); }
+  .tf-alpha-tile-sound { color:#9A6C11; font-size:calc(11px * var(--tf-alpha-font-scale)); font-weight:800; }
+  .tf-alpha-ending-list { display:grid; grid-template-columns:1fr; gap:10px; }
+  .tf-alpha-ending-btn {
+    display:grid; grid-template-columns:105px 1fr; align-items:center; gap:15px; width:100%;
+    min-height:70px; padding:13px 18px; border:1px solid rgba(139,99,16,.28);
+    border-radius:12px; background:#FFF9EC; color:#493719; text-align:left; cursor:pointer;
+  }
+  .tf-alpha-ending-btn strong { color:#7A5208; font-size:calc(19px * var(--tf-alpha-font-scale)); }
+  .tf-alpha-ending-btn span { font-family:'Noto Sans Thai',sans-serif; font-size:calc(18px * var(--tf-alpha-font-scale)); line-height:1.6; }
+  .tf-alpha-ending-detail { margin-top:14px; padding:20px; border:1px solid rgba(139,99,16,.24); border-radius:13px; background:#FBF8F1; color:#5A4727; line-height:1.8; }
+  .tf-alpha-ending-detail strong { color:#7A5208; }
+  .tf-manual-intro { max-width:760px; margin:0 auto 18px; text-align:center; color:#765C2C; line-height:1.75; }
+  .tf-manual-question {
+    max-width:760px; margin:0 auto 18px; padding:15px; border-radius:11px;
+    background:linear-gradient(135deg,#5A3E0A,#8B6310); color:#FFFAF0;
+    font-family:'Noto Serif TC',serif; font-size:calc(19px * var(--tf-alpha-font-scale)); font-weight:900; text-align:center;
+  }
+  .tf-manual-rule {
+    max-width:820px; margin:0 auto 15px; padding:20px; border:1px solid rgba(139,99,16,.28);
+    border-left:5px solid #C8973A; border-radius:13px; background:#FFFEFB;
+  }
+  .tf-manual-rule.is-live { border-left-color:#7A9D59; }
+  .tf-manual-rule.is-dead { border-left-color:#B96650; }
+  .tf-manual-rule h3 { margin:0 0 12px; color:#7A5208; font-family:'Noto Serif TC',serif; font-size:calc(20px * var(--tf-alpha-font-scale)); }
+  .tf-manual-summary { margin-bottom:12px; padding:12px 14px; border-radius:9px; background:#F7E7C5; color:#5A3E0A; font-weight:900; line-height:1.7; }
+  .tf-manual-rule details { border-top:1px solid rgba(139,99,16,.16); padding-top:11px; }
+  .tf-manual-rule summary {
+    display:inline-block; padding:8px 12px; border:1px solid rgba(139,99,16,.35); border-radius:9px;
+    background:#FFF9EC; color:#74500D; font-weight:900; cursor:pointer; list-style:none;
+  }
+  .tf-manual-rule summary::before { content:'＋ '; }
+  .tf-manual-rule details[open] summary::before { content:'－ '; }
+  .tf-manual-detail-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:11px; margin-top:14px; }
+  .tf-manual-detail-grid > .tf-alpha-menu-card {
+    width:100%; min-height:150px; height:100%; padding:22px; align-items:flex-start; justify-content:center;
+  }
+  .tf-manual-branch { padding:14px; border:1px solid rgba(139,99,16,.18); border-radius:10px; background:#FBF8F1; line-height:1.8; }
+  .tf-manual-branch b { color:#69490D; }
+  .tf-manual-term {
+    display:inline-flex; margin:2px; padding:4px 9px; border:1px solid rgba(139,99,16,.38);
+    border-radius:999px; background:#FFF9EC; color:#74500D; font:inherit; font-weight:900; cursor:pointer;
+  }
+  .tf-manual-tone-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
+  .tf-manual-tone { padding:14px 8px; border:1px solid rgba(139,99,16,.25); border-radius:11px; background:#FFF9EC; text-align:center; }
+  .tf-manual-tone b { display:block; font-family:'Noto Sans Thai',sans-serif; font-size:calc(32px * var(--tf-alpha-font-scale)); color:#7A5208; }
+  .tf-alpha-footer-note { margin:24px 0 0; color:#88775B; font-size:calc(13px * var(--tf-alpha-font-scale)); text-align:center; }
+  @media (max-width:720px) {
+    .tf-alpha-overlay { padding:0; align-items:stretch; }
+    .tf-alpha-dialog { --tf-alpha-font-scale:.8; width:100%; height:100%; max-height:none; border:0; border-radius:0; font-size:80%; }
+    .tf-alpha-overlay-head { grid-template-columns:46px 1fr 46px; min-height:64px; padding:8px 12px; }
+    .tf-alpha-icon-btn { width:42px; height:42px; }
+    .tf-alpha-overlay-title { font-size:calc(19px * var(--tf-alpha-font-scale)); }
+    .tf-alpha-overlay-body { padding:16px; }
+    .tf-alpha-menu { grid-template-columns:1fr; gap:12px; }
+    .tf-alpha-menu-card, .tf-alpha-menu > .tf-alpha-menu-card:first-child { grid-column:auto; min-height:130px; padding:22px; }
+    .tf-alpha-menu-card strong { font-size:calc(21px * var(--tf-alpha-font-scale)); }
+    .tf-alpha-tile-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+    .tf-manual-detail-grid { grid-template-columns:1fr; }
+    .tf-manual-tone-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .tf-alpha-ending-btn { grid-template-columns:82px 1fr; padding:12px; }
+  }
+  @media (max-width:720px) and (orientation:portrait) {
+    .tf-alpha-overlay { padding:10vh 10vw; align-items:center; }
+    .tf-alpha-dialog {
+      width:80vw; height:80vh; height:80dvh; max-height:80vh; max-height:80dvh;
+      border:1px solid rgba(139,99,16,.28); border-radius:18px;
+    }
+  }
+
   /* ── Session Guess Page (New Page 1) ── */
   .sg-breakdown {
     display: flex;
@@ -1918,7 +2058,7 @@ document.addEventListener('contextmenu', function(e){
       <button class="tf-ltab" id="tf-ltab-1" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_level_select',{category:'game',level:1});}catch(e){}TF.selectLevel(1)">初級</button>
       <button class="tf-ltab" id="tf-ltab-2" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_level_select',{category:'game',level:2});}catch(e){}TF.selectLevel(2)">中級</button>
       <button class="tf-ltab" id="tf-ltab-3" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_level_select',{category:'game',level:3});}catch(e){}TF.selectLevel(3)">高級</button> <!-- Lin 2026-07-16: เปิดคืนตามที่ Lin สั่ง -->
-      <button class="tf-ltab" id="tf-alpha-btn" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_alpha_zone_open',{category:'game'});}catch(e){}TF.openAlpha()"><span class="tf-alpha-icon" aria-hidden="true">🔤</span> 字母練習區</button>
+      <button class="tf-ltab" id="tf-alpha-btn" onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_alpha_zone_open',{category:'game'});}catch(e){}TF.openAlphabetOverlay('home')"><span class="tf-alpha-icon" aria-hidden="true">🔤</span> 字母練習區</button>
     </div>
     <div class="tf-banner-counter" id="tf-session-counter"></div>
   </div>

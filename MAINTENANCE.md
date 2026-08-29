@@ -1,6 +1,16 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-29 Asia/Bangkok** — Restore Game Search candidate
+**Updated: 2026-08-29 Asia/Bangkok** — Tone phonics manual / alphabet overlay candidate
+
+## 2026-08-29 — Tone phonics manual + state-preserving alphabet overlay (`PASS_LOCAL / HUMAN_REVIEW_PENDING / PRODUCTION_UNCHANGED`)
+
+- Changed Tone's existing `字母練習區` entry from a game-state reset/navigation path to one in-place overlay that preserves the current question, round, score, hint/zero-lock, progress and history. The overlay has the approved four-card hierarchy: the featured `泰文拼音規則手冊`, plus equal `子音練習`, `母音練習` and `尾音練習` cards; Desktop and Portrait use the current warm-white/gold site visual system.
+- Reused the full approved three-rule manual copy with a summary at the top of every rule and collapsed details. Rule 2 retains the vertical `中子音＋低子音 → 一聲` / `高子音＋前引字 → 五聲` split; Rule 3 retains `全部都是 → 二聲`. Manual terms open the same overlay, including tone marks and the `活音／死音 → 母音或尾音` choice.
+- Reused existing `ALPHA` consonant, vowel and ending data. Consonants are separated into common, uncommon and lead-letter groups; consonant/vowel buttons play only existing teacher audio, and lead letters map to their approved main-consonant recordings. Endings use the exact five long and three short groups and show the complete existing ending explanation without fabricated ending or tone-mark audio.
+- The existing Tone `?` hint charge, score ladder and zero-lock order are unchanged; its explanation popup now adds `查看拼音規則手冊`, opening the same overlay at the relevant rule. Classroom source, Mobile Landscape 5.2, Search/quota, Login/Vault, Supabase, SRS/Review/Leaderboard/score/Paid/Challenge, Lego and Production/data are unchanged.
+- Focused phonics-manual 10/10, Tone Mobile Landscape 8/8, shared-game 52/52, JavaScript syntax, whitespace and the full 1,018-file site gate pass. Local source Preview checks cover Desktop and 390×844 Portrait, four-card layout, collapsed details, live/dead branching, exact ending groups/explanations, consonant audio and `หน → น` audio with no fresh console warning/error. The four live/dead choice cards use the same computed width, height, padding and alignment at each breakpoint; an opened rule detail persists through internal navigation/back and resets only after closing/reopening the overlay. The Desktop overlay is capped at the Human-corrected compact 748×612 surface (15% smaller in both dimensions than 880×720); Mobile Portrait uses a centered 80vw×80dvh surface, 20% smaller than its viewport in both dimensions, while Mobile Landscape remains unchanged. All typography scoped inside `字母練習區` is reduced 15% on Desktop and 20% on mobile without changing text elsewhere. Release remains stopped for Lin's Human visual/audio/content PASS.
+
+**Prior update: 2026-08-29 Asia/Bangkok** — Restore Game Search candidate
 
 ## 2026-08-29 — Restore Game Search (`PASS_LOCAL / PROTECTED_PREVIEW_PENDING / PRODUCTION_UNCHANGED`)
 
