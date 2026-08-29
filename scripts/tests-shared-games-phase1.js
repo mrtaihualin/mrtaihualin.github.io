@@ -345,6 +345,7 @@ test('Tone-authority four-row stacks use exact 5px boundaries without resizing t
   assert.match(reading, /gsh-four-row-stack > \.gsh-copy-row \{ margin-top:5px !important; \}/);
   assert.match(typing, /gsh-four-row-stack > \.gsh-copy-row\{margin-top:5px !important;\}/);
   assert.match(listening, /\.lg-reveal > div \+ div\{margin-top:5px;\}/);
+  assert.match(reading, /@media \(max-width:768px\) and \(orientation:portrait\) \{[\s\S]{0,900}gsh-four-row-stack > \.gsh-copy-row \{ margin-top:5px !important; \}[\s\S]{0,700}\.word-th \{ padding-top:0; \}[\s\S]{0,180}#word-ctl-row \{ margin-top:1px !important; \}/, 'Reading Portrait must keep 5\/5\/5 copy gaps while preserving the prior gold-band height');
 });
 
 test('five-game Progress DOM and runtime are removed while item-score HUDs remain', () => {

@@ -195,6 +195,14 @@ html:not(.gc-ready) [onclick*="rgBackToEndFromMistakes("]{
   }
   body[data-gsh-game="reading"] .gsh-session-header > .gsh-level-selector { flex:none; }
   body[data-gsh-game="reading"] .gsh-gameplay { margin-top:0; }
+  body[data-gsh-game="reading"] .gsh-four-row-stack > .gsh-copy-row { margin-top:5px !important; }
+  body[data-gsh-game="reading"] .gsh-four-row-stack > .gsh-copy-row:first-child { margin-top:0 !important; }
+  body[data-gsh-game="reading"] .gsh-four-row-stack > .gsh-copy-row > .rev-pron,
+  body[data-gsh-game="reading"] .gsh-four-row-stack > .gsh-copy-row > .rev-en { margin-top:0 !important; }
+  /* 6px word padding + 5px tool margin become the three exact copy gaps;
+     total gold-band height stays unchanged and Landscape is excluded. */
+  body[data-gsh-game="reading"] .word-th { padding-top:0; }
+  body[data-gsh-game="reading"] #word-ctl-row { margin-top:1px !important; }
 }
 
 .level-tabs{display:flex;gap:8px;margin-bottom:10px;width:100%;max-width:640px;}
