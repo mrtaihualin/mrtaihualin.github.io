@@ -7,92 +7,105 @@ const path = require('path');
 
 const root = path.resolve(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
-const html = read('tone-finder.html');
-const app = read('js/games/tone-finder-game.js');
-const min = read('js/games/tone-finder-game.min.js');
-const stage = read('js/games/tone-mobile-landscape.js');
-const css = read('css/tone-mobile-landscape.css');
+const stage = read('js/core/mobile-landscape.js');
+const css = read('css/mobile-landscape.css');
+const toneApp = read('js/games/tone-finder-game.js');
+const pages = [
+  ['tone', 'tone-finder.html'],
+  ['reading', 'reading-game.html'],
+  ['listening', 'listening-game.html'],
+  ['typing', 'typing-game.html'],
+  ['word-order', 'word-order.html'],
+  ['lego', 'lego.html'],
+];
 
 let passed = 0;
 function test(name, fn) {
-  try {
-    fn();
-    passed += 1;
-    console.log('✓ ' + name);
-  } catch (error) {
-    console.error('✗ ' + name);
-    throw error;
-  }
+  fn();
+  passed += 1;
+  console.log('✓ ' + name);
 }
 
-test('Tone page binds only the Tone landscape assets and safe viewport', () => {
-  assert.match(html, /viewport-fit=cover/);
-  assert.match(html, /css\/tone-mobile-landscape\.css\?v=2/);
-  assert.match(html, /js\/games\/tone-mobile-landscape\.js\?v=1/);
-  const scopedGames = [...(stage + css).matchAll(/data-gsh-game="([^"]+)"/g)].map((match) => match[1]);
-  assert.ok(scopedGames.length > 0 && scopedGames.every((game) => game === 'tone'));
+test('all six pages bind one shared landscape system', () => {
+  for (const [game, file] of pages) {
+    const html = read(file);
+    assert.match(html, new RegExp(`<body[^>]*data-gsh-game="${game}"`), `${file}: missing game marker`);
+    assert.match(html, /css\/mobile-landscape\.css\?v=23/, `${file}: missing shared CSS`);
+    assert.match(html, /js\/core\/mobile-landscape\.js\?v=18/, `${file}: missing shared controller`);
+    assert.match(html, /js\/games\/thai-keyboard\.js\?v=2/, `${file}: missing shared split keyboard`);
+  }
+  assert.doesNotMatch(read('tone-finder.html'), /tone-mobile-landscape\.(?:css|js)/);
 });
 
-test('top bar and all four dropdowns share stable below-trigger positioning', () => {
-  assert.match(stage, /mountExistingNode\(q\('\.tf-page-title'\), slot\('shared-controls'\)\)/);
-  assert.match(stage, /mountExistingNode\(q\('\.rg-ctl-wrap'\), slot\('main-action'\)\)/);
+test('top band is Login, Chinese menus, title, Game, More and fixed Skip slot', () => {
+  assert.match(stage, /mainAction\.appendChild\(makeSlot\('skip'\)\)/);
+  assert.match(stage, /top\.append\(makeSlot\('dropdowns'\), makeSlot\('shared-controls'\), mainAction\)/);
+  assert.match(stage, /createDropdown\('level', '等級', levels\)/);
+  assert.match(stage, /createDropdown\('tools', '工具', tools\)/);
+  assert.match(stage, /mountExistingNode\(login, slot\('dropdowns'\)\)/);
+  assert.match(stage, /slot\('dropdowns'\)\.prepend\(login\)/);
+  assert.match(stage, /mountExistingNode\(title, slot\('shared-controls'\)\)/);
+  assert.match(stage, /insertBefore\(controls, slot\('skip'\)\)/);
+  assert.match(css, /data-gsh-ml-slot="skip"[\s\S]{0,220}flex: 0 0 var\(--gsh-ml-control-h\)/);
+});
+
+test('five standard games lock visible 30 / 40 / 30 outer cards', () => {
+  assert.match(css, /grid-template-columns: minmax\(0, 30fr\) minmax\(0, 40fr\) minmax\(0, 30fr\)/);
+  assert.match(css, /not\(\[data-gsh-game="lego"\]\) \[data-gsh-ml-slot="left"\][\s\S]{0,260}border: 1\.5px solid/);
+  assert.match(css, /not\(\[data-gsh-game="lego"\]\) \[data-gsh-ml-slot="center"\][\s\S]{0,420}overflow-y: auto/);
+  assert.match(stage, /play\.append\(makeSlot\('sentence'\), left, center, right/);
+});
+
+test('menus open below their owner, expose six rows and keep icon labels functional', () => {
   assert.match(stage, /function positionPanelBelow\(trigger, panel, fallbackWidth\)[\s\S]{0,1800}rect\.bottom \+ 4/);
-  assert.match(stage, /function syncUtilityPanels\(\)[\s\S]{0,1200}positionPanelBelow\(trigger, panel, 240\)/);
-  assert.match(stage, /if \(open\) positionPanelBelow\(trigger, panel, 220\)/);
-  assert.match(stage, /GamePanels\.closeOthers\(panelRegistryEntry\)/);
+  assert.match(stage, /if \(name === 'tools'\)[\s\S]{0,1200}control\.click\(\)/);
+  assert.match(css, /data-gsh-dropdown="tools"[\s\S]{0,2600}max-height: calc\(\(6 \* var\(--gsh-ml-control-h\)\)/);
+  assert.match(css, /data-gsh-ml-tool-label[\s\S]{0,500}border: 0 !important/);
+  assert.match(css, /game-switcher\[data-gsh-ml-utility-panel\][\s\S]{0,800}overflow-y: auto !important/);
 });
 
-test('Level and Tools are centered, touchable and scroll at six rows', () => {
-  assert.match(css, /data-gsh-dropdown="level"[\s\S]{0,300}grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
-  assert.match(css, /data-gsh-game="tone"[\s\S]{0,120}data-gsh-dropdown="tools"[\s\S]{0,320}grid-template-columns: 28px minmax\(0, 1fr\)[\s\S]{0,300}border: 0 !important/);
-  assert.match(css, /data-gsh-dropdown="tools"[\s\S]{0,1800}max-height: calc\([\s\S]{0,900}overflow-y: auto !important/);
-  assert.match(css, /gsh-ml-dropdown-trigger[\s\S]{0,520}touch-action: manipulation/);
-  assert.match(stage, /labeledNode\('#rg-pron-toggle', '讀音', '🗣️'\)/);
-});
-
-test('gameplay keeps three equal controls per side and Skip at center bottom', () => {
+test('Tone preserves three left, three right and reveal actions in the right slots', () => {
   assert.match(stage, /children\.length === 6 \? 3/);
   assert.match(stage, /mountExistingNode\(uncertain, container\)/);
-  assert.match(css, /sg-dontknow-btn[\s\S]{0,620}width: var\(--gsh-ml-tone-choice\)[\s\S]{0,520}border-radius: 50% !important/);
-  assert.match(css, /data-gsh-ml-slot="current-input"[\s\S]{0,160}:has\(> \[data-gsh-ml-role="skip"\]\)[\s\S]{0,240}margin-top: auto[\s\S]{0,120}justify-content: flex-end/);
-  assert.match(css, /data-gsh-ml-split="tone"\][\s\S]{0,160}align-content: end[\s\S]{0,120}padding-block: 0 !important/);
-  assert.match(css, /max-height: 300px[\s\S]{0,520}--gsh-ml-tone-choice: clamp\(46px, 22\.5dvh, 58px\)/);
+  assert.match(stage, /function syncToneRevealActions\([\s\S]{0,900}result-audio[\s\S]{0,260}result-english[\s\S]{0,260}result-next/);
+  assert.match(toneApp, /skipCurrentWord:\s*function\(\)[\s\S]{0,1500}is_skipped:\s*true/);
 });
 
-test('center owns the word, guidance and symmetric scrollable reveal content', () => {
-  assert.match(css, /:has\(\[data-gsh-ml-split="tone"\] > \.sg-tone-btn\)[\s\S]{0,200}#tf-banner[\s\S]{0,240}flex: 1 1 auto/);
-  assert.match(css, /question"\] #tf-body[\s\S]{0,340}overflow-y: auto !important[\s\S]{0,220}touch-action: pan-y/);
-  assert.match(css, /\.tf-body \.result-v2 \{[\s\S]{0,260}display: flex[\s\S]{0,180}gap: var\(--gsh-ml-gap\)/);
-  assert.match(css, /\.tf-options\[data-gsh-ml-split="tone"\][\s\S]{0,120}align-content: center !important/);
-  assert.match(css, /\.tf-options:has\(> \.tf-opt-wrap:nth-child\(3\):last-child\)[\s\S]{0,760}data-gsh-side="right"\]\[data-gsh-side-index="1"\][\s\S]{0,100}grid-row: 2/);
+test('Reading, Typing and Word Order keep game-owned actions in fixed right-side slots', () => {
+  assert.match(stage, /mountMany\(\['#btn-check', '#btn-next', '#btn-next-syl'\], slot\('right'\)\)/);
+  assert.match(stage, /mountMany\(\['#btn-check', '#btn-next'\], slot\('right'\)\)/);
+  assert.match(stage, /mountMany\(\['#wo-hint-btn', '#wo-next-btn'\], slot\('right'\)\)/);
+  assert.doesNotMatch(stage, /labeledNode\('#wo-hint-btn', '提示'/);
+  assert.match(css, /data-gsh-game="word-order"[\s\S]{0,220}#wo-hint-btn/);
 });
 
-test('physical iPhone Safari keeps long guided sentences inside the center column', () => {
-  assert.match(css, /#gsh-ml-stage \{[\s\S]{0,180}-webkit-text-size-adjust: 100%[\s\S]{0,80}text-size-adjust: 100%/);
-  assert.match(css, /question"\] #tf-banner \{[\s\S]{0,260}min-height: 0[\s\S]{0,120}max-height: 58% !important[\s\S]{0,180}overflow-y: auto !important/);
-  assert.match(css, /\.tf-adv-sent-main \{[\s\S]{0,220}font-size: clamp\(22px, 7\.2dvh, 30px\) !important[\s\S]{0,100}line-height: 1\.25 !important/);
-  assert.match(css, /:has\(\[data-gsh-ml-split="tone"\] > \.sg-tone-btn\)[\s\S]{0,220}#tf-banner[\s\S]{0,220}max-height: none/);
+test('Listening uses two choices per side and Typing keyboard geometry for typed mode', () => {
+  assert.match(stage, /game === 'listening'[\s\S]{0,160}Math\.min\(2, Math\.ceil\(children\.length \/ 2\)\)/);
+  assert.match(stage, /if \(view\.choice\)[\s\S]{0,220}assignSides\(view\.mcWrap, 'listening'\)/);
+  assert.match(stage, /if \(view\.typed\)[\s\S]{0,260}slot\('current-input'\)/);
+  assert.match(stage, /renderListeningKeyboard/);
+  assert.match(stage, /slot\('split-keyboard'\)/);
+  assert.match(stage, /function splitTypingKeyboard\(keyboard\)/);
+  assert.match(stage, /splitTypingKeyboard\(keyboard\)/);
+  assert.match(stage, /function restoreTypingKeyboard\(\)/);
+  assert.match(stage, /restoreTypingKeyboard\(\)/);
 });
 
-test('reveal and summary replace the right-side controls without Switch Game', () => {
-  assert.match(stage, /function syncToneRevealActions\(\)[\s\S]{0,900}result-audio[\s\S]{0,260}result-english[\s\S]{0,260}result-next/);
-  assert.match(css, /data-gsh-ml-role="result-audio"\][\s\S]{0,140}grid-row: 1[\s\S]{0,260}data-gsh-ml-role="result-english"\][\s\S]{0,140}grid-row: 2[\s\S]{0,520}data-gsh-ml-role="result-next"\][\s\S]{0,140}grid-row: 3/);
-  assert.match(css, /data-gsh-ml-role="summary-replay"\][\s\S]{0,140}grid-row: 3/);
-  assert.match(css, /\[data-game-result-switch="v1"\][\s\S]{0,100}display: none !important/);
-  assert.match(stage, /function createToneSummaryScrollPad\(\)[\s\S]{0,1700}pointermove[\s\S]{0,560}scroller\.scrollTop = toneSummaryDrag\.top \+ distance/);
+test('Lego has a full-width sentence band and three independent lower frames', () => {
+  assert.match(stage, /mountMany\(\['\.out-banner'\], slot\('sentence'\)\)/);
+  assert.match(stage, /leftIds = \['time', 'subj', 'modal', 'verb'\]/);
+  assert.match(stage, /centerIds = \['obj', 'prog', 'advObj'\]/);
+  assert.match(stage, /data-gsh-ml-role', 'lego-menu'/);
+  assert.match(css, /data-gsh-game="lego"[\s\S]{0,180}data-gsh-ml-slot="sentence"[\s\S]{0,220}grid-column: 1 \/ 4/);
+  assert.match(css, /data-gsh-game="lego"[\s\S]{0,700}data-gsh-ml-slot="left"[\s\S]{0,240}border: 1\.5px solid/);
 });
 
-test('mobile runtime removes computer-only actions and keeps neutral scoring', () => {
-  assert.match(app, /function tfTouchMobileSurface\(\)[\s\S]{0,140}tfMobilePortrait\(\) \|\| tfMobileLandscape\(\)/);
-  assert.match(app, /function tfWireToneKeyboard\(\)[\s\S]{0,160}if \(tfTouchMobileSurface\(\)\) return/);
-  assert.match(app, /function tfWireEnterNext\(\)[\s\S]{0,160}if \(tfTouchMobileSurface\(\)\) return/);
-  assert.match(app, /body\.innerHTML \+= tfNeutralSkipSurface\(\)[\s\S]{0,260}>跳過<\/button>/);
-  assert.match(app, /skipCurrentWord:\s*function\(\)[\s\S]{0,1500}is_skipped:\s*true[\s\S]{0,260}skip_reason:\s*'user_skip'/);
-  assert.match(app, /var _th = e\.readingTH \|\| \(tfMobileLandscape\(\) \? e\.word : ''\) \|\| ''/);
-  assert.match(app, /if \(tfMobileLandscape\(\) && dispWord && !audioBtnHtml\)[\s\S]{0,420}class="word-audio-btn"[\s\S]{0,460}WordAudio\.has\([\s\S]{0,320}WordAudio\.soonToast/);
-  assert.match(app, /tfMobileLandscape\(\) \? '' : '<div class="sg-question">你覺得這個字是第幾聲？<\/div>'/);
-  assert.match(min, />跳過<\/button>/);
-  assert.ok(min.includes('不確定'));
+test('Landscape input and popup policies stay bounded and reversible', () => {
+  assert.match(stage, /setInputPolicy\(q\('#rg-mobile-input'\), true\)/);
+  assert.match(stage, /setInputPolicy\(q\('#lg-type-input'\), typed\)/);
+  assert.match(stage, /function restoreInputs\(\)/);
+  assert.match(css, /gsh-confirm-card[\s\S]{0,420}width: min\(72vw, 640px\)[\s\S]{0,220}max-height:/);
+  assert.match(css, /@media \(orientation: landscape\) and \(max-width: 1024px\) and \(max-height: 600px\)/);
 });
 
-console.log('\n✅ Tone Mobile Landscape tests passed (' + passed + ' checks)');
+console.log(`\n✅ Mobile Landscape 5.2 tests passed (${passed} checks)`);
