@@ -451,6 +451,17 @@ test('all games omit the removed leave-game control and dialog', () => {
   assert.match(legoHtml, /shared\.min\.js\?v=47/, 'Lego must load the exit-free shared runtime');
 });
 
+test('the sitewide exit-intent survey and its submission path stay removed', () => {
+  const forbiddenSurvey = /exit-survey-bar|exit_survey_(?:shown|show|dismiss|submit)|ES_WEB3FORMS_KEY|花 3 秒告訴老師為什麼/;
+  assert.doesNotMatch(sharedJs, forbiddenSurvey, 'shared source must not create or submit the retired exit-intent survey');
+  assert.doesNotMatch(sharedMin, forbiddenSurvey, 'deployed shared runtime must not create or submit the retired exit-intent survey');
+  for (const file of fs.readdirSync(root).filter((name) => name.endsWith('.html'))) {
+    const html = fs.readFileSync(path.join(root, file), 'utf8');
+    assert.doesNotMatch(html, forbiddenSurvey, `${file}: retired exit-intent survey must not be defined inline`);
+  }
+  assert.match(sharedJs, /GA4 ARTICLE TRACKING/, 'unrelated article analytics must remain intact');
+});
+
 test('completed rounds no longer interrupt play with the removed VocabPopup lead flow', () => {
   const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
   assert.doesNotMatch(sharedJs, /window\.VocabPopup|vocab_popup_rounds|vocab_popup_shown|id=['"]vp-pop/);
