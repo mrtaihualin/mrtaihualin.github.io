@@ -9,6 +9,7 @@ const vm = require('vm');
 const root = path.resolve(__dirname, '..');
 const sharedCss = fs.readFileSync(path.join(root, 'css/shared.css'), 'utf8');
 const sharedJs = fs.readFileSync(path.join(root, 'js/core/shared.js'), 'utf8');
+const sharedMin = fs.readFileSync(path.join(root, 'js/core/shared.min.js'), 'utf8');
 const switcherJs = fs.readFileSync(path.join(root, 'js/games/game-switcher.js'), 'utf8');
 const wordMenuJs = fs.readFileSync(path.join(root, 'js/games/word-menu.js'), 'utf8');
 const games = [
@@ -246,8 +247,10 @@ test('all scoped pages use one fail-closed Login surface and game pages permanen
     assert.match(html, /shared\.min\.js\?v=45/, `${file}: non-game cache binding must remain unchanged`);
   }
   assert.doesNotMatch(sharedJs, /suppressScopedAnnouncement|staleScopedAnnouncement|avail-band-placeholder/);
+  assert.doesNotMatch(sharedMin, /suppressScopedAnnouncement|staleScopedAnnouncement|avail-band-placeholder/);
   assert.doesNotMatch(sharedJs, /band\s*=\s*document\.createElement\('div'\)[\s\S]{0,180}band\.id\s*=\s*'ann-band'/, 'shared runtime must not dynamically create an announcement band');
   assert.match(sharedJs, /var band = document\.body && !document\.body\.hasAttribute\('data-gsh-game'\)[\s\S]{0,100}document\.getElementById\('ann-band'\)[\s\S]{0,100}if \(band &&/, 'non-game pages may hydrate only an existing static announcement');
+  assert.match(sharedMin, /document\.body&&!document\.body\.hasAttribute\("data-gsh-game"\)\?document\.getElementById\("ann-band"\):null/, 'deployed shared runtime must keep the non-game announcement guard');
   assert.doesNotMatch(sharedCss, /(^|[},]\s*)\.avail-band\s*\{/m, 'announcement CSS must never target an unscoped game surface');
   assert.match(minimumGuest, /window\.MRT_PARKED_ACCOUNT_SURFACE = parked\.test\(path\)/);
   assert.doesNotMatch(minimumGuest, /location\.replace\('\/games\.html\?guest_launch=1'\)/);
