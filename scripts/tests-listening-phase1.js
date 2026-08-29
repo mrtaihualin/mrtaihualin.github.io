@@ -85,7 +85,8 @@ check('mobile software keyboard closes whenever Listening no longer needs typed 
   /function finishAnswer\([\s\S]*closeTypeKeyboard\(\)/.test(app) &&
   /function showModeSelectionForCurrent\(\) \{[\s\S]*closeTypeKeyboard\(\)/.test(app) &&
   /function showQuestion\([\s\S]*state\.mode === 'mc'\) \{[\s\S]*closeTypeKeyboard\(\)/.test(app) &&
-  /closest\('#wm-trigger, #lg-howto-btn'\)/.test(app));
+  /closest\('#lg-word-ctl-row, #lg-howto-btn'\)/.test(app) &&
+  !/#wm-trigger/.test(app));
 check('level selector uses only playable audio and keeps Advanced visibly locked',
   /function buildPlayablePool\(\) \{[\s\S]*window\.WordAudio\.has\(w\.th\)/.test(app) &&
   /function buildPool\(level\) \{[\s\S]*w\.level === level/.test(app) &&

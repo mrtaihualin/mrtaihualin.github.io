@@ -855,14 +855,23 @@ body .gsh-shell.tf-page { padding-top:8px; }
   body[data-gsh-game]:not([data-gsh-game="lego"]) .mrt-login-surface,
   body[data-gsh-game]:not([data-gsh-game="lego"]) .gsh-gameplay { margin-top:0; }
 
-  /* The original Tone floating control sizes/gaps remain game-owned. */
-  body[data-gsh-game]:not([data-gsh-game="lego"]) .rg-ctl-wrap {
+  /* Lin 2026-08-29: all six games keep the original right-side vertical
+     control stack on Desktop and Portrait. Mobile Landscape overrides this
+     below with its separate two-control play layout. */
+  body[data-gsh-game] .rg-ctl-wrap {
     right:12px !important;
     bottom:calc(60px + env(safe-area-inset-bottom,0px)) !important;
     z-index:100000 !important;
+    left:auto !important;
+    width:max-content !important;
+    transform:none !important;
+    flex-direction:column !important;
+    align-items:flex-end !important;
+    justify-content:flex-end !important;
+    gap:10px !important;
   }
-  body[data-gsh-game]:not([data-gsh-game="lego"]) .rg-ctl-wrap > #game-switcher,
-  body[data-gsh-game]:not([data-gsh-game="lego"]) .rg-ctl-wrap > .grw-menu {
+  body[data-gsh-game] .rg-ctl-wrap > #game-switcher,
+  body[data-gsh-game] .rg-ctl-wrap > .grw-menu {
     position:absolute !important; right:0 !important;
     bottom:calc(100% + 8px) !important; top:auto !important; left:auto !important;
     margin:0 !important; transform:none !important;
@@ -870,28 +879,23 @@ body .gsh-shell.tf-page { padding-top:8px; }
 }
 
 @media (max-width:768px) and (orientation:portrait) {
-  /* Lin 2026-08-29: Portrait already has the bottom game selector. Remove the
-     duplicate floating game-menu action completely and centre only the real
-     remaining actions. Desktop and the separate Landscape layout do not enter
-     this media query. */
+  /* Keep all three game controls visible in the same right-side vertical
+     order as Desktop. Vault owns a separate page-local two-control layout. */
   html body[data-gsh-game] .rg-ctl-wrap {
-    left:50% !important;
-    right:auto !important;
+    left:auto !important;
+    right:12px !important;
     width:max-content !important;
-    transform:translateX(-50%) !important;
-    flex-direction:row !important;
-    align-items:center !important;
-    justify-content:center !important;
-    gap:8px !important;
+    transform:none !important;
+    flex-direction:column !important;
+    align-items:flex-end !important;
+    justify-content:flex-end !important;
+    gap:10px !important;
   }
-  html body[data-gsh-game] .rg-ctl-wrap > .rg-ctl-fab[aria-label="遊戲選單"] {
-    display:none !important;
-  }
-  body[data-gsh-game]:not([data-gsh-game="lego"]) .rg-ctl-wrap {
+  body[data-gsh-game] .rg-ctl-wrap {
     bottom:calc(68px + env(safe-area-inset-bottom,0px)) !important;
   }
-  body[data-gsh-game]:not([data-gsh-game="lego"]).rg-fake-fullscreen .rg-ctl-wrap,
-  body[data-gsh-game]:not([data-gsh-game="lego"]) .rg-ctl-wrap.rg-ctl-fs {
+  body[data-gsh-game].rg-fake-fullscreen .rg-ctl-wrap,
+  body[data-gsh-game] .rg-ctl-wrap.rg-ctl-fs {
     bottom:calc(6px + env(safe-area-inset-bottom,0px)) !important;
   }
 }

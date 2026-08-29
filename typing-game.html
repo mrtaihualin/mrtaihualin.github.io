@@ -84,14 +84,14 @@ if (document.fonts && document.fonts.load) {
   document.fonts.load("400 14px 'Noto Sans Thai'", "◌่้๊๋").catch(function(){});
 }
 </script>
-<link rel="stylesheet" href="css/shared.css?v=35">
+<link rel="stylesheet" href="css/shared.css?v=36">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="js/core/supabase-config.js?v=10"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script>
 <script defer src="js/games/round-report.js?v=3"></script>
 <script defer src="js/games/typing-score.js?v=1"></script><!-- สูตร 無提示 ชุดเดียวกับ Listening Typing Bonus -->
 <script src="js/games/protected-word-audio.js?v=3"></script><!-- Core 5: isolated Guest audio client -->
-<script src="js/games/word-menu.js?v=9"></script><!-- เมนู 🍚 รวมตัวเลือกใต้คำศัพท์ (แบบรายการแนวตั้ง) — Lin 2026-07-19 -->
+<script src="js/games/word-menu.js?v=10"></script><!-- เครื่องมือช่วยเรียนแบบแถวตรง -->
 <script src="js/core/network-guard.js?v=1"></script>
 <script src="js/games/game-content-client.js?v=11"></script>
 <script src="data/tone-engine.js?v=3"></script>
@@ -421,7 +421,9 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
   ]
 }
 </script>
-<script src="js/core/minimum-guest-launch.js?v=5"></script>
+<script src="js/core/minimum-guest-launch.js?v=6"></script>
+<script defer src="js/games/word-vault.js?v=8"></script>
+<script defer src="js/games/sentence-vault.js?v=4"></script>
 </head>
 <body data-gsh-game="typing">
 
@@ -501,8 +503,8 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
       <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">✓ 「已記得」按鈕是什麼意思</div>
       <p style="margin:0 0 4px;">覺得字已經很熟，可按「已記得」跳過提示直接自測。不會加分、不會加星星，就算全打對也一樣——純粹標記「已精通」，用在複習系統。</p>
 
-      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🍚 好用小工具（點 🍚 圖示打開選單）</div>
-      <p style="margin:0 0 4px;">點 🍚 圖示展開直式清單：🔊發音（AI 語音）・🐣／🥚讀音顯示（切換注音式泰語讀音）・🍙／🌾翻譯顯示（🍙顯示中文翻譯，🌾隱藏翻譯）・🔖加入單字庫（收藏這個字，之後可在別處複習）・💡／🔥提示模式切換・⌨️螢幕鍵盤開關・🙏禮貌詞（只在高級句子出現，切換句尾要不要打ครับ／ค่ะ／คะ）。</p>
+      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🧰 好用小工具</div>
+      <p style="margin:0 0 4px;">題目上方的工具列可直接使用：🔊發音（AI 語音）・🐣／🥚讀音顯示（切換注音式泰語讀音）・🍙／🌾翻譯顯示（🍙顯示中文翻譯，🌾隱藏翻譯）・🔖加入單字庫（收藏這個字，之後可在別處複習）・💡／🔥提示模式切換・⌨️螢幕鍵盤開關・🙏禮貌詞（只在高級句子出現，切換句尾要不要打ครับ／ค่ะ／คะ）。</p>
 
       <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🏆 星星、稻米勳章、連續天數</div>
       <p style="margin:0 0 4px;">星星不是答對一題就有，是這個字經過複習、真的「精通」了才拿到一顆（跟其他遊戲共用）。星星累積解鎖稻米勳章：茉莉香米（10顆）→ 糯米（20顆）→ 紫米（40顆）→ 香黑米（60顆）→ 紅米（100顆）。每天練習累積連續天數，斷一天有「護盾」保護連續紀錄不歸零（次數有限）。每週換一次每週挑戰，完成有額外獎勵。</p>
@@ -594,7 +596,7 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
         <!-- Lin 2026-08-01: ปุ่มครับ/ค่ะ/คะ ท้ายประโยค高級 — ยังพิมพ์ได้จริง (ต่างจากเกมอ่าน) แต่ไม่นับคะแนนถ้าผิด โผล่เฉพาะตอนเล่น高級句子เท่านั้น -->
         <button id="rg-particle-toggle" class="word-ctl-btn" type="button" onclick="tgToggleParticleMode()" style="display:none;">🙏</button>
       </div>
-      <!-- Lin 2026-07-19: ยุบปุ่มทั้ง 6 เข้าเมนู 🍚 (รายการแนวตั้ง ไอคอน+ชื่อ+สถานะ) — ปุ่มเดิม/ช่องเสียบเดิมถูกย้ายเข้าเมนู ไม่ได้สร้างใหม่ ตรรกะเดิมทำงานครบ -->
+      <!-- เครื่องมือทั้งหมดอยู่ในแถวใต้คำ โดยใช้ปุ่มเดิม/ช่องเสียบเดิมและตรรกะเดิม -->
       <!-- Lin 2026-07-30 (แก้รอบ 2): เรียงลำดับกลางทุกเกม: 發音 → 讀音 → 英文讀音 → 翻譯 → 單字庫 → 提示 → 字體 → 螢幕鍵盤 (เกมไหนไม่มีปุ่มไหนก็เลื่อนขึ้น) -->
       <script>document.addEventListener('DOMContentLoaded',function(){WordMenu.init({rowId:'word-ctl-row',items:[
         {id:'rg-sound-toggle',    label:'發音',     state:'none'},
@@ -755,12 +757,12 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/typing-game-app.min.js?v=42']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/typing-game-app.min.js?v=43']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 </div><!-- /.v3-page -->
 <script src="data/nav-template.js?v=4"></script>
-<script src="js/core/shared.min.js?v=46"></script>
+<script src="js/core/shared.min.js?v=47"></script>
 <script src="js/games/game-flow.js?v=11"></script>
 
 <!-- ── Game Switcher (fixed pill) ── -->
@@ -773,7 +775,7 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
 @media(max-width:768px){#game-switcher{bottom:calc(120px + env(safe-area-inset-bottom,0px));}.gs-tab{padding:8px 13px;font-size:12px;}}
 </style>
 <div id="game-switcher" data-current="typing_game"></div>
-<script src="js/games/game-switcher.js?v=2"></script>
+<script src="js/games/game-switcher.js?v=6"></script>
 <!-- 單字庫徽章：移除了 — 單字庫已經在 #game-switcher（🎮 選單）裡有分頁，這裡放重複了 — Lin 2026-07-24 -->
 <script>
 // ── 提示泡泡（給其他頁面共用的函式，這頁不再自動觸發小泡泡，改用下面完整導覽）— Lin 2026-07-24 ──
@@ -786,7 +788,7 @@ function dismissHowtoHint(id){
 var GT_TOUR_STEPS=[
   {sel:'#wth',        title:'這裡是要打的字', text:'畫面會顯示要打的泰文音節，照著這個打就對了。'},
   {sel:'#rg-type-wrap',title:'點這裡開始打字', text:'點一下這個框，鍵盤就會跳出來，開始打字。'},
-  {sel:'#wm-trigger',  title:'更多功能都在這裡', text:'點 🍚 打開選單：發音、讀音、翻譯、收藏單字、提示切換、螢幕鍵盤開關、🙏禮貌詞（高級句子專用）都在裡面。'},
+  {sel:'#word-ctl-row', title:'學習工具都在這裡', text:'直接使用這排工具：發音、讀音、翻譯、收藏單字、提示切換、螢幕鍵盤開關，以及高級句子的🙏禮貌詞。'},
   {sel:'#rg-howto-btn',title:'忘記怎麼玩？', text:'隨時點這裡 📖，可以再看一次完整的玩法說明。'}
 ];
 var gtTourIdx=0;
@@ -835,7 +837,7 @@ function gtTourStart(){
   var card=document.getElementById('gt-tour-card'); if(card) card.style.display='block';
   gtTourRender();
 }
-// รอให้ปุ่ม 🍚 (สร้างหลัง DOMContentLoaded โดย word-menu.js) กับคำ/คีย์บอร์ดพร้อมก่อน ค่อยเริ่มทัวร์ — กันชี้ผิดที่/ชี้ที่ว่าง
+// รอให้แถวเครื่องมือกับคำ/คีย์บอร์ดพร้อมก่อน ค่อยเริ่มทัวร์ — กันชี้ผิดที่/ชี้ที่ว่าง
 (function(){
   try{
     if(localStorage.getItem('howto_tour_seen_typing')) return;
@@ -843,7 +845,8 @@ function gtTourStart(){
     var waitReady=setInterval(function(){
       tries++;
       var wth=document.getElementById('wth');
-      var ready=document.getElementById('wm-trigger') && document.getElementById('rg-kbd') && document.getElementById('rg-howto-btn') && wth && wth.textContent!=='—';
+      var toolsRow=document.getElementById('word-ctl-row');
+      var ready=toolsRow && toolsRow.getAttribute('data-wm-done')==='1' && document.getElementById('rg-kbd') && document.getElementById('rg-howto-btn') && wth && wth.textContent!=='—';
       if(ready || tries>25){
         clearInterval(waitReady);
         if(ready) setTimeout(gtTourStart, 500);

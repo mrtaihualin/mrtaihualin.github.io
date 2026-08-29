@@ -15,14 +15,14 @@ function test(label, fn) {
   catch (error) { console.error('✗ ' + label + ': ' + error.message); process.exitCode = 1; }
 }
 
-const labels = { 'reading-game': '拼讀練習室', 'word-order': '語序練習室' };
+const labels = { 'reading-game': '泰語拼讀練習室', 'word-order': '泰語語序練習室' };
 const items = [
   { th: 'สวัสดี', readingTH: 'สะ-หวัด-ดี', en: 'sawatdee', zh: '你好', provenance: [{ source: 'reading-game' }] },
   { th: 'ฉันกินข้าว', en: 'chan kin khao', zh: '我吃飯', provenance: [{ source: 'word-order' }] }
 ];
 
 test('Personal Search is loaded before the personal-content UI', () => {
-  assert.match(html, /personal-search\.js\?v=1[\s\S]*personal-content\.js\?v=4/);
+  assert.match(html, /personal-search\.js\?v=2[\s\S]*personal-content\.js\?v=5/);
 });
 test('search control only belongs to the authenticated render path', () => {
   const guestEnd = ui.indexOf('function renderLimit');
@@ -38,6 +38,12 @@ test('reading field and source label are searchable', () => {
   assert.strictEqual(search.filter(items, 'สะ-หวัด', labels).length, 1);
   assert.strictEqual(search.filter(items, '語序練習室', labels)[0].th, 'ฉันกินข้าว');
 });
+test('reviewed closed aliases match the same Thai concept', () => {
+  const person = [{ th: 'คุณ', readingTH: 'คุน', en: 'khun', zh: '你', provenance: [{ source: 'reading-game' }] }];
+  ['คุณ', 'คุน', 'คุร', '你', '您', 'khun', 'kun'].forEach((query) => {
+    assert.strictEqual(search.filter(person, query, labels).length, 1, query);
+  });
+});
 test('multiple terms must match the same personal item', () => {
   assert.strictEqual(search.filter(items, 'chan 吃飯', labels).length, 1);
   assert.strictEqual(search.filter(items, 'chan 你好', labels).length, 0);
@@ -48,12 +54,18 @@ test('empty query safely returns a copy of the current tab data', () => {
   assert.notStrictEqual(result, items);
 });
 test('UI has labeled search, clear and live result status', () => {
-  assert.match(ui, /搜尋我的內容/);
+  assert.match(ui, /搜尋泰語單字庫/);
   assert.match(ui, /pc-search-clear', '清除'/);
   assert.match(ui, /setAttribute\('aria-live', 'polite'\)/);
 });
+test('one search sits above tabs and renders word and sentence groups together', () => {
+  const account = ui.slice(ui.indexOf('function renderAccount'));
+  assert.ok(account.indexOf('searchControls(update)') < account.indexOf("el('div', 'pc-tabs')"));
+  assert.match(account, /PersonalSearch\.filter\(words,[\s\S]*PersonalSearch\.filter\(sentences/);
+  assert.match(account, /resultGroup\(list, '我的單字'[\s\S]*resultGroup\(list, '我的句子'/);
+});
 test('no-result branch is explicit and rendered with textContent helpers', () => {
-  assert.match(ui, /找不到符合的個人內容/);
+  assert.match(ui, /找不到符合的內容/);
   assert.doesNotMatch(ui.slice(ui.indexOf('function searchControls'), ui.indexOf('function renderAccount')), /innerHTML\s*=\s*searchQuery/);
 });
 

@@ -2107,7 +2107,7 @@ loadSave();
 if(_autoPlanReadingLevel||!rgTryLoadResumeBanner()){ initGame(); }
 try { rgRenderGameBar(); } catch(e){}
 
-// ── GA: ปุ่ม/องค์ประกอบที่สร้างโดยโมดูลกลาง (word-audio.js/word-menu.js/shared.js) — ผูก listener แยกต่างหาก ไม่แก้ไฟล์โมดูลกลาง ──
+// ── GA: ปุ่ม/องค์ประกอบที่สร้างโดยโมดูลกลาง (word-audio.js/shared.js) — ผูก listener แยกต่างหาก ไม่แก้ไฟล์โมดูลกลาง ──
 try {
   // (a) ปุ่ม 🔊 ฟังเสียง — word-audio.js ผูก listener ของตัวเองไว้ที่ id เดิมอยู่แล้ว listener อีกตัวบน element เดียวกันทำงานคู่ขนานได้ ไม่ชนกัน
   var _rgSoundBtn = document.getElementById('rg-sound-toggle');
@@ -2122,15 +2122,9 @@ document.addEventListener('click', function(e){
   var t = e.target && e.target.closest ? e.target.closest('.zh-fab-inline, #zh-fab-standalone') : null;
   if (t) { try { if(typeof gtag==='function') gtag('event','reading_game_translate_toggle',{category:'game'}); } catch(e2){} }
 }, true);
-// (d) ปุ่ม 🍚 เปิดเมนูตัวเลือก (สร้างโดย word-menu.js, id คงที่ #wm-trigger) — capture-phase delegated listener เช่นกัน
-document.addEventListener('click', function(e){
-  var t = e.target && e.target.closest ? e.target.closest('#wm-trigger') : null;
-  if (t) { try { if(typeof gtag==='function') gtag('event','reading_game_wordmenu_open',{category:'game'}); } catch(e2){} }
-}, true);
-
 // ── ฟ้อนต์โมเดิร์น (เหมือนเกมเสียง) ──
 function rgToggleFont() {
-  // Lin 2026-07-25: ลบโค้ดอัปเดตปุ่มเก่า #rg-font-btn ออก — ปุ่มนั้นไม่มีในหน้าแล้วตั้งแต่ย้ายเข้าเมนู 🍚 (shared.js สร้างปุ่มจริงเอง อ่านสถานะจาก class บน <body>)
+  // shared.js owns the inline font button and reads the current body class.
   var on = document.body.classList.toggle('rg-modern-font');
   try{ if(typeof gtag==='function') gtag('event','reading_game_font_toggle',{category:'game', on: on}); }catch(e){}
   try { localStorage.setItem('rg_modern_font', on ? '1' : '0'); } catch(e){}

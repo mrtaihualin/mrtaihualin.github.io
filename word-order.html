@@ -77,7 +77,7 @@ gtag("config","G-DKVQE30982");window.GA_CATEGORY="game";</script>
 <meta name="twitter:image" content="https://mrtaihualin.com/assets/share-card.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><!-- Lin 2026-07-26: เปิดสายไปที่เซิร์ฟเวอร์ฟอนต์ล่วงหน้า ลดเวลารอบนมือถือ -->
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700&family=Sarabun:wght@400;600;700&family=Noto+Sans+Thai:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/shared.css?v=35">
+<link rel="stylesheet" href="css/shared.css?v=36">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="js/core/supabase-config.js?v=10"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script>
@@ -85,7 +85,7 @@ gtag("config","G-DKVQE30982");window.GA_CATEGORY="game";</script>
 <script src="js/core/network-guard.js?v=1"></script>
 <script src="js/games/game-content-client.js?v=11"></script>
 <script src="js/games/protected-word-audio.js?v=3"></script><!-- Core 5: isolated Guest audio client -->
-<script src="js/games/word-menu.js?v=7"></script><!-- เมนู 🍚 (讀音/英文讀音/字體) — Lin 2026-07-25 -->
+<script src="js/games/word-menu.js?v=10"></script><!-- เครื่องมือช่วยเรียนแบบแถวตรง -->
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 /* P6-28 (2026-08-08): ปุ่มเรียกฟังก์ชันเกม (word-order-app.min.js โหลดแบบ async ผ่าน
@@ -140,7 +140,7 @@ html:not(.gc-ready) [onclick*="openStar("]{
 .wo-word-th{font-family:'Sarabun',sans-serif;line-height:1.25;}
 .wo-read-th{font-family:'Sarabun',sans-serif;font-size:12px;font-weight:600;color:#993C1D;line-height:1.3;margin-top:2px;}
 .wo-read-en{font-family:'Noto Sans TC',sans-serif;font-size:11px;font-weight:600;color:#8B6310;line-height:1.3;letter-spacing:0.2px;}
-/* Lin 2026-07-30: คำแปลจีนรายคำ ใต้กล่องทุกคำ (เปิด/ปิดจากแถว 翻譯 ในเมนู 🍚) — pointer-events:none กันคลิกโดนคำแปลแล้วแย่ง event ของไทล์ */
+/* Lin 2026-07-30: คำแปลจีนรายคำ ใต้กล่องทุกคำ (เปิด/ปิดจากปุ่ม 翻譯 ในแถวเครื่องมือ) — pointer-events:none กันคลิกโดนคำแปลแล้วแย่ง event ของไทล์ */
 .wo-read-zh{font-family:'Noto Sans TC',sans-serif;font-size:11.5px;font-weight:600;color:#6b6b6b;line-height:1.3;pointer-events:none;}
 body.rg-modern-font .wo-word-th,
 body.rg-modern-font .wo-read-th{font-family:'Noto Sans Thai','Sarabun',sans-serif !important;}
@@ -267,7 +267,8 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   ]
 }
 </script>
-<script src="js/core/minimum-guest-launch.js?v=5"></script>
+<script src="js/core/minimum-guest-launch.js?v=6"></script>
+<script defer src="js/games/sentence-vault.js?v=4"></script>
 </head>
 <body data-gsh-game="word-order">
 
@@ -326,8 +327,8 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
       <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">✓「已記得」按鈕是什麼意思</div>
       <p style="margin:0 0 10px;">覺得這句已經很熟，可按「已記得」跳過重排直接自測。不會加分、不會加星星，純粹標記「已精通」，用在複習系統。</p>
 
-      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🍚 好用小工具（點 🍚 圖示打開選單）</div>
-      <p style="margin:0 0 10px;">點 🍚 圖示展開直式清單：讀音顯示・英文讀音・翻譯顯示・字體切換・🙏禮貌詞（切換句尾要不要顯示 ครับ／ค่ะ／คะ，純顯示不影響排序或計分）。跟其他遊戲不一樣的是，句子還在重排的時候禮貌詞不會出現，要等排對、或看答案之後才會顯示，跟句子的中文意思解說放在一起。</p>
+      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🧰 好用小工具</div>
+      <p style="margin:0 0 10px;">題目上方的工具列可直接使用：讀音顯示・英文讀音・翻譯顯示・字體切換・🙏禮貌詞（切換句尾要不要顯示 ครับ／ค่ะ／คะ，純顯示不影響排序或計分）。跟其他遊戲不一樣的是，句子還在重排的時候禮貌詞不會出現，要等排對、或看答案之後才會顯示，跟句子的中文意思解說放在一起。</p>
 
       <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🏆 星星、稻米勳章</div>
       <p style="margin:0 0 10px;">星星是這句真正靠複習「精通」了才拿到（跟其他遊戲共用），累積解鎖 5 款稻米勳章：茉莉香米（10顆）→ 糯米（20顆）→ 紫米（40顆）→ 香黑米（60顆）→ 紅米（100顆）。</p>
@@ -407,7 +408,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   </div>
   <div class="zh-hint" id="wo-zh"></div>
 
-  <!-- แถวปุ่มของเมนู 🍚 (ปุ่มจริงถูกย้ายเข้าเมนูตอนโหลด เหลือกล่องเปล่า) — Lin 2026-07-25
+  <!-- แถวเครื่องมือใต้คำ — Lin 2026-07-25
        Lin 2026-07-30 (แก้รอบ 2): เพิ่มแถว 翻譯 (คำแปลรายคำ ใต้กล่องทุกคำ เหมือน 英文讀音) + เรียงลำดับกลางทุกเกม: 讀音 → 英文讀音 → 翻譯 → 字體 -->
   <div id="word-ctl-row" style="display:flex;align-items:center;justify-content:center;gap:8px;">
     <button id="rg-pron-toggle" class="word-ctl-btn" type="button" onclick="try{if(window.gtag)gtag('event','word_order_pron_toggle',{category:'game'});}catch(e){}woTogglePron()"></button>
@@ -479,7 +480,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 </footer>
 
 <script src="data/nav-template.js?v=4"></script>
-<script src="js/core/shared.min.js?v=46"></script>
+<script src="js/core/shared.min.js?v=47"></script>
 <script src="js/games/game-flow.js?v=11"></script>
 
 <div id="gt-tour-overlay">
@@ -538,7 +539,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 @media(max-width:768px){#game-switcher{bottom:calc(120px + env(safe-area-inset-bottom,0px));}.gs-tab{padding:8px 13px;font-size:12px;}}
 </style>
 <div id="game-switcher" data-current="word_order"></div>
-<script src="js/games/game-switcher.js?v=2"></script>
+<script src="js/games/game-switcher.js?v=6"></script>
 <script>
 // ── 提示泡泡（給其他頁面共用的函式，這頁不再自動觸發小泡泡，改用下面完整導覽）— Lin 2026-07-31 ──
 function dismissHowtoHint(id){
@@ -551,7 +552,7 @@ var GT_TOUR_STEPS=[
   {sel:'#wo-slots',        title:'這裡是答案排列區', text:'空格會依照正確順序，一格一格被填滿，先看清楚有幾個空格。'},
   {sel:'#wo-bank',         title:'點詞塊排順序', text:'下面的詞塊被打散了，照正確的泰語語序，依序點回上面的空格裡。'},
   {sel:'#wo-hint-btn',     title:'卡住了嗎？按提示', text:'點這裡會扣 2 分，但可以幫你填對一個位置，卡住的時候可以用。'},
-  {sel:'#wm-trigger',      title:'更多功能都在這裡', text:'點 🍚 打開選單：讀音、翻譯、字體切換、🙏禮貌詞（高級句子專用）都在裡面。'},
+  {sel:'#word-ctl-row',    title:'學習工具都在這裡', text:'直接使用這排工具：讀音、翻譯、字體切換，以及高級句子的🙏禮貌詞。'},
   {sel:'#rg-profile-wrap', title:'帳號狀態列', text:'<b>你的資料</b>：🔥連續天數・🛡️護盾・⭐星星・🌱勳章<br><b>怎麼玩</b>：忘記玩法，點 📖 隨時再看說明'}
 ];
 var gtTourIdx=0;
@@ -605,7 +606,7 @@ function gtTourStart(){
   var card=document.getElementById('gt-tour-card'); if(card) card.style.display='block';
   gtTourRender();
 }
-// รอให้ประโยคแรก + ปุ่ม 🍚 (สร้างหลัง DOMContentLoaded โดย word-menu.js) พร้อมก่อน ค่อยเริ่มทัวร์ — กันชี้ผิดที่/ชี้ที่ว่าง
+// รอให้ประโยคแรก + แถวเครื่องมือพร้อมก่อน ค่อยเริ่มทัวร์ — กันชี้ผิดที่/ชี้ที่ว่าง
 (function(){
   try{
     if(localStorage.getItem('howto_tour_seen_wordorder')) return;
@@ -614,7 +615,8 @@ function gtTourStart(){
       tries++;
       var slots=document.getElementById('wo-slots');
       var bank=document.getElementById('wo-bank');
-      var ready=document.getElementById('wm-trigger') && document.getElementById('wo-hint-btn') && slots && slots.children.length>0 && bank && bank.children.length>0;
+      var toolsRow=document.getElementById('word-ctl-row');
+      var ready=toolsRow && toolsRow.getAttribute('data-wm-done')==='1' && document.getElementById('wo-hint-btn') && slots && slots.children.length>0 && bank && bank.children.length>0;
       if(ready || tries>25){
         clearInterval(waitReady);
         if(ready) setTimeout(gtTourStart, 500);

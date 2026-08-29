@@ -139,8 +139,8 @@ SCOPE_PAGES.forEach((file) => {
     if (annMatch || /ANN-BAND|ann-band|avail-band|annDismissed|annGoTo|annPrev|annNext/.test(text)) {
       mismatches.push({ file, kind: 'game announcement code ยังค้าง', detail: 'เกมต้องไม่มี DOM/marker/script/style hook ของ announcement' });
     }
-    if (!/js\/core\/shared\.min\.js\?v=46/.test(text)) {
-      mismatches.push({ file, kind: 'game shared runtime cache ไม่ตรง', detail: 'ต้องใช้ shared.min.js?v=46' });
+    if (!/js\/core\/shared\.min\.js\?v=47/.test(text)) {
+      mismatches.push({ file, kind: 'game shared runtime cache ไม่ตรง', detail: 'ต้องใช้ shared.min.js?v=47' });
     }
   } else {
     const expectedAnn = NO_ANNOUNCEMENT_PAGES.has(file) ? NO_ANNOUNCEMENT_BLOCK : NAV.renderAnnBandBlockHTML();
@@ -148,6 +148,9 @@ SCOPE_PAGES.forEach((file) => {
       mismatches.push({ file, kind: 'ann-band ไม่พบ', detail: 'ไม่พบ ANN-BAND marker' });
     } else if (annMatch[0] !== expectedAnn) {
       mismatches.push({ file, kind: 'ann-band เนื้อหาไม่ตรง', detail: '' });
+    }
+    if (file === 'vault.html' && !/js\/core\/shared\.min\.js\?v=47/.test(text)) {
+      mismatches.push({ file, kind: 'Vault shared runtime cache ไม่ตรง', detail: 'ต้องใช้ shared.min.js?v=47 เพื่อไม่คืนปุ่ม 🍚 เก่า' });
     }
   }
 

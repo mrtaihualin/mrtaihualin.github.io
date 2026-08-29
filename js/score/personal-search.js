@@ -18,14 +18,34 @@
     return rows;
   }
 
+  // Product-owned closed aliases. Search expands only these reviewed groups;
+  // it does not guess spellings or call an external language service.
+  var CLOSED_ALIAS_GROUPS = [
+    ['คุณ', 'คุน', 'คุร', '你', '您', 'khun', 'kun']
+  ];
+
+  function closedAliases(values) {
+    var normalizedValues = values.filter(Boolean).map(normalize);
+    var aliases = [];
+    CLOSED_ALIAS_GROUPS.forEach(function (group) {
+      var matches = group.some(function (alias) {
+        var needle = normalize(alias);
+        return normalizedValues.some(function (value) { return value.indexOf(needle) !== -1; });
+      });
+      if (matches) aliases = aliases.concat(group);
+    });
+    return aliases;
+  }
+
   function haystack(item, sourceLabels) {
     item = item || {};
-    var values = [item.th, item.readingTH, item.en, item.zh];
+    var values = [item.th, item.readingTH, item.en, item.zh].concat(Array.isArray(item.aliases) ? item.aliases : []);
     provenance(item).forEach(function (row) {
       if (!row || !row.source) return;
       values.push(row.source);
       values.push(sourceLabels && sourceLabels[row.source]);
     });
+    values = values.concat(closedAliases(values));
     return normalize(values.filter(Boolean).join(' '));
   }
 
@@ -38,5 +58,5 @@
     });
   }
 
-  return { normalize: normalize, haystack: haystack, filter: filter };
+  return { normalize: normalize, haystack: haystack, filter: filter, CLOSED_ALIAS_GROUPS: CLOSED_ALIAS_GROUPS };
 });

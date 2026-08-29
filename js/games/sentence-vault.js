@@ -9,7 +9,7 @@
   var STORAGE_KEY = 'sentence_vault_v1';
   var TABLE = 'learning_saved_items';
   var VAULT_KEY = 'sentence_vault';
-  var MAX_SENTENCES = 10;
+  var MAX_SENTENCES = 50;
   var COLS = 'word_th,zh,en,source_raw,saved_at,deleted_at';
   var _sb = null;
   var _uid = null;
@@ -360,7 +360,7 @@
     clearTimeout(node._timer); node._timer = setTimeout(function () { node.style.opacity = '0'; }, 2600);
   }
   function fullToast() {
-    toast('已達免費儲存上限。請刪除部分內容後再新增，或升級方案以儲存更多。');
+    toast('單字庫已滿，請先刪除不需要的內容');
   }
 
   global.SentenceVault = {

@@ -85,7 +85,7 @@ if (document.fonts && document.fonts.load) {
   document.fonts.load("400 14px 'Noto Sans Thai'", "◌่้๊๋").catch(function(){});
 }
 </script>
-<link rel="stylesheet" href="css/shared.css?v=35">
+<link rel="stylesheet" href="css/shared.css?v=36">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="js/core/supabase-config.js?v=10"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script>
@@ -93,7 +93,7 @@ if (document.fonts && document.fonts.load) {
 <script defer src="js/games/reading-auth.js?v=29"></script>
 <script defer src="js/games/round-report.js?v=3"></script>
 <script src="js/games/protected-word-audio.js?v=3"></script><!-- Core 5: isolated Guest audio client -->
-<script src="js/games/word-menu.js?v=9"></script><!-- เครื่องมือช่วยเรียนแบบแถวข้างคำศัพท์; ไม่มีเมนู 🍚 แล้ว -->
+<script src="js/games/word-menu.js?v=10"></script><!-- เครื่องมือช่วยเรียนแบบแถวตรง -->
 <script src="js/core/network-guard.js?v=1"></script>
 <script src="js/games/game-content-client.js?v=11"></script>
 <script src="data/tone-engine.js?v=3"></script>
@@ -125,25 +125,11 @@ html:not(.gc-ready) [onclick*="rgBackToEndFromMistakes("]{
 .page-sub{font-family:'Noto Sans TC',sans-serif;font-size:12px;color:#b08040;margin-top:3px;}
 
 /* Reading Desktop reuses the accepted Tone shell treatment only where the
-   controls and hierarchy are shared. Portrait and Mobile Landscape stay on
-   their existing layouts. */
+   hierarchy is shared. Floating controls now follow the shared six-game
+   right-side vertical contract; Mobile Landscape keeps its separate layout. */
 @media (min-width:1025px), (min-width:769px) and (min-height:601px) {
   body[data-gsh-game="reading"].rg-fake-fullscreen .page-header { display:block !important; }
   body[data-gsh-game="reading"] #cookieConsentBanner { z-index:100100 !important; }
-  body[data-gsh-game="reading"] .rg-ctl-wrap {
-    flex-direction:row !important;
-    align-items:center !important;
-    gap:8px !important;
-  }
-  body[data-gsh-game="reading"] .rg-ctl-wrap > #game-switcher {
-    position:absolute !important;
-    right:0 !important;
-    bottom:calc(100% + 8px) !important;
-    top:auto !important;
-    left:auto !important;
-    margin:0 !important;
-    transform:none !important;
-  }
 
   /* Copy Tone's complete gold question band on ordinary Desktop. Reading keeps
      its own learning-tool buttons; only their surface, spacing and placement
@@ -457,7 +443,9 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   ]
 }
 </script>
-<script src="js/core/minimum-guest-launch.js?v=5"></script>
+<script src="js/core/minimum-guest-launch.js?v=6"></script>
+<script defer src="js/games/word-vault.js?v=8"></script>
+<script defer src="js/games/sentence-vault.js?v=4"></script>
 </head>
 <body data-gsh-game="reading">
 
@@ -616,7 +604,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
         <!-- Lin 2026-08-01: ปุ่มครับ/ค่ะ/คะ ท้ายประโยค高級 (เหมือนเกมเสียง) — ไม่เกี่ยวกับกล่องฝึกเขียน/คะแนนเลย โผล่เฉพาะตอนเล่น高級句子เท่านั้น -->
         <button id="rg-particle-toggle" class="word-ctl-btn" type="button" onclick="rgToggleParticleMode();try{gtag('event','reading_game_particle_toggle',{category:'game',mode:rgParticleMode})}catch(e){}" style="display:none;">🙏</button>
       </div>
-      <!-- เครื่องมือช่วยเรียนใช้ปุ่มเดิมในแถวนี้โดยตรง; ไม่มีปุ่มเปิดเมนู 🍚 -->
+      <!-- เครื่องมือช่วยเรียนใช้ปุ่มเดิมในแถวนี้โดยตรง -->
       <!-- Lin 2026-07-30 (แก้รอบ 2): เรียงลำดับกลางทุกเกม: 發音 → 讀音 → 英文讀音 → 翻譯 → 單字庫 → 提示 → 字體 → 螢幕鍵盤 (เกมไหนไม่มีปุ่มไหนก็เลื่อนขึ้น) -->
       <script>document.addEventListener('DOMContentLoaded',function(){WordMenu.init({rowId:'word-ctl-row',items:[
         {id:'rg-sound-toggle',    label:'發音',   state:'none'},
@@ -768,12 +756,12 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/reading-game-app.min.js?v=44']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/reading-game-app.min.js?v=45']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 </div><!-- /.v3-page -->
 <script src="data/nav-template.js?v=4"></script>
-<script src="js/core/shared.min.js?v=46"></script>
+<script src="js/core/shared.min.js?v=47"></script>
 <script src="js/games/game-flow.js?v=11"></script>
 
 <!-- ── Game Switcher (fixed pill) ── -->
@@ -786,7 +774,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 @media(max-width:768px){#game-switcher{bottom:calc(120px + env(safe-area-inset-bottom,0px));}.gs-tab{padding:8px 13px;font-size:12px;}}
 </style>
 <div id="game-switcher" data-current="reading_game"></div>
-<script src="js/games/game-switcher.js?v=2"></script>
+<script src="js/games/game-switcher.js?v=6"></script>
 <!-- 單字庫徽章：移除了 — 單字庫已經在 #game-switcher（🎮 選單）裡有分頁，這裡放重複了 — Lin 2026-07-24 -->
 <script>
 // ── 提示泡泡（給其他頁面共用的函式，這頁不再自動觸發小泡泡，改用下面完整導覽）— Lin 2026-07-31 ──

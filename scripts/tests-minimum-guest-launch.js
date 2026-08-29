@@ -9,12 +9,12 @@ var activePages = [
   'typing-game.html', 'word-order.html', 'lego.html'
 ];
 var parkedPages = [
-  'my-progress.html', 'vault.html', 'all-board.html', 'leaderboard.html',
+  'my-progress.html', 'all-board.html', 'leaderboard.html',
   'reading-board.html', 'listening-board.html', 'typing-board.html',
   'word-order-board.html', 'games-challenge.html'
 ];
 var staticParkedPages = [
-  'my-progress.html', 'vault.html', 'all-board.html', 'leaderboard.html',
+  'my-progress.html', 'all-board.html', 'leaderboard.html',
   'reading-board.html', 'listening-board.html', 'typing-board.html',
   'word-order-board.html', 'line-callback.html'
 ];
@@ -29,15 +29,15 @@ function ok(value, message) {
   ok(!fs.existsSync(path.join(root, file)), file + ' is removed instead of exposing a placeholder page');
 });
 
-activePages.concat(['games-challenge.html']).forEach(function (file) {
+activePages.concat(['vault.html', 'games-challenge.html']).forEach(function (file) {
   var html = read(file);
-  ok(html.indexOf('js/core/minimum-guest-launch.js?v=5') !== -1, file + ' loads the current Login-entry launch gate');
-  ok(html.indexOf('js/core/minimum-guest-launch.js?v=5') < html.indexOf('</head>'), file + ' loads the launch gate in head');
+  ok(html.indexOf('js/core/minimum-guest-launch.js?v=6') !== -1, file + ' loads the current Login-entry launch gate');
+  ok(html.indexOf('js/core/minimum-guest-launch.js?v=6') < html.indexOf('</head>'), file + ' loads the launch gate in head');
 });
 
 staticParkedPages.filter(function (file) { return file !== 'line-callback.html'; }).forEach(function (file) {
   var html = read(file);
-  ok(html.indexOf('js/core/minimum-guest-launch.js?v=5') !== -1, file + ' keeps the parked runtime gate with public Login visible');
+  ok(html.indexOf('js/core/minimum-guest-launch.js?v=6') !== -1, file + ' keeps the parked runtime gate with public Login visible');
 });
 ok(read('line-callback.html').indexOf('minimum-guest-launch.js') === -1,
   'LINE callback remains owned by the provider return flow');
@@ -46,7 +46,9 @@ var gate = read('js/core/minimum-guest-launch.js');
 ok(gate.indexOf('MRT_MINIMUM_GUEST_LAUNCH = true') !== -1, 'launch flag is explicit');
 ok(gate.indexOf('MRT_PARKED_ACCOUNT_SURFACE = parked.test(path)') !== -1, 'parked account surfaces remain fail-closed');
 ok(gate.indexOf('my-progress') !== -1 && gate.indexOf('games-challenge') !== -1, 'account and Challenge routes are parked');
-ok(gate.indexOf('vault-btn-slot') !== -1, 'personal save controls are hidden');
+ok(gate.indexOf('vault-btn-slot') === -1 && gate.indexOf('a[href="vault.html"]') === -1,
+  'authorized Personal Data controls and Vault routes are not hidden');
+ok(!/\(\?:my-progress\|vault\|/.test(gate), 'Vault is removed from the parked route matcher');
 
 function runGateAt(hash) {
   var replacedUrl = null;
@@ -86,12 +88,24 @@ ok(config.indexOf('getAnonymousSupabaseClient') !== -1 && config.indexOf('persis
   'isolated anonymous Supabase client cannot inherit browser auth');
 
 var sixGames = ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html','lego.html'];
-var parkedBundles = ['game-account.js','phase1-canonical-state.js','learning-summary.js','study-plan.js','tone-server.js','word-vault.js','sentence-vault.js','practice-events.js'];
+var parkedBundles = ['game-account.js','phase1-canonical-state.js','learning-summary.js','study-plan.js','tone-server.js','practice-events.js'];
 sixGames.forEach(function (file) {
   var html = read(file);
   parkedBundles.forEach(function (bundle) { ok(html.indexOf(bundle) === -1, file + ' does not execute parked ' + bundle); });
   ok(!/(?:reading|typing|listening|word-order|lego)-board\.html/.test(html), file + ' does not expose a leaderboard route');
 });
+['tone-finder.html','reading-game.html','listening-game.html','typing-game.html'].forEach(function (file) {
+  var html = read(file);
+  ok(html.indexOf('word-vault.js?v=8') !== -1 && html.indexOf('sentence-vault.js?v=4') !== -1,
+    file + ' executes the authorized word and sentence Personal Data clients');
+});
+['word-order.html','lego.html'].forEach(function (file) {
+  var html = read(file);
+  ok(html.indexOf('sentence-vault.js?v=4') !== -1 && html.indexOf('word-vault.js') === -1,
+    file + ' executes only the authorized sentence Personal Data client');
+});
+ok(/<script defer src="js\/games\/word-vault\.js\?v=8"><\/script>[\s\S]*<script defer src="js\/games\/sentence-vault\.js\?v=4"><\/script>/.test(read('vault.html')),
+  'Vault executes both personal clients');
 ok(read('reading-game.html').indexOf('reading-auth.js') !== -1,
   'Reading remains the direct provider-flow owner while other pages reuse it through the shared Login controller');
 

@@ -57,7 +57,7 @@
 
   var STORAGE_KEY = 'linvault_v1';
   // Phase 1 Login Free limit — Lin 2026-08-14. Paid quota remains Future.
-  var MAX_WORDS = 20;
+  var MAX_WORDS = 50;
 
   // ── ค่าที่ใช้คุยกับเซิร์ฟเวอร์ ──
   var TABLE = 'learning_saved_items';
@@ -621,7 +621,7 @@
     return !!(match && _provenanceFor(match).some(function(row){ return row.source === source; }));
   }
 
-  /** เต็มเพดาน Login Free 20 หรือยัง */
+  /** เต็มเพดาน Login Free 50 หรือยัง */
   function isFull() { return _accountReady() && load().length >= MAX_WORDS; }
 
   /** เพิ่ม/ลบ tag ในคำ
@@ -660,8 +660,35 @@
    * @param {object} opts  { onSave, onRemove }  callbacks (optional)
    * @returns {HTMLButtonElement}
    */
+  function sentenceCatalogEntry(th) {
+    var rows = Array.isArray(global.ADV_SENTENCES) ? global.ADV_SENTENCES : [];
+    var match = null;
+    rows.some(function (row) { if (row && row.th === th) { match = row; return true; } return false; });
+    return match;
+  }
+
+  function sentenceMeta(entry, meta) {
+    meta = meta || {};
+    var romanization = '';
+    if (entry && Array.isArray(entry.words)) {
+      romanization = entry.words.map(function (word) {
+        return (word.syls || []).map(function (syl) { return syl.en || ''; }).filter(Boolean).join('-');
+      }).filter(Boolean).join(' ');
+    }
+    return {
+      zh: meta.zh || entry && entry.zh || '',
+      readingTH: meta.readingTH || entry && entry.readingTH || '',
+      en: meta.en || romanization,
+      source: meta.source || ''
+    };
+  }
+
   function createSaveBtn(th, meta, opts) {
     opts = opts || {};
+    var sentence = sentenceCatalogEntry(th);
+    if (sentence && global.SentenceVault && typeof global.SentenceVault.createSaveBtn === 'function') {
+      return global.SentenceVault.createSaveBtn(th, sentenceMeta(sentence, meta), opts);
+    }
     var btn = document.createElement('button');
     btn.className = 'vault-save-btn';
     btn.title = '儲存到單字庫';
@@ -743,8 +770,7 @@
     }
     // โชว์จำนวนจริง — หลังรวมคำจาก 2 เครื่องอาจเกินเพดานได้จริง (เช่น 32/20)
     // ตามกติกาที่ Lin สั่ง: เกินเพดาน = บล็อกการเพิ่มคำใหม่ชั่วคราว **ห้ามตัดคำทิ้งเอง**
-    var n = load().length;
-    t.textContent = '已達免費儲存上限。請管理已儲存內容後再新增，或升級方案以儲存更多。';
+    t.textContent = '單字庫已滿，請先刪除不需要的內容';
     t.style.opacity = '1';
     clearTimeout(t._timer);
     t._timer = setTimeout(function(){ t.style.opacity = '0'; }, 3000);

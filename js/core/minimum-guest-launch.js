@@ -21,7 +21,8 @@
   }
 
   // LOGIN-L8 opens only the Login Core entry. Minimum Guest continues to own
-  // gameplay, score, SRS, personal data, Leaderboard and Challenge isolation.
+  // gameplay, score, SRS, Leaderboard and Challenge isolation. Task 3 opens
+  // only the authenticated Personal Data/Search surface inside this boundary.
   window.LOGIN_CORE_PUBLIC_ENTRY = true;
   if (window.LOGIN_CORE_PUBLIC_ENTRY !== true) clearAuthCallbackFragment();
   window.MRT_MINIMUM_GUEST_LAUNCH = true;
@@ -36,22 +37,22 @@
   }
   if (!document.querySelector('script[src*="login-surface.js"]')) {
     var loginController = document.createElement('script');
-    loginController.src = 'js/core/login-surface.js?v=4';
+    loginController.src = 'js/core/login-surface.js?v=5';
     loginController.defer = true;
     document.head.appendChild(loginController);
   }
 
   var path = String(window.location.pathname || '').toLowerCase();
-  var parked = /\/(?:my-progress|vault|all-board|leaderboard|reading-board|listening-board|typing-board|word-order-board|games-challenge|mix)\.html$/;
+  var parked = /\/(?:my-progress|all-board|leaderboard|reading-board|listening-board|typing-board|word-order-board|games-challenge|mix)\.html$/;
   window.MRT_PARKED_ACCOUNT_SURFACE = parked.test(path);
 
   var style = document.createElement('style');
   style.setAttribute('data-minimum-guest-launch', '1');
   style.textContent = [
     '#rg-cta-login,#tf-cta-login,#tf-challenge-banner,',
-    '#tf-streak-chip,#rg-streak-chip,[id*="vault-btn-slot"],',
+    '#tf-streak-chip,#rg-streak-chip,',
     '[data-mgl-parked],a[href="/my-progress.html"],a[href="my-progress.html"],',
-    'a[href="vault.html"],a[href="all-board.html"],a[href="leaderboard.html"],',
+    'a[href="all-board.html"],a[href="leaderboard.html"],',
     'a[href="reading-board.html"],a[href="listening-board.html"],a[href="typing-board.html"],',
     'a[href="word-order-board.html"],',
     'a[href="games-challenge.html"]{display:none!important}',
@@ -67,8 +68,7 @@
       '#tf-challenge-banner',
       '.tf-challenge-banner',
       '#tf-streak-chip',
-      '#rg-streak-chip',
-      '[id*="vault-btn-slot"]'
+      '#rg-streak-chip'
     ];
     selectors.forEach(function (selector) {
       Array.prototype.forEach.call(document.querySelectorAll(selector), function (node) {

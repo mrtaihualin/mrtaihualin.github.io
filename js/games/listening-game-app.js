@@ -450,7 +450,7 @@
 
   function initKeyboardDismissControls() {
     document.addEventListener('click', function (event) {
-      var target = event.target && event.target.closest ? event.target.closest('#wm-trigger, #lg-howto-btn') : null;
+      var target = event.target && event.target.closest ? event.target.closest('#lg-word-ctl-row, #lg-howto-btn') : null;
       if (target) closeTypeKeyboard();
     }, true);
   }

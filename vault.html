@@ -5,11 +5,11 @@
 <script src="js/core/clarity-consent-gate.js?v=1" data-clarity-id="xkbihw56tf"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>我的內容 · mrtaihualin.com</title>
+<title>泰語單字庫 · mrtaihualin.com</title>
 <meta name="description" content="查看登入帳號儲存的泰語單字與句子，並直接回到遊戲練習。">
 <meta name="robots" content="noindex,follow">
 <link rel="canonical" href="https://mrtaihualin.com/vault.html">
-<meta property="og:title" content="我的內容 — 泰華眼裡的泰語教學">
+<meta property="og:title" content="泰語單字庫 — 泰華眼裡的泰語教學">
 <meta property="og:description" content="查看登入帳號儲存的泰語單字與句子，並直接回到遊戲練習。">
 <meta property="og:image" content="https://mrtaihualin.com/assets/share-card.png">
 <meta property="og:type" content="website">
@@ -30,8 +30,8 @@
 <script defer src="js/core/network-guard.js?v=1"></script>
 <script defer src="js/score/phase1-canonical-state.js?v=2"></script>
 <script defer src="js/games/reading-auth.js?v=28"></script>
-<script type="text/plain" data-mrt-parked-runtime src="js/games/word-vault.js?v=7"></script>
-<script type="text/plain" data-mrt-parked-runtime src="js/games/sentence-vault.js?v=3"></script>
+<script defer src="js/games/word-vault.js?v=8"></script>
+<script defer src="js/games/sentence-vault.js?v=4"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Sarabun',sans-serif;background:#fdf8ef;min-height:100vh;padding-bottom:80px;}
@@ -88,13 +88,18 @@ body{font-family:'Sarabun',sans-serif;background:#fdf8ef;min-height:100vh;paddin
 .gs-tab:hover,.gs-tab.gs-active{background:rgba(139,99,16,0.1);}
 .gs-divider{width:1px;background:#d4b87a;margin:8px 0;flex-shrink:0;}
 @media(max-width:768px){#game-switcher{bottom:calc(120px + env(safe-area-inset-bottom,0px));}.gs-tab{padding:9px 12px;font-size:12px;}}
+@media(max-width:768px) and (orientation:portrait){
+  html body .rg-ctl-wrap{left:auto!important;right:12px!important;bottom:calc(68px + env(safe-area-inset-bottom,0px))!important;width:max-content!important;transform:none!important;flex-direction:row!important;align-items:center!important;justify-content:flex-end!important;gap:8px!important;}
+  html body .rg-ctl-wrap > #game-switcher{position:absolute!important;right:0!important;bottom:calc(100% + 8px)!important;top:auto!important;left:auto!important;margin:0!important;transform:none!important;}
+}
 
-/* Phase 1 我的內容 — one page / two tabs / Login-only Personal Search */
+/* Phase 1 泰語單字庫 — one page / two tabs / Login-only Personal Search */
 .pc-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0;}
 .pc-tab{border:1.5px solid rgba(139,99,16,.28);background:#fff;color:#765113;border-radius:12px;padding:11px;font:700 14px 'Noto Sans TC',sans-serif;cursor:pointer;}
 .pc-tab.active{background:#8B6310;color:#fff;border-color:#8B6310;}
 .pc-search{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:end;margin:0 0 12px;}.pc-search-label{display:grid;gap:6px;color:#765113;font:700 13px 'Noto Sans TC',sans-serif;}.pc-search-input{width:100%;min-height:44px;border:1.5px solid rgba(139,99,16,.35);border-radius:12px;background:#fff;padding:9px 12px;color:#3a2a0a;font:16px 'Noto Sans TC',sans-serif;}.pc-search-input:focus{outline:3px solid rgba(200,151,58,.22);border-color:#8B6310;}.pc-search-clear{min-height:44px;border:1.5px solid rgba(139,99,16,.35);border-radius:12px;background:#fff;color:#765113;padding:8px 13px;font:700 13px 'Noto Sans TC',sans-serif;cursor:pointer;}.pc-search-status{grid-column:1/-1;margin:0;color:#83775f;font-size:12px;}
 .pc-list{display:flex;flex-direction:column;gap:10px;}
+.pc-result-group-title{font:900 16px 'Noto Serif TC',serif;color:#5a3e10;margin:10px 0 0;}
 .pc-limit{align-self:flex-end;color:#8b7340;font-size:12px;text-align:right;}
 .pc-limit-near{background:#fff8e8;border:1px solid #e7c46e;border-radius:10px;padding:8px 11px;}
 .pc-limit-full{background:#fff3e9;border:1px solid #d98763;border-radius:12px;padding:12px;text-align:left;line-height:1.6;}
@@ -108,7 +113,7 @@ body{font-family:'Sarabun',sans-serif;background:#fdf8ef;min-height:100vh;paddin
 .pc-source,.pc-muted{margin:4px 0;color:#83775f;font-size:12px;line-height:1.5;}.pc-delete{margin-top:13px;background:#fff;border:1px solid #c96a63;color:#a53e37;}.pc-empty,.pc-guest{text-align:center;background:#fff;border-radius:16px;padding:35px 22px;color:#83775f;line-height:1.7;}.pc-guest h2{color:#5c4410;margin:8px 0}.pc-guest p{font-size:14px}.pc-guest-icon{font-size:40px}.pc-primary{display:inline-flex;margin-top:15px;background:#8B6310;color:#fff;border-radius:999px;padding:10px 18px;text-decoration:none;font-weight:800;}
 @media(max-width:420px){.pc-search{grid-template-columns:1fr}.pc-search-clear{width:100%}}
 </style>
-<script src="js/core/minimum-guest-launch.js?v=5"></script>
+<script src="js/core/minimum-guest-launch.js?v=6"></script>
 </head>
 <body>
 <!--ANN-BAND:START--><!-- Login UI scope: no announcement strip. --><!--ANN-BAND:END-->
@@ -134,7 +139,7 @@ body{font-family:'Sarabun',sans-serif;background:#fdf8ef;min-height:100vh;paddin
   <a class="vault-back" href="games.html" onclick="if(document.referrer&&history.length>1){history.back();return false;}">← 返回</a>
 
   <div class="page-header">
-    <h1 class="page-title" style="margin:0;">學習中心 · 我的內容</h1>
+    <h1 class="page-title" style="margin:0;">泰語單字庫</h1>
     <span class="vault-count-chip" id="vault-total-count"></span>
   </div>
   <div id="personal-content-root"></div>
@@ -148,10 +153,10 @@ body{font-family:'Sarabun',sans-serif;background:#fdf8ef;min-height:100vh;paddin
   <span class="footer-legal"><a href="/terms.html" style="color:inherit;text-decoration:underline;">使用條款與著作權聲明</a><span aria-hidden="true"> · </span><a href="/privacy.html" style="color:inherit;text-decoration:underline;">隱私權政策</a></span><br>
   <span class="footer-copyright">© 2026 mrtaihualin.com</span>
 </footer>
-<script src="js/games/game-switcher.js?v=1"></script>
+<script src="js/games/game-switcher.js?v=6"></script>
 
 <script src="data/nav-template.js?v=4"></script>
-<script src="js/core/shared.min.js?v=45"></script>
+<script src="js/core/shared.min.js?v=47"></script>
 <script type="text/plain" data-superseded="phase1-personal-content">
 var TAGS = ['อยากฝึก','เป็นแล้ว','ชอบ'];
 var TAG_COLORS = {'อยากฝึก':'#C8973A','เป็นแล้ว':'#5a3e0a','ชอบ':'#A8780F'};
@@ -271,8 +276,8 @@ renderList();
 window.addEventListener('wordvault:changed', renderList);
 </script>
 <script src="js/games/practice-events.js?v=2"></script>
-<script type="text/plain" data-mrt-parked-runtime src="js/score/personal-search.js?v=1"></script>
-<script type="text/plain" data-mrt-parked-runtime src="js/score/personal-content.js?v=4"></script>
+<script src="js/score/personal-search.js?v=2"></script>
+<script src="js/score/personal-content.js?v=5"></script>
 
 <div id="cookieConsentBanner" role="dialog" aria-label="Cookie 與分析設定" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:9999;
   background:#FAF4E8;border-top:2px solid #8B6310;box-shadow:0 -4px 16px rgba(0,0,0,0.12);
