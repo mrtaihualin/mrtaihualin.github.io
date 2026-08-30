@@ -1617,7 +1617,7 @@
     pointer-events: none;
   }
 
-  [data-gsh-ml-slot="main-action"] .rg-ctl-wrap {
+  body.gsh-ml-active [data-gsh-ml-slot="main-action"] .rg-ctl-wrap {
     position: static !important;
     inset: auto !important;
     width: auto !important;
@@ -1633,7 +1633,7 @@
     justify-content: flex-end !important;
     gap: var(--gsh-ml-top-control-gap) !important;
   }
-  [data-gsh-ml-slot="main-action"] .rg-ctl-wrap > button.rg-ctl-fab {
+  body.gsh-ml-active [data-gsh-ml-slot="main-action"] .rg-ctl-wrap > button.rg-ctl-fab {
     width: var(--gsh-ml-control-h) !important;
     min-width: var(--gsh-ml-control-h) !important;
     max-width: var(--gsh-ml-control-h) !important;
@@ -1643,7 +1643,7 @@
     padding: 0 !important;
     border-radius: 50% !important;
   }
-  [data-gsh-ml-slot="main-action"] .rg-ctl-wrap > button.rg-ctl-fab[aria-pressed] {
+  body.gsh-ml-active [data-gsh-ml-slot="main-action"] .rg-ctl-wrap > button.rg-ctl-fab[aria-pressed] {
     display: none !important;
   }
   [data-gsh-ml-slot="skip"],

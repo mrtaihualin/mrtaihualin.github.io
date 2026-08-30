@@ -2461,3 +2461,8 @@ node scripts/check-site.js
 - Added source-only Free pre-SRS tables and one service-role RPC that resolves the existing `content_ref` to exactly one `learning_items.item_id`, applies transitions atomically with compare-and-swap, stores exact replay results, rejects changed replay, and enters the existing SRS owner at stage 0 without backflow.
 - Browser roles receive no table or RPC write privilege. The bridge ignores client item IDs and client score values; it requires a game-specific server verification seam and keeps canonical learning scores before every combo/golden/level/end-round/SRS bonus.
 - Local PostgreSQL verification compiles the migration and passes deny-by-default, missing/duplicate identity, Free Review timing/attempts, idempotency/conflict/CAS, stage-0/no-backflow, five-game isolation and concurrent exactly-once checks. The source is not applied to Staging or Production; Paid and public runtime remain OFF.
+# 2026-08-30 — Mobile Landscape top-action collision correction
+
+- Strengthened the existing shared Landscape selector so the moved `🎮 / ⋯` controls participate in the right action row instead of retaining the older fixed-position rule from `shared.css`.
+- The Reading example now measures four visible controls in order: `🎮 / ⋯ / 跳過 / 檢查`, each `39px` at `844×390`, with exact `5px` adjacent gaps and a `12px` right safe edge; no rectangles overlap.
+- Advanced the shared Landscape stylesheet cache key on the five scoped games only; Lego remains untouched. Targeted Landscape/shared tests and the full `1,018`-file site gate pass.

@@ -39,7 +39,7 @@ test('five scoped pages bind the updated shared landscape system and Lego stays 
       assert.match(html, /css\/mobile-landscape\.css\?v=26/, `${file}: Lego CSS binding drifted`);
       assert.match(html, /js\/core\/mobile-landscape\.js\?v=18/, `${file}: Lego controller binding drifted`);
     } else {
-      assert.match(html, /css\/mobile-landscape\.css\?v=27/, `${file}: missing updated shared CSS`);
+      assert.match(html, /css\/mobile-landscape\.css\?v=28/, `${file}: missing updated shared CSS`);
       assert.match(html, /js\/core\/mobile-landscape\.js\?v=19/, `${file}: missing updated shared controller`);
     }
   }
@@ -85,7 +85,7 @@ test('Tone preserves three left, three right and reveal actions in the right slo
   assert.match(css, /data-gsh-ml-slot="dropdowns"[^}]+gap:\s*var\(--gsh-ml-top-control-gap\)/);
   assert.match(css, /data-gsh-ml-slot="main-action"[^}]+gap:\s*var\(--gsh-ml-top-control-gap\)/);
   assert.match(css, /data-gsh-game="tone"[^}]+data-gsh-ml-slot="main-action"[^}]+\.rg-ctl-wrap[^}]+gap:\s*var\(--gsh-ml-top-control-gap\)/);
-  assert.match(css, /data-gsh-ml-slot="main-action"[^}]+\.rg-ctl-wrap[^}]+padding:\s*0 !important/);
+  assert.match(css, /body\.gsh-ml-active \[data-gsh-ml-slot="main-action"\] \.rg-ctl-wrap[^}]+position:\s*static !important[^}]+gap:\s*var\(--gsh-ml-top-control-gap\)/);
 });
 
 test('five games expose the requested ordered top actions with neutral Skip', () => {
