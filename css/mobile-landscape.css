@@ -14,6 +14,7 @@
     --gsh-ml-safe-b: max(8px, env(safe-area-inset-bottom));
     --gsh-ml-top-h: clamp(40px, 11dvh, 52px);
     --gsh-ml-gap: clamp(4px, 1.3dvh, 10px);
+    --gsh-ml-top-control-gap: clamp(8px, 1.4vw, 12px);
     --gsh-ml-pad: clamp(6px, 1.7dvh, 12px);
     --gsh-ml-font-sm: clamp(11px, 2.7dvh, 15px);
     --gsh-ml-font: clamp(13px, 3.2dvh, 18px);
@@ -1567,6 +1568,10 @@
 
   [data-gsh-ml-slot="dropdowns"] {
     flex-wrap: nowrap;
+    gap: var(--gsh-ml-top-control-gap);
+  }
+  [data-gsh-ml-slot="main-action"] {
+    gap: var(--gsh-ml-top-control-gap);
   }
   [data-gsh-ml-slot="dropdowns"] #rg-login-slot {
     order: -1;
@@ -1625,7 +1630,7 @@
     flex-flow: row nowrap !important;
     align-items: center !important;
     justify-content: flex-end !important;
-    gap: var(--gsh-ml-gap) !important;
+    gap: var(--gsh-ml-top-control-gap) !important;
   }
   [data-gsh-ml-slot="main-action"] .rg-ctl-wrap > button.rg-ctl-fab {
     width: var(--gsh-ml-control-h) !important;
