@@ -1646,7 +1646,9 @@
   [data-gsh-ml-slot="main-action"] .rg-ctl-wrap > button.rg-ctl-fab[aria-pressed] {
     display: none !important;
   }
-  [data-gsh-ml-slot="skip"] {
+  [data-gsh-ml-slot="skip"],
+  [data-gsh-ml-slot="check"],
+  [data-gsh-ml-slot="reset"] {
     flex: 0 0 var(--gsh-ml-control-h);
     width: var(--gsh-ml-control-h);
     height: var(--gsh-ml-control-h);
@@ -1654,7 +1656,14 @@
     align-items: center;
     justify-content: center;
   }
-  [data-gsh-ml-slot="skip"] > [data-gsh-ml-role="skip"] {
+  [data-gsh-ml-slot="skip"]:empty,
+  [data-gsh-ml-slot="check"]:empty,
+  [data-gsh-ml-slot="reset"]:empty {
+    display: none;
+  }
+  [data-gsh-ml-slot="skip"] > [data-gsh-ml-role="skip"],
+  [data-gsh-ml-slot="check"] > [data-gsh-ml-role="check"],
+  [data-gsh-ml-slot="reset"] > [data-gsh-ml-role="reset"] {
     position: static !important;
     inset: auto !important;
     width: var(--gsh-ml-control-h) !important;

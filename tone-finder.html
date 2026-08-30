@@ -92,8 +92,8 @@ if (document.fonts && document.fonts.load) {
   document.fonts.load("400 14px 'Noto Sans Thai'", "◌่้๊๋").catch(function(){});
 }
 </script>
-<link rel="stylesheet" href="css/shared.css?v=36">
-<link rel="stylesheet" href="css/mobile-landscape.css?v=26">
+<link rel="stylesheet" href="css/shared.css?v=37">
+<link rel="stylesheet" href="css/mobile-landscape.css?v=27">
 <script src="js/games/thai-keyboard.js?v=2"></script>
 <style>
   /* P6-28 (2026-08-08): ปุ่มเรียกฟังก์ชันเกม (TF.* มาจาก tone-finder-game.min.js โหลดแบบ async
@@ -679,8 +679,6 @@ if (document.fonts && document.fonts.load) {
   }
   .tf-alpha-entry:hover { border-color: rgba(184,134,40,0.65); background: linear-gradient(180deg, #F0E0A8 0%, #FDFAF2 100%); }
 
-  .tf-desktop-skip-copy { display:none; }
-
   /* Cookie consent stays above the shared right-side controls and menus.
      Their axis and anchoring are owned by css/shared.css for all six games. */
   @media (min-width:1025px),
@@ -805,8 +803,6 @@ if (document.fonts && document.fonts.load) {
       gap:10px; width:100%; max-width:640px; margin:20px auto 0;
     }
     body[data-gsh-game="tone"] .gsh-result-home-actions { margin:18px auto 0; }
-    .tf-desktop-skip-copy { display:inline; }
-    .tf-nondesktop-remember-copy { display:none; }
   }
 
   /* Tone Mobile Portrait: Desktop content/gameplay with compact touch controls. */
@@ -978,8 +974,6 @@ if (document.fonts && document.fonts.load) {
     body[data-gsh-game="tone"] [data-game-flow-status],
     body[data-gsh-game="tone"] [data-game-flow-pause] { display:none !important; }
     body[data-gsh-game="tone"] .gsh-desktop-only { display:none !important; }
-    body[data-gsh-game="tone"] .tf-desktop-skip-copy { display:inline; }
-    body[data-gsh-game="tone"] .tf-nondesktop-remember-copy { display:none; }
 
     body[data-gsh-game="tone"] .tf-alpha-surface {
       background:linear-gradient(180deg,#FFF9EC 0%,#F5E6C7 100%);
@@ -2074,8 +2068,8 @@ document.addEventListener('contextmenu', function(e){
         <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">💡🔥 兩種模式</div>
         <p style="margin:0 0 10px;"><strong>💡 有提示（練習模式）</strong>：每一步會反白正確答案，方便熟悉規則——這個模式整輪都不計分、不算星星、不算複習進度，純粹拿來練習規則用。<strong>🔥 無提示（挑戰模式）</strong>：沒提示全靠自己推導，答對才有分數。畫面上按鈕可以切換。</p>
 
-        <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;"><span class="tf-desktop-skip-copy">「跳過」按鈕是什麼意思</span><span class="tf-nondesktop-remember-copy">✓「已記得」按鈕是什麼意思</span></div>
-        <p style="margin:0 0 10px;"><span class="tf-desktop-skip-copy">不想做這題時可按「跳過」直接進入下一題；不算答對或答錯、不加減分，也不影響 Combo 或複習進度。</span><span class="tf-nondesktop-remember-copy">覺得這個字已經很熟，可按「已記得」跳過推導直接自測。不會加分、不會加星星，純粹標記「已精通」，用在複習系統。</span></p>
+        <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">「跳過」按鈕是什麼意思</div>
+        <p style="margin:0 0 10px;">不想做這題時可按「跳過」直接進入下一題；不算答對或答錯、不加減分，也不影響 Combo 或複習進度。是否已記住由複習系統依實際作答決定。</p>
 
         <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🧰 好用小工具</div>
         <p style="margin:0 0 10px;">題目上方的工具列可直接使用：讀音顯示・翻譯顯示・🔖加入單字庫（收藏這個字，之後可在別處複習）・💡／🔥提示模式切換・字體切換・🙏禮貌詞（只在高級句子出現，切換句尾要不要顯示 ครับ／ค่ะ／คะ，純顯示不影響推導或計分）。</p>
@@ -2242,7 +2236,7 @@ document.addEventListener('contextmenu', function(e){
 <script src="data/nav-template.js?v=4"></script>
 <script src="js/core/shared.min.js?v=48"></script>
 <script src="js/games/game-flow.js?v=12"></script>
-<script src="js/core/mobile-landscape.js?v=18"></script>
+<script src="js/core/mobile-landscape.js?v=19"></script>
 <script>
 // ── GA4 Extra Events: tone-finder.html ──────────────────────────────
 // (tone_finder_start / complete / answer_correct / answer_wrong ติดอยู่แล้วในโค้ดเกม)

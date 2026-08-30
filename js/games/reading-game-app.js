@@ -235,7 +235,7 @@ function rgLogWord(o){
     var base={th:w?w.th:'',contentKey:rgContentKey(w),zh:w?w.zh:'',wordGlosses:wordGlosses,reading:w&&w.readingTH?w.readingTH:'',userAnswer:readingSubmittedAttempts.length?readingSubmittedAttempts[readingSubmittedAttempts.length-1].answer:'',correctAnswer:w&&w.readingTH?w.readingTH:(w?w.th:''),wrong:totalWrong,attempts:readingSubmittedAttempts.slice(),attemptScore:readingAttemptScore,correctionAttempts:readingCorrectionAttempts,learningEvidence:{firstCheckSyllableWrongCounts:(readingFirstCheckWrongCounts||sylWrongCount||[]).slice()},failed:false,guide:false,pts:0,srsDue:'',mastered:false};
     for(var k in o){ if(Object.prototype.hasOwnProperty.call(o,k)) base[k]=o[k]; }
     roundLog.push(base);
-    if(roundReport&&window.RoundReport)RoundReport.addItem(roundReport,{content_ref:{source:(w&&w.words&&w.words.length)?'game_sentences':'game_words',key:rgContentKey(w)},question:base.th,meaning:base.zh,attempts:base.attempts,user_answer:base.userAnswer,correct_answer:base.correctAnswer,is_correct:!base.failed&&!base.guide&&base.wrong===0,wrong_count:base.wrong,item_score:base.pts,hint_used:!!base.guide,learning_evidence:base.learningEvidence,linguistic:{reading_th:base.reading,syls:w&&w.syls||null,read_syls:w&&w.readSyls||null},words:wordGlosses||[],srs_state:base.srsDue||null,mastered_state:!!base.mastered});
+    if(roundReport&&window.RoundReport)RoundReport.addItem(roundReport,{content_ref:{source:(w&&w.words&&w.words.length)?'game_sentences':'game_words',key:rgContentKey(w)},question:base.th,meaning:base.zh,attempts:base.attempts,user_answer:base.userAnswer,correct_answer:base.correctAnswer,is_correct:!base.skipped&&!base.failed&&!base.guide&&base.wrong===0,is_skipped:!!base.skipped,skip_reason:base.skipped?'user_skip':null,wrong_count:base.wrong,item_score:base.pts,hint_used:!!base.guide,learning_evidence:base.learningEvidence,linguistic:{reading_th:base.reading,syls:w&&w.syls||null,read_syls:w&&w.readSyls||null},words:wordGlosses||[],srs_state:base.srsDue||null,mastered_state:!!base.mastered});
   }catch(e){}
 }
 // 2026-07-13 Lin：ดึงคำที่พลาดในรอบนี้จาก roundLog ไปเก็บลง reading_sessions.wrong_items (ฐานข้อมูลจุดอ่อน)
@@ -904,8 +904,8 @@ function updateSyllableCounter(){
 }
 function loadWord(){
   rememberStep=0;clearTimeout(rememberTimer);
-  var rb=document.getElementById('btn-remember');
-  if(rb){rb.textContent='已記得';rb.style.cssText='';rb.style.display='';}
+  var rb=document.getElementById('btn-skip');
+  if(rb){rb.textContent='跳過';rb.style.cssText='';rb.style.display='';}
   WORD=WORDS[roundQueue[cur]];
   sylList=buildSyls(WORD);
   sylIdx=0;wordHadWrong=false;wordFailed=false;wrongCount=0;sylCache=[];readingSubmittedAttempts=[]; // sylCache: เก็บ state แต่ละพยางค์ ให้เลือกพยางค์ไหนก่อนก็ได้ (คำใหม่ = ล้าง)
@@ -1389,16 +1389,12 @@ function rgToggleDetail(){
   }
 }
 
-// งานที่7 (2026-07-04 แบบเข้ม ลอกเกมเสียง markKnown()): กดแล้ว "ไม่ตัดคำทันที" —
-// ต้องตอบคำนี้ต่อให้ผ่านแบบสะอาด (ไม่ผิดเลย ไม่ใช้คำใบ้) 1 ครั้งก่อน ถึงจะตัดคำออก (ดู finalizeWord curWordIsKnownCheck)
-function remember(){
-  try{ if(typeof gtag==='function') gtag('event','reading_game_remember_click',{category:'game', word: (typeof WORD!=='undefined'&&WORD)?WORD.th:''}); }catch(e){}
-  curWordIsKnownCheck=true;
-  updateActiveSlot();updateOptHint(); // ซ่อนคำใบ้ที่อาจค้างอยู่ทันที
-  var b=document.getElementById('banner');
-  if(b){b.textContent='證明你真的記得：接下來不會有提示，答對才會標記熟練 ✓';b.className='result-banner show';}
-  var rb=document.getElementById('btn-remember');
-  if(rb)rb.style.display='none';
+// Neutral skip: advance without answer, score, Combo, life, or SRS mutation.
+function skipWord(){
+  try{ if(typeof gtag==='function') gtag('event','reading_game_skip_click',{category:'game', word:(typeof WORD!=='undefined'&&WORD)?WORD.th:''}); }catch(e){}
+  curWordIsKnownCheck=false;
+  rgLogWord({skipped:true,wrong:0,attempts:[],userAnswer:'',attemptScore:null,correctionAttempts:0,pts:0});
+  nextWord();
 }
 function next(){
   try{ if(typeof gtag==='function') gtag('event','reading_game_next_click',{category:'game', word: (typeof WORD!=='undefined'&&WORD)?WORD.th:''}); }catch(e){}
@@ -1523,6 +1519,7 @@ function rgDownloadReport(){
     return '<div style="font-size:10px;font-weight:400;color:#777;line-height:1.5;margin-top:4px;">逐字：'+w.wordGlosses.map(function(g){return esc(g.th)+'＝'+esc(g.zh);}).join('・')+'</div>';
   }
   function statusLabel(w){
+    if(w.skipped) return '<span style="color:#777;">跳過</span>';
     if(w.mastered) return '<span style="color:#8B6310;">✓ 已精通</span>';
     if(w.guide) return '<span style="color:#b06020;">💡 用提示</span>';
     if(w.failed) return '<span style="color:#c62828;">✗ 待加強</span>';
@@ -1638,7 +1635,7 @@ function updateCombo(){
 }
 
 function setGameBtns(mode){
-  var re=document.getElementById('btn-remember');
+  var re=document.getElementById('btn-skip');
   var ch=document.getElementById('btn-check');
   var nx=document.getElementById('btn-next');
   if(mode==='normal'){

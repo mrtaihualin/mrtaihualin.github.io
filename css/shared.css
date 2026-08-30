@@ -1037,8 +1037,8 @@ body .gsh-shell.tf-page { padding-top:8px; }
   }
   body[data-gsh-game="reading"] .btn-row,
   body[data-gsh-game="typing"] .btn-row { display:contents; }
-  body[data-gsh-game="reading"] #btn-remember,
-  body[data-gsh-game="typing"] #btn-remember {
+  body[data-gsh-game="reading"] #btn-skip,
+  body[data-gsh-game="typing"] #btn-skip {
     position:fixed; z-index:55; left:var(--gsh-safe-l); top:calc(var(--gsh-safe-t) + 126px);
   }
   body[data-gsh-game="reading"] #btn-check,
@@ -1085,15 +1085,15 @@ body .gsh-shell.tf-page { padding-top:8px; }
   }
   body[data-gsh-game="word-order"] .btn-row { display:contents; }
   body[data-gsh-game="word-order"] #wo-hint-btn,
-  body[data-gsh-game="word-order"] #wo-remember-btn {
+  body[data-gsh-game="word-order"] #wo-skip-btn {
     position:fixed; z-index:55; left:var(--gsh-safe-l); top:calc(var(--gsh-safe-t) + 126px);
   }
-  body[data-gsh-game="word-order"] #wo-remember-btn { top:calc(var(--gsh-safe-t) + 170px); }
+  body[data-gsh-game="word-order"] #wo-skip-btn { top:calc(var(--gsh-safe-t) + 170px); }
   body[data-gsh-game="word-order"] #wo-next-btn,
-  body[data-gsh-game="word-order"] .btn-row .btn-secondary:not(#wo-remember-btn) {
+  body[data-gsh-game="word-order"] .btn-row .btn-secondary:not(#wo-skip-btn) {
     position:fixed; z-index:55; right:var(--gsh-safe-r); top:var(--gsh-safe-t);
   }
-  body[data-gsh-game="word-order"] .btn-row .btn-secondary:not(#wo-remember-btn) { top:calc(var(--gsh-safe-t) + 46px); }
+  body[data-gsh-game="word-order"] .btn-row .btn-secondary:not(#wo-skip-btn) { top:calc(var(--gsh-safe-t) + 46px); }
 
   /* Tone: prompt centre; normal 1/2/3 and 4/5/uncertain mapping in the lower two-hand zone. */
   body[data-gsh-game="tone"] #tf-banner {

@@ -84,7 +84,7 @@
     var top = document.createElement('header');
     top.className = 'gsh-ml-top';
     var mainAction = makeSlot('main-action');
-    mainAction.appendChild(makeSlot('skip'));
+    mainAction.append(makeSlot('skip'), makeSlot('check'), makeSlot('reset'));
     top.append(makeSlot('dropdowns'), makeSlot('shared-controls'), mainAction);
 
     var play = document.createElement('section');
@@ -387,7 +387,6 @@
         setControlDisabled(keyboardToggle, true);
       }
     } else if (game === 'word-order') {
-      var reset = q('[onclick*="woResetSentence("]');
       tools = [
         labeledNode('#wo-howto-btn', '玩法', '📖'),
         labeledNode('#rg-pron-toggle', '讀音', '🗣️'),
@@ -396,11 +395,6 @@
         labeledNode('#font-toggle-slot', '字體', '🅰️'),
         labeledNode('#rg-particle-toggle', '禮貌詞', '🙏')
       ];
-      if (reset) {
-        reset.setAttribute('data-gsh-ml-tool-label', '重排這句');
-        reset.setAttribute('data-gsh-ml-tool-icon', '🔄');
-        tools.push(reset);
-      }
     } else if (game === 'lego') {
       tools = [labeledNode('#lego-howto-btn', '玩法', '📖')];
     }
@@ -433,7 +427,7 @@
       }
     } else if (game === 'reading') {
       mountMany(['.word-area', '#syl-strip', '#slot-row'], slot('question'));
-      mountMany(['#btn-check', '#btn-next', '#btn-next-syl'], slot('right'));
+      mountMany(['#btn-next', '#btn-next-syl'], slot('right'));
     } else if (game === 'listening') {
       // Listening start / Choice / Typed / Reveal are state-owned and are
       // mounted by syncListeningGameplay(), never all at once.
@@ -506,13 +500,76 @@
     }
   }
 
-  function syncSharedSkip(game) {
+  function clearTopAction(name, keep) {
+    var target = slot(name);
+    if (!target) return;
+    Array.prototype.slice.call(target.children).forEach(function (node) {
+      if (node === keep) return;
+      if (node.hasAttribute('data-gsh-ml-original-label')) {
+        node.textContent = node.getAttribute('data-gsh-ml-original-label');
+        node.removeAttribute('data-gsh-ml-original-label');
+        node.removeAttribute('aria-label');
+      }
+      node.removeAttribute('data-gsh-ml-role');
+      if (moved.has(node)) restoreExistingNode(node); else node.remove();
+    });
+  }
+
+  function mountTopAction(name, node) {
+    var target = slot(name);
+    if (!target) return;
+    var available = !!node && !node.hidden && node.style.display !== 'none' && isVisible(node);
+    clearTopAction(name, available ? node : null);
+    if (!available) {
+      if (node && moved.has(node)) {
+        node.removeAttribute('data-gsh-ml-role');
+        restoreExistingNode(node);
+      }
+      return;
+    }
+    if (name === 'reset' && node.id === 'wo-reset-btn' && !node.hasAttribute('data-gsh-ml-original-label')) {
+      node.setAttribute('data-gsh-ml-original-label', node.textContent);
+      node.textContent = '重新';
+      node.setAttribute('aria-label', '重新');
+    }
+    node.setAttribute('data-gsh-ml-role', name);
+    mountExistingNode(node, target);
+  }
+
+  function createWordOrderCheckAction() {
+    var button = document.createElement('button');
+    button.type = 'button';
+    button.id = 'wo-check-btn';
+    button.className = 'btn btn-primary';
+    button.textContent = '檢查';
+    button.setAttribute('data-gsh-ml-owned-action', 'word-order-check');
+    button.addEventListener('click', function () {
+      if (!button.disabled && typeof window.woCheck === 'function') window.woCheck();
+    });
+    slot('check').appendChild(button);
+    return button;
+  }
+
+  function syncTopActions(game) {
     var skip = null;
+    var check = null;
+    var reset = null;
     if (game === 'tone') skip = q('#tf-body .tf-known-btn');
+    else if (game === 'reading') { skip = q('#btn-skip'); check = q('#btn-check'); }
     else if (game === 'listening') skip = q('#lg-skip-btn');
-    if (!skip || !isSourceVisible(skip)) return;
-    skip.setAttribute('data-gsh-ml-role', 'skip');
-    mountExistingNode(skip, slot('skip'));
+    else if (game === 'typing') skip = q('#btn-skip');
+    else if (game === 'word-order') {
+      skip = q('#wo-skip-btn');
+      reset = q('#wo-reset-btn');
+      check = q('[data-gsh-ml-owned-action="word-order-check"]', slot('check')) || createWordOrderCheckAction();
+      check.disabled = !window.woCheck || q('#wo-slots .wo-slot.empty') !== null;
+    }
+    mountTopAction('skip', skip);
+    if (game === 'word-order') {
+      clearTopAction('check', check);
+      check.setAttribute('data-gsh-ml-role', 'check');
+    } else mountTopAction('check', check);
+    mountTopAction('reset', reset);
   }
 
   function resolveListeningGameplay() {
@@ -1002,7 +1059,7 @@
       mountStaticGameNodes(game);
       var listeningView = game === 'listening' ? syncListeningGameplay() : null;
       syncSplitContent(game);
-      syncSharedSkip(game);
+      syncTopActions(game);
       if (game === 'lego') syncLegoMenu();
       syncDynamicMainAction();
       syncToneRevealActions(game);
@@ -1118,6 +1175,11 @@
     restoreActiveResultDetail(null, false);
     restoreActiveResult(null, false);
     restoreDynamicMainActions();
+    qa('[data-gsh-ml-original-label]').forEach(function (node) {
+      node.textContent = node.getAttribute('data-gsh-ml-original-label');
+      node.removeAttribute('data-gsh-ml-original-label');
+      node.removeAttribute('aria-label');
+    });
     restoreAll();
     if (stage) stage.remove();
     stage = null;

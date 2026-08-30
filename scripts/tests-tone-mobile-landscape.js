@@ -10,6 +10,10 @@ const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const stage = read('js/core/mobile-landscape.js');
 const css = read('css/mobile-landscape.css');
 const toneApp = read('js/games/tone-finder-game.js');
+const readingApp = read('js/games/reading-game-app.js');
+const listeningApp = read('js/games/listening-game-app.js');
+const typingApp = read('js/games/typing-game-app.js');
+const wordOrderApp = read('js/games/word-order-app.js');
 const pages = [
   ['tone', 'tone-finder.html'],
   ['reading', 'reading-game.html'],
@@ -26,19 +30,24 @@ function test(name, fn) {
   console.log('✓ ' + name);
 }
 
-test('all six pages bind one shared landscape system', () => {
+test('five scoped pages bind the updated shared landscape system and Lego stays untouched', () => {
   for (const [game, file] of pages) {
     const html = read(file);
     assert.match(html, new RegExp(`<body[^>]*data-gsh-game="${game}"`), `${file}: missing game marker`);
-    assert.match(html, /css\/mobile-landscape\.css\?v=26/, `${file}: missing shared CSS`);
-    assert.match(html, /js\/core\/mobile-landscape\.js\?v=18/, `${file}: missing shared controller`);
     assert.match(html, /js\/games\/thai-keyboard\.js\?v=2/, `${file}: missing shared split keyboard`);
+    if (game === 'lego') {
+      assert.match(html, /css\/mobile-landscape\.css\?v=26/, `${file}: Lego CSS binding drifted`);
+      assert.match(html, /js\/core\/mobile-landscape\.js\?v=18/, `${file}: Lego controller binding drifted`);
+    } else {
+      assert.match(html, /css\/mobile-landscape\.css\?v=27/, `${file}: missing updated shared CSS`);
+      assert.match(html, /js\/core\/mobile-landscape\.js\?v=19/, `${file}: missing updated shared controller`);
+    }
   }
   assert.doesNotMatch(read('tone-finder.html'), /tone-mobile-landscape\.(?:css|js)/);
 });
 
-test('top band is Login, Chinese menus, title, Game, More and fixed Skip slot', () => {
-  assert.match(stage, /mainAction\.appendChild\(makeSlot\('skip'\)\)/);
+test('top band is Login, Chinese menus, title, Game, More and ordered action slots', () => {
+  assert.match(stage, /mainAction\.append\(makeSlot\('skip'\), makeSlot\('check'\), makeSlot\('reset'\)\)/);
   assert.match(stage, /top\.append\(makeSlot\('dropdowns'\), makeSlot\('shared-controls'\), mainAction\)/);
   assert.match(stage, /createDropdown\('level', '等級', levels\)/);
   assert.match(stage, /createDropdown\('tools', '工具', tools\)/);
@@ -46,7 +55,7 @@ test('top band is Login, Chinese menus, title, Game, More and fixed Skip slot', 
   assert.match(stage, /slot\('dropdowns'\)\.prepend\(login\)/);
   assert.match(stage, /mountExistingNode\(title, slot\('shared-controls'\)\)/);
   assert.match(stage, /insertBefore\(controls, slot\('skip'\)\)/);
-  assert.match(css, /data-gsh-ml-slot="skip"[\s\S]{0,220}flex: 0 0 var\(--gsh-ml-control-h\)/);
+  assert.match(css, /data-gsh-ml-slot="skip"[\s\S]{0,120}data-gsh-ml-slot="check"[\s\S]{0,120}data-gsh-ml-slot="reset"[\s\S]{0,220}flex: 0 0 var\(--gsh-ml-control-h\)/);
 });
 
 test('five standard games lock visible 30 / 40 / 30 outer cards', () => {
@@ -79,10 +88,20 @@ test('Tone preserves three left, three right and reveal actions in the right slo
   assert.match(css, /data-gsh-ml-slot="main-action"[^}]+\.rg-ctl-wrap[^}]+padding:\s*0 !important/);
 });
 
-test('Reading, Typing and Word Order keep game-owned actions in fixed right-side slots', () => {
-  assert.match(stage, /mountMany\(\['#btn-check', '#btn-next', '#btn-next-syl'\], slot\('right'\)\)/);
+test('five games expose the requested ordered top actions with neutral Skip', () => {
+  assert.match(stage, /game === 'reading'\) \{ skip = q\('#btn-skip'\); check = q\('#btn-check'\); \}/);
+  assert.match(stage, /game === 'listening'\) skip = q\('#lg-skip-btn'\)/);
+  assert.match(stage, /game === 'typing'\) skip = q\('#btn-skip'\)/);
+  assert.match(stage, /game === 'word-order'[\s\S]{0,260}#wo-skip-btn[\s\S]{0,120}#wo-reset-btn[\s\S]{0,260}word-order-check/);
+  assert.match(readingApp, /function skipWord\(\)[\s\S]{0,420}skipped:true[\s\S]{0,180}nextWord\(\)/);
+  assert.match(typingApp, /function skipWord\(\)[\s\S]{0,420}skipped:true[\s\S]{0,180}nextWord\(\)/);
+  assert.match(listeningApp, /function skipCurrentQuestion\(\)[\s\S]{0,900}is_skipped: true[\s\S]{0,500}state\.idx\+\+/);
+  assert.match(wordOrderApp, /window\.woSkip = function\(\)[\s\S]{0,500}skipped:true[\s\S]{0,160}window\.woNext\(\)/);
+  assert.match(wordOrderApp, /window\.woCheck = function\(\)[\s\S]{0,180}checkAnswer\(\)/);
+  assert.match(stage, /mountMany\(\['#btn-next', '#btn-next-syl'\], slot\('right'\)\)/);
   assert.match(stage, /mountMany\(\['#btn-check', '#btn-next'\], slot\('right'\)\)/);
   assert.match(stage, /mountMany\(\['#wo-hint-btn', '#wo-next-btn'\], slot\('right'\)\)/);
+  assert.doesNotMatch(stage, /data-gsh-ml-tool-label', '重排這句'/);
   assert.doesNotMatch(stage, /labeledNode\('#wo-hint-btn', '提示'/);
   assert.match(css, /data-gsh-game="word-order"[\s\S]{0,220}#wo-hint-btn/);
 });

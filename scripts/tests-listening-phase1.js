@@ -102,9 +102,10 @@ check('level identity survives round, report and Resume without mixed-pool fallb
   /difficulty: state\.level/.test(app) &&
   /state\.level = pend\.level;[\s\S]*state\.pool = buildPool\(state\.level\)/.test(app) &&
   /legacyLevels\.length === 1/.test(app));
-check('audio failure alone shows the locked skip recovery and successful retry clears it',
-  /if \(!ok\) \{[\s\S]*state\.listenCount = Math\.max\(0, state\.listenCount - 1\)[\s\S]*音檔暫時無法播放，請點「跳過此題」[\s\S]*el\.skipBtn\.style\.display = 'inline-flex'/.test(app) &&
-  /if \(state\.audioFailed\) \{[\s\S]*state\.audioFailed = false;[\s\S]*el\.resultBanner\.textContent = '';[\s\S]*el\.skipBtn\.style\.display = 'none'/.test(app));
+check('audio failure keeps neutral skip available and successful retry clears only the error',
+  /if \(!ok\) \{[\s\S]*state\.listenCount = Math\.max\(0, state\.listenCount - 1\)[\s\S]*音檔暫時無法播放，可以按「跳過」進入下一題/.test(appFunction('playCurrent', 'skipCurrentQuestion')) &&
+  /if \(state\.audioFailed\) \{[\s\S]*state\.audioFailed = false;[\s\S]*el\.resultBanner\.textContent = ''/.test(appFunction('playCurrent', 'skipCurrentQuestion')) &&
+  !/el\.skipBtn\.style\.display = 'none'/.test(appFunction('playCurrent', 'skipCurrentQuestion')));
 check('skip advances with no score, penalty, wrong or attempt mutation',
   /state\.itemAttempts = \[\];[\s\S]*skipped: true[\s\S]*listeningScore: 0, typingBonus: 0, totalScore: 0/.test(appFunction('skipCurrentQuestion', 'renderMC')) &&
   !/state\.(correct|wrong|primaryTotal|typingBonusTotal)\+\+/.test(appFunction('skipCurrentQuestion', 'renderMC')) &&

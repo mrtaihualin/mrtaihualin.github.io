@@ -709,7 +709,7 @@ function tfTouchMobileSurface() {
 }
 
 function tfNeutralSkipSurface() {
-  return tfDesktopOrPortrait() || tfMobileLandscape();
+  return true;
 }
 
 // Desktop Enter starts an explicit guided question or uses the visible Next action.
@@ -2297,9 +2297,7 @@ function render() {
     // Lin 2026-07-04: อยู่ในโหมดพิสูจน์ (known-check) แล้ว → ซ่อนปุ่ม "已記得" (กันกดวน + ต้องพิสูจน์ให้จบก่อน)
     if (session.curWordIsKnownCheck) _hideKnown = true;
     if (!_hideKnown) {
-      body.innerHTML += tfNeutralSkipSurface()
-        ? '<div class="tf-known-bar"><button type="button" class="tf-known-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_skip_click\',{category:\'game\'});}catch(e){}TF.skipCurrentWord()">跳過</button></div>'
-        : '<div class="tf-known-bar"><button class="tf-known-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_mark_known_click\',{category:\'game\'});}catch(e){}TF.markKnown()">\u2713 \u5df2\u8a18\u5f97\u9019\u500b\u5b57</button></div>';
+      body.innerHTML += '<div class="tf-known-bar"><button type="button" class="tf-known-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_skip_click\',{category:\'game\'});}catch(e){}TF.skipCurrentWord()">跳過</button></div>';
     }
   }
 
@@ -4125,32 +4123,10 @@ var TF = {
     '</div>';
     document.body.appendChild(div);
   },
-  // ── Lin 2026-07-04: "✓ 已記得這個字" แบบเข้ม (กันปั๊ม) ──
-  //   เดิม: กดแล้วข้ามคำเฉยๆ (ไม่ตัดคำ ไม่ได้ดาว)
-  // กดแล้วไม่ตัดคำทันที → เข้าโหมดพิสูจน์ 1 ครั้งแบบ final-check (ไม่มี推導/ใบ้)
-  //     ถูกสะอาด → ตัดคำออกถาวร (mastered) แต่ "ไม่แจกดาว/แต้ม/bump เพดาน" (ดู tfProcessSrsOnWordCommit)
-  //     ผิด → resetOnFail กลับ day1 เข้าคิว SRS ปกติ แล้วไปคำถัดไป
+  // Compatibility guard: stale callers must never let the player mark a word
+  // mastered. Memory status belongs to SRS; this legacy entry is neutral skip.
   markKnown: function() {
-    if (!session) return;
-    session.hadSkip = true;                     // มีการ "อ้างว่ารู้แล้ว" ในรอบนี้ → ไม่นับ perfect (กันได้ perfect ฟรีจากการข้าม)
-    tfResetWordScoring();                        // ล้างคะแนน/สถานะคำนี้ให้เริ่มพิสูจน์ใหม่หมด
-    session.initialGuess = undefined;
-    session.finalAnswer = undefined;
-    session.currentWordGolden = false;           // ปิดคำทอง — โหมดพิสูจน์ไม่มีแต้ม/ตัวคูณอยู่แล้ว
-    session.curWordIsKnownCheck = true;          // ⚑ เข้าโหมดพิสูจน์ (ไม่มี推導/ใบ้/แต้ม ผิดปุ๊บ fail — ผ่าน tfCurWordNoTools)
-    // ตั้งจอคำ "เดิม" (ไม่ index++) ให้ทายใหม่ — ห้ามเรียก tfSetupSrsFlagsForCurrentWord (จะล้าง flag known ทิ้ง)
-    var nx = session.words[session.index];
-    randomEntry = nx;
-    var w = nx.word;
-    // Lin 2026-07-14: คำหลายพยางค์ ไม่มีหน้าเลือกพยางค์เองแล้ว → เริ่มพยางค์ที่ 1 ตรงเลย
-    if (nx.readingTH && nx.readingTH.indexOf('-') !== -1) {
-      var _syls2 = nx.readingTH.split('-');
-      S = { word: _syls2[0], step: 'session-guess', path: [_syls2[0]], tone: null, syllables: _syls2, selectedSyl: 0, sylResults: {}, parentWord: w };
-    } else {
-      S = { word: w, step: 'session-guess', path: [w], tone: null };
-    }
-    hist.push(S); histPos++;
-    render();
+    return this.skipCurrentWord();
   },
   // Neutral skip on all supported layouts: no answer, score, Combo, SRS, or countdown.
   skipCurrentWord: function() {
