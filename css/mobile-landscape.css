@@ -341,8 +341,10 @@
 
   body.gsh-ml-active[data-gsh-game="word-order"]
   [data-gsh-ml-split="word-order"] {
-    align-content: center;
-    row-gap: clamp(5px, 1.6dvh, 8px);
+    grid-template-rows: repeat(100, minmax(0, 1fr));
+    grid-auto-rows: minmax(0, 1fr);
+    align-content: stretch;
+    row-gap: 0 !important;
     padding-block: clamp(4px, 1.2dvh, 8px) !important;
     overflow-y: hidden;
     overflow-x: hidden;
@@ -360,6 +362,9 @@
     line-height: 1.12;
     white-space: normal;
     overflow-wrap: anywhere;
+    grid-row: var(--gsh-ml-row-start) / span var(--gsh-ml-row-span);
+    align-self: center;
+    margin-block: 3px !important;
   }
   body.gsh-ml-active[data-gsh-game="word-order"]
   [data-gsh-ml-slot="center"] {
@@ -369,6 +374,18 @@
   body.gsh-ml-active[data-gsh-game="word-order"]
   [data-gsh-ml-slot="question"] {
     justify-content: flex-start;
+  }
+  body.gsh-ml-active[data-gsh-game="word-order"] #gsh-ml-word-order-question {
+    flex: 0 0 auto;
+    width: 100%;
+    padding: clamp(2px, .7dvh, 4px) var(--gsh-ml-pad);
+    color: var(--gold-deep, #8b6310);
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: clamp(18px, 5dvh, 25px);
+    font-weight: 800;
+    line-height: 1.2;
+    text-align: center;
+    overflow-wrap: anywhere;
   }
   body.gsh-ml-active[data-gsh-game="word-order"] #wo-slots {
     gap: clamp(4px, 1.3dvh, 8px) !important;
@@ -1327,32 +1344,18 @@
     overscroll-behavior-y: none;
   }
   body[data-gsh-game="reading"].gsh-ml-active [data-gsh-ml-split="reading"] {
-    --gsh-ml-reading-rows: 1;
-    --gsh-ml-reading-choice-h: clamp(56px, calc((100% - (2 * var(--gsh-ml-pad)) - ((var(--gsh-ml-reading-rows) - 1) * var(--gsh-ml-gap))) / var(--gsh-ml-reading-rows)), 96px);
-    grid-template-rows: repeat(var(--gsh-ml-reading-rows), var(--gsh-ml-reading-choice-h));
-    grid-auto-rows: var(--gsh-ml-reading-choice-h);
-    align-content: center;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-  }
-  body[data-gsh-game="reading"].gsh-ml-active [data-gsh-ml-split="reading"][data-gsh-max-side-count="2"] { --gsh-ml-reading-rows: 2; }
-  body[data-gsh-game="reading"].gsh-ml-active [data-gsh-ml-split="reading"][data-gsh-max-side-count="3"] { --gsh-ml-reading-rows: 3; }
-  body[data-gsh-game="reading"].gsh-ml-active [data-gsh-ml-split="reading"][data-gsh-max-side-count="4"] { --gsh-ml-reading-rows: 4; }
-  body[data-gsh-game="reading"].gsh-ml-active [data-gsh-ml-split="reading"][data-gsh-max-side-count="5"] { --gsh-ml-reading-rows: 5; }
-  body[data-gsh-game="reading"].gsh-ml-active [data-gsh-ml-split="reading"] > [data-gsh-side-index="0"] { grid-row: 1; }
-  body[data-gsh-game="reading"].gsh-ml-active [data-gsh-ml-split="reading"] > [data-gsh-side-index="1"] { grid-row: 2; }
-  body[data-gsh-game="reading"].gsh-ml-active [data-gsh-ml-split="reading"] > [data-gsh-side-index="2"] { grid-row: 3; }
-  body[data-gsh-game="reading"].gsh-ml-active [data-gsh-ml-split="reading"] > [data-gsh-side-index="3"] { grid-row: 4; }
-  body[data-gsh-game="reading"].gsh-ml-active [data-gsh-ml-split="reading"] > [data-gsh-side-index="4"] { grid-row: 5; }
-  body[data-gsh-game="reading"].gsh-ml-active [data-gsh-ml-split="reading"] > [data-gsh-side-count="1"] {
-    grid-row: 1 / span 2;
-    align-self: center;
+    grid-template-rows: repeat(100, minmax(0, 1fr));
+    grid-auto-rows: minmax(0, 1fr);
+    align-content: stretch;
+    row-gap: 0 !important;
+    overflow-x: hidden;
   }
   body[data-gsh-game="reading"].gsh-ml-active [data-gsh-ml-split="reading"] > .opt {
+    grid-row: var(--gsh-ml-row-start) / span var(--gsh-ml-row-span);
     width: calc(100% - (2 * var(--gsh-ml-pad))) !important;
-    height: var(--gsh-ml-reading-choice-h) !important;
-    min-height: var(--gsh-ml-reading-choice-h) !important;
-    max-height: var(--gsh-ml-reading-choice-h) !important;
+    height: clamp(46px, 13dvh, 58px) !important;
+    min-height: 46px !important;
+    max-height: 58px !important;
     justify-self: center;
     align-self: center;
     padding: clamp(8px, 2dvh, 12px) clamp(12px, 2vw, 18px) !important;

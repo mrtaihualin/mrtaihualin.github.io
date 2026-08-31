@@ -908,6 +908,8 @@
     if(window.GameFlow)GameFlow.cancel('word-order');
     activeSentence = woBuildPlayableSentence(baseSentence());
     var s = curSentence();
+    var landscapeSlots = document.getElementById('wo-slots');
+    if (landscapeSlots) landscapeSlots.setAttribute('data-gsh-ml-question', s.zh || '');
     answer = []; used = {};
     attemptedWrongThisSentence = false;
     hintUsedThisSentence = false;

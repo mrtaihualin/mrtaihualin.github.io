@@ -2466,3 +2466,10 @@ node scripts/check-site.js
 - Strengthened the existing shared Landscape selector so the moved `🎮 / ⋯` controls participate in the right action row instead of retaining the older fixed-position rule from `shared.css`.
 - The Reading example now measures four visible controls in order: `🎮 / ⋯ / 跳過 / 檢查`, each `39px` at `844×390`, with exact `5px` adjacent gaps and a `12px` right safe edge; no rectangles overlap.
 - Advanced the shared Landscape stylesheet cache key on the five scoped games only; Lego remains untouched. Targeted Landscape/shared tests and the full `1,018`-file site gate pass.
+
+# 2026-08-31 — Mobile Landscape Core-4 first-gameplay layout
+
+- Applied the approved first-gameplay layouts for Tone, Reading, Typing, and Word Order while leaving Listening and Lego gameplay unchanged.
+- Reading and Word Order now reserve the lower-right position-two zone completely; side choices use independent available heights, preserve stable placement, and Word Order may allocate unequal left/right counts. Word Order position two uses `重新` before completion and the existing `下一題` afterward.
+- Typing now renders the 47 Kedmanee character/symbol keys plus one synchronized Shift control on each side, removes the on-screen Space and Backspace keys, promotes Shift characters while active, auto-releases after one character, and shapes standalone Thai marks without adding a dotted circle while preserving `ฺ`.
+- Advanced the shared Landscape CSS/controller cache keys and the Typing bundle cache key. Verification: Landscape `15/15`, shared `52/52`, Typing `17/17`, owner-switch `12/12`, browser geometry at `844×390`, and the full `1,018`-file site gate passed.

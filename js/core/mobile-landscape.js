@@ -474,12 +474,20 @@
       child.removeAttribute('data-gsh-side');
       child.removeAttribute('data-gsh-side-index');
       child.removeAttribute('data-gsh-side-count');
+      child.style.removeProperty('--gsh-ml-row-start');
+      child.style.removeProperty('--gsh-ml-row-span');
     });
     var leftCount;
     if (game === 'tone') {
       leftCount = children.length === 6 ? 3 : children.length === 3 ? 1 : children.length === 2 ? 1 : Math.ceil(children.length / 2);
     } else if (game === 'listening') {
       leftCount = Math.min(2, Math.ceil(children.length / 2));
+    } else if (game === 'word-order') {
+      // Position 2 owns the lower-right 30%. Give the full-height left side
+      // proportionally more word tiles instead of forcing visual symmetry.
+      leftCount = Math.ceil(children.length * 0.6);
+    } else if (game === 'reading' && children.length > 4) {
+      leftCount = Math.ceil(children.length * 0.6);
     } else {
       leftCount = Math.ceil(children.length / 2);
     }
@@ -489,8 +497,17 @@
     children.forEach(function (child, index) {
       var side = index < leftCount ? 'left' : 'right';
       child.dataset.gshSide = side;
-      child.dataset.gshSideIndex = String(side === 'left' ? leftIndex++ : rightIndex++);
-      child.dataset.gshSideCount = String(side === 'left' ? leftCount : children.length - leftCount);
+      var sideIndex = side === 'left' ? leftIndex++ : rightIndex++;
+      var sideCount = side === 'left' ? leftCount : children.length - leftCount;
+      child.dataset.gshSideIndex = String(sideIndex);
+      child.dataset.gshSideCount = String(sideCount);
+      if (game === 'reading' || game === 'word-order') {
+        var availableRows = side === 'right' ? 68 : 100;
+        var rowStart = Math.floor(sideIndex * availableRows / sideCount);
+        var rowEnd = Math.floor((sideIndex + 1) * availableRows / sideCount);
+        child.style.setProperty('--gsh-ml-row-start', String(rowStart + 1));
+        child.style.setProperty('--gsh-ml-row-span', String(Math.max(1, rowEnd - rowStart)));
+      }
     });
   }
 
@@ -506,6 +523,26 @@
         if (uncertain) mountExistingNode(uncertain, container);
       }
       assignSides(container, game);
+    }
+  }
+
+  function syncWordOrderQuestion(game) {
+    var prompt = q('#gsh-ml-word-order-question', stage);
+    if (game !== 'word-order') {
+      if (prompt) prompt.remove();
+      return;
+    }
+    var slotsNode = q('#wo-slots');
+    if (!slotsNode) return;
+    var text = slotsNode.getAttribute('data-gsh-ml-question') || '';
+    if (!prompt) {
+      prompt = document.createElement('div');
+      prompt.id = 'gsh-ml-word-order-question';
+    }
+    prompt.textContent = text;
+    prompt.hidden = !text;
+    if (prompt.parentNode !== slot('question') || prompt.nextSibling !== slotsNode) {
+      slot('question').insertBefore(prompt, slotsNode);
     }
   }
 
@@ -991,7 +1028,7 @@
     }
     actions.filter(Boolean).forEach(function (node) {
       var text = (node.textContent || '').replace(/\s+/g, ' ').trim();
-      if (node.id === 'wo-reset-btn') applyPositionTwoLabel(node, '重排這句', '重排這句');
+      if (node.id === 'wo-reset-btn') applyPositionTwoLabel(node, '重新', '重新');
       else if (text.indexOf('下一個音節') >= 0) applyPositionTwoLabel(node, '下一個<br>音節', '下一個音節');
       else if (text.indexOf('下一題') >= 0) applyPositionTwoLabel(node, '下一題', '下一題');
       else if (node.id === 'tf-guide-start-btn') applyPositionTwoLabel(node, '開始練習', '開始練習');
@@ -1102,6 +1139,7 @@
       var exclusiveView = resolveExclusiveView(game);
       prepareExclusiveView(exclusiveView);
       mountStaticGameNodes(game);
+      syncWordOrderQuestion(game);
       var listeningView = game === 'listening' ? syncListeningGameplay() : null;
       syncSplitContent(game);
       syncTopActions(game);

@@ -36,8 +36,8 @@ test('all six pages bind the updated shared landscape menu system', () => {
     const html = read(file);
     assert.match(html, new RegExp(`<body[^>]*data-gsh-game="${game}"`), `${file}: missing game marker`);
     assert.match(html, /js\/games\/thai-keyboard\.js\?v=2/, `${file}: missing shared split keyboard`);
-    assert.match(html, /css\/mobile-landscape\.css\?v=30/, `${file}: missing updated shared CSS`);
-    assert.match(html, /js\/core\/mobile-landscape\.js\?v=23/, `${file}: missing updated shared controller`);
+    assert.match(html, /css\/mobile-landscape\.css\?v=31/, `${file}: missing updated shared CSS`);
+    assert.match(html, /js\/core\/mobile-landscape\.js\?v=24/, `${file}: missing updated shared controller`);
     assert.match(html, /js\/games\/game-switcher\.js\?v=7/, `${file}: missing fixed six-game navigation`);
   }
   assert.doesNotMatch(read('tone-finder.html'), /tone-mobile-landscape\.(?:css|js)/);
@@ -75,7 +75,7 @@ test('Reading reuses Tone menu presentation without replacing Reading menu conte
   assert.ok(css.includes('body.gsh-ml-active #game-switcher[data-gsh-ml-utility-panel] .gs-tab'));
   assert.ok(css.includes('body.gsh-ml-active .grw-menu[data-gsh-ml-utility-panel] .grw-item'));
   assert.match(stage, /game === 'reading'[\s\S]{0,900}labeledNode\('#rg-howto-btn', '玩法', '📖'\)[\s\S]{0,900}labeledNode\('#rg-en-toggle', '英文讀音', '🔤'\)[\s\S]{0,900}labeledNode\('#rg-particle-toggle', '禮貌詞', '🙏'\)/);
-  assert.match(read('reading-game.html'), /css\/mobile-landscape\.css\?v=30/);
+  assert.match(read('reading-game.html'), /css\/mobile-landscape\.css\?v=31/);
 });
 
 test('approved menus, hints and six-game navigation are exact', () => {
@@ -140,11 +140,38 @@ test('approved position two reuses Tone uncertain geometry and exact labels', ()
   assert.match(stage, /actions = \[q\('#btn-next-syl'\), q\('#btn-next'\)\]/);
   assert.match(stage, /actions = \[q\('#wo-reset-btn'\), q\('#wo-next-btn'\)\]/);
   assert.match(stage, /applyPositionTwoLabel\(node, '下一個<br>音節', '下一個音節'\)/);
-  assert.match(stage, /applyPositionTwoLabel\(node, '重排這句', '重排這句'\)/);
-  assert.doesNotMatch(stage, /applyPositionTwoLabel\(node, '↺ 重排這句'/);
+  assert.match(stage, /applyPositionTwoLabel\(node, '重新', '重新'\)/);
+  assert.doesNotMatch(stage, /applyPositionTwoLabel\(node, '(?:↺ )?重排這句'/);
   assert.match(stage, /syncToneRevealActions\(game\);[\s\S]{0,100}syncPositionTwoActions\(game\);/);
   assert.match(css, /data-gsh-ml-position="2"[\s\S]{0,1200}grid-row: 3/);
   assert.match(css, /#wo-reset-btn:disabled[\s\S]{0,180}#wo-next-btn:disabled[\s\S]{0,120}display: none !important/);
+});
+
+test('Reading and Word Order reserve the lower-right zone exclusively for position two', () => {
+  assert.match(stage, /game === 'word-order'[\s\S]{0,420}children\.length \* 0\.6/);
+  assert.match(stage, /availableRows = side === 'right' \? 68 : 100/);
+  assert.match(stage, /--gsh-ml-row-start/);
+  assert.match(stage, /--gsh-ml-row-span/);
+  assert.match(css, /data-gsh-ml-split="word-order"[\s\S]{0,300}repeat\(100, minmax\(0, 1fr\)\)/);
+  assert.match(css, /data-gsh-ml-split="reading"[\s\S]{0,300}repeat\(100, minmax\(0, 1fr\)\)/);
+  assert.match(css, /grid-row: var\(--gsh-ml-row-start\) \/ span var\(--gsh-ml-row-span\)/);
+  assert.match(css, /data-gsh-ml-position="2"[\s\S]{0,1200}grid-row: 3/);
+  assert.match(stage, /function syncWordOrderQuestion\(game\)[\s\S]{0,800}data-gsh-ml-question/);
+  assert.match(wordOrderApp, /landscapeSlots\.setAttribute\('data-gsh-ml-question', s\.zh \|\| ''\)/);
+  assert.match(css, /#gsh-ml-word-order-question[\s\S]{0,420}text-align: center/);
+});
+
+test('Typing exposes 47 character keys and two synchronized one-shot Shift controls', () => {
+  assert.match(typingApp, /function rgShiftKeys\(\)[\s\S]{0,150}\.rg-shift-key/);
+  assert.match(typingApp, /rgMakeShiftKey\('left'\)[\s\S]{0,100}rgMakeShiftKey\('right'\)/);
+  assert.match(typingApp, /RG_TYPE\.shiftOn=!RG_TYPE\.shiftOn; rgSyncShiftKeys\(\)/);
+  assert.match(typingApp, /if\(RG_TYPE\.shiftOn\)[\s\S]{0,100}RG_TYPE\.shiftOn=false;[\s\S]{0,100}rgSyncShiftKeys\(\)/);
+  assert.doesNotMatch(typingApp, /spaceKey=document\.createElement|backKey=document\.createElement/);
+  assert.match(typingApp, /KeyB:'ฺ'/);
+  assert.match(typingApp, /rgKeyboardLabelHTML\(sh\)[\s\S]{0,100}rgKeyboardLabelHTML\(un\)/);
+  assert.match(read('typing-game.html'), /\.tkbd\.shift-on \.tk-key \.tk-shift[^{]*\{font-size:15px/);
+  assert.match(read('typing-game.html'), /typing-game-app\.min\.js\?v=45/);
+  assert.strictEqual((typingApp.match(/(?:Backquote|Digit\d|Minus|Equal|Key[A-Z]|BracketLeft|BracketRight|Semicolon|Quote|Backslash|Comma|Period|Slash):/g) || []).length / 2, 47);
 });
 
 test('Listening uses two choices per side and Typing keyboard geometry for typed mode', () => {

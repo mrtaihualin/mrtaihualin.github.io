@@ -1933,6 +1933,23 @@ function rgToggleWebKbd(){
 // → ช่อง input เสียโฟกัส → คีย์บอร์ดเครื่องหุบทันที และบน iOS การ focus() คืนอัตโนมัติ (นอกจังหวะแตะของผู้ใช้) มักถูกบล็อก คีย์บอร์ดเลยไม่กลับมาเอง
 // วิธีแก้มาตรฐาน: preventDefault ที่ mousedown (คลิก/แตะยังทำงานปกติ แต่โฟกัสไม่ย้าย คีย์บอร์ดไม่หุบ) — อ้างอิง: MDN mousedown default action = focus
 function rgNoFocusSteal(el){ if(el)el.addEventListener('mousedown',function(e){e.preventDefault();}); }
+function rgShiftKeys(){ return Array.prototype.slice.call(document.querySelectorAll('#rg-kbd .rg-shift-key')); }
+function rgSyncShiftKeys(){
+  var box=document.getElementById('rg-kbd');
+  if(box)box.classList.toggle('shift-on',RG_TYPE.shiftOn);
+  rgShiftKeys().forEach(function(key){ key.classList.toggle('active',RG_TYPE.shiftOn); });
+}
+function rgKeyboardLabelHTML(value){ return dispHTML(value||''); }
+function rgMakeShiftKey(side){
+  var key=document.createElement('div');
+  key.className='tk-key tk-wide rg-shift-key';key.id='rg-shift-key-'+side;key.textContent='⇧ Shift';
+  key.onclick=function(){ RG_TYPE.shiftOn=!RG_TYPE.shiftOn; rgSyncShiftKeys(); };
+  key.setAttribute('role','button');key.setAttribute('tabindex','0');
+  key.setAttribute('aria-label','Shift');
+  key.onkeydown=function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); key.onclick(); } };
+  rgNoFocusSteal(key);
+  return key;
+}
 function rgBuildKeyboard(){
   var box=document.getElementById('rg-kbd');
   if(!box)return;
@@ -1949,7 +1966,7 @@ function rgBuildKeyboard(){
       var k=document.createElement('div');
       k.className='tk-key';k.dataset.code=code;
       var sh=RG_SHIFT_MAP[code]||'';var un=RG_BASE_MAP[code]||'';
-      k.innerHTML='<span class="tk-shift">'+sh+'</span><span class="tk-base">'+un+'</span>';
+      k.innerHTML='<span class="tk-shift">'+rgKeyboardLabelHTML(sh)+'</span><span class="tk-base">'+rgKeyboardLabelHTML(un)+'</span>';
       k.onclick=function(){ rgVirtualPress(code); };
       // Lin 2026-07-15 (audit): ให้กดด้วยคีย์บอร์ด/โปรแกรมอ่านหน้าจอได้
       k.setAttribute('role','button');
@@ -1961,28 +1978,16 @@ function rgBuildKeyboard(){
     box.appendChild(rowEl);
   });
   var lastRow=document.createElement('div');lastRow.className='tk-row';
-  var shiftKey=document.createElement('div');shiftKey.className='tk-key tk-wide';shiftKey.id='rg-shift-key';shiftKey.textContent='⇧ Shift';
-  shiftKey.onclick=function(){ RG_TYPE.shiftOn=!RG_TYPE.shiftOn; shiftKey.classList.toggle('active',RG_TYPE.shiftOn); };
-  shiftKey.setAttribute('role','button');shiftKey.setAttribute('tabindex','0');
-  shiftKey.onkeydown=function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); shiftKey.onclick(); } };
-  // ปุ่มเว้นวรรค: ไม่มีคำไหนในเกมมีช่องว่าง → ทำเป็นปุ่มโชว์เฉยๆ (inert) กันกดแล้วโดนนับผิด — Lin 2026-07-02
-  var spaceKey=document.createElement('div');spaceKey.className='tk-key tk-space';spaceKey.textContent='空白鍵';
-  spaceKey.style.opacity='.45';spaceKey.style.cursor='default';
-  var backKey=document.createElement('div');backKey.className='tk-key tk-wide';backKey.textContent='⌫ 退格';
-  backKey.onclick=function(){ rgTypeBackspace(); };
-  backKey.setAttribute('role','button');backKey.setAttribute('tabindex','0');
-  backKey.onkeydown=function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); backKey.onclick(); } };
-  rgNoFocusSteal(shiftKey);rgNoFocusSteal(backKey);rgNoFocusSteal(spaceKey); // Lin 2026-07-16: แตะปุ่มจอแล้วคีย์บอร์ดเครื่องต้องไม่หุบ
-  lastRow.appendChild(shiftKey);lastRow.appendChild(spaceKey);lastRow.appendChild(backKey);
+  lastRow.appendChild(rgMakeShiftKey('left'));lastRow.appendChild(rgMakeShiftKey('right'));
   box.appendChild(lastRow);
+  rgSyncShiftKeys();
 }
 function rgVirtualPress(code){
   var ch=RG_TYPE.shiftOn?(RG_SHIFT_MAP[code]||''):(RG_BASE_MAP[code]||'');
   // Shift จอปล่อยเองหลังพิมพ์ 1 ตัว (เหมือนคีย์บอร์ดมือถือ) — กัน Shift ค้างแล้วตัวถัดไปพิมพ์ผิด — Lin 2026-07-02
   if(RG_TYPE.shiftOn){
     RG_TYPE.shiftOn=false;
-    var sk=document.getElementById('rg-shift-key');
-    if(sk)sk.classList.remove('active');
+    rgSyncShiftKeys();
   }
   if(ch)rgTypeChar(ch);
 }
@@ -2025,14 +2030,14 @@ function rgTypeHighlightNextKey(){
   if(!box)return;
   box.querySelectorAll('.tk-key.hint').forEach(function(k){k.classList.remove('hint');});
   var expected=RG_TYPE.target.charAt(RG_TYPE.pos);
-  var shiftKey=document.getElementById('rg-shift-key');
-  if(!guideMode || curWordIsKnownCheck){ if(shiftKey)shiftKey.classList.remove('need'); return; } // โหมดไม่มีไกด์ไลน์ · ด่านพิสูจน์已記得ห้ามมีคำใบ้เด็ดขาด
-  if(!expected){ if(shiftKey)shiftKey.classList.remove('need'); return; }
+  var shiftKeys=rgShiftKeys();
+  if(!guideMode || curWordIsKnownCheck){ shiftKeys.forEach(function(key){key.classList.remove('need');}); return; } // โหมดไม่มีไกด์ไลน์ · ด่านพิสูจน์已記得ห้ามมีคำใบ้เด็ดขาด
+  if(!expected){ shiftKeys.forEach(function(key){key.classList.remove('need');}); return; }
   var info=RG_REVERSE[expected];
-  if(!info){ if(shiftKey)shiftKey.classList.remove('need'); return; }
+  if(!info){ shiftKeys.forEach(function(key){key.classList.remove('need');}); return; }
   var keyEl=box.querySelector('.tk-key[data-code="'+info.code+'"]');
   if(keyEl)keyEl.classList.add('hint');
-  if(shiftKey)shiftKey.classList.toggle('need',!!info.shift);
+  shiftKeys.forEach(function(key){key.classList.toggle('need',!!info.shift);});
   // กฎ MASTER (อุดรูรั่ว): "เห็นคำใบ้ = คำนี้ไม่ได้แต้ม" — ล็อกทันทีที่ไฮไลต์คีย์ถัดไป (ไม่ใช่รอพิมพ์ครบ)
   wordUsedGuide=true;
 }
@@ -2114,8 +2119,7 @@ function rgTypeChar(ch){
       // Lin 2026-07-13: พิมพ์ครบพยางค์แล้ว ต้องเคลียร์ตัวใบ้ที่ค้างอยู่บนคีย์บอร์ดด้วย ไม่งั้นปุ่มล่าสุดยังสว่างค้าง ทำให้ไม่รู้ว่ากดไปแล้ว
       var kbdBox=document.getElementById('rg-kbd');
       if(kbdBox)kbdBox.querySelectorAll('.tk-key.hint').forEach(function(k){k.classList.remove('hint');});
-      var shiftKeyDone=document.getElementById('rg-shift-key');
-      if(shiftKeyDone)shiftKeyDone.classList.remove('need');
+      rgShiftKeys().forEach(function(key){key.classList.remove('need');});
       rgTypeOnFullyTyped();
     } else {
       rgTypeHighlightNextKey();
@@ -2229,8 +2233,7 @@ function rgContAdvanceSegment(isLast){
     // Lin 2026-07-13: พิมพ์ครบทั้งคำแล้ว ต้องเคลียร์ตัวใบ้ที่ค้างอยู่บนคีย์บอร์ดด้วย ไม่งั้นปุ่มล่าสุดยังสว่างค้าง ทำให้ไม่รู้ว่ากดไปแล้ว
     var kbdBox=document.getElementById('rg-kbd');
     if(kbdBox)kbdBox.querySelectorAll('.tk-key.hint').forEach(function(k){k.classList.remove('hint');});
-    var shiftKeyDone=document.getElementById('rg-shift-key');
-    if(shiftKeyDone)shiftKeyDone.classList.remove('need');
+    rgShiftKeys().forEach(function(key){key.classList.remove('need');});
     rgContFinish(); // Lin 2026-07-30: เอา猜聲調ออกแล้ว — พิมพ์ครบทั้งคำ = จบคำเลย ไม่ถามวรรณยุกต์ต่อท้าย
     return;
   }
