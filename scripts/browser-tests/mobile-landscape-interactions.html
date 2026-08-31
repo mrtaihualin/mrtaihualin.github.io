@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Mobile Landscape interaction gate</title>
+  <style>
+    body { margin: 0; padding: 16px; font: 14px/1.45 system-ui, sans-serif; color: #26221a; background: #f5f0e8; }
+    h1 { margin: 0 0 8px; font-size: 20px; }
+    #status { font-weight: 800; }
+    #results { white-space: pre-wrap; background: #fff; border: 1px solid #d4b87a; border-radius: 10px; padding: 12px; }
+    iframe { position: absolute; left: -10000px; top: 0; width: 844px; height: 390px; border: 0; }
+  </style>
+</head>
+<body>
+  <h1>Mobile Landscape interaction gate</h1>
+  <p id="status">RUNNING</p>
+  <pre id="results"></pre>
+  <iframe id="game-frame" title="Game under test"></iframe>
+  <script src="mobile-landscape-interactions.js"></script>
+</body>
+</html>

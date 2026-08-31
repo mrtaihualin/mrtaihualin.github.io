@@ -31,13 +31,14 @@ function test(name, fn) {
   console.log('✓ ' + name);
 }
 
-test('all six pages bind the updated shared landscape menu system', () => {
+test('all six pages bind the shared landscape menu system and Core 4 owns this cache delta', () => {
   for (const [game, file] of pages) {
     const html = read(file);
     assert.match(html, new RegExp(`<body[^>]*data-gsh-game="${game}"`), `${file}: missing game marker`);
     assert.match(html, /js\/games\/thai-keyboard\.js\?v=2/, `${file}: missing shared split keyboard`);
-    assert.match(html, /css\/mobile-landscape\.css\?v=31/, `${file}: missing updated shared CSS`);
-    assert.match(html, /js\/core\/mobile-landscape\.js\?v=24/, `${file}: missing updated shared controller`);
+    const paused = game === 'listening' || game === 'lego';
+    assert.match(html, paused ? /css\/mobile-landscape\.css\?v=31/ : /css\/mobile-landscape\.css\?v=32/, `${file}: wrong scoped CSS version`);
+    assert.match(html, paused ? /js\/core\/mobile-landscape\.js\?v=24/ : /js\/core\/mobile-landscape\.js\?v=25/, `${file}: wrong scoped controller version`);
     assert.match(html, /js\/games\/game-switcher\.js\?v=7/, `${file}: missing fixed six-game navigation`);
   }
   assert.doesNotMatch(read('tone-finder.html'), /tone-mobile-landscape\.(?:css|js)/);
@@ -75,7 +76,7 @@ test('Reading reuses Tone menu presentation without replacing Reading menu conte
   assert.ok(css.includes('body.gsh-ml-active #game-switcher[data-gsh-ml-utility-panel] .gs-tab'));
   assert.ok(css.includes('body.gsh-ml-active .grw-menu[data-gsh-ml-utility-panel] .grw-item'));
   assert.match(stage, /game === 'reading'[\s\S]{0,900}labeledNode\('#rg-howto-btn', '玩法', '📖'\)[\s\S]{0,900}labeledNode\('#rg-en-toggle', '英文讀音', '🔤'\)[\s\S]{0,900}labeledNode\('#rg-particle-toggle', '禮貌詞', '🙏'\)/);
-  assert.match(read('reading-game.html'), /css\/mobile-landscape\.css\?v=31/);
+  assert.match(read('reading-game.html'), /css\/mobile-landscape\.css\?v=32/);
 });
 
 test('approved menus, hints and six-game navigation are exact', () => {
@@ -137,12 +138,15 @@ test('five games expose the requested ordered top actions with neutral Skip', ()
 test('approved position two reuses Tone uncertain geometry and exact labels', () => {
   assert.match(stage, /function syncPositionTwoActions\(game\)/);
   assert.match(stage, /toneAction[\s\S]{0,260}slot\('right'\)/);
-  assert.match(stage, /actions = \[q\('#btn-next-syl'\), q\('#btn-next'\)\]/);
-  assert.match(stage, /actions = \[q\('#wo-reset-btn'\), q\('#wo-next-btn'\)\]/);
+  assert.match(stage, /actions = \[readingNextSyl, readingNext\]/);
+  assert.match(stage, /actions = \[wordOrderReset, wordOrderNext\]/);
   assert.match(stage, /applyPositionTwoLabel\(node, '下一個<br>音節', '下一個音節'\)/);
   assert.match(stage, /applyPositionTwoLabel\(node, '重新', '重新'\)/);
   assert.doesNotMatch(stage, /applyPositionTwoLabel\(node, '(?:↺ )?重排這句'/);
   assert.match(stage, /syncToneRevealActions\(game\);[\s\S]{0,100}syncPositionTwoActions\(game\);/);
+  assert.match(stage, /function setPositionTwoActive\(actions, activeNode\)/);
+  assert.match(stage, /revealed = q\('#wo-slots \.wo-slot\.correct'\) !== null/);
+  assert.match(css, /gsh-ml-position-two-inactive[\s\S]{0,120}display: none !important/);
   assert.match(css, /data-gsh-ml-position="2"[\s\S]{0,1200}grid-row: 3/);
   assert.match(css, /#wo-reset-btn:disabled[\s\S]{0,180}#wo-next-btn:disabled[\s\S]{0,120}display: none !important/);
 });
@@ -159,6 +163,7 @@ test('Reading and Word Order reserve the lower-right zone exclusively for positi
   assert.match(stage, /function syncWordOrderQuestion\(game\)[\s\S]{0,800}data-gsh-ml-question/);
   assert.match(wordOrderApp, /landscapeSlots\.setAttribute\('data-gsh-ml-question', s\.zh \|\| ''\)/);
   assert.match(css, /#gsh-ml-word-order-question[\s\S]{0,420}text-align: center/);
+  assert.match(css, /data-gsh-ml-split="word-order"[^}]+grid-template-columns: minmax\(0, 30fr\) minmax\(0, 40fr\) minmax\(0, 30fr\) !important/);
 });
 
 test('Typing exposes 47 character keys and two synchronized one-shot Shift controls', () => {
@@ -171,6 +176,9 @@ test('Typing exposes 47 character keys and two synchronized one-shot Shift contr
   assert.match(typingApp, /rgKeyboardLabelHTML\(sh\)[\s\S]{0,100}rgKeyboardLabelHTML\(un\)/);
   assert.match(read('typing-game.html'), /\.tkbd\.shift-on \.tk-key \.tk-shift[^{]*\{font-size:15px/);
   assert.match(read('typing-game.html'), /typing-game-app\.min\.js\?v=45/);
+  assert.match(css, /data-gsh-game="typing"[\s\S]{0,180}#rg-kbd[^}]+max-width: none !important/);
+  assert.match(css, /#rg-kbd \.gsh-split-kbd-row[^}]+grid-template-columns: minmax\(0, 30fr\) minmax\(0, 40fr\) minmax\(0, 30fr\) !important/);
+  assert.match(css, /#rg-kbd\.shift-on \.tk-key \.tk-shift[\s\S]{0,160}font-weight: 700/);
   assert.strictEqual((typingApp.match(/(?:Backquote|Digit\d|Minus|Equal|Key[A-Z]|BracketLeft|BracketRight|Semicolon|Quote|Backslash|Comma|Period|Slash):/g) || []).length / 2, 47);
 });
 

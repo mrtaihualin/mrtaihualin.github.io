@@ -79,10 +79,11 @@ test('Word Order uses manual Check only on Mobile Landscape and neutral Skip nev
   assert.match(order, /if \(w\.skipped\) return '<span style="color:#777;">跳過<\/span>'/);
 });
 
-test('Mobile Landscape top actions are ordered Skip, Check, Reset per game', () => {
+test('Mobile Landscape keeps Skip and Check in the top actions while Word Order state actions stay in Position 2', () => {
   assert.match(stage, /mainAction\.append\(makeSlot\('skip'\), makeSlot\('check'\), makeSlot\('reset'\)\)/);
   assert.match(stage, /game === 'reading'\) \{ skip = q\('#btn-skip'\); check = q\('#btn-check'\); \}/);
-  assert.match(stage, /game === 'word-order'[\s\S]{0,260}#wo-skip-btn[\s\S]{0,120}#wo-reset-btn/);
+  assert.match(stage, /game === 'word-order'\) \{[\s\S]{0,120}#wo-skip-btn[\s\S]{0,220}createWordOrderCheckAction/);
+  assert.match(stage, /game === 'word-order'\) \{[\s\S]{0,160}#wo-slots[\s\S]{0,120}#wo-reset-btn[^\n]+#wo-next-btn/);
   assert.match(stage, /createWordOrderCheckAction/);
   assert.match(stage, /name === 'reset'[\s\S]{0,260}node\.textContent = '重新'/);
   assert.match(read('word-order.html'), /id="wo-reset-btn"[^>]*>↺ 重排這句<\/button>/);

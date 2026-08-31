@@ -1010,21 +1010,47 @@
     node.setAttribute('aria-label', label);
   }
 
+  function setPositionTwoActive(actions, activeNode) {
+    actions.filter(Boolean).forEach(function (node) {
+      var isActive = node === activeNode;
+      node.setAttribute('data-gsh-ml-position-two-active', isActive ? 'true' : 'false');
+      node.classList.toggle('gsh-ml-position-two-inactive', !isActive);
+      if (isActive) node.removeAttribute('aria-hidden');
+      else node.setAttribute('aria-hidden', 'true');
+    });
+  }
+
   function syncPositionTwoActions(game) {
     var actions = [];
+    var activeAction = null;
     if (game === 'tone') {
-      var toneAction = q('#tf-body .sg-dontknow-btn');
-      var toneGrid = q('#tf-body .sg-tone-grid');
+      var toneAction = q('.sg-dontknow-btn', stage) || q('#tf-body .sg-dontknow-btn');
+      var toneGrid = q('.sg-tone-grid', stage) || q('#tf-body .sg-tone-grid');
       if (toneAction && (!toneGrid || !toneGrid.contains(toneAction))) {
         mountExistingNode(toneAction, slot('right'));
       }
-      actions = [toneAction, q('#tf-session-next-btn')];
+      var toneNext = q('#tf-session-next-btn');
+      actions = [toneAction, toneNext];
+      activeAction = toneNext && !toneNext.hidden && toneNext.style.display !== 'none' ? toneNext : toneAction;
     } else if (game === 'reading') {
-      actions = [q('#btn-next-syl'), q('#btn-next')];
+      var readingNextSyl = q('#btn-next-syl');
+      var readingNext = q('#btn-next');
+      actions = [readingNextSyl, readingNext];
+      activeAction = readingNext && !readingNext.hidden && readingNext.style.display !== 'none' && !readingNext.disabled
+        ? readingNext
+        : readingNextSyl && !readingNextSyl.hidden && readingNextSyl.style.display !== 'none' && !readingNextSyl.disabled
+          ? readingNextSyl
+          : null;
     } else if (game === 'typing') {
-      actions = [q('#btn-next')];
+      var typingNext = q('#btn-next');
+      actions = [typingNext];
+      activeAction = typingNext && !typingNext.hidden && typingNext.style.display !== 'none' && !typingNext.disabled ? typingNext : null;
     } else if (game === 'word-order') {
-      actions = [q('#wo-reset-btn'), q('#wo-next-btn')];
+      var wordOrderReset = q('#wo-reset-btn');
+      var wordOrderNext = q('#wo-next-btn');
+      actions = [wordOrderReset, wordOrderNext];
+      var revealed = q('#wo-slots .wo-slot.correct') !== null;
+      activeAction = revealed && wordOrderNext && !wordOrderNext.disabled ? wordOrderNext : wordOrderReset;
     }
     actions.filter(Boolean).forEach(function (node) {
       var text = (node.textContent || '').replace(/\s+/g, ' ').trim();
@@ -1034,6 +1060,7 @@
       else if (node.id === 'tf-guide-start-btn') applyPositionTwoLabel(node, '開始練習', '開始練習');
       else if (node.classList.contains('sg-dontknow-btn')) applyPositionTwoLabel(node, '不確定', '不確定');
     });
+    setPositionTwoActive(actions, activeAction);
   }
 
   function restoreToneSummaryLayout() {
@@ -1223,7 +1250,7 @@
     closeDropdowns();
     restoreInputs();
     restoreControls();
-    qa('[data-gsh-side], [data-gsh-side-index], [data-gsh-side-count], [data-gsh-max-side-count], [data-gsh-ml-split], [data-gsh-ml-role], [data-gsh-ml-custom-input]').forEach(function (node) {
+    qa('[data-gsh-side], [data-gsh-side-index], [data-gsh-side-count], [data-gsh-max-side-count], [data-gsh-ml-split], [data-gsh-ml-role], [data-gsh-ml-custom-input], [data-gsh-ml-position-two-active]').forEach(function (node) {
       node.removeAttribute('data-gsh-side');
       node.removeAttribute('data-gsh-side-index');
       node.removeAttribute('data-gsh-side-count');
@@ -1231,6 +1258,9 @@
       node.removeAttribute('data-gsh-ml-split');
       node.removeAttribute('data-gsh-ml-role');
       node.removeAttribute('data-gsh-ml-custom-input');
+      node.removeAttribute('data-gsh-ml-position-two-active');
+      node.classList.remove('gsh-ml-position-two-inactive');
+      if (node.getAttribute('aria-hidden') === 'true') node.removeAttribute('aria-hidden');
     });
     qa('[data-gsh-ml-tool-label]').forEach(function (node) {
       node.removeAttribute('data-gsh-ml-tool-label');

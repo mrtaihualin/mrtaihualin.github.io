@@ -2473,3 +2473,10 @@ node scripts/check-site.js
 - Reading and Word Order now reserve the lower-right position-two zone completely; side choices use independent available heights, preserve stable placement, and Word Order may allocate unequal left/right counts. Word Order position two uses `重新` before completion and the existing `下一題` afterward.
 - Typing now renders the 47 Kedmanee character/symbol keys plus one synchronized Shift control on each side, removes the on-screen Space and Backspace keys, promotes Shift characters while active, auto-releases after one character, and shapes standalone Thai marks without adding a dotted circle while preserving `ฺ`.
 - Advanced the shared Landscape CSS/controller cache keys and the Typing bundle cache key. Verification: Landscape `15/15`, shared `52/52`, Typing `17/17`, owner-switch `12/12`, browser geometry at `844×390`, and the full `1,018`-file site gate passed.
+
+# 2026-08-31 — Mobile Landscape Core-4 interaction correction
+
+- Replaced the earlier source-only Preview claim with a browser interaction gate that closes Cookie/tutorial blockers, measures live bounding boxes, and clicks through Tone, Reading, Typing, and Word Order states at `844×390`.
+- Enforced one state-owned Position 2 action, corrected Word Order side-grid gaps and its save-button runtime error, and kept every Word Order choice inside its owner frame without entering the centre or Position 2.
+- Kept the Typing keyboard halves inside their respective side frames, verified all 47 character keys plus both shared one-shot Shift controls, and preserved the real `ฺ` character without a dotted-circle display artifact.
+- Verification: browser interaction gate `134/134`, targeted Core-4 tests, shared game tests, owner-switch and neutral-action regressions, and the full `1,020`-file site gate passed. Human acceptance remains pending; Listening, Lego, and Production are unchanged.

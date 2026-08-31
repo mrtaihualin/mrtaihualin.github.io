@@ -402,7 +402,6 @@
     if (!slot || !window.SentenceVault) return;
     var s = curSentence();
     if (!s) { slot.innerHTML = ''; return; }
-    WordVault.injectStyles();
     slot.innerHTML = ''; // ล้างปุ่มของประโยคก่อนหน้าเสมอ กันปุ่มค้าง
     var romanization = woWordReads(s).map(function (row) { return row.en; }).filter(Boolean).join(' ');
     var sentenceText = woSentenceText(s);
@@ -1014,6 +1013,7 @@
     bank.forEach(function(tile){
       var el = document.createElement('div');
       el.className = 'wo-tile' + (used[tile.orig] ? ' used' : '');
+      el.dataset.gshOriginalIndex = String(tile.orig);
       // Lin 2026-07-25: คำอ่านแปะใต้คำในกองด้วย (กองสลับที่แล้ว คำอ่านก็ยังตรงกับคำของตัวเอง ไม่เฉลยลำดับ)
       el.innerHTML = '<div class="wo-word-th">' + tile.th + '</div>' + woReadHtml(tile.orig);
       el.onclick = function(){ if (!locked && !used[tile.orig]) addToAnswer(tile.orig); };
