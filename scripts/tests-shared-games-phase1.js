@@ -185,19 +185,17 @@ test('all five games expose the shared cross-game switcher', () => {
   }
 });
 
-test('shared switcher contains exactly the Phase 1 Core 5 in canonical order', () => {
+test('shared switcher renders the fixed six games plus 我的單字庫 in canonical order', () => {
   const core5Block = switcherJs.slice(switcherJs.indexOf('var CORE5_TABS'), switcherJs.indexOf('var CORE6_TABS'));
   const ids = Array.from(core5Block.matchAll(/\{ id: '([^']+)'/g), (match) => match[1]);
   assert.deepStrictEqual(ids, ['tone_finder', 'reading_game', 'listening_game', 'typing_game', 'word_order']);
   assert.doesNotMatch(core5Block, /href: '(?:lego|vault|games-challenge)\.html'/);
-  assert.match(switcherJs, /var CORE6_TABS = CORE5_TABS\.concat\([\s\S]{0,180}id: 'lego'/, 'Tone Desktop switcher variant must include Lego');
-  assert.match(switcherJs, /includeLego \? CORE6_TABS : CORE5_TABS/, 'Core 5 pages without the opt-in must keep the original switcher');
-  assert.match(switcherJs, /var VAULT_TAB = \{ id: 'vault', href: 'vault\.html', label: '🔖 泰語單字庫'/, 'all game switchers must append the approved Vault route');
-  assert.match(switcherJs, /if \(core5\) tabs = tabs\.concat\(\[VAULT_TAB\]\)/, 'Core game menus must append exactly one Vault route');
+  assert.match(switcherJs, /var CORE6_TABS = CORE5_TABS\.concat\([\s\S]{0,180}id: 'lego'/, 'fixed game switcher must include Lego sixth');
+  assert.match(switcherJs, /var tabs = CORE6_TABS\.concat\(\[VAULT_TAB\]\)/, 'every game must use the same six-game menu plus library route');
+  assert.match(switcherJs, /var VAULT_TAB = \{ id: 'vault', href: 'vault\.html', label: '🔖 我的單字庫'/, 'all game switchers must append the approved library route');
   assert.match(switcherJs, /data-vault-portrait-entry/, 'Portrait bottom navigation must expose the additional Vault route');
   assert.match(switcherJs, /DOMContentLoaded[\s\S]{0,180}addPortraitVaultEntry/, 'Portrait Vault route must wait for late bottom-navigation markup');
   assert.match(switcherJs, /if \(current === 'vault'\) tabs = tabs\.filter/, 'Vault must not render a self entry');
-  assert.match(games.find((g) => g.id === 'tone').htmlText, /data-include-lego="1"/, 'Tone must opt into the six-game switcher on every viewport');
   assert.match(switcherJs, /role="menuitem" aria-current="page"/);
 });
 
@@ -859,7 +857,7 @@ test('Tone mobile touch surfaces keep Desktop gameplay free of keyboard-only cop
   assert.match(tone.htmlText, /\.tf-page \{[\s\S]{0,100}padding-top:10px;/, 'Portrait must not count the fixed navigation height twice above the Tone title');
   assert.match(tone.htmlText, /\.tf-result-login-card \{[\s\S]{0,180}padding-top:12px !important; padding-bottom:12px !important;[\s\S]{0,100}line-height:1\.5 !important;/, 'Portrait Result login card must keep equal top and bottom spacing');
   assert.match(tone.htmlText, /\.tf-result-login-card button \{[\s\S]{0,100}display:block; margin:9px auto 0 !important;/, 'Portrait Result login button must stay visibly separated from its copy');
-  assert.match(tone.htmlText, /game-switcher\.js\?v=6/, 'Tone must request the Vault-capable switcher');
+  assert.match(tone.htmlText, /game-switcher\.js\?v=7/, 'Tone must request the fixed six-game switcher');
   assert.match(tone.htmlText, /點選 1–5 就可以。/, 'Portrait Tour must not advertise computer keyboard controls');
 });
 

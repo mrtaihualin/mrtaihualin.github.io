@@ -199,11 +199,17 @@ var readingAttemptScore=null;  // Phase 1: snapshot จาก 檢查 ครั�
 var readingFirstCheckWrongCounts=null; // primitive evidence for server verifier; never a client-computed score
 var readingCorrectionAttempts=0;
 var readingFirstCheckDone=false;
+function rgScoreSylCount(){
+  var list=(typeof sylList!=='undefined'&&sylList)?sylList:[];
+  var n=list.length||((typeof sylWrongCount!=='undefined'&&sylWrongCount&&sylWrongCount.length)?sylWrongCount.length:1);
+  if(list.length&&list[list.length-1]&&list[list.length-1].isParticle)n--;
+  return Math.max(1,n);
+}
 // ใช้สูตรเดิมของเกมเท่านั้น เพราะ exact component-error mapping ยังรอ Lin re-lock; ฟังก์ชันนี้แค่ snapshot ไม่สร้างสูตรใหม่
 function rgSnapshotExistingAttemptScore(){
   if(wordUsedGuide)return 0;
   readingFirstCheckWrongCounts=(sylWrongCount&&sylWrongCount.length)?sylWrongCount.slice():[typeof wrongCount!=='undefined'?wrongCount:0];
-  var n=(sylWrongCount&&sylWrongCount.length)?sylWrongCount.length:1;
+  var n=rgScoreSylCount();
   var avgCount=Math.max(1,Math.min(n,HIGH_RAW_START_IDX));
   var sum=0,i;
   for(i=0;i<avgCount;i++)sum+=rgSyllableScore((sylWrongCount&&sylWrongCount[i])||0);
@@ -397,7 +403,12 @@ setRgGuideMode(rgGuideMode); // ตั้งสถานะปุ่มตาม
 // ── ปุ่มเปิด/ปิดคำอ่านที่โชว์ตั้งแต่คำเพิ่งโหลด — Lin 2026-07-16
 // 🐣 มีนาเจี๊ยบออกเสียง = คำอ่านโชว์อยู่ · 🥚 ไข่เงียบ = คำอ่านซ่อนอยู่ — icon เลือกโดย Lin
 // Lin 2026-07-26: เดิมตอนเฉลย (checked=true) จะบังคับโชว์讀音เสมอ กดปุ่ม🐣/🥚ไม่มีผลตอนเฉลย → แก้ให้ปุ่มกดเปิด/ปิดได้จริงแม้ตอนเฉลยแล้ว
-// ── ปุ่มครับ/ค่ะ/คะ ท้ายประโยค高級 (Lin 2026-08-01) — ไม่เกี่ยวกับกล่องฝึกเขียน/คะแนนเลย แค่ต่อท้ายชื่อประโยคเต็ม (#wth) เท่านั้น
+// 禮貌詞在高級是真正的拼讀音節，但不計分。
+var RG_PARTICLE_SYLS={
+  'ครับ':{th:'ครับ',read:'ครับ',cons:'ค',cluster:'ร',vowel:'อะ',final:'บ',tone_name:'ตรี',en:'kráp',isParticle:true},
+  'ค่ะ':{th:'ค่ะ',read:'ค่ะ',cons:'ค',vowel:'อะ',tone:'่',tone_name:'เอก',en:'khà',isParticle:true},
+  'คะ':{th:'คะ',read:'คะ',cons:'ค',vowel:'อะ',tone_name:'ตรี',en:'khá',isParticle:true}
+};
 //   เดียวกับเกมเสียงทุกอย่าง: ใช้ localStorage key เดียวกัน (games_particle_mode) ให้ค่าติดกันข้ามเกม, politeF อ่านจากข้อมูล adv-sentences.js ผ่าน buildSentencesForPhonicsGames
 var rgParticleMode=(function(){try{return localStorage.getItem('games_particle_mode')||'off';}catch(e){return 'off';}})();
 function rgShowParticleFor(w){
@@ -425,8 +436,8 @@ function rgSyncParticleBtn(){
 function rgToggleParticleMode(){
   rgParticleMode=(rgParticleMode==='off')?'m':(rgParticleMode==='m'?'f':'off');
   try{localStorage.setItem('games_particle_mode',rgParticleMode);}catch(e){}
-  rgApplyParticleToTitle();
-  rgSyncParticleBtn();
+  if(typeof WORD!=='undefined'&&WORD&&WORD.level==='高')loadWord();
+  else{rgApplyParticleToTitle();rgSyncParticleBtn();}
 }
 var rgPronMode=(function(){try{var v=localStorage.getItem('rg_pron_mode');return v===null?false:v==='1';}catch(e){return false;}})(); // default = ซ่อน (ผู้เล่นกดเปิดเอง) — Lin 2026-07-16
 function setRgPronMode(on){
@@ -908,6 +919,8 @@ function loadWord(){
   if(rb){rb.textContent='跳過';rb.style.cssText='';rb.style.display='';}
   WORD=WORDS[roundQueue[cur]];
   sylList=buildSyls(WORD);
+  var _rgParticle=(WORD.level==='高')?rgShowParticleFor(WORD):null;
+  if(_rgParticle&&RG_PARTICLE_SYLS[_rgParticle])sylList=sylList.concat([RG_PARTICLE_SYLS[_rgParticle]]);
   sylIdx=0;wordHadWrong=false;wordFailed=false;wrongCount=0;sylCache=[];readingSubmittedAttempts=[]; // sylCache: เก็บ state แต่ละพยางค์ ให้เลือกพยางค์ไหนก่อนก็ได้ (คำใหม่ = ล้าง)
   sylWrongCount=new Array(sylList.length).fill(0); // งานที่1: ตัวนับผิดแยกรายพยางค์ (คำใหม่ = ล้าง)
   readingAttemptScore=null;readingFirstCheckWrongCounts=null;readingCorrectionAttempts=0;readingFirstCheckDone=false;
@@ -1186,7 +1199,7 @@ function finalizeWord(){
   }
 
   // ── กฎ MASTER: คะแนนต่อพยางค์เฉลี่ย (ดิบ ไม่คูณระดับที่นี่ — ไปคูณทั้งรอบตอนจบ) + 高 พยางค์ 8+ บวกดิบ ──
-  var n=sylWrongCount.length;
+  var n=rgScoreSylCount();
   var avgCount=Math.min(n,HIGH_RAW_START_IDX);
   var sum=0,i;
   for(i=0;i<avgCount;i++) sum+=rgSyllableScore(sylWrongCount[i]);
@@ -1968,7 +1981,7 @@ function rgCaptureSylState(){
 function rgSylFilled(st){ return st.comps.every(function(c){return st.slotFills[c]!=null;}); }
 function rgAllSylsFilled(){
   if(sylList.length<=1) return allSlotsFilled();
-  for(var i=0;i<sylList.length;i++){
+  for(var i=0;i<rgScoreSylCount();i++){
     if(i===sylIdx){ if(!allSlotsFilled())return false; }
     else{ var st=sylCache[i]; if(!st || !rgSylFilled(st))return false; }
   }
@@ -2072,14 +2085,17 @@ function rgCheckWholeWord(){
     refreshUI();
   } else {
     var wasCorrectionCheck=readingFirstCheckDone;
-    wordHadWrong=true;streak=0;badC++;
+    var particleOnly=!!(sylList[wrongIdx]&&sylList[wrongIdx].isParticle);
+    if(!particleOnly){wordHadWrong=true;streak=0;badC++;}
     // งานที่1: นับผิดแยกรายพยางค์ (พยางค์ไหนโผล่มาว่าผิด ก็ +1 เฉพาะพยางค์นั้น) แทนนับรวมทั้งคำแบบเดิม
     sylWrongCount[wrongIdx]=(sylWrongCount[wrongIdx]||0)+1;
-    if(wasCorrectionCheck)readingCorrectionAttempts++;
-    else{readingFirstCheckDone=true;readingAttemptScore=rgSnapshotExistingAttemptScore();}
-    try{ if(typeof gtag==='function') gtag('event','reading_game_wrong',{category:'game',word: WORD.th, wrongs: sylWrongCount[wrongIdx], syllable: wrongIdx+1}); }catch(e){}
-    try{ if(typeof gtag==='function') gtag('event','game_wrong',{category:'game',game:'reading_game'}); }catch(e){}
-    wrongCount=sylWrongCount[wrongIdx]; // ให้ retry-hint อ้างอิงจำนวนผิดของพยางค์นี้เอง
+    if(!particleOnly){
+      if(wasCorrectionCheck)readingCorrectionAttempts++;
+      else{readingFirstCheckDone=true;readingAttemptScore=rgSnapshotExistingAttemptScore();}
+      try{ if(typeof gtag==='function') gtag('event','reading_game_wrong',{category:'game',word: WORD.th, wrongs: sylWrongCount[wrongIdx], syllable: wrongIdx+1}); }catch(e){}
+      try{ if(typeof gtag==='function') gtag('event','game_wrong',{category:'game',game:'reading_game'}); }catch(e){}
+    }
+    wrongCount=particleOnly?Math.min(sylWrongCount[wrongIdx],3):sylWrongCount[wrongIdx]; // 禮貌詞必須拼對，但不進入扣分/失敗計數
     rgJumpForCheck(wrongIdx);
     refreshUI(); // Lin 2026-07-06: หลอด 本題分數 ลดสด+ไล่สีตอนกดผิด (พยางค์ปัจจุบัน)
     if(wrongCount<4){

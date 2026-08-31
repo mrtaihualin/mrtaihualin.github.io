@@ -328,6 +328,14 @@
     return node;
   }
 
+  function quickAction(selector, label) {
+    var node = q(selector);
+    if (!node) return null;
+    node.setAttribute('data-gsh-ml-quick-action', label);
+    mountExistingNode(node, slot('dropdowns'));
+    return node;
+  }
+
   function configureDropdowns(game) {
     slot('dropdowns').replaceChildren();
     var modes = game === 'listening' ? nodesFor(['.mode-tabs']) : [];
@@ -337,11 +345,9 @@
       levels = nodesFor(['#tf-level-tabs']);
       tools = [
         labeledNode('#tf-howto-btn', '玩法', '📖'),
-        labeledNode('#tf-alpha-btn', '字母', '🔤'),
         labeledNode('#rg-pron-toggle', '讀音', '🗣️'),
         labeledNode('#zh-toggle-slot', '翻譯', '🌐'),
         labeledNode('#tf-vault-btn-slot', '單字庫', '📚'),
-        labeledNode('#tf-guide-toggle', '提示', '💡'),
         labeledNode('#font-toggle-slot', '字體', '🅰️'),
         labeledNode('#tf-particle-toggle', '禮貌詞', '🙏')
       ];
@@ -354,7 +360,6 @@
         labeledNode('#rg-en-toggle', '英文讀音', '🔤'),
         labeledNode('#zh-toggle-slot', '翻譯', '🌐'),
         labeledNode('#rg-vault-btn-slot', '單字庫', '📚'),
-        labeledNode('#rg-guide-toggle', '提示', '💡'),
         labeledNode('#font-toggle-slot', '字體', '🅰️'),
         labeledNode('#rg-particle-toggle', '禮貌詞', '🙏')
       ];
@@ -377,7 +382,6 @@
         labeledNode('#rg-en-toggle', '英文讀音', '🔤'),
         labeledNode('#zh-toggle-slot', '翻譯', '🌐'),
         labeledNode('#rg-vault-btn-slot', '單字庫', '📚'),
-        labeledNode('#guide-toggle', '提示', '💡'),
         labeledNode('#font-toggle-slot', '字體', '🅰️'),
         labeledNode('#rg-particle-toggle', '禮貌詞', '🙏')
       ];
@@ -392,6 +396,7 @@
         labeledNode('#rg-pron-toggle', '讀音', '🗣️'),
         labeledNode('#rg-en-toggle', '英文讀音', '🔤'),
         labeledNode('#wo-zh-word-toggle', '逐字翻譯', '🌐'),
+        labeledNode('#wo-vault-btn-slot', '單字庫', '📚'),
         labeledNode('#font-toggle-slot', '字體', '🅰️'),
         labeledNode('#rg-particle-toggle', '禮貌詞', '🙏')
       ];
@@ -400,6 +405,10 @@
     }
     createDropdown('level', '等級', levels);
     createDropdown('tools', '工具', tools);
+    if (game === 'tone') quickAction('#tf-guide-toggle', '提示');
+    else if (game === 'reading') quickAction('#rg-guide-toggle', '提示');
+    else if (game === 'typing') quickAction('#guide-toggle', '提示');
+    else if (game === 'word-order') quickAction('#wo-hint-btn', '提示 (-2)');
   }
 
   function mountMany(selectors, target) {
@@ -437,7 +446,7 @@
       mountMany(['#btn-check', '#btn-next'], slot('right'));
     } else if (game === 'word-order') {
       mountMany(['#wo-slots'], slot('question'));
-      mountMany(['#wo-hint-btn', '#wo-next-btn'], slot('right'));
+      mountMany(['#wo-reset-btn', '#wo-next-btn'], slot('right'));
     } else if (game === 'lego') {
       mountMany(['.out-banner'], slot('sentence'));
       syncLegoFrames();
@@ -553,14 +562,12 @@
   function syncTopActions(game) {
     var skip = null;
     var check = null;
-    var reset = null;
     if (game === 'tone') skip = q('#tf-body .tf-known-btn');
     else if (game === 'reading') { skip = q('#btn-skip'); check = q('#btn-check'); }
     else if (game === 'listening') skip = q('#lg-skip-btn');
     else if (game === 'typing') skip = q('#btn-skip');
     else if (game === 'word-order') {
       skip = q('#wo-skip-btn');
-      reset = q('#wo-reset-btn');
       check = q('[data-gsh-ml-owned-action="word-order-check"]', slot('check')) || createWordOrderCheckAction();
       check.disabled = !window.woCheck || q('#wo-slots .wo-slot.empty') !== null;
     }
@@ -569,7 +576,7 @@
       clearTopAction('check', check);
       check.setAttribute('data-gsh-ml-role', 'check');
     } else mountTopAction('check', check);
-    mountTopAction('reset', reset);
+    mountTopAction('reset', null);
   }
 
   function resolveListeningGameplay() {
@@ -954,6 +961,44 @@
     }
   }
 
+  function applyPositionTwoLabel(node, html, label) {
+    if (!node) return;
+    var applied = node.getAttribute('data-gsh-ml-position-two-applied');
+    if (!node.hasAttribute('data-gsh-ml-position-two-source') || (applied && node.innerHTML !== applied)) {
+      node.setAttribute('data-gsh-ml-position-two-source', node.innerHTML);
+    }
+    if (node.innerHTML !== html) node.innerHTML = html;
+    node.setAttribute('data-gsh-ml-position-two-applied', html);
+    node.setAttribute('data-gsh-ml-position', '2');
+    node.setAttribute('aria-label', label);
+  }
+
+  function syncPositionTwoActions(game) {
+    var actions = [];
+    if (game === 'tone') {
+      var toneAction = q('#tf-body .sg-dontknow-btn');
+      var toneGrid = q('#tf-body .sg-tone-grid');
+      if (toneAction && (!toneGrid || !toneGrid.contains(toneAction))) {
+        mountExistingNode(toneAction, slot('right'));
+      }
+      actions = [toneAction, q('#tf-session-next-btn')];
+    } else if (game === 'reading') {
+      actions = [q('#btn-next-syl'), q('#btn-next')];
+    } else if (game === 'typing') {
+      actions = [q('#btn-next')];
+    } else if (game === 'word-order') {
+      actions = [q('#wo-reset-btn'), q('#wo-next-btn')];
+    }
+    actions.filter(Boolean).forEach(function (node) {
+      var text = (node.textContent || '').replace(/\s+/g, ' ').trim();
+      if (node.id === 'wo-reset-btn') applyPositionTwoLabel(node, '重排這句', '重排這句');
+      else if (text.indexOf('下一個音節') >= 0) applyPositionTwoLabel(node, '下一個<br>音節', '下一個音節');
+      else if (text.indexOf('下一題') >= 0) applyPositionTwoLabel(node, '下一題', '下一題');
+      else if (node.id === 'tf-guide-start-btn') applyPositionTwoLabel(node, '開始練習', '開始練習');
+      else if (node.classList.contains('sg-dontknow-btn')) applyPositionTwoLabel(node, '不確定', '不確定');
+    });
+  }
+
   function restoreToneSummaryLayout() {
     toneSummaryActions.slice().forEach(restoreExistingNode);
     toneSummaryActions = [];
@@ -1063,10 +1108,11 @@
       if (game === 'lego') syncLegoMenu();
       syncDynamicMainAction();
       syncToneRevealActions(game);
+      syncPositionTwoActions(game);
       syncToneSummaryLayout(game, exclusiveView);
       syncKeyboard(game, listeningView);
       syncExclusiveView(game, exclusiveView);
-      if (game === 'tone') qa('[data-gsh-ml-tool-label]').forEach(ensureToolLabelText);
+      qa('[data-gsh-ml-tool-label]').forEach(ensureToolLabelText);
       syncUtilityPanels();
     } finally {
       syncing = false;
@@ -1160,6 +1206,9 @@
       var text = q(':scope > .gsh-ml-tool-text', node);
       if (text) text.remove();
     });
+    qa('[data-gsh-ml-quick-action]').forEach(function (node) {
+      node.removeAttribute('data-gsh-ml-quick-action');
+    });
     qa('[data-gsh-ml-utility-panel]').forEach(function (panel) {
       panel.removeAttribute('data-gsh-ml-utility-panel');
       panel.style.removeProperty('top');
@@ -1175,6 +1224,13 @@
     restoreActiveResultDetail(null, false);
     restoreActiveResult(null, false);
     restoreDynamicMainActions();
+    qa('[data-gsh-ml-position-two-source]').forEach(function (node) {
+      node.innerHTML = node.getAttribute('data-gsh-ml-position-two-source');
+      node.removeAttribute('data-gsh-ml-position-two-source');
+      node.removeAttribute('data-gsh-ml-position-two-applied');
+      node.removeAttribute('data-gsh-ml-position');
+      node.removeAttribute('aria-label');
+    });
     qa('[data-gsh-ml-original-label]').forEach(function (node) {
       node.textContent = node.getAttribute('data-gsh-ml-original-label');
       node.removeAttribute('data-gsh-ml-original-label');

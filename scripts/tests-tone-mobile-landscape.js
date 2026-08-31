@@ -14,6 +14,7 @@ const readingApp = read('js/games/reading-game-app.js');
 const listeningApp = read('js/games/listening-game-app.js');
 const typingApp = read('js/games/typing-game-app.js');
 const wordOrderApp = read('js/games/word-order-app.js');
+const switcher = read('js/games/game-switcher.js');
 const pages = [
   ['tone', 'tone-finder.html'],
   ['reading', 'reading-game.html'],
@@ -30,18 +31,14 @@ function test(name, fn) {
   console.log('✓ ' + name);
 }
 
-test('five scoped pages bind the updated shared landscape system and Lego stays untouched', () => {
+test('all six pages bind the updated shared landscape menu system', () => {
   for (const [game, file] of pages) {
     const html = read(file);
     assert.match(html, new RegExp(`<body[^>]*data-gsh-game="${game}"`), `${file}: missing game marker`);
     assert.match(html, /js\/games\/thai-keyboard\.js\?v=2/, `${file}: missing shared split keyboard`);
-    if (game === 'lego') {
-      assert.match(html, /css\/mobile-landscape\.css\?v=26/, `${file}: Lego CSS binding drifted`);
-      assert.match(html, /js\/core\/mobile-landscape\.js\?v=18/, `${file}: Lego controller binding drifted`);
-    } else {
-      assert.match(html, /css\/mobile-landscape\.css\?v=28/, `${file}: missing updated shared CSS`);
-      assert.match(html, /js\/core\/mobile-landscape\.js\?v=19/, `${file}: missing updated shared controller`);
-    }
+    assert.match(html, /css\/mobile-landscape\.css\?v=30/, `${file}: missing updated shared CSS`);
+    assert.match(html, /js\/core\/mobile-landscape\.js\?v=23/, `${file}: missing updated shared controller`);
+    assert.match(html, /js\/games\/game-switcher\.js\?v=7/, `${file}: missing fixed six-game navigation`);
   }
   assert.doesNotMatch(read('tone-finder.html'), /tone-mobile-landscape\.(?:css|js)/);
 });
@@ -65,12 +62,42 @@ test('five standard games lock visible 30 / 40 / 30 outer cards', () => {
   assert.match(stage, /play\.append\(makeSlot\('sentence'\), left, center, right/);
 });
 
-test('menus open below their owner, expose six rows and keep icon labels functional', () => {
+test('menus open below their owner, expose seven navigation rows and keep icon labels functional', () => {
   assert.match(stage, /function positionPanelBelow\(trigger, panel, fallbackWidth\)[\s\S]{0,1800}rect\.bottom \+ 4/);
   assert.match(stage, /if \(name === 'tools'\)[\s\S]{0,1200}control\.click\(\)/);
-  assert.match(css, /data-gsh-dropdown="tools"[\s\S]{0,2600}max-height: calc\(\(6 \* var\(--gsh-ml-control-h\)\)/);
+  assert.match(css, /data-gsh-dropdown="tools"[\s\S]{0,2600}max-height: calc\(\(7 \* var\(--gsh-ml-control-h\)\)/);
   assert.match(css, /data-gsh-ml-tool-label[\s\S]{0,500}border: 0 !important/);
   assert.match(css, /game-switcher\[data-gsh-ml-utility-panel\][\s\S]{0,800}overflow-y: auto !important/);
+});
+
+test('Reading reuses Tone menu presentation without replacing Reading menu content', () => {
+  assert.ok(css.includes('body.gsh-ml-active [data-gsh-dropdown="tools"] .gsh-ml-dropdown-panel > [data-gsh-ml-tool-label]'));
+  assert.ok(css.includes('body.gsh-ml-active #game-switcher[data-gsh-ml-utility-panel] .gs-tab'));
+  assert.ok(css.includes('body.gsh-ml-active .grw-menu[data-gsh-ml-utility-panel] .grw-item'));
+  assert.match(stage, /game === 'reading'[\s\S]{0,900}labeledNode\('#rg-howto-btn', '玩法', '📖'\)[\s\S]{0,900}labeledNode\('#rg-en-toggle', '英文讀音', '🔤'\)[\s\S]{0,900}labeledNode\('#rg-particle-toggle', '禮貌詞', '🙏'\)/);
+  assert.match(read('reading-game.html'), /css\/mobile-landscape\.css\?v=30/);
+});
+
+test('approved menus, hints and six-game navigation are exact', () => {
+  assert.match(stage, /game === 'tone'[\s\S]{0,1200}'玩法'[\s\S]{0,220}'讀音'[\s\S]{0,220}'翻譯'[\s\S]{0,220}'單字庫'[\s\S]{0,220}'字體'[\s\S]{0,220}'禮貌詞'/);
+  assert.match(stage, /game === 'reading'[\s\S]{0,1500}'玩法'[\s\S]{0,220}'發音'[\s\S]{0,220}'讀音'[\s\S]{0,220}'英文讀音'[\s\S]{0,220}'翻譯'[\s\S]{0,220}'單字庫'[\s\S]{0,220}'字體'[\s\S]{0,220}'禮貌詞'/);
+  assert.match(stage, /game === 'word-order'[\s\S]{0,1300}'玩法'[\s\S]{0,220}'讀音'[\s\S]{0,220}'英文讀音'[\s\S]{0,220}'逐字翻譯'[\s\S]{0,220}'單字庫'[\s\S]{0,220}'字體'[\s\S]{0,220}'禮貌詞'/);
+  assert.match(stage, /quickAction\('#tf-guide-toggle', '提示'\)[\s\S]{0,220}quickAction\('#rg-guide-toggle', '提示'\)[\s\S]{0,220}quickAction\('#guide-toggle', '提示'\)[\s\S]{0,220}quickAction\('#wo-hint-btn', '提示 \(-2\)'\)/);
+  assert.match(switcher, /var tabs = CORE6_TABS\.concat\(\[VAULT_TAB\]\)/);
+  assert.match(switcher, /label: '🔖 我的單字庫'/);
+});
+
+test('polite particles are playable but score-free in the four approved games', () => {
+  assert.match(toneApp, /TF_PARTICLE_ENTRIES[\s\S]{0,900}isParticle:true/);
+  assert.match(toneApp, /entries\.push\(TF_PARTICLE_ENTRIES\[_particle\]\)/);
+  assert.match(toneApp, /scoredResults = session\.results\.filter[\s\S]{0,120}isParticle/);
+  assert.match(readingApp, /var RG_PARTICLE_SYLS=[\s\S]{0,700}isParticle:true/);
+  assert.match(readingApp, /sylList=sylList\.concat\(\[RG_PARTICLE_SYLS\[_rgParticle\]\]\)/);
+  assert.match(readingApp, /function rgScoreSylCount\(\)[\s\S]{0,360}isParticle/);
+  assert.match(typingApp, /var TG_PARTICLE_SYLS=[\s\S]{0,700}isParticle:true/);
+  assert.match(wordOrderApp, /function woBuildPlayableSentence\(s\)[\s\S]{0,900}isParticle:true/);
+  assert.match(wordOrderApp, /particleOnlyWrong[\s\S]{0,260}不扣分/);
+  assert.match(wordOrderApp, /var particleHint =[\s\S]{0,180}if \(!particleHint\)/);
 });
 
 test('Tone preserves three left, three right and reveal actions in the right slots', () => {
@@ -92,7 +119,7 @@ test('five games expose the requested ordered top actions with neutral Skip', ()
   assert.match(stage, /game === 'reading'\) \{ skip = q\('#btn-skip'\); check = q\('#btn-check'\); \}/);
   assert.match(stage, /game === 'listening'\) skip = q\('#lg-skip-btn'\)/);
   assert.match(stage, /game === 'typing'\) skip = q\('#btn-skip'\)/);
-  assert.match(stage, /game === 'word-order'[\s\S]{0,260}#wo-skip-btn[\s\S]{0,120}#wo-reset-btn[\s\S]{0,260}word-order-check/);
+  assert.match(stage, /game === 'word-order'[\s\S]{0,260}#wo-skip-btn[\s\S]{0,260}word-order-check/);
   assert.match(readingApp, /function skipWord\(\)[\s\S]{0,420}skipped:true[\s\S]{0,180}nextWord\(\)/);
   assert.match(typingApp, /function skipWord\(\)[\s\S]{0,420}skipped:true[\s\S]{0,180}nextWord\(\)/);
   assert.match(listeningApp, /function skipCurrentQuestion\(\)[\s\S]{0,900}is_skipped: true[\s\S]{0,500}state\.idx\+\+/);
@@ -100,10 +127,24 @@ test('five games expose the requested ordered top actions with neutral Skip', ()
   assert.match(wordOrderApp, /window\.woCheck = function\(\)[\s\S]{0,180}checkAnswer\(\)/);
   assert.match(stage, /mountMany\(\['#btn-next', '#btn-next-syl'\], slot\('right'\)\)/);
   assert.match(stage, /mountMany\(\['#btn-check', '#btn-next'\], slot\('right'\)\)/);
-  assert.match(stage, /mountMany\(\['#wo-hint-btn', '#wo-next-btn'\], slot\('right'\)\)/);
+  assert.match(stage, /mountMany\(\['#wo-reset-btn', '#wo-next-btn'\], slot\('right'\)\)/);
   assert.doesNotMatch(stage, /data-gsh-ml-tool-label', '重排這句'/);
-  assert.doesNotMatch(stage, /labeledNode\('#wo-hint-btn', '提示'/);
+  assert.match(stage, /quickAction\('#wo-hint-btn', '提示 \(-2\)'\)/);
+  assert.doesNotMatch(stage, /reset = q\('#wo-reset-btn'\)/);
   assert.match(css, /data-gsh-game="word-order"[\s\S]{0,220}#wo-hint-btn/);
+});
+
+test('approved position two reuses Tone uncertain geometry and exact labels', () => {
+  assert.match(stage, /function syncPositionTwoActions\(game\)/);
+  assert.match(stage, /toneAction[\s\S]{0,260}slot\('right'\)/);
+  assert.match(stage, /actions = \[q\('#btn-next-syl'\), q\('#btn-next'\)\]/);
+  assert.match(stage, /actions = \[q\('#wo-reset-btn'\), q\('#wo-next-btn'\)\]/);
+  assert.match(stage, /applyPositionTwoLabel\(node, '下一個<br>音節', '下一個音節'\)/);
+  assert.match(stage, /applyPositionTwoLabel\(node, '重排這句', '重排這句'\)/);
+  assert.doesNotMatch(stage, /applyPositionTwoLabel\(node, '↺ 重排這句'/);
+  assert.match(stage, /syncToneRevealActions\(game\);[\s\S]{0,100}syncPositionTwoActions\(game\);/);
+  assert.match(css, /data-gsh-ml-position="2"[\s\S]{0,1200}grid-row: 3/);
+  assert.match(css, /#wo-reset-btn:disabled[\s\S]{0,180}#wo-next-btn:disabled[\s\S]{0,120}display: none !important/);
 });
 
 test('Listening uses two choices per side and Typing keyboard geometry for typed mode', () => {
