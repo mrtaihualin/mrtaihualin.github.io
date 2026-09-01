@@ -138,6 +138,153 @@
     assert(!resumeBanner || !shown(win, resumeBanner), 'Resume prompt does not block gameplay after QA closes it');
   }
 
+  function showResumeFixture(win, doc, file) {
+    var banner = doc.querySelector('.gsh-resume-banner');
+    if (file === 'tone-finder.html' && typeof win.tfShowResumeBannerIfAny === 'function') {
+      win.tfShowResumeBannerIfAny({ level: 1, wordIds: ['กิน'], index: 0, total: 5 });
+      banner = doc.querySelector('.gsh-resume-banner');
+    } else if (banner) {
+      var detail = banner.querySelector('.gsh-resume-detail');
+      if (detail && !detail.textContent.trim()) detail.textContent = '上次進度：練習・初級・第 1/5 題';
+      banner.style.display = 'block';
+    }
+    return banner;
+  }
+
+  async function testResumeScreen(file, width, height) {
+    frame.style.width = width + 'px';
+    frame.style.height = height + 'px';
+    var nonce = Date.now() + '-' + Math.random().toString(16).slice(2);
+    if (file === 'listening-game.html') {
+      frame.srcdoc = '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">' +
+        '<link rel="stylesheet" href="../../css/mobile-landscape.css?v=34"></head>' +
+        '<body data-gsh-game="listening" class="gsh-ml-active"><div id="gsh-ml-stage" data-gsh-ml-view="resume">' +
+        '<div class="gsh-ml-exclusive"><div data-gsh-ml-slot="exclusive-left"></div>' +
+        '<div data-gsh-ml-slot="exclusive-center"><div class="gsh-resume-banner">' +
+        '<div class="gsh-resume-title">上次的安全進度還在</div><div class="gsh-resume-detail">上次進度：聽力練習・初級・第 1/5 題</div>' +
+        '<div class="gsh-resume-actions"><button>繼續上次練習</button><button>重新開始本次練習</button><button>開始新一輪</button></div>' +
+        '</div></div><div data-gsh-ml-slot="exclusive-right"></div></div></div></body></html>';
+    } else {
+      frame.removeAttribute('srcdoc');
+      frame.src = '../../' + file + '?ml52-resume-test=' + nonce;
+    }
+    await new Promise(function (resolve, reject) {
+      var timer = setTimeout(function () { reject(new Error('resume load timeout: ' + file)); }, 20000);
+      frame.onload = function () { clearTimeout(timer); resolve(); };
+    });
+    var win = frame.contentWindow;
+    var doc = frame.contentDocument;
+    var runtimeErrors = [];
+    win.addEventListener('error', function (event) {
+      runtimeErrors.push(String(event.message || event.error || 'unknown runtime error'));
+    }, true);
+    await waitFor(function () {
+      return doc.body.classList.contains('gsh-ml-active') && doc.getElementById('gsh-ml-stage') &&
+        (file === 'listening-game.html' || file === 'lego.html' || doc.documentElement.classList.contains('gc-ready'));
+    }, file + ' Resume ready', 25000);
+
+    var banner = showResumeFixture(win, doc, file);
+    await waitFor(function () {
+      return banner && shown(win, banner) && doc.getElementById('gsh-ml-stage').dataset.gshMlView === 'resume';
+    }, file + ' Resume view', 5000);
+    var bannerRect = rect(banner);
+    assert(Math.abs(bannerRect.width - 640) <= 2, file + ' Resume card is 640px at ' + width + 'x' + height);
+    assert(Math.abs((bannerRect.left + bannerRect.right) / 2 - width / 2) <= 2, file + ' Resume card is horizontally centred');
+    assert(bannerRect.top >= 0 && bannerRect.bottom <= height, file + ' Resume card stays inside the landscape viewport');
+    assert(banner.scrollWidth <= banner.clientWidth + 1 && banner.scrollHeight <= banner.clientHeight + 1, file + ' Resume content does not overflow');
+
+    var actions = Array.prototype.slice.call(banner.querySelectorAll('.gsh-resume-actions button'));
+    var labels = actions.map(function (button) { return button.textContent.trim(); });
+    assert(actions.length === 3, file + ' Resume exposes exactly three actions');
+    assert(labels.join('|') === '繼續上次練習|重新開始本次練習|開始新一輪', file + ' Resume uses the approved action copy');
+    var actionRects = actions.map(rect);
+    actionRects.forEach(function (box) { assert(inside(box, bannerRect), file + ' Resume action stays inside its card'); });
+    assert(actionRects.every(function (box) { return Math.abs(box.width - actionRects[0].width) <= 1; }), file + ' Resume actions have equal widths');
+    assert(actionRects.every(function (box) { return Math.abs(box.top - actionRects[0].top) <= 1; }), file + ' Resume actions stay on one row');
+    assert(!intersects(actionRects[0], actionRects[1]) && !intersects(actionRects[1], actionRects[2]), file + ' Resume actions do not overlap');
+
+  }
+
+  function resumeKey(file) {
+    return ({
+      'tone-finder.html': 'tone-finder',
+      'reading-game.html': 'reading-game',
+      'typing-game.html': 'typing-game',
+      'word-order.html': 'word-order',
+      'lego.html': 'lego'
+    })[file];
+  }
+
+  async function loadResumeActionPage(file, label) {
+    frame.style.width = '844px';
+    frame.style.height = '390px';
+    var nonce = Date.now() + '-' + Math.random().toString(16).slice(2);
+    frame.src = '../../' + file + '?ml52-resume-action=' + label + '-' + nonce;
+    await new Promise(function (resolve, reject) {
+      var timer = setTimeout(function () { reject(new Error('Resume action load timeout: ' + file)); }, 20000);
+      frame.onload = function () { clearTimeout(timer); resolve(); };
+    });
+    var win = frame.contentWindow;
+    var doc = frame.contentDocument;
+    var runtimeErrors = [];
+    win.addEventListener('error', function (event) {
+      runtimeErrors.push(String(event.message || event.error || 'unknown runtime error'));
+    }, true);
+    await waitFor(function () {
+      return (file === 'lego.html' || doc.documentElement.classList.contains('gc-ready')) &&
+        doc.body.classList.contains('gsh-ml-active');
+    }, file + ' real Resume action ready', 25000);
+    return { win: win, doc: doc, runtimeErrors: runtimeErrors };
+  }
+
+  async function seedRealResume(page, file) {
+    var existing = page.doc.querySelector('.gsh-resume-banner');
+    if (existing && shown(page.win, existing)) {
+      var dismiss = existing.querySelector('.gsh-resume-new');
+      if (dismiss) dismiss.click();
+      await waitFor(function () { return !shown(page.win, existing); }, file + ' existing Resume dismissal', 3000);
+    }
+    if (file === 'tone-finder.html') page.win.tfSaveResumeState();
+    else if (file === 'reading-game.html') page.win.rgSaveResumeState();
+    else if (file === 'typing-game.html') page.win.tgSaveResume();
+    else if (file === 'word-order.html') {
+      var sentence = page.win.ADV_SENTENCES && page.win.ADV_SENTENCES[0];
+      if (!sentence || !sentence.th) throw new Error('Word Order real Resume sentence missing');
+      page.win.GameResume.save('word-order', {
+        sentenceIds: [sentence.th], idx: 0, completedCurrent: false, score: 0,
+        correctFirstTry: 0, cleanC: 0, curCombo: 0, maxCombo: 0, roundLog: [], report: null
+      });
+    }
+    else if (file === 'lego.html') {
+      var option = page.doc.querySelector('.slot[data-id="subj"] .opt[role="button"]');
+      if (!option) throw new Error('Lego real Resume seed option missing');
+      option.click();
+    }
+    var saved = page.win.GameResume && page.win.GameResume.load(resumeKey(file));
+    assert(saved && typeof saved === 'object', file + ' creates a real saved Resume state');
+  }
+
+  async function testRealResumeActions(file) {
+    var page = await loadResumeActionPage(file, 'seed');
+    for (var actionIndex = 0; actionIndex < 3; actionIndex += 1) {
+      await seedRealResume(page, file);
+      page = await loadResumeActionPage(file, 'action-' + actionIndex);
+      var banner = page.doc.querySelector('.gsh-resume-banner');
+      await waitFor(function () {
+        return banner && shown(page.win, banner) && page.doc.getElementById('gsh-ml-stage').dataset.gshMlView === 'resume';
+      }, file + ' real Resume prompt', 5000);
+      var actions = Array.prototype.slice.call(banner.querySelectorAll('.gsh-resume-actions button'));
+      assert(actions.length === 3, file + ' real Resume state exposes three actions');
+      actions[actionIndex].click();
+      await waitFor(function () {
+        return !shown(page.win, banner) && page.doc.getElementById('gsh-ml-stage').dataset.gshMlView !== 'resume';
+      }, file + ' real Resume action ' + (actionIndex + 1) + ' transition', 5000);
+      assert(!shown(page.win, banner), file + ' real Resume action ' + (actionIndex + 1) + ' closes the prompt');
+      assert(page.doc.getElementById('gsh-ml-stage').dataset.gshMlView !== 'resume', file + ' real Resume action ' + (actionIndex + 1) + ' enters game state');
+      assert(page.runtimeErrors.length === 0, file + ' real Resume action ' + (actionIndex + 1) + ' runs without a runtime error');
+    }
+  }
+
   async function loadGame(file, ready) {
     var nonce = Date.now() + '-' + Math.random().toString(16).slice(2);
     frame.src = '../../' + file + '?ml52-browser-test=' + nonce;
@@ -310,6 +457,17 @@
 
   (async function run() {
     try {
+      var resumeFiles = ['tone-finder.html', 'reading-game.html', 'listening-game.html', 'typing-game.html', 'word-order.html', 'lego.html'];
+      for (var resumeIndex = 0; resumeIndex < resumeFiles.length; resumeIndex += 1) {
+        await testResumeScreen(resumeFiles[resumeIndex], 844, 390);
+        await testResumeScreen(resumeFiles[resumeIndex], 932, 430);
+      }
+      var activeResumeFiles = ['tone-finder.html', 'reading-game.html', 'typing-game.html', 'word-order.html', 'lego.html'];
+      for (var activeResumeIndex = 0; activeResumeIndex < activeResumeFiles.length; activeResumeIndex += 1) {
+        await testRealResumeActions(activeResumeFiles[activeResumeIndex]);
+      }
+      frame.style.width = '844px';
+      frame.style.height = '390px';
       await testTone();
       await testReading();
       await testTyping();

@@ -1552,26 +1552,26 @@
     display: none !important;
   }
 
-  /* Tone first. Apply this same three-equal-action Resume treatment to each
-     remaining game only when that game's Landscape review reaches this item. */
-  body[data-gsh-game="tone"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-view="resume"] [data-gsh-ml-slot="exclusive-center"] {
+  /* All six games share Tone's centred 640px Resume card and three equal
+     actions. Resume remains an exclusive state; gameplay stays underneath. */
+  body[data-gsh-game].gsh-ml-active #gsh-ml-stage[data-gsh-ml-view="resume"] [data-gsh-ml-slot="exclusive-center"] {
     grid-column: 1 / 4;
     width: min(100%, 680px);
     justify-self: center;
   }
-  body[data-gsh-game="tone"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-view="resume"] .gsh-resume-banner {
+  body[data-gsh-game].gsh-ml-active #gsh-ml-stage[data-gsh-ml-view="resume"] .gsh-resume-banner {
     width: 100% !important;
     max-width: 640px !important;
     margin: 0 auto !important;
     padding: clamp(7px, 1.7dvh, 12px) !important;
   }
-  body[data-gsh-game="tone"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-view="resume"] .gsh-resume-actions {
+  body[data-gsh-game].gsh-ml-active #gsh-ml-stage[data-gsh-ml-view="resume"] .gsh-resume-actions {
     width: 100%;
     display: grid !important;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: var(--gsh-ml-gap) !important;
   }
-  body[data-gsh-game="tone"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-view="resume"] .gsh-resume-actions button {
+  body[data-gsh-game].gsh-ml-active #gsh-ml-stage[data-gsh-ml-view="resume"] .gsh-resume-actions button {
     width: 100% !important;
     min-width: 0 !important;
     min-height: var(--gsh-ml-control-h) !important;

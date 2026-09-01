@@ -55,9 +55,9 @@ window.GameUiCopy = window.GameUiCopy || (function () {
   var messages = {
     resume: {
       prefix: '上次進度：',
-      continueAction: '▶ 繼續上次',
-      restartAction: '↺ 重新開始',
-      newAction: '＋ 開始新一輪'
+      continueAction: '繼續上次練習',
+      restartAction: '重新開始本次練習',
+      newAction: '開始新一輪'
     },
     result: {
       completed: '完成',

@@ -31,14 +31,13 @@ function test(name, fn) {
   console.log('✓ ' + name);
 }
 
-test('all six pages bind the shared landscape menu system and Core 4 owns this cache delta', () => {
+test('all six pages bind the shared landscape menu system and Resume parity owns this CSS cache delta', () => {
   for (const [game, file] of pages) {
     const html = read(file);
     assert.match(html, new RegExp(`<body[^>]*data-gsh-game="${game}"`), `${file}: missing game marker`);
     assert.match(html, /js\/games\/thai-keyboard\.js\?v=2/, `${file}: missing shared split keyboard`);
     const paused = game === 'listening' || game === 'lego';
-    const cssVersion = paused ? 31 : 33;
-    assert.match(html, new RegExp(`css/mobile-landscape\\.css\\?v=${cssVersion}`), `${file}: wrong scoped CSS version`);
+    assert.match(html, /css\/mobile-landscape\.css\?v=34/, `${file}: wrong shared Resume CSS version`);
     const controllerVersion = game === 'tone' || game === 'reading' || game === 'word-order' ? 26 : paused ? 24 : 25;
     assert.match(html, new RegExp(`js/core/mobile-landscape\\.js\\?v=${controllerVersion}`), `${file}: wrong scoped controller version`);
     assert.match(html, /js\/games\/game-switcher\.js\?v=7/, `${file}: missing fixed six-game navigation`);
@@ -78,7 +77,22 @@ test('Reading reuses Tone menu presentation without replacing Reading menu conte
   assert.ok(css.includes('body.gsh-ml-active #game-switcher[data-gsh-ml-utility-panel] .gs-tab'));
   assert.ok(css.includes('body.gsh-ml-active .grw-menu[data-gsh-ml-utility-panel] .grw-item'));
   assert.match(stage, /game === 'reading'[\s\S]{0,900}labeledNode\('#rg-howto-btn', '玩法', '📖'\)[\s\S]{0,900}labeledNode\('#rg-en-toggle', '英文讀音', '🔤'\)[\s\S]{0,900}labeledNode\('#rg-particle-toggle', '禮貌詞', '🙏'\)/);
-  assert.match(read('reading-game.html'), /css\/mobile-landscape\.css\?v=33/);
+  assert.match(read('reading-game.html'), /css\/mobile-landscape\.css\?v=34/);
+});
+
+test('all six Resume screens reuse Tone 640px geometry and exact three-action copy', () => {
+  assert.match(css, /body\[data-gsh-game\]\.gsh-ml-active #gsh-ml-stage\[data-gsh-ml-view="resume"\] \[data-gsh-ml-slot="exclusive-center"\][\s\S]{0,220}grid-column:\s*1 \/ 4[\s\S]{0,120}width:\s*min\(100%, 680px\)/);
+  assert.match(css, /body\[data-gsh-game\]\.gsh-ml-active #gsh-ml-stage\[data-gsh-ml-view="resume"\] \.gsh-resume-banner[\s\S]{0,180}max-width:\s*640px !important/);
+  assert.match(css, /body\[data-gsh-game\]\.gsh-ml-active #gsh-ml-stage\[data-gsh-ml-view="resume"\] \.gsh-resume-actions[\s\S]{0,180}grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/);
+  for (const [, file] of pages) {
+    const html = read(file);
+    assert.match(html, /css\/mobile-landscape\.css\?v=34/, `${file}: must load Resume parity CSS`);
+    assert.match(html, /js\/core\/shared\.min\.js\?v=48/, `${file}: must load exact Resume copy`);
+  }
+  const shared = read('js/core/shared.js');
+  assert.match(shared, /continueAction: '繼續上次練習'/);
+  assert.match(shared, /restartAction: '重新開始本次練習'/);
+  assert.match(shared, /newAction: '開始新一輪'/);
 });
 
 test('approved menus, hints and six-game navigation are exact', () => {
