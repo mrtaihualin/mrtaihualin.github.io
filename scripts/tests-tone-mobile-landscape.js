@@ -37,7 +37,8 @@ test('all six pages bind the shared landscape menu system and Core 4 owns this c
     assert.match(html, new RegExp(`<body[^>]*data-gsh-game="${game}"`), `${file}: missing game marker`);
     assert.match(html, /js\/games\/thai-keyboard\.js\?v=2/, `${file}: missing shared split keyboard`);
     const paused = game === 'listening' || game === 'lego';
-    assert.match(html, paused ? /css\/mobile-landscape\.css\?v=31/ : /css\/mobile-landscape\.css\?v=32/, `${file}: wrong scoped CSS version`);
+    const cssVersion = paused ? 31 : 33;
+    assert.match(html, new RegExp(`css/mobile-landscape\\.css\\?v=${cssVersion}`), `${file}: wrong scoped CSS version`);
     assert.match(html, paused ? /js\/core\/mobile-landscape\.js\?v=24/ : /js\/core\/mobile-landscape\.js\?v=25/, `${file}: wrong scoped controller version`);
     assert.match(html, /js\/games\/game-switcher\.js\?v=7/, `${file}: missing fixed six-game navigation`);
   }
@@ -76,7 +77,7 @@ test('Reading reuses Tone menu presentation without replacing Reading menu conte
   assert.ok(css.includes('body.gsh-ml-active #game-switcher[data-gsh-ml-utility-panel] .gs-tab'));
   assert.ok(css.includes('body.gsh-ml-active .grw-menu[data-gsh-ml-utility-panel] .grw-item'));
   assert.match(stage, /game === 'reading'[\s\S]{0,900}labeledNode\('#rg-howto-btn', '玩法', '📖'\)[\s\S]{0,900}labeledNode\('#rg-en-toggle', '英文讀音', '🔤'\)[\s\S]{0,900}labeledNode\('#rg-particle-toggle', '禮貌詞', '🙏'\)/);
-  assert.match(read('reading-game.html'), /css\/mobile-landscape\.css\?v=32/);
+  assert.match(read('reading-game.html'), /css\/mobile-landscape\.css\?v=33/);
 });
 
 test('approved menus, hints and six-game navigation are exact', () => {
@@ -164,6 +165,11 @@ test('Reading and Word Order reserve the lower-right zone exclusively for positi
   assert.match(wordOrderApp, /landscapeSlots\.setAttribute\('data-gsh-ml-question', s\.zh \|\| ''\)/);
   assert.match(css, /#gsh-ml-word-order-question[\s\S]{0,420}text-align: center/);
   assert.match(css, /data-gsh-ml-split="word-order"[^}]+grid-template-columns: minmax\(0, 30fr\) minmax\(0, 40fr\) minmax\(0, 30fr\) !important/);
+});
+
+test('Reading choices stay fixed after pointer and selected states', () => {
+  assert.match(css, /data-gsh-ml-split="reading"\] > \.opt:hover:not\(\.locked\),[\s\S]{0,220}data-gsh-ml-split="reading"\] > \.opt\.sel[\s\S]{0,180}transform: none !important;[\s\S]{0,80}transition: none !important/);
+  assert.match(css, /gsh-resume-banner\[style\*="display:none"\],[\s\S]{0,160}gsh-resume-banner\[style\*="display: none"\][\s\S]{0,100}display: none !important/);
 });
 
 test('Typing exposes 47 character keys and two synchronized one-shot Shift controls', () => {

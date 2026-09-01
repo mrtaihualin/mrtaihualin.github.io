@@ -2480,3 +2480,9 @@ node scripts/check-site.js
 - Enforced one state-owned Position 2 action, corrected Word Order side-grid gaps and its save-button runtime error, and kept every Word Order choice inside its owner frame without entering the centre or Position 2.
 - Kept the Typing keyboard halves inside their respective side frames, verified all 47 character keys plus both shared one-shot Shift controls, and preserved the real `ฺ` character without a dotted-circle display artifact.
 - Verification: browser interaction gate `134/134`, targeted Core-4 tests, shared game tests, owner-switch and neutral-action regressions, and the full `1,020`-file site gate passed. Human acceptance remains pending; Listening, Lego, and Production are unchanged.
+
+# 2026-09-01 — Mobile Landscape Reading tap-stability correction
+
+- Invalidated the earlier Source Preview technical claim after a real pointer tap showed Reading's desktop hover transform moving and enlarging a selected choice outside its Landscape owner frame.
+- Scoped the tap correction to Reading Mobile Landscape: hover and selected choices now keep their exact bounding box, with a browser regression that compares geometry after every answer selection. The shared Landscape Resume host also once again respects the game-owned close action instead of forcing the closed prompt visible over gameplay.
+- Human acceptance remains pending. Listening, Lego, Supabase behavior and Production are unchanged.

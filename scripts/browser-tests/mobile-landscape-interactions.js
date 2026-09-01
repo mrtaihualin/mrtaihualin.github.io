@@ -59,6 +59,12 @@
       a.top < b.bottom - tolerance && a.bottom > b.top + tolerance;
   }
 
+  function sameRect(a, b, tolerance) {
+    tolerance = tolerance || 1;
+    return Math.abs(a.left - b.left) <= tolerance && Math.abs(a.top - b.top) <= tolerance &&
+      Math.abs(a.width - b.width) <= tolerance && Math.abs(a.height - b.height) <= tolerance;
+  }
+
   function visiblePositionTwo(win, doc) {
     return Array.prototype.slice.call(doc.querySelectorAll('[data-gsh-ml-position="2"]')).filter(function (node) {
       return shown(win, node);
@@ -128,6 +134,8 @@
     assert(!cookie || !shown(win, cookie), 'Cookie consent does not block gameplay during QA');
     var visibleTour = doc.getElementById('gt-tour-card');
     assert(!visibleTour || !shown(win, visibleTour), 'Tutorial does not block gameplay during QA');
+    var resumeBanner = doc.querySelector('.gsh-resume-banner');
+    assert(!resumeBanner || !shown(win, resumeBanner), 'Resume prompt does not block gameplay after QA closes it');
   }
 
   async function loadGame(file, ready) {
@@ -175,13 +183,19 @@
     });
     assertSideGeometry(page.win, page.doc, '#pool .opt');
     assertPositionTwo(page.win, page.doc);
-    page.win.comps.forEach(function (component) {
+    for (var componentIndex = 0; componentIndex < page.win.comps.length; componentIndex += 1) {
+      var component = page.win.comps[componentIndex];
       var option = Array.prototype.slice.call(page.doc.querySelectorAll('#pool .opt')).filter(function (node) {
         return !node.classList.contains('sel') && node.dataset.val === String(page.win.correctVal[component]);
       })[0];
       if (!option) throw new Error('Reading correct option missing for ' + component);
+      var beforeOption = rect(option);
       option.click();
-    });
+      await wait(30);
+      var afterOption = rect(option);
+      assert(sameRect(beforeOption, afterOption), 'Reading option stays fixed after selecting ' + component);
+      assertSideGeometry(page.win, page.doc, '#pool .opt');
+    }
     var check = page.doc.getElementById('btn-check');
     assert(!check.disabled, 'Reading check becomes enabled after real option clicks');
     var before = (page.doc.getElementById('qn').textContent || '') + '|' + (page.doc.getElementById('wth').textContent || '');

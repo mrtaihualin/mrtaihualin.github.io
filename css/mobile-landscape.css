@@ -1384,6 +1384,11 @@
     animation: none;
     will-change: auto;
   }
+  body[data-gsh-game="reading"].gsh-ml-active [data-gsh-ml-split="reading"] > .opt:hover:not(.locked),
+  body[data-gsh-game="reading"].gsh-ml-active [data-gsh-ml-split="reading"] > .opt.sel {
+    transform: none !important;
+    transition: none !important;
+  }
   body[data-gsh-game="reading"].gsh-ml-active [data-gsh-ml-slot="question"] .word-area {
     flex: 0 1 auto;
     z-index: auto;
@@ -1535,10 +1540,16 @@
   }
   [data-gsh-ml-slot="exclusive-center"] .gsh-resume-banner,
   [data-gsh-ml-slot="exclusive-center"] [data-gsh-ml-custom-input] {
-    display: block !important;
     padding: var(--gsh-ml-pad) !important;
     background: #fffdf7;
     border-radius: 14px;
+  }
+  [data-gsh-ml-slot="exclusive-center"] [data-gsh-ml-custom-input] {
+    display: block !important;
+  }
+  [data-gsh-ml-slot="exclusive-center"] .gsh-resume-banner[style*="display:none"],
+  [data-gsh-ml-slot="exclusive-center"] .gsh-resume-banner[style*="display: none"] {
+    display: none !important;
   }
 
   /* Tone first. Apply this same three-equal-action Resume treatment to each
