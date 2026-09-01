@@ -2332,3 +2332,10 @@ node scripts/check-site.js
 - The shared runtime no longer creates a fallback announcement, replaces a legacy placeholder, or binds announcement listeners on a `data-gsh-game` body. Shared announcement styling is scoped to non-game body surfaces so non-game pages retain their existing capability.
 - Updated the navigation generator and read-only checker so generated game output contains no announcement marker, DOM, listener, or style hook, while non-game output remains unchanged.
 - Verification: generator idempotence, static six-page scan, shared/Login/game/Landscape checks, Desktop plus `390×844`, `768×1024`, and `844×390` browser checks, secret scan, and `node scripts/check-site.js` across 1,018 source files.
+
+# 2026-09-01 — Tone alphabet practice and active vocabulary-stack Delta
+
+- Enlarged the complete `字母練習區` dialog by exactly 15% on Desktop Computer only, with an inverse viewport cap that keeps the transformed surface inside a 20px safe bound. Existing Mobile and Tablet sizing rules remain unchanged.
+- Bound every descendant in the alphabet-practice dialog to Tone's live Standard/Modern body state, including home cards, expanded manual details, consonants, vowels, and endings.
+- Added collision-safe line height and row spacing to the active Tone, Reading, Typing, and Word Order vocabulary stacks for Desktop and Mobile, including long wrapping text and both font states. Lego lower gameplay and the parked Listening game are unchanged.
+- Verification: targeted alphabet, active-stack, shared-game, and Mobile Landscape regressions; browser geometry at `1440×900` and `390×844` with Standard → Modern → Standard; and the normal full-site gate before Preview handoff.

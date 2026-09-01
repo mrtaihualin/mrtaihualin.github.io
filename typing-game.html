@@ -149,9 +149,11 @@ html:not(.gc-ready) [onclick*="openStar("]{
 .word-area{text-align:center;margin:4px 0 0;}
 .word-th{font-size:38px;font-weight:700;color:#3a2a0a;line-height:1.5;padding-top:6px;}/* Lin 2026-07-12: ย่อให้เท่าเกมเสียง (เดิม 62px ใหญ่ไป) */
 .word-zh{font-size:15px;color:#888;font-family:'Noto Sans TC',sans-serif;margin-top:4px;}
-.gsh-four-row-stack > .gsh-copy-row{margin-top:5px !important;}
+.gsh-four-row-stack > .gsh-copy-row{margin-top:9px !important;line-height:1.6;}
 .gsh-four-row-stack > .gsh-copy-row:first-child{margin-top:0 !important;}
 .gsh-four-row-stack > .gsh-copy-row > .rev-pron,.gsh-four-row-stack > .gsh-copy-row > .rev-en{margin-top:0 !important;}
+.gsh-four-row-stack > .gsh-copy-row:empty{display:none !important;margin-top:0 !important;}
+.gsh-four-row-stack .word-th{line-height:1.6 !important;padding-block:.08em;}
 /* มือถือแนวนอน (landscape): ตรึงเฉพาะโซนคำศัพท์ไว้บนสุด ไม่ต้องเลื่อนตามหน้า — ปุ่ม/ช่อง/คีย์บอร์ดด้านล่างเลื่อนปกติ — Lin 2026-07-12 */
 @media (orientation:landscape) and (hover:none) and (pointer:coarse){
   .word-area{position:sticky;top:var(--nav-h,60px);z-index:50;background:#F5F0E8;padding-bottom:4px;}

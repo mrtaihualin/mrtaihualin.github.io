@@ -136,12 +136,12 @@ html:not(.gc-ready) [onclick*="openStar("]{
 .wo-tile:hover{background:#ffeedd;border-color:#c07030;transform:translateY(-2px);}
 .wo-tile.used{opacity:0;pointer-events:none;transform:scale(.6);position:absolute;}/* Lin 2026-07-12: เอาออกจาก flow เลย ไม่ให้เหลือช่องว่างค้างในแถบตัวเลือกคำ */
 /* Lin 2026-07-25: คำอ่าน (讀音 / 英文讀音) แปะใต้คำแต่ละคำ — ติดไปกับคำ ย้ายไปวางช่องไหนก็ตามไปด้วย */
-.wo-slot.filled{flex-direction:column;gap:1px;}
-.wo-word-th{font-family:'Sarabun',sans-serif;line-height:1.25;}
-.wo-read-th{font-family:'Sarabun',sans-serif;font-size:12px;font-weight:600;color:#993C1D;line-height:1.3;margin-top:2px;}
-.wo-read-en{font-family:'Noto Sans TC',sans-serif;font-size:11px;font-weight:600;color:#8B6310;line-height:1.3;letter-spacing:0.2px;}
+.wo-slot.filled{flex-direction:column;gap:5px;}
+.wo-word-th{font-family:'Sarabun',sans-serif;line-height:1.55;padding-block:.06em;}
+.wo-read-th{font-family:'Sarabun',sans-serif;font-size:12px;font-weight:600;color:#993C1D;line-height:1.5;margin-top:0;}
+.wo-read-en{font-family:'Noto Sans TC',sans-serif;font-size:11px;font-weight:600;color:#8B6310;line-height:1.5;letter-spacing:0.2px;}
 /* Lin 2026-07-30: คำแปลจีนรายคำ ใต้กล่องทุกคำ (เปิด/ปิดจากปุ่ม 翻譯 ในแถวเครื่องมือ) — pointer-events:none กันคลิกโดนคำแปลแล้วแย่ง event ของไทล์ */
-.wo-read-zh{font-family:'Noto Sans TC',sans-serif;font-size:11.5px;font-weight:600;color:#6b6b6b;line-height:1.3;pointer-events:none;}
+.wo-read-zh{font-family:'Noto Sans TC',sans-serif;font-size:11.5px;font-weight:600;color:#6b6b6b;line-height:1.5;pointer-events:none;}
 body.rg-modern-font .wo-word-th,
 body.rg-modern-font .wo-read-th{font-family:'Noto Sans Thai','Sarabun',sans-serif !important;}
 
