@@ -3565,8 +3565,208 @@ function showTip(keys) {
         '<button class="tf-tip-close-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_tip_close\',{category:\'game\'});}catch(e){}document.getElementById(\'tf-tip-ov\').remove()">✕</button>' +
       '</div>' +
       rows +
+      '<button class="tf-tip-manual-action" onclick="TF.openManualFromTip(\'' +
+        encodeURIComponent(JSON.stringify(keys)) +
+      '\')">查看拼音規則手冊 →</button>' +
     '</div>';
   document.body.appendChild(div);
+}
+
+// ════════════════════════════════════════════════════════════
+// 5.4 字母練習區／泰文拼音規則手冊 — state-preserving Overlay
+// This surface reads ALPHA + TF_FLASH_AUDIO only. It never mutates S/session/score/history.
+// ════════════════════════════════════════════════════════════
+var tfAlphabetOverlay = { view:'home', arg:null, stack:[], details:{} };
+var TF_LEAD_AUDIO = {'หน':'น','หม':'ม','หล':'ล','หว':'ว','หย':'ย','หร':'ร','หญ':'ญ','หง':'ง','อย':'ย'};
+
+function tfAlphaButton(label, view, arg) {
+  return '<button class="tf-alpha-tab" onclick="TF.alphaOverlayView(\''+view+'\',\''+(arg||'')+'\')">'+label+'</button>';
+}
+
+function tfAlphaAudioTile(card, category, spoken) {
+  var ch = card.ch || card;
+  var audioCh = spoken || ch;
+  var read = card.zh ? card.zh + (card.py ? ' · ' + card.py : '') : '';
+  return '<button class="tf-alpha-tile" onclick="TF.alphaOverlaySpeak(\''+category+'\',\''+audioCh+'\',this)">' +
+    '<span class="tf-alpha-tile-th">'+ch+'</span>' +
+    (read ? '<span class="tf-alpha-tile-read">'+read+'</span>' : '') +
+    '<span class="tf-alpha-tile-sound">🔊 ฟังเสียง'+(spoken?' ('+spoken+')':'')+'</span>' +
+  '</button>';
+}
+
+function tfAlphaGroup(title, cards, category) {
+  return '<h3 class="tf-alpha-section-title">'+title+'</h3><div class="tf-alpha-tile-grid">' +
+    cards.map(function(card){ return tfAlphaAudioTile(card, category); }).join('') + '</div>';
+}
+
+function tfAlphaLeadGroup() {
+  return '<h3 class="tf-alpha-section-title">前引字</h3><div class="tf-alpha-tile-grid">' +
+    Object.keys(TF_LEAD_AUDIO).map(function(ch){ return tfAlphaAudioTile({ch:ch}, 'consonants', TF_LEAD_AUDIO[ch]); }).join('') +
+    '</div><div class="tf-alpha-note">前引字使用後方主要子音的老師錄音，例如 หน 使用 น 的聲音。</div>';
+}
+
+function tfAlphaConsonants(tab) {
+  tab = tab || 'common';
+  var C = ALPHA.consonant;
+  var tabs = '<div class="tf-alpha-tabs">' +
+    '<button class="tf-alpha-tab'+(tab==='common'?' is-active':'')+'" onclick="TF.alphaOverlayReplace(\'consonants\',\'common\')">常用子音</button>' +
+    '<button class="tf-alpha-tab'+(tab==='uncommon'?' is-active':'')+'" onclick="TF.alphaOverlayReplace(\'consonants\',\'uncommon\')">少用子音</button>' +
+    '<button class="tf-alpha-tab'+(tab==='lead'?' is-active':'')+'" onclick="TF.alphaOverlayReplace(\'consonants\',\'lead\')">前引字</button></div>';
+  if (tab === 'lead') return tabs + tfAlphaLeadGroup();
+  var key = tab === 'uncommon' ? 'forgot' : 'common';
+  var prefix = tab === 'uncommon' ? '少用' : '';
+  return tabs +
+    tfAlphaGroup(prefix+'中子音', C.mid[key], 'consonants') +
+    tfAlphaGroup(prefix+'高子音', C.high[key], 'consonants') +
+    tfAlphaGroup(prefix+'低子音', C.low[key], 'consonants');
+}
+
+function tfAlphaVowels(tab) {
+  tab = tab || 'long';
+  var cards = tab === 'short' ? ALPHA.vowel.short : ALPHA.vowel.long;
+  return '<div class="tf-alpha-tabs">' +
+    '<button class="tf-alpha-tab'+(tab==='long'?' is-active':'')+'" onclick="TF.alphaOverlayReplace(\'vowels\',\'long\')">長母音</button>' +
+    '<button class="tf-alpha-tab'+(tab==='short'?' is-active':'')+'" onclick="TF.alphaOverlayReplace(\'vowels\',\'short\')">短母音</button></div>' +
+    '<div class="tf-alpha-note">กดสระเพื่อฟังเสียงครู</div>' +
+    tfAlphaGroup(tab === 'short' ? '短母音' : '長母音', cards, 'vowels');
+}
+
+function tfAlphaEndingCard(ch) {
+  for (var i=0; i<ALPHA.ending.length; i++) if (ALPHA.ending[i].ch === ch) return ALPHA.ending[i];
+  return null;
+}
+
+function tfAlphaEndingRows(kind) {
+  var groups = kind === 'dead'
+    ? [['ก','ก ข ค ฆ'],['บ','บ ป พ ฟ ภ'],['ด','จ ช ซ ฎ ฏ ฐ ฑ ฒ ด ต ถ ท ธ ศ ษ ส']]
+    : [['น','น ณ ญ ร ล ฬ'],['ย','ย'],['ม','ม'],['ง','ง'],['ว','ว']];
+  return '<div class="tf-alpha-ending-list">' + groups.map(function(g){
+    return '<button class="tf-alpha-ending-btn" onclick="TF.alphaOverlayEndingDetail(\''+g[0]+'\')"><strong>尾音 '+g[0]+'</strong><span>'+g[1]+'</span></button>';
+  }).join('') + '</div>';
+}
+
+function tfAlphaEndings(kind) {
+  kind = kind || 'live';
+  var live = kind === 'live';
+  return '<div class="tf-alpha-tabs">' +
+    '<button class="tf-alpha-tab'+(live?' is-active':'')+'" onclick="TF.alphaOverlayReplace(\'endings\',\'live\')">長尾音・活音</button>' +
+    '<button class="tf-alpha-tab'+(!live?' is-active':'')+'" onclick="TF.alphaOverlayReplace(\'endings\',\'dead\')">短尾音・死音</button></div>' +
+    '<div class="tf-alpha-note"><b>'+(live?'活音':'死音')+'</b><br>' +
+      (live ? '① 有長尾音（น ณ ญ ร ล ฬ ม ย ว ง）收尾<br>② 無尾音但使用長母音' : '① 有短尾音（ก ข ค ฆ บ ป พ ฟ ภ จ ช ซ ฎ ฏ ฐ ฑ ฒ ด ต ถ ท ธ ศ ษ ส）收尾<br>② 無尾音但使用短母音') +
+    '</div><h3 class="tf-alpha-section-title">'+(live?'五個尾音群組':'三個尾音群組')+'</h3>' + tfAlphaEndingRows(kind);
+}
+
+function tfManualTerm(key, label) {
+  return '<button class="tf-manual-term" onclick="TF.alphaOverlayTerm(\''+key+'\')">'+label+'</button>';
+}
+
+function tfAlphaManual(context) {
+  var open1 = (context === 'rule1' || tfAlphabetOverlay.details.rule1) ? ' open' : '';
+  var open2 = (context === 'rule2' || tfAlphabetOverlay.details.rule2) ? ' open' : '';
+  var open3 = (context === 'rule3' || tfAlphabetOverlay.details.rule3) ? ' open' : '';
+  return '<div class="tf-manual-intro">看到一個泰文字時，先做第一個判斷：</div>' +
+    '<div class="tf-manual-question">這個字有沒有聲調符號？</div>' +
+    '<section class="tf-manual-rule" id="tf-manual-rule1"><h3>規則 1｜有聲調符號</h3>' +
+      '<div class="tf-manual-summary">低子音：聲調往後一個念<br>非低子音：寫什麼，就念什麼。</div>' +
+      '<details'+open1+' ontoggle="TF.alphaOverlayDetail(\'rule1\',this.open)"><summary>查看詳細說明</summary><div class="tf-manual-detail-grid">' +
+        '<div class="tf-manual-branch"><b>如果是'+tfManualTerm('low','低子音')+'</b><br>'+tfManualTerm('tone2','寫二聲符號')+' → 念三聲<br>'+tfManualTerm('tone3','寫三聲符號')+' → 念四聲</div>' +
+        '<div class="tf-manual-branch"><b>如果不是低子音</b><br>包含：'+tfManualTerm('mid','中子音')+'、'+tfManualTerm('high','高子音')+'、'+tfManualTerm('lead','前引字')+'<br>'+tfManualTerm('tone2','寫二聲符號')+' → 念二聲<br>'+tfManualTerm('tone3','寫三聲符號')+' → 念三聲<br>'+tfManualTerm('tone4','寫四聲符號')+' → 念四聲<br>'+tfManualTerm('tone5','寫五聲符號')+' → 念五聲</div>' +
+      '</div></details></section>' +
+    '<section class="tf-manual-rule is-live" id="tf-manual-rule2"><h3>規則 2｜沒有聲調符號 ＋ '+tfManualTerm('live','活音')+'</h3>' +
+      '<div class="tf-manual-summary">子音本身是什麼聲調，這個字就跟著念什麼聲調。</div>' +
+      '<details'+open2+' ontoggle="TF.alphaOverlayDetail(\'rule2\',this.open)"><summary>查看詳細說明</summary><div class="tf-manual-detail-grid">' +
+        '<div class="tf-manual-branch">'+tfManualTerm('mid','中子音')+' ＋ '+tfManualTerm('low','低子音')+' → <b>一聲</b></div>' +
+        '<div class="tf-manual-branch">'+tfManualTerm('high','高子音')+' ＋ '+tfManualTerm('lead','前引字')+' → <b>五聲</b></div>' +
+      '</div></details></section>' +
+    '<section class="tf-manual-rule is-dead" id="tf-manual-rule3"><h3>規則 3｜沒有聲調符號 ＋ '+tfManualTerm('dead','死音')+'</h3>' +
+      '<div class="tf-manual-summary">低子音：長母音→三聲；短母音→四聲<br>非低子音：全部→二聲</div>' +
+      '<details'+open3+' ontoggle="TF.alphaOverlayDetail(\'rule3\',this.open)"><summary>查看詳細說明</summary><div class="tf-manual-detail-grid">' +
+        '<div class="tf-manual-branch"><b>如果是'+tfManualTerm('low','低子音')+'</b><br>'+tfManualTerm('longVowel','長母音')+' → 三聲<br>'+tfManualTerm('shortVowel','短母音')+' → 四聲</div>' +
+        '<div class="tf-manual-branch"><b>如果不是低子音</b><br>包含：'+tfManualTerm('mid','中子音')+'、'+tfManualTerm('high','高子音')+'、'+tfManualTerm('lead','前引字')+'<br><b>全部都是 → 二聲</b></div>' +
+      '</div></details></section>';
+}
+
+function tfAlphaTermView(key) {
+  var C = ALPHA.consonant;
+  if (key === 'mid' || key === 'high' || key === 'low') return tfAlphaGroup(C[key].zh+'・常用', C[key].common, 'consonants');
+  if (key === 'lead') return tfAlphaLeadGroup();
+  if (key === 'longVowel' || key === 'shortVowel') return tfAlphaVowels(key === 'longVowel' ? 'long' : 'short');
+  if (key === 'live' || key === 'dead') {
+    var live = key === 'live';
+    return '<div class="tf-alpha-note"><b>'+(live?'活音':'死音')+'</b><br>先選擇要查看母音或尾音。</div><div class="tf-manual-detail-grid">' +
+      '<button class="tf-alpha-menu-card" onclick="TF.alphaOverlayView(\'vowels\',\''+(live?'long':'short')+'\')"><strong>'+(live?'長母音':'短母音')+'</strong><span>'+(live?'沒有尾音時，長母音是活音':'沒有尾音時，短母音是死音')+'</span></button>' +
+      '<button class="tf-alpha-menu-card" onclick="TF.alphaOverlayView(\'endings\',\''+(live?'live':'dead')+'\')"><strong>'+(live?'長尾音':'短尾音')+'</strong><span>'+(live?'有尾音時，看五個長尾音群組':'有尾音時，看三個短尾音群組')+'</span></button></div>';
+  }
+  var active = key || 'tone2';
+  var marks = [['tone2','อ่','二聲符號 ่'],['tone3','อ้','三聲符號 ้'],['tone4','อ๊','四聲符號 ๊'],['tone5','อ๋','五聲符號 ๋']];
+  return '<div class="tf-alpha-note">聲調符號寫在子音上方。這一區只顯示符號，不製作假錄音。</div><div class="tf-manual-tone-grid">' + marks.map(function(m){
+    return '<div class="tf-manual-tone'+(active===m[0]?' is-active':'')+'"><b>'+m[1]+'</b><span>'+m[2]+'</span></div>';
+  }).join('') + '</div>';
+}
+
+function tfAlphaHome() {
+  return '<div class="tf-alpha-menu">' +
+    '<button class="tf-alpha-menu-card" onclick="TF.alphaOverlayView(\'manual\')"><strong>泰文拼音規則手冊</strong><span>先看三個判斷規則</span></button>' +
+    '<button class="tf-alpha-menu-card" onclick="TF.alphaOverlayView(\'consonants\',\'common\')"><strong>子音練習</strong><span>常用子音、少用子音、前引字</span></button>' +
+    '<button class="tf-alpha-menu-card" onclick="TF.alphaOverlayView(\'vowels\',\'long\')"><strong>母音練習</strong><span>長母音、短母音・有老師錄音</span></button>' +
+    '<button class="tf-alpha-menu-card" onclick="TF.alphaOverlayView(\'endings\',\'live\')"><strong>尾音練習</strong><span>長尾音、短尾音・活音、死音</span></button>' +
+  '</div><p class="tf-alpha-footer-note">全部內容都在同一個視窗內開啟，關閉後回到原題。</p>';
+}
+
+function tfAlphaRender() {
+  var root = document.getElementById('tf-alpha-overlay');
+  if (!root) return;
+  var body = root.querySelector('.tf-alpha-overlay-body');
+  var title = root.querySelector('.tf-alpha-overlay-title');
+  var back = root.querySelector('.tf-alpha-back');
+  var view = tfAlphabetOverlay.view, arg = tfAlphabetOverlay.arg;
+  var names = {home:'字母練習區',manual:'泰文拼音規則手冊',consonants:'子音練習',vowels:'母音練習',endings:'尾音練習',term:'拼音規則'};
+  title.textContent = names[view] || names.home;
+  back.hidden = tfAlphabetOverlay.stack.length === 0;
+  if (view === 'manual') body.innerHTML = tfAlphaManual(arg);
+  else if (view === 'consonants') body.innerHTML = tfAlphaConsonants(arg);
+  else if (view === 'vowels') body.innerHTML = tfAlphaVowels(arg);
+  else if (view === 'endings') body.innerHTML = tfAlphaEndings(arg);
+  else if (view === 'term') body.innerHTML = tfAlphaTermView(arg);
+  else body.innerHTML = tfAlphaHome();
+  body.scrollTop = 0;
+  if (view === 'manual' && /^rule[123]$/.test(arg || '')) {
+    var target = document.getElementById('tf-manual-'+arg);
+    if (target) target.scrollIntoView({block:'start'});
+  }
+}
+
+function tfOpenAlphabetOverlay(view, arg) {
+  var old = document.getElementById('tf-alpha-overlay');
+  if (old) old.remove();
+  tfAlphabetOverlay = {view:view||'home', arg:arg||null, stack:[], details:{}};
+  var root = document.createElement('div');
+  root.id = 'tf-alpha-overlay'; root.className = 'tf-alpha-overlay';
+  root.setAttribute('role','dialog'); root.setAttribute('aria-modal','true'); root.setAttribute('aria-label','字母練習區');
+  root.onclick = function(e){ if (e.target === root) TF.closeAlphabetOverlay(); };
+  root.onkeydown = function(e){ if (e.key === 'Escape') TF.closeAlphabetOverlay(); };
+  root.innerHTML = '<section class="tf-alpha-dialog"><header class="tf-alpha-overlay-head">' +
+    '<button class="tf-alpha-icon-btn tf-alpha-back" aria-label="返回" onclick="TF.alphaOverlayBack()">←</button>' +
+    '<h2 class="tf-alpha-overlay-title"></h2>' +
+    '<button class="tf-alpha-icon-btn" aria-label="關閉" onclick="TF.closeAlphabetOverlay()">×</button>' +
+    '</header><div class="tf-alpha-overlay-body"></div></section>';
+  document.body.appendChild(root);
+  TF._alphaPrevOverflow = document.body.style.overflow;
+  document.body.style.overflow = 'hidden';
+  tfAlphaRender();
+  root.querySelector('.tf-alpha-icon-btn:last-child').focus();
+}
+
+function tfAlphaView(view, arg, replace) {
+  if (!replace) tfAlphabetOverlay.stack.push({view:tfAlphabetOverlay.view,arg:tfAlphabetOverlay.arg});
+  tfAlphabetOverlay.view = view; tfAlphabetOverlay.arg = arg || null; tfAlphaRender();
+}
+
+function tfAlphaContextFromKeys(keys) {
+  if (keys.indexOf('toneMark') >= 0 || keys.some(function(k){return /^tone[2-5]$/.test(k);})) return 'rule1';
+  if (keys.indexOf('live') >= 0 || keys.indexOf('longEnd') >= 0) return 'rule2';
+  if (keys.indexOf('dead') >= 0 || keys.indexOf('longVowel') >= 0 || keys.indexOf('shortVowel') >= 0 || keys.indexOf('shortEnd') >= 0) return 'rule3';
+  return null;
 }
 
 function showStats() {
@@ -3998,6 +4198,65 @@ var TF = {
     S = { word:'', step:'alpha-home', path:[], tone:null };
     hist = [S]; histPos = 0;
     render();
+  },
+  openAlphabetOverlay: function(view, arg) {
+    tfOpenAlphabetOverlay(view || 'home', arg || null);
+  },
+  closeAlphabetOverlay: function() {
+    var root = document.getElementById('tf-alpha-overlay');
+    if (root) root.remove();
+    document.body.style.overflow = this._alphaPrevOverflow || '';
+    if (this._alphaAudio) {
+      try { this._alphaAudio.pause(); this._alphaAudio.currentTime = 0; } catch(e){}
+      this._alphaAudio = null;
+    }
+  },
+  alphaOverlayView: function(view, arg) { tfAlphaView(view, arg, false); },
+  alphaOverlayReplace: function(view, arg) { tfAlphaView(view, arg, true); },
+  alphaOverlayBack: function() {
+    var prev = tfAlphabetOverlay.stack.pop();
+    if (!prev) { this.closeAlphabetOverlay(); return; }
+    tfAlphabetOverlay.view = prev.view; tfAlphabetOverlay.arg = prev.arg; tfAlphaRender();
+  },
+  alphaOverlayTerm: function(key) { tfAlphaView('term', key, false); },
+  alphaOverlayDetail: function(rule, open) {
+    if (!tfAlphabetOverlay.details) tfAlphabetOverlay.details = {};
+    tfAlphabetOverlay.details[rule] = !!open;
+  },
+  alphaOverlayEndingDetail: function(ch) {
+    var card = tfAlphaEndingCard(ch);
+    var body = document.querySelector('#tf-alpha-overlay .tf-alpha-overlay-body');
+    if (!card || !card.exp || !body) return;
+    var old = document.getElementById('tf-alpha-ending-detail');
+    if (old) old.remove();
+    var detail = document.createElement('div');
+    detail.id = 'tf-alpha-ending-detail'; detail.className = 'tf-alpha-ending-detail';
+    detail.innerHTML = '<strong>尾音 '+ch+'｜包含：'+card.mem+'</strong><br><b>'+card.exp.cat+'</b><br>'+card.exp.how+
+      (card.exp.thai ? '<br>泰文範例：'+card.exp.thai : '') + (card.exp.zh ? '<br>中文對應：'+card.exp.zh : '');
+    body.appendChild(detail); detail.scrollIntoView({block:'nearest'});
+  },
+  alphaOverlaySpeak: function(category, ch, btn) {
+    var self = this;
+    var src = TF_FLASH_AUDIO && TF_FLASH_AUDIO[category] ? TF_FLASH_AUDIO[category][ch] : null;
+    if (!src && !TF_FLASH_AUDIO_READY && TF_FLASH_AUDIO_PROMISE) {
+      TF_FLASH_AUDIO_PROMISE.then(function(){ self.alphaOverlaySpeak(category, ch, btn); });
+      return;
+    }
+    if (!src) return;
+    try {
+      if (self._alphaAudio) { self._alphaAudio.pause(); self._alphaAudio.currentTime = 0; }
+      var audio = new Audio(src); self._alphaAudio = audio;
+      if (btn) btn.classList.add('is-playing');
+      audio.addEventListener('ended', function(){ if (btn) btn.classList.remove('is-playing'); }, {once:true});
+      audio.play().catch(function(err){ if (btn) btn.classList.remove('is-playing'); console.error('[phonics-manual] audio failed:', src, err); });
+    } catch(e) { console.error('[phonics-manual] Audio() error:', src, e); }
+  },
+  openManualFromTip: function(encodedKeys) {
+    var keys = [];
+    try { keys = JSON.parse(decodeURIComponent(encodedKeys)); } catch(e){}
+    var tip = document.getElementById('tf-tip-ov');
+    if (tip) tip.remove();
+    tfOpenAlphabetOverlay('manual', tfAlphaContextFromKeys(keys));
   },
   alphaConsonants: function() {
     S = { word:'', step:'alpha-consonant', path:[], tone:null };
