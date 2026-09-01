@@ -2486,3 +2486,8 @@ node scripts/check-site.js
 - Invalidated the earlier Source Preview technical claim after a real pointer tap showed Reading's desktop hover transform moving and enlarging a selected choice outside its Landscape owner frame.
 - Scoped the tap correction to Reading Mobile Landscape: hover and selected choices now keep their exact bounding box, with a browser regression that compares geometry after every answer selection. The shared Landscape Resume host also once again respects the game-owned close action instead of forcing the closed prompt visible over gameplay.
 - Human acceptance remains pending. Listening, Lego, Supabase behavior and Production are unchanged.
+
+# 2026-09-01 — Mobile Landscape Tone top-action stability correction
+
+- Screen-recording review found Tone's Skip action alternating between its original `#tf-body` owner and the shared top slot on successive observer syncs. The controller now resolves the already-mounted action first, so the same live button remains in one owner instead of being restored and remounted every animation frame.
+- Added a browser regression that observes the top slot across multiple frames and fails on any child-list churn. The interaction gate now also completes every Reading syllable before Check, so randomized multi-syllable questions cannot create a false failure. A randomized live Preview question then exposed a final right-choice overlap at the Position 2 boundary; Reading and Word Order now stop at row 65 with fresh controller keys. Typing, Listening, Lego and Production behavior remain unchanged.

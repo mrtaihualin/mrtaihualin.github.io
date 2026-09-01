@@ -169,6 +169,18 @@
     var numbered = choices.filter(function (node) { return node.classList.contains('sg-tone-btn'); });
     assert(numbered.slice(0, 3).every(function (node) { return node.dataset.gshSide === 'left'; }), 'Tone 1-3 stay in the left frame');
     assert(numbered.slice(3).every(function (node) { return node.dataset.gshSide === 'right'; }), 'Tone 4-5 stay in the right frame');
+    var skipSlot = page.doc.querySelector('[data-gsh-ml-slot="skip"]');
+    var stableSkip = skipSlot && skipSlot.querySelector('.tf-known-btn');
+    assert(stableSkip && shown(page.win, stableSkip), 'Tone Skip is visible in the top action slot');
+    var skipMutations = 0;
+    var skipObserver = new page.win.MutationObserver(function (records) {
+      records.forEach(function (record) { if (record.type === 'childList') skipMutations += 1; });
+    });
+    skipObserver.observe(skipSlot, { childList: true });
+    await wait(350);
+    skipObserver.disconnect();
+    assert(skipSlot.querySelector('.tf-known-btn') === stableSkip && shown(page.win, stableSkip), 'Tone Skip keeps one stable DOM owner across animation frames');
+    assert(skipMutations === 0, 'Tone Skip does not flicker between its source and top slot');
     var uncertain = assertPositionTwo(page.win, page.doc, '不確定');
     var before = page.doc.querySelector('#tf-body').textContent;
     uncertain.click();
@@ -183,20 +195,28 @@
     });
     assertSideGeometry(page.win, page.doc, '#pool .opt');
     assertPositionTwo(page.win, page.doc);
-    for (var componentIndex = 0; componentIndex < page.win.comps.length; componentIndex += 1) {
-      var component = page.win.comps[componentIndex];
-      var option = Array.prototype.slice.call(page.doc.querySelectorAll('#pool .opt')).filter(function (node) {
-        return !node.classList.contains('sel') && node.dataset.val === String(page.win.correctVal[component]);
-      })[0];
-      if (!option) throw new Error('Reading correct option missing for ' + component);
-      var beforeOption = rect(option);
-      option.click();
-      await wait(30);
-      var afterOption = rect(option);
-      assert(sameRect(beforeOption, afterOption), 'Reading option stays fixed after selecting ' + component);
-      assertSideGeometry(page.win, page.doc, '#pool .opt');
-    }
     var check = page.doc.getElementById('btn-check');
+    for (var syllablePass = 0; syllablePass < 10; syllablePass += 1) {
+      for (var componentIndex = 0; componentIndex < page.win.comps.length; componentIndex += 1) {
+        var component = page.win.comps[componentIndex];
+        var option = Array.prototype.slice.call(page.doc.querySelectorAll('#pool .opt')).filter(function (node) {
+          return !node.classList.contains('sel') && node.dataset.val === String(page.win.correctVal[component]);
+        })[0];
+        if (!option) throw new Error('Reading correct option missing for ' + component);
+        var beforeOption = rect(option);
+        option.click();
+        await wait(30);
+        var afterOption = rect(option);
+        assert(sameRect(beforeOption, afterOption), 'Reading option stays fixed after selecting ' + component);
+        assertSideGeometry(page.win, page.doc, '#pool .opt');
+      }
+      if (!check.disabled) break;
+      var nextSyllable = assertPositionTwo(page.win, page.doc, '下一個音節');
+      var beforeSyllable = page.win.sylIdx;
+      nextSyllable.click();
+      await waitFor(function () { return page.win.sylIdx !== beforeSyllable; }, 'Reading next-syllable transition');
+      assert(true, 'Reading 下一個音節 changes the active syllable');
+    }
     assert(!check.disabled, 'Reading check becomes enabled after real option clicks');
     var before = (page.doc.getElementById('qn').textContent || '') + '|' + (page.doc.getElementById('wth').textContent || '');
     check.click();

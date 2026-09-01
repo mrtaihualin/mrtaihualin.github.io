@@ -502,7 +502,7 @@
       child.dataset.gshSideIndex = String(sideIndex);
       child.dataset.gshSideCount = String(sideCount);
       if (game === 'reading' || game === 'word-order') {
-        var availableRows = side === 'right' ? 68 : 100;
+        var availableRows = side === 'right' ? 65 : 100;
         var rowStart = Math.floor(sideIndex * availableRows / sideCount);
         var rowEnd = Math.floor((sideIndex + 1) * availableRows / sideCount);
         child.style.setProperty('--gsh-ml-row-start', String(rowStart + 1));
@@ -599,7 +599,7 @@
   function syncTopActions(game) {
     var skip = null;
     var check = null;
-    if (game === 'tone') skip = q('#tf-body .tf-known-btn');
+    if (game === 'tone') skip = q('.tf-known-btn', slot('skip')) || q('#tf-body .tf-known-btn');
     else if (game === 'reading') { skip = q('#btn-skip'); check = q('#btn-check'); }
     else if (game === 'listening') skip = q('#lg-skip-btn');
     else if (game === 'typing') skip = q('#btn-skip');

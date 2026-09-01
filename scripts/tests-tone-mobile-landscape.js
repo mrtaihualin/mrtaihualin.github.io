@@ -39,7 +39,8 @@ test('all six pages bind the shared landscape menu system and Core 4 owns this c
     const paused = game === 'listening' || game === 'lego';
     const cssVersion = paused ? 31 : 33;
     assert.match(html, new RegExp(`css/mobile-landscape\\.css\\?v=${cssVersion}`), `${file}: wrong scoped CSS version`);
-    assert.match(html, paused ? /js\/core\/mobile-landscape\.js\?v=24/ : /js\/core\/mobile-landscape\.js\?v=25/, `${file}: wrong scoped controller version`);
+    const controllerVersion = game === 'tone' || game === 'reading' || game === 'word-order' ? 26 : paused ? 24 : 25;
+    assert.match(html, new RegExp(`js/core/mobile-landscape\\.js\\?v=${controllerVersion}`), `${file}: wrong scoped controller version`);
     assert.match(html, /js\/games\/game-switcher\.js\?v=7/, `${file}: missing fixed six-game navigation`);
   }
   assert.doesNotMatch(read('tone-finder.html'), /tone-mobile-landscape\.(?:css|js)/);
@@ -103,6 +104,7 @@ test('polite particles are playable but score-free in the four approved games', 
 });
 
 test('Tone preserves three left, three right and reveal actions in the right slots', () => {
+  assert.match(stage, /game === 'tone'\) skip = q\('\.tf-known-btn', slot\('skip'\)\) \|\| q\('#tf-body \.tf-known-btn'\)/);
   assert.match(stage, /children\.length === 6 \? 3/);
   assert.match(stage, /mountExistingNode\(uncertain, container\)/);
   assert.match(stage, /function syncToneRevealActions\([\s\S]{0,900}result-audio[\s\S]{0,260}result-english[\s\S]{0,260}result-next/);
@@ -154,7 +156,7 @@ test('approved position two reuses Tone uncertain geometry and exact labels', ()
 
 test('Reading and Word Order reserve the lower-right zone exclusively for position two', () => {
   assert.match(stage, /game === 'word-order'[\s\S]{0,420}children\.length \* 0\.6/);
-  assert.match(stage, /availableRows = side === 'right' \? 68 : 100/);
+  assert.match(stage, /availableRows = side === 'right' \? 65 : 100/);
   assert.match(stage, /--gsh-ml-row-start/);
   assert.match(stage, /--gsh-ml-row-span/);
   assert.match(css, /data-gsh-ml-split="word-order"[\s\S]{0,300}repeat\(100, minmax\(0, 1fr\)\)/);
