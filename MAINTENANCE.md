@@ -2,10 +2,11 @@
 
 **Updated: 2026-09-02 Asia/Bangkok** — Temporary six-game Mobile Landscape safety gate
 
-## 2026-09-02 — Temporary Mobile Landscape safety gate (`PASS_LOCAL / HUMAN_PREVIEW_PENDING / PRODUCTION_UNCHANGED`)
+## 2026-09-02 — Temporary Mobile Landscape safety gate (`TECHNICAL_PASS / HUMAN_PREVIEW_PASS / PRODUCTION_UNCHANGED`)
 
 - Temporarily blocked the current short-screen Mobile Landscape surface on the exact current four-game scope—Tone, Reading, Typing and Word Order—with one reversible Traditional Chinese rotate-to-Portrait notice. The gate prevents underlying pointer, keyboard and assistive-technology interaction while active, restores the exact prior accessibility/focus state after rotation and is absent from Portrait, Desktop, Listening, Lego and non-game pages.
 - The existing Landscape gameplay/menu implementation remains in Source unchanged behind the gate. No gameplay rule, content, Login/account, data, Supabase, schema, Production or real-user state is changed; removal or replacement of this gate remains separately authorized after 5.2 Human and Production acceptance.
+- Lin accepted the exact isolated Cloudflare Preview runtime bound to source `efee6cbc180eac2f40157d5db8bd2d2d2061b886` and Worker version `a44ab59b-c7d0-4b29-8a6c-6bf532fc9f43`. This documentation-only closeout does not change that accepted runtime; source merge and Production remain separate gates.
 
 **Prior update: 2026-09-02 Asia/Bangkok** — Final Notes verb Source rewrite candidate
 
