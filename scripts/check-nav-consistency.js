@@ -139,8 +139,8 @@ SCOPE_PAGES.forEach((file) => {
     if (annMatch || /ANN-BAND|ann-band|avail-band|annDismissed|annGoTo|annPrev|annNext/.test(text)) {
       mismatches.push({ file, kind: 'game announcement code ยังค้าง', detail: 'เกมต้องไม่มี DOM/marker/script/style hook ของ announcement' });
     }
-    if (!/js\/core\/shared\.min\.js\?v=47/.test(text)) {
-      mismatches.push({ file, kind: 'game shared runtime cache ไม่ตรง', detail: 'ต้องใช้ shared.min.js?v=47' });
+    if (!/js\/core\/shared\.min\.js\?v=48/.test(text)) {
+      mismatches.push({ file, kind: 'game shared runtime cache ไม่ตรง', detail: 'ต้องใช้ shared.min.js?v=48' });
     }
   } else {
     const expectedAnn = NO_ANNOUNCEMENT_PAGES.has(file) ? NO_ANNOUNCEMENT_BLOCK : NAV.renderAnnBandBlockHTML();

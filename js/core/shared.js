@@ -2384,3 +2384,109 @@ window.deleteFBComment = function(postId, idx) {
 
 // Learning tools stay in their game-owned inline toolbars. No shared fallback
 // creates a second control surface on game or non-game pages.
+
+// Phase 1.2 / 5.2 temporary safety gate: keep short-screen mobile landscape
+// unavailable across the six public games until the replacement layout passes
+// its Human and Production gates. Portrait and Desktop stay untouched.
+(function () {
+  var games = ['tone', 'reading', 'listening', 'typing', 'word-order', 'lego'];
+  var game = document.body && document.body.getAttribute('data-gsh-game');
+  if (games.indexOf(game) === -1 || !window.matchMedia) return;
+
+  var query = window.matchMedia('(orientation: landscape) and (max-width: 1024px) and (max-height: 600px)');
+  var overlay = document.createElement('section');
+  overlay.id = 'gsh-landscape-temporary-gate';
+  overlay.className = 'gsh-landscape-temporary-gate';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-labelledby', 'gsh-landscape-temporary-gate-title');
+  overlay.setAttribute('aria-describedby', 'gsh-landscape-temporary-gate-message');
+  overlay.setAttribute('tabindex', '-1');
+  overlay.hidden = true;
+  overlay.setAttribute('aria-hidden', 'true');
+  overlay.innerHTML =
+    '<div class="gsh-landscape-temporary-gate__card">' +
+      '<div class="gsh-landscape-temporary-gate__icon" aria-hidden="true">↻</div>' +
+      '<h1 id="gsh-landscape-temporary-gate-title">請使用直向模式</h1>' +
+      '<p id="gsh-landscape-temporary-gate-message">手機橫向模式目前尚未開放，請先將手機轉回直向繼續使用。</p>' +
+    '</div>';
+
+  var style = document.createElement('style');
+  style.id = 'gsh-landscape-temporary-gate-style';
+  style.textContent =
+    '.gsh-landscape-temporary-gate[hidden]{display:none!important;}' +
+    '.gsh-landscape-temporary-gate{position:fixed;inset:0;z-index:2147483647;display:grid;place-items:center;box-sizing:border-box;padding:max(18px,env(safe-area-inset-top)) max(24px,env(safe-area-inset-right)) max(18px,env(safe-area-inset-bottom)) max(24px,env(safe-area-inset-left));overflow:auto;background:#faf4e8;color:#4b3513;font-family:\'Noto Sans TC\',sans-serif;text-align:center;overscroll-behavior:none;touch-action:none;}' +
+    '.gsh-landscape-temporary-gate__card{width:min(560px,100%);box-sizing:border-box;padding:clamp(18px,5dvh,30px) clamp(24px,5vw,42px);border:2px solid #c8973a;border-radius:20px;background:#fffaf0;box-shadow:0 14px 36px rgba(90,62,10,.2);}' +
+    '.gsh-landscape-temporary-gate__icon{width:clamp(42px,12dvh,58px);height:clamp(42px,12dvh,58px);margin:0 auto 8px;display:grid;place-items:center;border-radius:50%;background:#f4e2b8;color:#805d1d;font-size:clamp(25px,8dvh,36px);font-weight:800;line-height:1;}' +
+    '.gsh-landscape-temporary-gate h1{margin:0;font-size:clamp(22px,6.5dvh,30px);line-height:1.3;color:#5a3e0a;}' +
+    '.gsh-landscape-temporary-gate p{margin:10px auto 0;max-width:34em;font-size:clamp(15px,4.2dvh,18px);font-weight:600;line-height:1.6;color:#6a5126;}' +
+    'body.gsh-landscape-temporary-gate-open{overflow:hidden!important;overscroll-behavior:none!important;touch-action:none!important;}';
+  document.head.appendChild(style);
+  document.body.appendChild(overlay);
+
+  var blockedNodes = [];
+  var previousFocus = null;
+  var observer = null;
+
+  function blockNode(node) {
+    if (!node || node === overlay || node.nodeType !== 1) return;
+    if (blockedNodes.some(function (entry) { return entry.node === node; })) return;
+    blockedNodes.push({
+      node: node,
+      ariaHidden: node.getAttribute('aria-hidden'),
+      hadInert: node.hasAttribute('inert'),
+      inertValue: !!node.inert
+    });
+    node.setAttribute('aria-hidden', 'true');
+    node.setAttribute('inert', '');
+    try { node.inert = true; } catch (_) {}
+  }
+
+  function enterGate() {
+    if (!overlay.hidden) return;
+    previousFocus = document.activeElement;
+    Array.prototype.forEach.call(document.body.children, blockNode);
+    document.body.classList.add('gsh-landscape-temporary-gate-open');
+    overlay.hidden = false;
+    overlay.setAttribute('aria-hidden', 'false');
+    observer = new MutationObserver(function (records) {
+      records.forEach(function (record) {
+        Array.prototype.forEach.call(record.addedNodes, blockNode);
+      });
+    });
+    observer.observe(document.body, { childList: true });
+    try { overlay.focus({ preventScroll: true }); } catch (_) { overlay.focus(); }
+  }
+
+  function leaveGate() {
+    if (overlay.hidden) return;
+    if (observer) observer.disconnect();
+    observer = null;
+    overlay.hidden = true;
+    overlay.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('gsh-landscape-temporary-gate-open');
+    blockedNodes.forEach(function (entry) {
+      if (!entry.node || !entry.node.isConnected) return;
+      if (entry.ariaHidden === null) entry.node.removeAttribute('aria-hidden');
+      else entry.node.setAttribute('aria-hidden', entry.ariaHidden);
+      if (entry.hadInert) entry.node.setAttribute('inert', '');
+      else entry.node.removeAttribute('inert');
+      try { entry.node.inert = entry.inertValue; } catch (_) {}
+    });
+    blockedNodes = [];
+    if (previousFocus && previousFocus.isConnected && previousFocus.focus) {
+      try { previousFocus.focus({ preventScroll: true }); } catch (_) { previousFocus.focus(); }
+    }
+    previousFocus = null;
+  }
+
+  function syncGate() {
+    if (query.matches) enterGate();
+    else leaveGate();
+  }
+
+  if (query.addEventListener) query.addEventListener('change', syncGate);
+  else if (query.addListener) query.addListener(syncGate);
+  window.addEventListener('orientationchange', syncGate);
+  syncGate();
+})();

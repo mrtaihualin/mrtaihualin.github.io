@@ -1,6 +1,13 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-09-02 Asia/Bangkok** — Final Notes verb Source rewrite candidate
+**Updated: 2026-09-02 Asia/Bangkok** — Temporary six-game Mobile Landscape safety gate
+
+## 2026-09-02 — Temporary Mobile Landscape safety gate (`PASS_LOCAL / HUMAN_PREVIEW_PENDING / PRODUCTION_UNCHANGED`)
+
+- Temporarily blocked the current short-screen Mobile Landscape surface on Tone, Reading, Listening, Typing, Word Order and Lego with one reversible Traditional Chinese rotate-to-Portrait notice. The gate prevents underlying pointer, keyboard and assistive-technology interaction while active, restores the exact prior accessibility/focus state after rotation and is absent from Portrait, Desktop and non-game pages.
+- The existing Landscape gameplay/menu implementation remains in Source unchanged behind the gate. No gameplay rule, content, Login/account, data, Supabase, schema, Production or real-user state is changed; removal or replacement of this gate remains separately authorized after 5.2 Human and Production acceptance.
+
+**Prior update: 2026-09-02 Asia/Bangkok** — Final Notes verb Source rewrite candidate
 
 ## 2026-09-02 — Final Notes verb Source rewrite (`SOURCE_PASS / RELEASE_AUTHORIZED / PRODUCTION_UNCHANGED`)
 
