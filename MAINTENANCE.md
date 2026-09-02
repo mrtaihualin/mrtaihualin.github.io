@@ -1,6 +1,16 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-09-02 Asia/Bangkok** — Temporary six-game Mobile Landscape safety gate
+**Updated: 2026-09-02 Asia/Bangkok** — Compact all-page Cookie Consent candidate
+
+## 2026-09-02 — Compact all-page Cookie Consent (`SOURCE_PASS / LOCAL_VISUAL_PASS / PREVIEW_PENDING / PRODUCTION_UNCHANGED`)
+
+- Reused the existing generated Cookie Consent system across all `108` public HTML routes, including the `21` previously non-analytics pages, without adding analytics loaders to those pages. The preserved Vault delayed-Clarity gate remains separate but now uses the same compact presentation and preference fallback.
+- Mobile Portrait uses a compact inset card measured at `376×90` on `390×844`; short Mobile Landscape uses `830×50` on `844×390`; Desktop uses the existing full-width placement at `1280×59`. All tested layouts have zero horizontal overflow and retain the privacy-policy link plus Reject/Accept controls.
+- A valid choice hides the banner immediately and stays hidden across routes and reloads. The existing `cookieConsent` localStorage key remains primary; one first-party `mrtCookieConsent` preference cookie provides one-year persistence when localStorage is unavailable. If both mechanisms are unavailable, consent fails closed and asks again on the next load rather than inferring a grant.
+- Added executable all-page layout/persistence coverage and Vault fallback coverage. Cookie-focused, analytics-consent, Vault, shared-game, Mobile Landscape and Auth regressions pass; the full site gate passes across `1,026` files. Local browser checks cover Accept/Reject, reload/cross-page persistence, a formerly uncovered Classroom page, Desktop/Portrait/Landscape, the four-game Landscape block and unchanged Listening/Lego gate exclusion.
+- GitHub, Cloudflare Preview/Production, DNS, Supabase, Auth, Database and real-user/data state remain unchanged. Production 5.2 stays paused until this exact candidate passes GitLab CI, Cloudflare Preview and Lin's Human gate, followed by a new exact Production approval.
+
+**Prior update: 2026-09-02 Asia/Bangkok** — Temporary Mobile Landscape safety gate
 
 ## 2026-09-02 — Temporary Mobile Landscape safety gate (`TECHNICAL_PASS / HUMAN_PREVIEW_PASS / PRODUCTION_UNCHANGED`)
 

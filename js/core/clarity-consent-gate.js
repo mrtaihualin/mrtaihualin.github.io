@@ -12,14 +12,27 @@
   'use strict';
 
   var STORAGE_KEY = 'cookieConsent';
+  var COOKIE_KEY = 'mrtCookieConsent';
   var SCRIPT_ID = 'clarity-consent-script';
 
   function createController(win, doc, siteId) {
     function state() {
       try {
         var value = win.localStorage.getItem(STORAGE_KEY);
-        return value === 'granted' || value === 'denied' ? value : 'unset';
+        if (value === 'granted' || value === 'denied') return value;
+      } catch (_) {}
+      try {
+        var match = String(doc.cookie || '').match(new RegExp('(?:^|;\\s*)' + COOKIE_KEY + '=(granted|denied)(?:;|$)'));
+        return match ? match[1] : 'unset';
       } catch (_) { return 'unset'; }
+    }
+
+    function persist(value) {
+      try { win.localStorage.setItem(STORAGE_KEY, value); } catch (_) {}
+      try {
+        var secure = win.location && win.location.protocol === 'https:' ? ';Secure' : '';
+        doc.cookie = COOKIE_KEY + '=' + value + ';Max-Age=31536000;path=/;SameSite=Lax' + secure;
+      } catch (_) {}
     }
 
     function loadIfGranted() {
@@ -40,7 +53,7 @@
 
     function decide(granted) {
       var value = granted ? 'granted' : 'denied';
-      try { win.localStorage.setItem(STORAGE_KEY, value); } catch (_) {}
+      persist(value);
       if (granted) return loadIfGranted();
       if (typeof win.clarity === 'function') {
         try {
@@ -54,5 +67,5 @@
     return { state: state, loadIfGranted: loadIfGranted, decide: decide };
   }
 
-  return { STORAGE_KEY: STORAGE_KEY, SCRIPT_ID: SCRIPT_ID, createController: createController };
+  return { STORAGE_KEY: STORAGE_KEY, COOKIE_KEY: COOKIE_KEY, SCRIPT_ID: SCRIPT_ID, createController: createController };
 });
