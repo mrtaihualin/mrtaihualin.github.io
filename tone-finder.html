@@ -197,6 +197,32 @@ if (document.fonts && document.fonts.load) {
   #tf-banner > .word-zh { margin-top:5px; }
   #tf-banner > .tf-adv-sent-reading,
   #tf-banner > .tf-adv-sent-ctx-zh { margin-top:5px; }
+  /* Vocabulary-stack clearance: Thai marks and vowels must never collide with
+     the reading/romanization/translation rows in either font mode. */
+  #tf-banner > .tf-banner-word,
+  #tf-banner > .tf-adv-sent-main,
+  .result-v2 > .result-v2-word {
+    line-height:1.6 !important;
+    padding-block:.08em;
+  }
+  #tf-banner > #tf-read-line {
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+    margin-top:10px;
+  }
+  #tf-banner > #tf-read-line:empty { margin-top:0; }
+  #tf-banner > #tf-read-line > .tf-read-th,
+  #tf-banner > #tf-read-line > .tf-read-en,
+  #tf-banner > .tf-adv-sent-reading,
+  #tf-banner > .tf-adv-sent-ctx-zh,
+  #tf-banner > .word-zh,
+  .result-v2 > .tf-read-th,
+  .result-v2 > .tf-read-en,
+  .result-v2 > .word-zh {
+    line-height:1.65;
+    margin-top:8px;
+  }
+  #tf-banner > #tf-read-line > .tf-read-th,
+  #tf-banner > #tf-read-line > .tf-read-en { margin-top:0; }
   body.tf-modern-font .tf-read-th { font-family: 'Noto Sans Thai', 'Sarabun', sans-serif !important; }
   /* Lin 2026-07-25: ป้ายบอกว่ากำลังอยู่โหมด 提示 (ไม่คิดคะแนน) + ไฮไลต์ตัวเลือกที่ถูกในขั้น推導 */
   .tf-guide-note {
@@ -1260,6 +1286,16 @@ if (document.fonts && document.fonts.load) {
     overflow:hidden; background:#FFFEFB; border:1px solid rgba(139,99,16,.28); border-radius:22px;
     box-shadow:0 24px 70px rgba(45,32,12,.28);
   }
+  /* Keep the alphabet/manual surface on the same two font modes as Tone.
+     The body class is the game-owned state, so an open overlay updates immediately. */
+  body:not(.tf-modern-font) .tf-alpha-dialog,
+  body:not(.tf-modern-font) .tf-alpha-dialog * {
+    font-family:'Sarabun','Noto Sans TC',sans-serif !important;
+  }
+  body.tf-modern-font .tf-alpha-dialog,
+  body.tf-modern-font .tf-alpha-dialog * {
+    font-family:'Noto Sans Thai','Noto Sans TC',sans-serif !important;
+  }
   .tf-alpha-overlay-head {
     display:grid; grid-template-columns:54px 1fr 54px; align-items:center; min-height:74px;
     padding:10px 22px; border-bottom:1px solid rgba(139,99,16,.18); background:#FFFEFB;
@@ -1359,6 +1395,16 @@ if (document.fonts && document.fonts.load) {
   .tf-manual-tone { padding:14px 8px; border:1px solid rgba(139,99,16,.25); border-radius:11px; background:#FFF9EC; text-align:center; }
   .tf-manual-tone b { display:block; font-family:'Noto Sans Thai',sans-serif; font-size:calc(32px * var(--tf-alpha-font-scale)); color:#7A5208; }
   .tf-alpha-footer-note { margin:24px 0 0; color:#88775B; font-size:calc(13px * var(--tf-alpha-font-scale)); text-align:center; }
+  /* Desktop Computer only: enlarge the complete production-approved surface 15%.
+     The inverse viewport cap keeps the transformed dialog inside a 20px safe bound. */
+  @media (min-width:1025px) and (min-height:601px) {
+    .tf-alpha-dialog {
+      width:min(748px,calc(86.9565vw - 34.7826px));
+      height:min(612px,calc(86.9565vh - 34.7826px));
+      transform:scale(1.15);
+      transform-origin:center;
+    }
+  }
   @media (max-width:720px) {
     .tf-alpha-overlay { padding:0; align-items:stretch; }
     .tf-alpha-dialog { --tf-alpha-font-scale:.8; width:100%; height:100%; max-height:none; border:0; border-radius:0; font-size:80%; }

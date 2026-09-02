@@ -127,6 +127,12 @@ html:not(.gc-ready) [onclick*="rgBackToEndFromMistakes("]{
 /* Reading Desktop reuses the accepted Tone shell treatment only where the
    hierarchy is shared. Floating controls now follow the shared six-game
    right-side vertical contract; Mobile Landscape keeps its separate layout. */
+body[data-gsh-game="reading"] .gsh-four-row-stack > .gsh-copy-row { line-height:1.6; }
+body[data-gsh-game="reading"] .gsh-four-row-stack > .gsh-copy-row:empty { display:none !important; margin-top:0 !important; }
+body[data-gsh-game="reading"] .gsh-four-row-stack .word-th {
+  line-height:1.6 !important;
+  padding-block:.08em;
+}
 @media (min-width:1025px), (min-width:769px) and (min-height:601px) {
   body[data-gsh-game="reading"].rg-fake-fullscreen .page-header { display:block !important; }
   body[data-gsh-game="reading"] #cookieConsentBanner { z-index:100100 !important; }
@@ -142,12 +148,12 @@ html:not(.gc-ready) [onclick*="rgBackToEndFromMistakes("]{
     margin:6px 0 4px;
   }
   body[data-gsh-game="reading"] .word-area { margin:0; }
-  body[data-gsh-game="reading"] .gsh-four-row-stack > .gsh-copy-row { margin-top:5px !important; }
+  body[data-gsh-game="reading"] .gsh-four-row-stack > .gsh-copy-row { margin-top:9px !important; }
   body[data-gsh-game="reading"] .gsh-four-row-stack > .gsh-copy-row:first-child { margin-top:0 !important; }
   body[data-gsh-game="reading"] .gsh-four-row-stack > .gsh-copy-row > .rev-pron,
   body[data-gsh-game="reading"] .gsh-four-row-stack > .gsh-copy-row > .rev-en { margin-top:0 !important; }
   body[data-gsh-game="reading"] .word-th {
-    padding-top:0;
+    padding-top:.08em;
     font-family:'Sarabun',sans-serif;
   }
   body[data-gsh-game="reading"] .rev-pron {
@@ -180,13 +186,12 @@ html:not(.gc-ready) [onclick*="rgBackToEndFromMistakes("]{
   }
   body[data-gsh-game="reading"] .gsh-session-header > .gsh-level-selector { flex:none; }
   body[data-gsh-game="reading"] .gsh-gameplay { margin-top:0; }
-  body[data-gsh-game="reading"] .gsh-four-row-stack > .gsh-copy-row { margin-top:5px !important; }
+  body[data-gsh-game="reading"] .gsh-four-row-stack > .gsh-copy-row { margin-top:9px !important; }
   body[data-gsh-game="reading"] .gsh-four-row-stack > .gsh-copy-row:first-child { margin-top:0 !important; }
   body[data-gsh-game="reading"] .gsh-four-row-stack > .gsh-copy-row > .rev-pron,
   body[data-gsh-game="reading"] .gsh-four-row-stack > .gsh-copy-row > .rev-en { margin-top:0 !important; }
-  /* 6px word padding + 5px tool margin become the three exact copy gaps;
-     total gold-band height stays unchanged and Landscape is excluded. */
-  body[data-gsh-game="reading"] .word-th { padding-top:0; }
+  /* Keep Thai combining marks clear of the reading rows in Portrait too. */
+  body[data-gsh-game="reading"] .word-th { padding-top:.08em; }
   body[data-gsh-game="reading"] #word-ctl-row { margin-top:1px !important; }
 }
 

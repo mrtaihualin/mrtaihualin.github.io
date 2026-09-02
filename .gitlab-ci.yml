@@ -1,0 +1,24 @@
+stages:
+  - verify
+
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+    - when: never
+
+default:
+  image: node:22-bookworm
+  interruptible: true
+
+variables:
+  GIT_DEPTH: "0"
+
+required-tests-and-write-set:
+  stage: verify
+  timeout: 15m
+  script:
+    - node scripts/tests-task-write-set.js
+    - node scripts/check-task-write-set.js --gitlab
+    - node scripts/check-site.js

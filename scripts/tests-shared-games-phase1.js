@@ -352,25 +352,24 @@ test('Reading Desktop reuses the shared vertical controls without a page-specifi
   assert.match(sharedCss, /body\[data-gsh-game\] \.rg-ctl-wrap > #game-switcher,[\s\S]{0,140}body\[data-gsh-game\] \.rg-ctl-wrap > \.grw-menu/, 'Reading must inherit the shared menu anchors');
 });
 
-test('Tone-authority four-row stacks use exact 5px boundaries without resizing text', () => {
+test('active-game vocabulary stacks use collision-safe spacing without forced heights', () => {
   const tone = games.find((g) => g.id === 'tone');
   const reading = games.find((g) => g.id === 'reading').htmlText;
   const typing = games.find((g) => g.id === 'typing').htmlText;
-  const listening = games.find((g) => g.id === 'listening').htmlText;
   const wordOrder = games.find((g) => g.id === 'wordorder').htmlText;
   assert.doesNotMatch(sharedCss, /--gsh-copy-|--gsh-progress-height|--gsh-tools-height|height:136px/, 'shared positioning must not impose new content heights');
   assert.doesNotMatch(tone.appText, /gsh-question-stack|gsh-copy-slot/, 'Tone runtime must retain its existing content DOM');
   assert.match(tone.appText, /mainBoxHtml \+ '<div id="tf-read-line">'[\s\S]{0,180}zhHtml \+ sentReadingHtml \+ sentCtxZhHtml/, 'Tone must retain its original content order');
-  assert.match(tone.htmlText, /#tf-banner > #tf-read-line \{ margin-top:5px; \}/);
-  assert.match(tone.htmlText, /#tf-banner > #tf-read-line \.tf-read-th \{ margin-top:0; \}/);
-  assert.match(tone.htmlText, /\.tf-read-en \{[\s\S]{0,180}margin-top: 5px;/);
-  assert.match(tone.htmlText, /#tf-banner > \.word-zh \{ margin-top:5px; \}/);
+  assert.match(tone.htmlText, /#tf-banner > #tf-read-line \{[\s\S]{0,180}gap:8px;[\s\S]{0,100}margin-top:10px/);
+  assert.match(tone.htmlText, /#tf-banner > \.tf-banner-word,[\s\S]{0,180}line-height:1\.6 !important;[\s\S]{0,80}padding-block:\.08em/);
+  assert.match(tone.htmlText, /#tf-banner > #tf-read-line > \.tf-read-th,[\s\S]{0,650}line-height:1\.65;[\s\S]{0,100}margin-top:8px/);
   assert.doesNotMatch(wordOrder, /gsh-wordorder-content-slot/);
   assert.match(reading, /gsh-four-row-stack[\s\S]{0,900}gsh-copy-row/);
-  assert.match(reading, /gsh-four-row-stack > \.gsh-copy-row \{ margin-top:5px !important; \}/);
-  assert.match(typing, /gsh-four-row-stack > \.gsh-copy-row\{margin-top:5px !important;\}/);
-  assert.match(listening, /\.lg-reveal > div \+ div\{margin-top:5px;\}/);
-  assert.match(reading, /@media \(max-width:768px\) and \(orientation:portrait\) \{[\s\S]{0,900}gsh-four-row-stack > \.gsh-copy-row \{ margin-top:5px !important; \}[\s\S]{0,700}\.word-th \{ padding-top:0; \}[\s\S]{0,180}#word-ctl-row \{ margin-top:1px !important; \}/, 'Reading Portrait must keep 5\/5\/5 copy gaps while preserving the prior gold-band height');
+  assert.match(reading, /gsh-four-row-stack > \.gsh-copy-row \{ margin-top:9px !important; \}/);
+  assert.match(typing, /gsh-four-row-stack > \.gsh-copy-row\{margin-top:9px !important;line-height:1\.6;\}/);
+  assert.match(reading, /@media \(max-width:768px\) and \(orientation:portrait\) \{[\s\S]{0,900}gsh-four-row-stack > \.gsh-copy-row \{ margin-top:9px !important; \}[\s\S]{0,700}\.word-th \{ padding-top:\.08em; \}/, 'Reading Portrait must preserve collision-safe copy gaps and Thai-mark clearance');
+  assert.match(wordOrder, /\.wo-slot\.filled\{flex-direction:column;gap:5px;\}/);
+  assert.match(wordOrder, /\.wo-word-th\{[^}]*line-height:1\.55;[^}]*padding-block:\.06em/);
 });
 
 test('five-game Progress DOM and runtime are removed while item-score HUDs remain', () => {
@@ -428,8 +427,8 @@ test('Reading Desktop copies the complete Tone gold-band rhythm while retaining 
   assert.match(reading, /data-gsh-game="reading"\] \.gold-banner \{\s*padding:16px 22px 0;\s*border-bottom:0;/, 'Reading Desktop gold band must use Tone horizontal and top spacing');
   assert.match(reading, /\.gold-banner \.bars-wrap \{\s*margin:6px 0 4px;/, 'Reading Desktop item-score row must use Tone placement');
   assert.match(reading, /data-gsh-game="reading"\] \.word-area \{ margin:0; \}/, 'Reading Desktop word area must remove the old extra offset');
-  assert.match(reading, /data-gsh-game="reading"\] \.word-th \{\s*padding-top:0;\s*font-family:'Sarabun',sans-serif;/, 'Reading Desktop Thai prompt must use Tone placement and font');
-  assert.match(reading, /gsh-four-row-stack > \.gsh-copy-row \{ margin-top:5px !important; \}/, 'Reading four-row boundaries must be exact 5px');
+  assert.match(reading, /data-gsh-game="reading"\] \.word-th \{\s*padding-top:\.08em;\s*font-family:'Sarabun',sans-serif;/, 'Reading Desktop Thai prompt must preserve Tone placement, font, and Thai-mark clearance');
+  assert.match(reading, /gsh-four-row-stack > \.gsh-copy-row \{ margin-top:9px !important; \}/, 'Reading four-row boundaries must provide collision-safe clearance');
   assert.match(reading, /gsh-four-row-stack > \.gsh-copy-row > \.rev-pron,[\s\S]{0,160}gsh-four-row-stack > \.gsh-copy-row > \.rev-en \{ margin-top:0 !important; \}/, 'Reading nested row children must not add hidden margins');
   assert.match(reading, /data-gsh-game="reading"\] #word-ctl-row \{[\s\S]{0,280}width:calc\(100% \+ 44px\);[\s\S]{0,120}margin:10px -22px 0 !important;[\s\S]{0,120}padding:0 22px 14px;[\s\S]{0,180}border-bottom:2px solid rgba\(184,134,40,\.50\);/, 'Reading-specific tools must occupy Tone\'s full-width gold tool row');
   assert.match(reading, /id="rg-en-toggle"/, 'Reading must retain its additional English-reading tool');

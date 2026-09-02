@@ -4,10 +4,12 @@
 const assert = require('assert');
 const {
   isAllowed,
+  normalizeCommitSha,
   normalizePattern,
   parsePullRequestBody,
   pathsFromNameStatus,
   pathsFromPullRequestBatch,
+  runGitlabMergeRequest,
   validateTaskContract,
 } = require('./check-task-write-set');
 
@@ -17,6 +19,8 @@ assert.strictEqual(isAllowed('README.md', ['scripts/**']), false);
 assert.throws(() => normalizePattern('**'), /กว้างทั้ง repository/);
 assert.throws(() => normalizePattern('scripts/*.js'), /รองรับเฉพาะ/);
 assert.throws(() => normalizePattern('../outside'), /ไม่ใช่ repository-relative/);
+assert.strictEqual(normalizeCommitSha('a'.repeat(40), 'base'), 'a'.repeat(40));
+assert.throws(() => normalizeCommitSha('abc', 'base'), /commit SHA แบบเต็ม/);
 assert.deepStrictEqual(
   pathsFromNameStatus('R100\0outside.txt\0inside.txt\0D\0deleted.txt\0'),
   ['outside.txt', 'inside.txt', 'deleted.txt'],
@@ -56,5 +60,7 @@ assert.throws(
 );
 assert.throws(() => validateTaskContract('', ['README.md'], ['README.md']), /Task-ID/);
 assert.throws(() => validateTaskContract('AE-1', [], []), /อย่างน้อย 1 path/);
+
+assert.doesNotThrow(() => runGitlabMergeRequest({ CI_PIPELINE_SOURCE: 'push' }));
 
 console.log('✓ task Write-Set enforcement tests');
