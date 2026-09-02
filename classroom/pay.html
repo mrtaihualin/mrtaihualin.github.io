@@ -622,5 +622,116 @@ document.addEventListener('click', function(e){
 
 init();
 </script>
+
+<!-- Cookie consent banner (Google Consent Mode v2) — แทรกอัตโนมัติโดย scripts/apply-cookie-consent.js ห้ามแก้มือ ให้แก้ที่ต้นฉบับแล้วรันสคริปต์ใหม่ -->
+<style>
+  #cookieConsentBanner{display:none;position:fixed;left:0;right:0;bottom:0;z-index:9999;background:#FAF4E8;border-top:1px solid #8B6310;box-shadow:0 -3px 12px rgba(0,0,0,.12);padding:10px 14px;font-family:'Noto Sans TC',sans-serif;}
+  #cookieConsentBanner .ccb-inner{max-width:960px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;}
+  #cookieConsentBanner .ccb-copy{margin:0;color:#1C1C1C;font-size:13px;line-height:1.45;min-width:0;}
+  #cookieConsentBanner .ccb-actions{display:flex;gap:7px;flex-wrap:nowrap;align-items:center;}
+  #cookieConsentBanner .ccb-button{border-radius:8px;min-height:36px;padding:6px 12px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;font-family:'Noto Sans TC',sans-serif;}
+  #cookieConsentBanner .ccb-reject{background:#FAF4E8;color:#8B6310;border:1.5px solid #8B6310;}
+  #cookieConsentBanner .ccb-accept{background:linear-gradient(135deg,#C8973A,#8B6310);color:#FAF4E8;border:1.5px solid transparent;}
+  @media (max-width:767px), (max-width:900px) and (max-height:500px){
+    #cookieConsentBanner{left:max(7px,env(safe-area-inset-left));right:max(7px,env(safe-area-inset-right));bottom:max(7px,env(safe-area-inset-bottom));border:1px solid #8B6310;border-radius:11px;padding:7px 8px;max-height:calc(100dvh - 14px);overflow:auto;}
+    #cookieConsentBanner .ccb-inner{grid-template-columns:minmax(0,1fr) auto;gap:7px;}
+    #cookieConsentBanner .ccb-copy{font-size:11px;line-height:1.35;}
+    #cookieConsentBanner .ccb-actions{gap:5px;}
+    #cookieConsentBanner .ccb-button{min-height:34px;padding:5px 9px;font-size:12px;}
+  }
+  @media (max-width:359px){
+    #cookieConsentBanner .ccb-inner{grid-template-columns:1fr;gap:6px;}
+    #cookieConsentBanner .ccb-actions{justify-content:flex-end;}
+  }
+</style>
+<div id="cookieConsentBanner" role="dialog" aria-label="Cookie 與分析設定" style="display:none;">
+  <div class="ccb-inner">
+    <p class="ccb-copy">
+      🍪 本站使用 <strong>Google Analytics</strong> 與 <strong>Microsoft Clarity</strong> 改善體驗；Microsoft Clarity 僅在您同意後使用分析 Cookie。若您拒絕，仍可能依 Consent API V2 進行有限的無 Cookie 衡量。詳見
+      <a href="/privacy.html" style="color:#8B6310;font-weight:700;text-decoration:underline;">隱私權政策</a>。
+    </p>
+    <div class="ccb-actions">
+      <button class="ccb-button ccb-reject" onclick="window.__cookieConsentDecide(false)">
+        拒絕
+      </button>
+      <button class="ccb-button ccb-accept" onclick="window.__cookieConsentDecide(true)">
+        接受
+      </button>
+    </div>
+  </div>
+</div>
+<script>
+  window.__cookieConsentRead = window.__cookieConsentRead || function() {
+    var value = null;
+    try { value = window.localStorage.getItem('cookieConsent'); } catch (_) {}
+    if (value === 'granted' || value === 'denied') return value;
+    try {
+      var match = document.cookie.match(/(?:^|;\s*)mrtCookieConsent=(granted|denied)(?:;|$)/);
+      return match ? match[1] : null;
+    } catch (_) { return null; }
+  };
+  window.__cookieConsentWrite = window.__cookieConsentWrite || function(value) {
+    try { window.localStorage.setItem('cookieConsent', value); } catch (_) {}
+    try {
+      document.cookie = 'mrtCookieConsent=' + value + ';Max-Age=31536000;path=/;SameSite=Lax' + (window.location.protocol === 'https:' ? ';Secure' : '');
+    } catch (_) {}
+  };
+  window.__clearGaCookies = function() {
+    var names = document.cookie.split(';').map(function(part) {
+      return part.split('=')[0].trim();
+    }).filter(function(name) {
+      return name === '_ga' || name.indexOf('_ga_') === 0;
+    });
+    var hostname = window.location.hostname;
+    var domains = [];
+    if (hostname && hostname !== 'localhost' && !/^\d+(?:\.\d+){3}$/.test(hostname) && hostname.indexOf(':') === -1) {
+      domains.push(hostname);
+      var parts = hostname.split('.');
+      if (parts.length > 2) domains.push(parts.slice(-2).join('.'));
+    }
+    names.forEach(function(name) {
+      var expired = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;Max-Age=0;path=/';
+      document.cookie = expired;
+      domains.forEach(function(domain) {
+        document.cookie = expired + ';domain=' + domain;
+        document.cookie = expired + ';domain=.' + domain;
+      });
+    });
+  };
+  window.__clearGaCookiesAfterRevoke = function() {
+    window.__clearGaCookies();
+    window.setTimeout(window.__clearGaCookies, 0);
+    window.setTimeout(window.__clearGaCookies, 100);
+    window.setTimeout(window.__clearGaCookies, 1000);
+  };
+  window.__cookieConsentDecide = function(granted) {
+    var choice = granted ? 'granted' : 'denied';
+    window.__cookieConsentWrite(choice);
+    if (typeof gtag === 'function') {
+      gtag('consent', 'update', { analytics_storage: granted ? 'granted' : 'denied' });
+    }
+    if (!granted) window.__clearGaCookiesAfterRevoke();
+    if (typeof window.clarity === 'function') {
+      window.clarity('consentv2', { ad_Storage: 'denied', analytics_Storage: granted ? 'granted' : 'denied' });
+      if (!granted) window.clarity('consent', false); // erase any cookies from an earlier grant
+    }
+    var __b = document.getElementById('cookieConsentBanner');
+    if (__b) __b.style.display = 'none';
+  };
+  // เปิด banner ขึ้นมาใหม่ได้ทุกเมื่อ (ใช้จากลิงก์ "Cookie 設定" ใน privacy.html)
+  window.__reopenCookieConsent = function() {
+    var __b = document.getElementById('cookieConsentBanner');
+    if (__b) __b.style.display = 'block';
+  };
+  var __cookieConsentState = window.__cookieConsentRead();
+  if (__cookieConsentState !== 'granted' && __cookieConsentState !== 'denied') {
+    var __b0 = document.getElementById('cookieConsentBanner');
+    if (__b0) __b0.style.display = 'block';
+  }
+  if (__cookieConsentState === 'denied') {
+    window.__clearGaCookiesAfterRevoke();
+  }
+</script>
+
 </body>
 </html>

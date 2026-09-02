@@ -15,9 +15,11 @@ function test(label, fn) {
   catch (error) { console.error(`✗ ${label}: ${error.message}`); process.exitCode = 1; }
 }
 
-function fixture(initial) {
+function fixture(initial, options = {}) {
   const values = {};
   if (initial) values.cookieConsent = initial;
+  const cookieJar = options.cookieJar || {};
+  const storageAvailable = options.storageAvailable !== false;
   const inserted = [];
   const first = { parentNode: { insertBefore(node) { inserted.push(node); } } };
   const doc = {
@@ -26,13 +28,28 @@ function fixture(initial) {
     createElement() { return {}; },
     getElementsByTagName() { return [first]; },
   };
+  Object.defineProperty(doc, 'cookie', {
+    get() { return Object.entries(cookieJar).map(([key, value]) => key + '=' + value).join('; '); },
+    set(serialized) {
+      const firstPair = String(serialized).split(';')[0];
+      const splitAt = firstPair.indexOf('=');
+      cookieJar[firstPair.slice(0, splitAt)] = firstPair.slice(splitAt + 1);
+    }
+  });
   const win = {
+    location: { protocol: 'https:' },
     localStorage: {
-      getItem(key) { return Object.prototype.hasOwnProperty.call(values, key) ? values[key] : null; },
-      setItem(key, value) { values[key] = value; },
+      getItem(key) {
+        if (!storageAvailable) throw new Error('storage unavailable');
+        return Object.prototype.hasOwnProperty.call(values, key) ? values[key] : null;
+      },
+      setItem(key, value) {
+        if (!storageAvailable) throw new Error('storage unavailable');
+        values[key] = value;
+      },
     },
   };
-  return { win, doc, inserted, values, controller: gate.createController(win, doc, 'test-site') };
+  return { win, doc, inserted, values, cookieJar, controller: gate.createController(win, doc, 'test-site') };
 }
 
 test('Vault replaces eager Clarity loader with consent gate', () => {
@@ -69,6 +86,16 @@ test('reject stores denial without loading Clarity', () => {
   assert.strictEqual(f.controller.decide(false), false);
   assert.strictEqual(f.values.cookieConsent, 'denied');
   assert.strictEqual(f.inserted.length, 0);
+});
+
+test('Vault persists rejection with a first-party cookie when localStorage is unavailable', () => {
+  const cookieJar = {};
+  const first = fixture(null, { storageAvailable: false, cookieJar });
+  assert.strictEqual(first.controller.decide(false), false);
+  assert.strictEqual(cookieJar.mrtCookieConsent, 'denied');
+  const nextPage = fixture(null, { storageAvailable: false, cookieJar });
+  assert.strictEqual(nextPage.controller.state(), 'denied');
+  assert.strictEqual(nextPage.controller.loadIfGranted(), false);
 });
 
 test('Vault includes accessible Accept and Reject controls', () => {
