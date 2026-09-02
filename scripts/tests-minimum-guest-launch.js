@@ -31,14 +31,14 @@ function ok(value, message) {
 
 activePages.concat(['vault.html', 'games-challenge.html']).forEach(function (file) {
   var html = read(file);
-  var binding = file === 'games.html' ? 'js/core/minimum-guest-launch.js?v=7' : 'js/core/minimum-guest-launch.js?v=6';
+  var binding = 'js/core/minimum-guest-launch.js?v=8';
   ok(html.indexOf(binding) !== -1, file + ' loads the current Login-entry launch gate');
   ok(html.indexOf(binding) < html.indexOf('</head>'), file + ' loads the launch gate in head');
 });
 
 staticParkedPages.filter(function (file) { return file !== 'line-callback.html'; }).forEach(function (file) {
   var html = read(file);
-  ok(html.indexOf('js/core/minimum-guest-launch.js?v=6') !== -1, file + ' keeps the parked runtime gate with public Login visible');
+  ok(html.indexOf('js/core/minimum-guest-launch.js?v=8') !== -1, file + ' keeps the parked runtime gate with public Login visible');
 });
 ok(read('line-callback.html').indexOf('minimum-guest-launch.js') === -1,
   'LINE callback remains owned by the provider return flow');

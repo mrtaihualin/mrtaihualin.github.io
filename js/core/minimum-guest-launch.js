@@ -37,7 +37,7 @@
   }
   if (!document.querySelector('script[src*="login-surface.js"]')) {
     var loginController = document.createElement('script');
-    loginController.src = 'js/core/login-surface.js?v=5';
+    loginController.src = 'js/core/login-surface.js?v=6';
     loginController.defer = true;
     document.head.appendChild(loginController);
   }
