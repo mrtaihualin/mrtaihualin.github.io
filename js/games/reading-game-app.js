@@ -215,6 +215,7 @@ var roundQueue=[],cur=0,okC=0,badC=0,streak=0,maxStreak=0,roundScore=0,cleanC=0,
 var roundLog=[]; // {th,zh,wrong,failed,guide,pts,srsDue,mastered} ต่อคำ — ทำรายงาน PDF ท้ายรอบ — Lin 2026-07-07
 var roundReport=null;
 var readingSubmittedAttempts=[];
+function rgContentKey(w){return w&&w.contentKey?w.contentKey:((w&&w.words&&w.words.length)?w.th:((w&&w.th||'')+'@'+(w&&w.level||curLevel)));}
 function rgReportRows(){
   if(!roundReport||!roundReport.items)return [];
   return roundReport.items.map(function(i){return {th:i.question,zh:i.meaning,wordGlosses:i.words,reading:i.linguistic&&i.linguistic.reading_th||'',userAnswer:i.user_answer,correctAnswer:i.correct_answer,wrong:i.wrong_count,failed:!i.is_correct,guide:!!i.hint_used,pts:i.item_score,srsDue:i.srs_state||'',mastered:!!i.mastered_state,attempts:i.attempts};});
@@ -225,10 +226,10 @@ function rgLogWord(o){
     var w=WORDS[idx];
     var totalWrong=(sylWrongCount&&sylWrongCount.length)?sylWrongCount.reduce(function(a,b){return a+(b||0);},0):(typeof wrongCount!=='undefined'?wrongCount:0);
     var wordGlosses=(w&&w.words&&w.words.length)?w.words.map(function(part){return {th:part.th||'',zh:part.zh||''};}):null;
-    var base={th:w?w.th:'',zh:w?w.zh:'',wordGlosses:wordGlosses,reading:w&&w.readingTH?w.readingTH:'',userAnswer:readingSubmittedAttempts.length?readingSubmittedAttempts[readingSubmittedAttempts.length-1].answer:'',correctAnswer:w&&w.readingTH?w.readingTH:(w?w.th:''),wrong:totalWrong,attempts:readingSubmittedAttempts.slice(),attemptScore:readingAttemptScore,correctionAttempts:readingCorrectionAttempts,failed:false,guide:false,pts:0,srsDue:'',mastered:false};
+    var base={th:w?w.th:'',contentKey:rgContentKey(w),zh:w?w.zh:'',wordGlosses:wordGlosses,reading:w&&w.readingTH?w.readingTH:'',userAnswer:readingSubmittedAttempts.length?readingSubmittedAttempts[readingSubmittedAttempts.length-1].answer:'',correctAnswer:w&&w.readingTH?w.readingTH:(w?w.th:''),wrong:totalWrong,attempts:readingSubmittedAttempts.slice(),attemptScore:readingAttemptScore,correctionAttempts:readingCorrectionAttempts,failed:false,guide:false,pts:0,srsDue:'',mastered:false};
     for(var k in o){ if(Object.prototype.hasOwnProperty.call(o,k)) base[k]=o[k]; }
     roundLog.push(base);
-    if(roundReport&&window.RoundReport)RoundReport.addItem(roundReport,{content_ref:{source:(w&&w.words&&w.words.length)?'game_sentences':'game_words',key:(w&&w.words&&w.words.length)?w.th:(w.th+'@'+(RG_LEVEL_TO_NUM[curLevel]||1))},question:base.th,meaning:base.zh,attempts:base.attempts,user_answer:base.userAnswer,correct_answer:base.correctAnswer,is_correct:!base.failed&&!base.guide&&base.wrong===0,wrong_count:base.wrong,item_score:base.pts,hint_used:!!base.guide,linguistic:{reading_th:base.reading,syls:w&&w.syls||null,read_syls:w&&w.readSyls||null},words:wordGlosses||[],srs_state:base.srsDue||null,mastered_state:!!base.mastered});
+    if(roundReport&&window.RoundReport)RoundReport.addItem(roundReport,{content_ref:{source:(w&&w.words&&w.words.length)?'game_sentences':'game_words',key:rgContentKey(w)},question:base.th,meaning:base.zh,attempts:base.attempts,user_answer:base.userAnswer,correct_answer:base.correctAnswer,is_correct:!base.failed&&!base.guide&&base.wrong===0,wrong_count:base.wrong,item_score:base.pts,hint_used:!!base.guide,linguistic:{reading_th:base.reading,syls:w&&w.syls||null,read_syls:w&&w.readSyls||null},words:wordGlosses||[],srs_state:base.srsDue||null,mastered_state:!!base.mastered});
   }catch(e){}
 }
 // 2026-07-13 Lin：ดึงคำที่พลาดในรอบนี้จาก roundLog ไปเก็บลง reading_sessions.wrong_items (ฐานข้อมูลจุดอ่อน)
@@ -312,7 +313,7 @@ var RG_SRS={
 // Lin 2026-07-15: เปลี่ยน key จาก "ลำดับ index ใน WORDS" เป็น "คำ+ระดับ" (rgSrsKey) กันบั๊ก —
 // เดิม key เป็นตำแหน่งเลขในลิสต์ พอ Lin เพิ่ม/ลบคำ ตำแหน่งขยับ ความจำของนักเรียนที่เคยเล่นแล้วจะไปติดผิดคำ
 // ฝั่งเซิร์ฟเวอร์ (tone_srs_state, tone-round) เก็บด้วย "คำ+ระดับ" อยู่แล้วเป็นความจริงหลัก — อันนี้แค่ทำให้ local ตรงกัน
-function rgSrsKey(w){ return (w&&w.th||'')+'@'+(RG_LEVEL_TO_NUM[w&&w.level]||0); }
+function rgSrsKey(w){ var k=w&&w.contentKey||'';return k.indexOf('#')>=0?k:((w&&w.th||'')+'@'+(RG_LEVEL_TO_NUM[w&&w.level]||0)); }
 var srsRecords={}; // key = rgSrsKey(word) → SRS record
 function rgSrsGet(key){return srsRecords[key]||null;}
 function rgSrsSet(key,rec){srsRecords[key]=rec;}
@@ -483,6 +484,15 @@ function doSave(){
 // ไม่แตะ granularity ระดับพยางค์/ไทล์ที่กำลังลากอยู่ — resume กลับไปที่ "จุดเริ่มคำที่ค้างไว้" เท่านั้น (ตามที่สเปกอนุญาต)
 // ════════════════════════════════════════════
 var RG_RESUME_ID='reading-game';
+function rgResumeWordId(w){return w&&(w.contentKey||w.th)||null;}
+function rgResumeWordIndex(id,level){
+  var matches=[];
+  for(var i=0;i<WORDS.length;i++){
+    if(WORDS[i].contentKey===id)return i;
+    if(WORDS[i].th===id&&WORDS[i].level===level)matches.push(i);
+  }
+  return matches.length===1?matches[0]:null;
+}
 function rgSaveResumeState(){
   try{
     if(isWordPractice)return; // ?word= ฝึกคำเดียว/ทบทวน全部精通 — ไม่ใช่ "รอบ" จริง ไม่ต้องจำ
@@ -490,7 +500,7 @@ function rgSaveResumeState(){
     if(!roundQueue||!roundQueue.length)return;
     GameResume.save(RG_RESUME_ID,{
       level:curLevel,
-      wordIds:roundQueue.map(function(i){return WORDS[i]?WORDS[i].th:null;}),
+      wordIds:roundQueue.map(function(i){return rgResumeWordId(WORDS[i]);}),
       cur:cur,okC:okC,badC:badC,streak:streak,maxStreak:maxStreak,
       roundScore:roundScore,cleanC:cleanC,roundTotal:roundTotal
       ,roundLog:roundLog,report:roundReport&&window.RoundReport?RoundReport.snapshot(roundReport):null
@@ -546,8 +556,8 @@ function rgResumeContinue(){
   var lt=document.getElementById('ltab-'+curLevel); if(lt)lt.classList.add('active');
   // สร้าง roundQueue ใหม่จากรายชื่อคำที่บันทึกไว้ (th+level) — คำไหนหาไม่เจอ (Lin แก้/ลบคำไปแล้วระหว่างนี้) ก็ข้ามไปเฉยๆ
   var rq=[];
-  (st.wordIds||[]).forEach(function(th){
-    for(var i=0;i<WORDS.length;i++){ if(WORDS[i].th===th && WORDS[i].level===st.level){ rq.push(i); return; } }
+  (st.wordIds||[]).forEach(function(id){
+    var idx=rgResumeWordIndex(id,st.level);if(idx!=null)rq.push(idx);
   });
   if(!rq.length){ rgClearResumeState(); initGame(); return; } // ข้อมูลเปลี่ยนไปมากจนหาคำเดิมไม่เจอเลย → เริ่มรอบใหม่แทน ปลอดภัยกว่าเล่นรอบว่าง
   roundQueue=rq; roundTotal=roundQueue.length;
@@ -568,7 +578,7 @@ function rgResumeRestartSame(){
   var st=window.__rgPendingResume;
   if(!st){ rgResumeNewRound(); return; }
   var rq=[];
-  (st.wordIds||[]).forEach(function(th){for(var i=0;i<WORDS.length;i++){if(WORDS[i].th===th&&WORDS[i].level===st.level){rq.push(i);return;}}});
+  (st.wordIds||[]).forEach(function(id){var idx=rgResumeWordIndex(id,st.level);if(idx!=null)rq.push(idx);});
   if(!rq.length){rgResumeNewRound();return;}
   var banner=document.getElementById('rg-resume-banner');if(banner)banner.style.display='none';
   curLevel=st.level||curLevel;roundQueue=rq;roundTotal=rq.length;cur=0;okC=0;badC=0;streak=0;maxStreak=0;roundScore=0;cleanC=0;roundLog=[];readingSubmittedAttempts=[];roundReport=window.RoundReport?RoundReport.create({game_type:'reading',difficulty:curLevel,mode:'phonics'}):null;isWordPractice=false;
@@ -634,7 +644,7 @@ function rgSyncSrsFromServer(force){
       if(res.error||!res.data){ window.__rgSrsSyncedOnce=true; return false; }
       var changed=false;
       res.data.forEach(function(row){
-        var key=(row.word||'')+'@'+(row.level||0);
+        var key=String(row.word||'').indexOf('#')>=0?String(row.word):(row.word||'')+'@'+(row.level||0);
         var srv={stage:row.stage||0,dueDate:row.due_date||'',dueAt:0,everFailed:!!row.ever_failed,mastered:!!row.mastered};
         var cur=srsRecords[key];
         var win=rgSrsPickAdvanced(cur,srv);
@@ -764,7 +774,9 @@ function initGame(){
     var _m=location.search.match(/[?&]word=([^&]+)/);
     if(_m){
       var _wanted=decodeURIComponent(_m[1]);
-      for(var _wi=0;_wi<WORDS.length;_wi++){ if(WORDS[_wi].th===_wanted){ _wq=[_wi]; break; } }
+      var _matches=[];
+      for(var _wi=0;_wi<WORDS.length;_wi++){ if(WORDS[_wi].contentKey===_wanted){ _matches=[_wi]; break; } if(WORDS[_wi].th===_wanted)_matches.push(_wi); }
+      if(_matches.length===1)_wq=[_matches[0]];
     }
   }catch(e){}
   isWordPractice=!!_wq; // ?word= = ฝึกคำเดียว ไม่คิดคะแนน/ลีก (G)
@@ -1136,7 +1148,7 @@ function finalizeWord(){
       // Phase 4: บอกเซิร์ฟเวอร์ด้วย (已記得 = พิสูจน์ครั้งเดียว → mastered แต่ไม่ให้ดาว)
       try{
         if(window.TONE_SERVER && TONE_SERVER.available())
-          TONE_SERVER.finishRound({ game:'reading', word:WORD.th, level:RG_LEVEL_TO_NUM[curLevel]||1, clean:passedClean, knownCheck:true });
+          TONE_SERVER.finishRound({ game:'reading', word:WORD.th, contentKey:WORD.contentKey, level:RG_LEVEL_TO_NUM[curLevel]||1, clean:passedClean, knownCheck:true });
       }catch(e){}
     }
     curWordIsKnownCheck=false;
@@ -1187,7 +1199,7 @@ function finalizeWord(){
   //   คู่ขนาน ไม่รื้อ local · เน็ตล่ม/ไม่ล็อกอิน = เกมทำงานเหมือนเดิมทุกอย่าง
   try{
     if(loggedIn && window.TONE_SERVER && TONE_SERVER.available()){
-      TONE_SERVER.finishRound({ game:'reading', word:WORD.th, level:RG_LEVEL_TO_NUM[curLevel]||1, clean:clean }).then(function(r){
+      TONE_SERVER.finishRound({ game:'reading', word:WORD.th, contentKey:WORD.contentKey, level:RG_LEVEL_TO_NUM[curLevel]||1, clean:clean }).then(function(r){
         if(r&&r.ok&&r.justMastered&&r.stars>0&&window.console) console.log('[P4] ⭐ server',r.stars,'→ total',r.totalStars);
         else if(r&&!r.ok&&window.console) console.log('[P4] server not-ok:',r.reason);
       });
@@ -1428,7 +1440,7 @@ function endRound(){
   try{
     if(window.READING_AUTH && READING_AUTH.saveScore) submissionId=READING_AUTH.saveScore(weightedScore,1,'reading',rgWrongItemsFromLog(),{
       difficulty:curLevel,
-      items:roundLog.map(function(w){return {key:w.th,points:Number(w.pts)||0,wrong:Number(w.wrong)||0,guide:!!w.guide,failed:!!w.failed,mastered:!!w.mastered};}),
+      items:roundLog.map(function(w){return {key:w.contentKey||w.th,points:Number(w.pts)||0,wrong:Number(w.wrong)||0,guide:!!w.guide,failed:!!w.failed,mastered:!!w.mastered};}),
       roundBonus:roundBonus,srsBonus:0
     });
   }catch(e){} // S29: server-authoritative score submission พร้อมหลักฐาน First Check ต่อ item

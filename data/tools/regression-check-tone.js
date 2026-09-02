@@ -48,7 +48,7 @@ W.forEach(function (w) {
   });
   const allMatch = syllables.every(function (s) { return s.match === true; });
   entries.push({
-    id: 'catalog:' + w.word,
+    id: 'catalog:' + (w.contentKey || w.word),
     word: w.word, readingTH: w.readingTH !== undefined ? w.readingTH : w.word,
     zh: w.zh, en: w.en, level: w.level, category: w.category,
     sourceFile: 'words-data.js',

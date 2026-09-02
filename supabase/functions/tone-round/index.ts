@@ -677,6 +677,16 @@ Deno.serve(async (req: Request) => {
   const word = String(body.word || "");
   const level = Number(body.level);
   if (!word || ![1, 2, 3].includes(level)) return json({ error: "bad word/level" }, 400);
+  const contentKey = String(body.content_key || "");
+  const levelCode = ({ 1: "初", 2: "中", 3: "高" } as Record<number, string>)[level];
+  const baseContentKey = `${word}@${levelCode}`;
+  if (contentKey && contentKey !== baseContentKey &&
+      !new RegExp(`^${baseContentKey.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}#[a-z0-9_-]+$`).test(contentKey)) {
+    return json({ error: "bad content_key" }, 400);
+  }
+  // Existing single-meaning rows keep their historical word identity. Only an explicit sense suffix
+  // gets a new state key, so cached clients and all prior SRS remain compatible while homographs split.
+  const stateWord = contentKey.includes("#") ? contentKey : word;
 
   // ── game: แยก SRS ต่อเกม (default 'tone' = backward-compatible กับ client เกมเสียงเดิม) ──
   // Phase 1: Mini-Game Challenge is Paid-only. Paid entitlement does not exist yet, so fail closed.
@@ -685,7 +695,7 @@ Deno.serve(async (req: Request) => {
   const spellingGame = game !== "tone"; // อ่าน/พิมพ์/เรียงประโยค = trust-clean (เซิร์ฟเวอร์ตรวจเองไม่ได้ → เชื่อ flag clean)
 
   const requestHash = await sha256({
-    game, word, level,
+    game, word, contentKey, level,
     clean: body.clean === true,
     starClean: typeof body.starClean === "boolean" ? body.starClean : null,
     initialGuess: body.initialGuess ?? null,
@@ -704,7 +714,7 @@ Deno.serve(async (req: Request) => {
     if (replay.error) return json({ error: "round_replay_unavailable" }, 503);
     if (!replay.data) return null;
     const same = replay.data.user_id === user.id && replay.data.game === game &&
-      Number(replay.data.level) === level && replay.data.word === word && replay.data.request_hash === requestHash;
+      Number(replay.data.level) === level && replay.data.word === stateWord && replay.data.request_hash === requestHash;
     if (!same) return json({ error: "replay_conflict" }, 409);
     return json(Object.assign({}, replay.data.response || {}, {
       idempotent: true,
@@ -730,7 +740,7 @@ Deno.serve(async (req: Request) => {
   // ── อ่าน state จริงจาก DB (source of truth) ──
   const srsRead = await admin.from("tone_srs_state")
     .select("stage, due_date, ever_failed, mastered")
-    .eq("user_id", user.id).eq("game", game).eq("level", level).eq("word", word).maybeSingle();
+    .eq("user_id", user.id).eq("game", game).eq("level", level).eq("word", stateWord).maybeSingle();
   if (srsRead.error) return json({ error: "srs_read_unavailable" }, 503);
   const srsRow = srsRead.data;
 
@@ -769,7 +779,7 @@ Deno.serve(async (req: Request) => {
     p_request_hash: requestHash,
     p_game: game,
     p_level: level,
-    p_word: word,
+    p_word: stateWord,
     p_expected_exists: !!srsRow,
     p_expected_stage: srsRow?.stage ?? null,
     p_expected_due_date: srsRow?.due_date ?? null,

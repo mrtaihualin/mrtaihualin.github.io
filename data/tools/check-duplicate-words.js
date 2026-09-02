@@ -24,6 +24,9 @@ const fs = require('fs');
 const path = require('path');
 
 const W = global.WORDS_MASTER;
+const APPROVED_SAME_SPELLING_KEYS = {
+  'ร้อง': new Set(['ร้อง@初#sing', 'ร้อง@初#scream']),
+};
 
 function buildCatalogIndex(list) {
   const byWord = new Map();
@@ -37,12 +40,31 @@ function buildCatalogIndex(list) {
 function auditCatalogSelf() {
   const idx = buildCatalogIndex(W);
   const dupes = [];
+  const approvedSenseDupes = [];
   idx.forEach(function (entries, word) {
-    if (entries.length > 1) dupes.push({ word: word, count: entries.length, entries: entries });
+    if (entries.length <= 1) return;
+    const keys = entries.map(function (entry) { return entry.contentKey; });
+    const meanings = entries.map(function (entry) { return entry.zh; });
+    const approvedKeys = APPROVED_SAME_SPELLING_KEYS[word];
+    const isApprovedSenseSplit = entries.every(function (entry) { return entry.allowSameSpelling === true; })
+      && approvedKeys
+      && keys.length === approvedKeys.size
+      && keys.every(function (key) { return approvedKeys.has(key); })
+      && keys.every(Boolean)
+      && new Set(keys).size === entries.length
+      && meanings.every(Boolean)
+      && new Set(meanings).size === entries.length;
+    const row = { word: word, count: entries.length, entries: entries };
+    if (isApprovedSenseSplit) approvedSenseDupes.push(row);
+    else dupes.push(row);
   });
   console.log('เช็คคำซ้ำในคลังเดิม (' + W.length + ' คำ) ...');
   if (dupes.length === 0) {
-    console.log('✓ ไม่มีคำซ้ำในคลังเลย (' + W.length + ' คำ ทุกคำไม่ซ้ำกัน)');
+    console.log('✓ ไม่มีคำซ้ำที่ไม่มีรหัสความหมาย (' + W.length + ' รายการ)');
+    approvedSenseDupes.forEach(function (d) {
+      console.log('  ✓ "' + d.word + '" แยกความหมายแบบอนุมัติ ' + d.count + ' รายการ: ' +
+        d.entries.map(function (e) { return e.contentKey + '=' + e.zh; }).join(' · '));
+    });
   } else {
     console.log('⚠ พบคำซ้ำ ' + dupes.length + ' คำ:');
     dupes.forEach(function (d) {

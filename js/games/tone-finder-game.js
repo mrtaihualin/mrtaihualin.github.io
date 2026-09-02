@@ -531,14 +531,20 @@ var TF_SRS = {
 var TF_SRS_KEY = 'tf_srs_v1';
 function tfLoadSrs() { if(!tfSrsLoggedIn())return {};try { return JSON.parse(localStorage.getItem(TF_SRS_KEY) || '{}') || {}; } catch (e) { return {}; } }
 function tfSaveSrs(o) { if(!tfSrsLoggedIn())return;try { localStorage.setItem(TF_SRS_KEY, JSON.stringify(o)); } catch (e) {} }
-function tfGetSrsRecord(word, level) {
+function tfStateWord(entryOrWord) {
+  if (entryOrWord && typeof entryOrWord === 'object') {
+    return entryOrWord.contentKey && entryOrWord.contentKey.indexOf('#') >= 0 ? entryOrWord.contentKey : entryOrWord.word;
+  }
+  return entryOrWord;
+}
+function tfGetSrsRecord(entryOrWord, level) {
   var all = tfLoadSrs();
-  var k = TF_SRS.keyFor(word, level);
+  var k = TF_SRS.keyFor(tfStateWord(entryOrWord), level);
   return all[k] || null;
 }
-function tfSetSrsRecord(word, level, rec) {
+function tfSetSrsRecord(entryOrWord, level, rec) {
   var all = tfLoadSrs();
-  all[TF_SRS.keyFor(word, level)] = rec;
+  all[TF_SRS.keyFor(tfStateWord(entryOrWord), level)] = rec;
   tfSaveSrs(all);
 }
 // เช็กว่าล็อกอินอยู่ไหม (ระบบคะแนน/ดาวเงิน/SRS ทำงานเฉพาะตอนล็อกอินจริงตามสเปกข้อ 0)
@@ -1320,7 +1326,7 @@ function tfComboFlash(combo, mult) {
 function tfSoftPointsAllowed(entry) {
   if (tfGuideMode || (session && session.currentWordGuideUsed)) return false;
   if (!tfSrsLoggedIn()) return true; // ไม่ล็อกอิน = ไม่มี SRS อยู่แล้ว ให้แต้มปกติตามเดิม
-  var rec = tfGetSrsRecord(entry && entry.word, selectedLevel);
+  var rec = tfGetSrsRecord(entry, selectedLevel);
   return !(rec && rec.mastered); // mastered แล้ว → ห้ามแจกแต้มเกมซ้ำอีก (กันฟาร์ม)
 }
 
@@ -1328,8 +1334,9 @@ function tfSoftPointsAllowed(entry) {
 // เดิมคะแนน/ดาวเงินกันไว้แล้วที่ tfSoftPointsAllowed (ได้ 0 เพิ่มถูกต้อง) แต่ยังเสียเวลาผู้เล่นเจอคำที่จำได้แล้วซ้ำ
 // จุดนี้กรองออกตั้งแต่ตอนสร้างพูลคำเลย (ไม่ใช่แค่กันคะแนนตอนเล่น) — ทำงานเฉพาะล็อกอิน (ไม่งั้นไม่มี SRS record ให้เช็ก)
 // กันพูลว่าง: ถ้ากรองแล้วเหลือน้อยกว่า minKeep (เช่น mastered ไปเกือบหมดแล้ว) → คืนของเดิมไม่กรอง ดีกว่าเจอ "หาไม่พบ"
-function tfWordLevel(word) {
-  for (var i = 0; i < WORD_LIST.length; i++) if (WORD_LIST[i].word === word) return WORD_LIST[i].level;
+function tfWordLevel(entryOrWord) {
+  if (entryOrWord && typeof entryOrWord === 'object' && entryOrWord.level) return entryOrWord.level;
+  for (var i = 0; i < WORD_LIST.length; i++) if (WORD_LIST[i].word === entryOrWord) return WORD_LIST[i].level;
   return selectedLevel || 1;
 }
 function tfExcludeMasteredWords(words, minKeep) {
@@ -1604,9 +1611,9 @@ function tfCommitWordAndAdvance(opts) {
   if (roundReport && window.RoundReport) {
     var _tfResult = session.results[session.results.length - 1];
     var _tfSentence = selectedLevel === 3 && advSentenceCtx && advSentenceCtx.th;
-    var _tfRec = tfSrsLoggedIn() ? tfGetSrsRecord(entry.word, selectedLevel) : null;
+    var _tfRec = tfSrsLoggedIn() ? tfGetSrsRecord(entry, selectedLevel) : null;
     RoundReport.addItem(roundReport, {
-      content_ref: { source: _tfSentence ? 'game_sentences' : 'game_words', key: _tfSentence || (entry.word + '@' + (selectedLevel || 1)) },
+      content_ref: { source: _tfSentence ? 'game_sentences' : 'game_words', key: _tfSentence || entry.contentKey || (entry.word + '@' + (({1:'初',2:'中'})[selectedLevel] || selectedLevel || 1)) },
       question: entry.word, meaning: entry.zh || '', attempts: _tfResult.attempts,
       user_answer: _tfResult.attempts.length ? _tfResult.attempts[_tfResult.attempts.length - 1].answer : '',
       correct_answer: TONES[tone] ? TONES[tone].zh : String(tone || ''),
@@ -1667,7 +1674,7 @@ function tfProcessSrsOnWordCommit(entry, mistakes, firstTry, forced) {
   //   ดาวที่ "แลกเงินได้" = ที่เซิร์ฟเวอร์เขียนเท่านั้น · ดาว local = ตัวโชว์เฉยๆ (หลังล็อก RLS จะ sync ขึ้นไม่ได้)
   try {
     if (window.TONE_SERVER && TONE_SERVER.available()) {
-      var _sv = { word: entry.word, level: selectedLevel || 1, knownCheck: wasKnownCheck };
+      var _sv = { word: entry.word, contentKey: entry.contentKey, level: selectedLevel || 1, knownCheck: wasKnownCheck };
       var _syls = (entry.readingTH && entry.readingTH.indexOf('-') > -1) ? entry.readingTH.split('-') : null;
       if (_syls && _syls.length > 1) {
         _sv.syllables = _syls;
@@ -1686,7 +1693,7 @@ function tfProcessSrsOnWordCommit(entry, mistakes, firstTry, forced) {
     }
   } catch (e) {}
 
-  var rec = tfGetSrsRecord(entry.word, selectedLevel);
+  var rec = tfGetSrsRecord(entry, selectedLevel);
   if (!rec) rec = TF_SRS.blank();
 
   // known-check (กดปุ่ม "✓ 已記得") = พิสูจน์ 1 ครั้งแบบรอบตัดสิน (กฎเดิม ไม่ใช่ SRS checkpoint ปกติ)
@@ -1698,7 +1705,7 @@ function tfProcessSrsOnWordCommit(entry, mistakes, firstTry, forced) {
     } else {
       rec = TF_SRS.resetOnFail(rec);
     }
-    tfSetSrsRecord(entry.word, selectedLevel, rec);
+    tfSetSrsRecord(entry, selectedLevel, rec);
     if (session) { session.curWordIsKnownCheck = false; session.curWordIsFinalSrsCheck = false; }
     return;
   }
@@ -1732,7 +1739,7 @@ function tfProcessSrsOnWordCommit(entry, mistakes, firstTry, forced) {
     // ผิด/แอบดู/forced (รวมถึงรอบตัดสิน Day 7) → กลับจุดเริ่ม SRS เข้าคิวใหม่
     rec = TF_SRS.resetOnFail(rec);
   }
-  tfSetSrsRecord(entry.word, selectedLevel, rec);
+  tfSetSrsRecord(entry, selectedLevel, rec);
   // เคลียร์ flag เช็ก final ของ "รอบนี้" ไว้ตรงนี้ (รอบถัดไปจะเช็กใหม่ตอน setup คำถัดไป)
   if (session) { session.curWordIsFinalSrsCheck = false; }
 }
@@ -1745,7 +1752,7 @@ function tfSetupSrsFlagsForCurrentWord() {
   if (!session || !tfSrsLoggedIn()) return;
   var entry = session.words[session.index];
   if (!entry) return;
-  var rec = tfGetSrsRecord(entry.word, selectedLevel);
+  var rec = tfGetSrsRecord(entry, selectedLevel);
   session.curWordIsFinalSrsCheck = !!(rec && TF_SRS.isFinalCheck(rec));
 }
 
@@ -2367,14 +2374,24 @@ var TONE_OVERRIDE = {
 
 // คำในนี้ = ไม่มีกฎมาตรฐานอธิบายได้จริง → ข้ามขั้นตอน推導 (เหมือน final-check/known-check)
 // แต่ตอบถูกครั้งแรกยังได้คะแนนเต็มปกติ (ไม่ใช่ noSoftPoints แบบ known-check)
+function tfCatalogToneOverride(word) {
+  var entry = session && session.words && session.words[session.index];
+  if (entry && entry.word === word && entry.toneSpecial === 1 && entry.toneDerivation === 0) {
+    var approved = Number(entry.toneOverride);
+    if (approved >= 1 && approved <= 5) return approved;
+  }
+  return TONE_OVERRIDE[word];
+}
+
 function tfCurWordIsToneSpecial() {
   if (!session) return false;
   var w = (typeof S !== 'undefined' && S.word) || (session.words[session.index] && session.words[session.index].word);
-  return !!(w && TONE_OVERRIDE[w] !== undefined);
+  return !!(w && tfCatalogToneOverride(w) !== undefined);
 }
 
 function computeTone(word) {
-  if (TONE_OVERRIDE[word] !== undefined) return TONE_OVERRIDE[word];
+  var catalogOverride = tfCatalogToneOverride(word);
+  if (catalogOverride !== undefined) return catalogOverride;
   var cls  = TH.getInitClass(word);
   var mark = TH.getToneMark(word);
   var live = TH.isLiveWord(word);
@@ -2603,7 +2620,7 @@ function stepSessionSummary() {
     try{
       if(window.READING_AUTH && READING_AUTH.saveScore) _tfSubmissionId=READING_AUTH.saveScore(weightedScore,1,'tone',results.filter(function(r){return r.mistakes>0;}).map(function(r){return {word:r.entry.word,wrong:r.mistakes||0};}),{
         difficulty:({1:'初',2:'中',3:'高'})[selectedLevel]||'初',
-        items:results.map(function(r){return {key:r.entry.word,points:Number(r.score)||0,wrong:Number(r.mistakes)||0,guide:false,failed:!!r.forced,skipped:!!r.skipped,mastered:false};}),
+        items:results.map(function(r){return {key:r.entry.contentKey||r.entry.word,points:Number(r.score)||0,wrong:Number(r.mistakes)||0,guide:false,failed:!!r.forced,skipped:!!r.skipped,mastered:false};}),
         roundBonus:Number(session.bonusAwarded)||0,
         srsBonus:Number(session.srsReviewBonus)||0
       });
@@ -2896,12 +2913,21 @@ function tfFireStartOnce() {
 // เก็บ "level + รายชื่อคำ/ประโยคที่กำลังเล่นอยู่ + ทำไปถึงข้อไหน" ไว้ให้ guest กลับมาเล่นต่อได้หลัง refresh/ปิดแท็บ
 // ระดับความละเอียด: "เล่นชุดคำ/ประโยคเดิมซ้ำตั้งแต่ต้น" (ไม่ replay กลางพยางค์/คะแนนสะสมกลางรอบ — ดูรายละเอียดในรายงานที่ส่งให้ orchestrator)
 // ไม่เกี่ยวกับ SRS/ดาว/แบดจ์/Free-account resume ฝั่งเซิร์ฟเวอร์ใดๆ ทั้งสิ้น
+function tfResumeWordId(entry) { return entry && (entry.contentKey || entry.word) || null; }
+function tfFindEntryByResumeId(id) {
+  var matches = [];
+  for (var i = 0; i < WORD_LIST.length; i++) {
+    if (WORD_LIST[i].contentKey === id) return WORD_LIST[i];
+    if (WORD_LIST[i].word === id) matches.push(WORD_LIST[i]);
+  }
+  return matches.length === 1 ? matches[0] : null;
+}
 function tfSaveResumeState() {
   try {
     if (!window.GameResume || !session || !session.words || !session.words.length) return;
     GameResume.save('tone-finder', {
       level: selectedLevel,
-      wordIds: session.words.map(function (w) { return w.word; }),
+      wordIds: session.words.map(tfResumeWordId),
       index: session.index,
       total: session.words.length,
       advSentIdx: (selectedLevel === 3) ? advSentIdx : null,
@@ -3033,7 +3059,7 @@ function tfPrioritizeDueSrs(entries) {
   var now = Date.now();
   var due = [], notDue = [];
   entries.forEach(function (e) {
-    var rec = tfGetSrsRecord(e.word, selectedLevel);
+    var rec = tfGetSrsRecord(e, selectedLevel);
     if (rec && !rec.mastered && TF_SRS.isDue(rec, now)) due.push(e);
     else notDue.push(e);
   });
@@ -3988,8 +4014,8 @@ var TF = {
       return;
     }
     // F5 (2026-08-10): จำ "คำสุดท้ายของชุดก่อนหน้า" ไว้ก่อนที่ session ตัวแปรจะถูกทับด้วยชุดใหม่ (ใช้กันคำแรกของชุดใหม่ซ้ำกับคำสุดท้ายของชุดก่อน)
-    var _prevLastWord = (session && session.words && session.words.length) ? session.words[session.words.length - 1].word : null;
-    var pool = WORD_LIST.filter(function(w){ return !selectedLevel || w.level === selectedLevel; }).map(function(w){ return w.word; });
+    var _prevLastWord = (session && session.words && session.words.length) ? tfStateWord(session.words[session.words.length - 1]) : null;
+    var pool = WORD_LIST.filter(function(w){ return !selectedLevel || w.level === selectedLevel; });
     if (!pool.length) { tfToast('找不到單字，請試試其他等級'); return; }
     // Lin 2026-07-04: ถ้าจำได้ครบทุกคำในระดับนี้ (全部精通) → เด้งหน้าฉลองก่อน (ไม่เริ่มชุดอัตโนมัติให้เล่นวนเปล่าๆ)
     if (tfSrsLoggedIn()) {
@@ -4006,13 +4032,13 @@ var TF = {
       var _now=Date.now();
       var _due=pool.filter(function(w){var r=tfGetSrsRecord(w,tfWordLevel(w));return !!(r&&!r.mastered&&TF_SRS.isDue(r,_now));});
       var _regular=pool.filter(function(w){return _due.indexOf(w)===-1;});
-      words=GameFlow.allocateSrs({tier:'free',total:Math.min(5,pool.length),due:_due.slice().sort(function(){return Math.random()-0.5;}),regular:_regular.slice().sort(function(){return Math.random()-0.5;}),idOf:function(w){return w;},scope:'tone-'+selectedLevel}).items;
+      words=GameFlow.allocateSrs({tier:'free',total:Math.min(5,pool.length),due:_due.slice().sort(function(){return Math.random()-0.5;}),regular:_regular.slice().sort(function(){return Math.random()-0.5;}),idOf:function(w){return tfStateWord(w);},scope:'tone-'+selectedLevel}).items;
     } else {
       words = pool.slice().sort(function(){ return Math.random()-0.5; }).slice(0, 5);
     }
     // F5 (2026-08-10): พยายามไม่ให้คำแรกของชุดใหม่ซ้ำกับคำสุดท้ายของชุดก่อนหน้า — สลับที่กับคำถัดไปในชุด (แค่ลองครั้งเดียว)
     //   pool เล็กจนเลี่ยงไม่ได้ (เหลือคำเดียว/ทุกคำในชุดใหม่คือคำเดิม) ก็ปล่อยให้ซ้ำได้ตามที่ Lin ยืนยัน ไม่ใช่ด่านบังคับ
-    if (_prevLastWord && words.length > 1 && words[0] === _prevLastWord) {
+    if (_prevLastWord && words.length > 1 && tfStateWord(words[0]) === _prevLastWord) {
       var _tmp = words[0]; words[0] = words[1]; words[1] = _tmp;
     }
     startSetSession(words,{keepOrder:true});
@@ -4125,7 +4151,7 @@ var TF = {
     if (roundReport && window.RoundReport) {
       var _skipSentence = selectedLevel === 3 && advSentenceCtx && advSentenceCtx.th;
       RoundReport.addItem(roundReport, {
-        content_ref: { source: _skipSentence ? 'game_sentences' : 'game_words', key: _skipSentence || (entry.word + '@' + (selectedLevel || 1)) },
+        content_ref: { source: _skipSentence ? 'game_sentences' : 'game_words', key: _skipSentence || entry.contentKey || (entry.word + '@' + (({1:'初',2:'中'})[selectedLevel] || selectedLevel || 1)) },
         question: entry.word,
         meaning: entry.zh || '',
         attempts: [],
@@ -4502,10 +4528,7 @@ var TF = {
       }
       return;
     }
-    var entries = (data.wordIds || []).map(function (wid) {
-      for (var i = 0; i < WORD_LIST.length; i++) if (WORD_LIST[i].word === wid) return WORD_LIST[i];
-      return null;
-    }).filter(Boolean);
+    var entries = (data.wordIds || []).map(tfFindEntryByResumeId).filter(Boolean);
     if (!entries.length) { TF._startRandom5(); return; } // คำในชุดเดิมหาไม่เจอสักคำ (ข้อมูลเปลี่ยน) — สุ่มชุดใหม่แทน ดีกว่าค้าง
     selectedLevel = data.level || 1;
     selectedCategory = 'ทั้งหมด';
@@ -4516,7 +4539,7 @@ var TF = {
     var data=__tfResumeSnapshot;tfHideResumeBanner();if(!data)return;
     selectedLevel=data.level||1;
     if(data.level===3&&data.advSentIdx!=null&&window.ADV_SENTENCES&&ADV_SENTENCES[data.advSentIdx]){TF.startAdvSentence(data.advSentIdx);return;}
-    var entries=(data.wordIds||[]).map(function(wid){for(var i=0;i<WORD_LIST.length;i++)if(WORD_LIST[i].word===wid)return WORD_LIST[i];return null;}).filter(Boolean);
+    var entries=(data.wordIds||[]).map(tfFindEntryByResumeId).filter(Boolean);
     if(entries.length)startSetSession(entries,{keepOrder:true});else TF._startRandom5();
   },
   startNewFromResume: function() {

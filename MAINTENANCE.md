@@ -1,6 +1,14 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-09-02 Asia/Bangkok** — GitLab canonical Source/CI local candidate
+**Updated: 2026-09-02 Asia/Bangkok** — Final Notes verb Source rewrite candidate
+
+## 2026-09-02 — Final Notes verb Source rewrite (`SOURCE_PASS / RELEASE_AUTHORIZED / PRODUCTION_UNCHANGED`)
+
+- Rewrote the reviewed verb Source to exactly 225 semantic records / 224 written verbs (167 single-syllable, 57 multi-syllable), all category `กริยา`, with explicit word-level `spellingTH` and `readingTH`. Per-syllable written text is now derived at runtime and omitted from synced JSON so it cannot diverge from those authorities.
+- Applied the approved meaning, level, romanization and syllable corrections, including the two distinct `ร้อง` senses and the exact `แชท` Tone special contract. Removed image/object metadata and set every reviewed verb's real-audio status to the unverified state `ยังไม่เช็ก`; sentence content remains untouched.
+- Prepared only backward-compatible Source/schema/Edge/client changes. Focused vocabulary, data-health, duplicate, protected-content, game, owner-race and network suites plus JavaScript syntax, whitespace and the full 1,024-file site gate pass. No Production SQL, database sync, Edge/static deploy or real-user/data mutation is authorized or performed.
+
+**Prior update: 2026-09-02 Asia/Bangkok** — GitLab canonical Source/CI local candidate
 
 ## 2026-09-02 — GitLab canonical Source/CI (`PASS_LOCAL / REMOTE_NOT_CREATED / PRODUCTION_UNCHANGED`)
 
@@ -2347,3 +2355,12 @@ node scripts/check-site.js
 - Bound every descendant in the alphabet-practice dialog to Tone's live Standard/Modern body state, including home cards, expanded manual details, consonants, vowels, and endings.
 - Added collision-safe line height and row spacing to the active Tone, Reading, Typing, and Word Order vocabulary stacks for Desktop and Mobile, including long wrapping text and both font states. Lego lower gameplay and the parked Listening game are unchanged.
 - Verification: targeted alphabet, active-stack, shared-game, and Mobile Landscape regressions; browser geometry at `1440×900` and `390×844` with Standard → Modern → Standard; and the normal full-site gate before Preview handoff.
+
+# 2026-09-02 — Sense-safe seven-record vocabulary source candidate
+
+- Added only the seven Lin-approved verb records, including separate new identities for `ร้อง=唱` and `ร้อง=尖叫`; the old combined `ร้อง=唱/哭` identity remains legacy and separate.
+- Applied Lin's follow-up catalog wording: `นัด=約人` and `แชท=打字聊天`.
+- Scoped the records to Tone, Reading, and Typing only. Game-content requests now declare their surface, while cached clients retain the legacy response path.
+- Propagated `contentKey` through reports, SRS calls, direct practice, and Resume without changing existing single-meaning SRS keys; object-use metadata is intentionally absent from the catalog and review flow.
+- Added an unapplied database migration, safe release/rollback order, focused regressions, and refreshed generated game bundles. No Production SQL, content sync, Edge/static deploy, Auth, or user-data mutation was performed.
+- Verification: focused data/game/rollout/race checks, minified-source freshness, `git diff --check`, and the full site gate.

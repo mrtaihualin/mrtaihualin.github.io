@@ -7,7 +7,10 @@
  * ผ่าน = ไม่มี error พิมพ์ออกมา (exit code 0)
  * ไม่ผ่าน = พิมพ์รายการที่ผิด (exit code 1) — ห้าม push จนกว่าจะแก้หมด
  *
- * เช็คอะไรบ้าง (เพิ่มหลังเจอบั๊ก 2026-07-14: syls[].th ดันใส่คำอ่านแทนตัวสะกดจริง เช่น
+ * เช็คอะไรบ้าง (กริยาที่ผ่าน Final Notes ใช้ spellingTH/readingTH เป็น authority ระดับคำ
+ * และ derive syls[].th แบบ non-enumerable ตอนโหลด; คำหมวดอื่นยังใช้ schema เดิม):
+ *
+ * เพิ่มหลังเจอบั๊ก 2026-07-14: syls[].th ดันใส่คำอ่านแทนตัวสะกดจริง เช่น
  * รถทัวร์ → th:'รด'+'ทัว' แทนที่จะเป็น th:'รถ'+'ทัวร์' → ตอนพิมพ์เกมพิมพ์เลยให้พิมพ์ผิดคำ):
  *   1. syls[].th ต่อกันแล้วต้อง = word เป๊ะ (ตัวพิมพ์เป็นตัวสะกดจริงเท่านั้น ห้ามใส่คำอ่าน/พยางค์แทรก)
  *      — เช็คทุกคำเสมอ (2026-07-15: หลังรวม schema ทุกคำมี syls แล้ว รวมคำพยางค์เดียวด้วย ไม่ใช่แค่คำหลายพยางค์)
@@ -123,8 +126,38 @@ const LEVEL_OVERRIDE_CONFIRMED = {
   'ไว้ใจ': '中',
   'ค้นคว้า': '中',
   'ตกแต่ง': '中',
-  'ทะเลาะ': '中'
+  'ทะเลาะ': '中',
+  // Lin approved these exact corrected records on 2026-09-02; content authority overrides
+  // the older automatic two-syllable heuristic.
+  'ตื่นนอน': '中',
+  'ร้องไห้': '中',
+  'ทบทวน': '中',
+  'ถ่ายรูป': '初',
+  'สระผม': '初'
 };
+
+const REVIEWED_VERBS = W.filter(function (w) { return w.category === 'กริยา'; });
+const REVIEWED_WRITTEN = new Set(REVIEWED_VERBS.map(function (w) { return w.word; }));
+const REVIEWED_SINGLE = new Set(REVIEWED_VERBS.filter(function (w) { return w.syls.length === 1; }).map(function (w) { return w.word; }));
+const REVIEWED_MULTI = new Set(REVIEWED_VERBS.filter(function (w) { return w.syls.length > 1; }).map(function (w) { return w.word; }));
+if (REVIEWED_VERBS.length !== 225 || REVIEWED_WRITTEN.size !== 224 || REVIEWED_SINGLE.size !== 167 || REVIEWED_MULTI.size !== 57) {
+  errors.push('Final Notes verb corpus count mismatch (records=' + REVIEWED_VERBS.length + ', written=' + REVIEWED_WRITTEN.size + ', single=' + REVIEWED_SINGLE.size + ', multi=' + REVIEWED_MULTI.size + ')');
+}
+REVIEWED_VERBS.forEach(function (w) {
+  const spellingParts = typeof w.spellingTH === 'string' ? w.spellingTH.split('-') : [];
+  const readingParts = typeof w.readingTH === 'string' ? w.readingTH.split('-') : [];
+  if (!w.spellingTH || !w.readingTH || spellingParts.length !== w.syls.length || readingParts.length !== w.syls.length || spellingParts.join('') !== w.word) {
+    errors.push(w.word + ' → spellingTH/readingTH authority ไม่ตรงกับ word หรือจำนวน syls');
+  }
+  if (w.audioStatus !== 'ยังไม่เช็ก') errors.push(w.word + ' → audioStatus ต้องเป็น "ยังไม่เช็ก"');
+  if (Object.prototype.hasOwnProperty.call(w, 'imageStatus')) errors.push(w.word + ' → ห้ามมี imageStatus');
+  if (Object.keys(w).some(function (key) { return /object/i.test(key); })) errors.push(w.word + ' → ห้ามมี object-use metadata');
+  w.syls.forEach(function (s, index) {
+    if (s.th !== spellingParts[index] || Object.prototype.propertyIsEnumerable.call(s, 'th')) {
+      errors.push(w.word + ' → syls[' + index + '].th ต้อง derive จาก spellingTH แบบ non-enumerable');
+    }
+  });
+});
 
 W.forEach(function (w) {
   // เช็ค 4: ระดับตรงกฎไหม (ข้ามคำที่ Lin ยืนยัน override ไว้แล้ว)

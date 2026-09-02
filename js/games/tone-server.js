@@ -28,6 +28,7 @@
     var payload = {
       round_id: roundId(),
       word: args.word,
+      content_key: args.contentKey,
       level: args.level,
       game: args.game,                    // 'tone'(default)/'reading'/'typing'/'wordorder' — แยก SRS ต่อเกม
       clean: args.clean,                  // เกมสะกด/เรียงประโยค: รอบนี้เลื่อนขั้น(clean)ไหม
