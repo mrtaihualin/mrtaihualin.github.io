@@ -2386,10 +2386,10 @@ window.deleteFBComment = function(postId, idx) {
 // creates a second control surface on game or non-game pages.
 
 // Phase 1.2 / 5.2 temporary safety gate: keep short-screen mobile landscape
-// unavailable across the six public games until the replacement layout passes
+// unavailable across the current four-game scope until the replacement layout passes
 // its Human and Production gates. Portrait and Desktop stay untouched.
 (function () {
-  var games = ['tone', 'reading', 'listening', 'typing', 'word-order', 'lego'];
+  var games = ['tone', 'reading', 'typing', 'word-order'];
   var game = document.body && document.body.getAttribute('data-gsh-game');
   if (games.indexOf(game) === -1 || !window.matchMedia) return;
 

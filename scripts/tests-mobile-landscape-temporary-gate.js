@@ -12,10 +12,8 @@ const min = read('js/core/shared.min.js');
 const games = [
   ['tone', 'tone-finder.html'],
   ['reading', 'reading-game.html'],
-  ['listening', 'listening-game.html'],
   ['typing', 'typing-game.html'],
-  ['word-order', 'word-order.html'],
-  ['lego', 'lego.html']
+  ['word-order', 'word-order.html']
 ];
 
 let passed = 0;
@@ -30,15 +28,17 @@ function test(name, fn) {
   }
 }
 
-test('gate is allowlisted to the six public games only', () => {
-  assert.match(shared, /var games = \['tone', 'reading', 'listening', 'typing', 'word-order', 'lego'\]/);
+test('gate is allowlisted to the exact current four-game scope only', () => {
+  assert.match(shared, /var games = \['tone', 'reading', 'typing', 'word-order'\]/);
   assert.match(shared, /games\.indexOf\(game\) === -1/);
-  assert.doesNotMatch(shared, /var games = \[[^\]]*(?:challenge|games|practice)/);
+  assert.doesNotMatch(shared, /var games = \[[^\]]*(?:listening|lego|challenge|games|practice)/);
   games.forEach(([game, file]) => {
     const html = read(file);
     assert.match(html, new RegExp('<body[^>]+data-gsh-game="' + game + '"'));
     assert.match(html, /js\/core\/shared\.min\.js\?v=48/);
   });
+  assert.match(read('listening-game.html'), /js\/core\/shared\.min\.js\?v=47/);
+  assert.match(read('lego.html'), /js\/core\/shared\.min\.js\?v=47/);
 });
 
 test('only the current short-screen landscape contract activates the gate', () => {
