@@ -21,12 +21,15 @@ change Production. After a fresh HIGH approval, release in this order so cached 
    `authenticated`. Do not run the content sync yet.
 3. Deploy the backward-compatible `game-content` and `tone-round` functions. Prove an empty request
    body still receives only the `legacy` surface before continuing.
-4. Run `scripts/migrate-game-content.js`, then verify only the seven approved records are prioritized
-   on `tone`, `reading`, and `typing`; none appears on `legacy`, `listening`, or `word_order`.
-5. Deploy the three static pages last. Their requests name the game surface and their reports, SRS
-   calls, and Resume snapshots carry `contentKey`.
+4. Run `scripts/migrate-game-content.js`, then verify the reviewed verb corpus has exactly 225 semantic
+   records / 224 written verbs, explicit `spelling_th` + `reading_th`, audio status `ยังไม่เช็ก`, and
+   no image/object metadata. Verify only the seven scoped records are prioritized on `tone`, `reading`,
+   and `typing`; none of those seven appears on `legacy`, `listening`, or `word_order`.
+5. Deploy the five protected-content pages last so every page receives the authority-validation client;
+   Tone, Reading and Typing additionally name their game surface, and their reports, SRS calls, and
+   Resume snapshots carry `contentKey`.
 
-Rollback in reverse: restore the prior three static pages, then the prior Edge versions. Keep the
+Rollback in reverse: restore the prior five static pages, then the prior Edge versions. Keep the
 additive columns and identity/audit rows; deleting them would destroy history. Hiding the seven rows
 (`status='legacy'`, `surfaces='{}'`) or reconciling user-linked SRS is a separate HIGH data mutation
 and requires an exact approved statement plus pre/post counts. Never restore the combined legacy

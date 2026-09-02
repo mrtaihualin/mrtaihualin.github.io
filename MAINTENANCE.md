@@ -1,6 +1,14 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-09-02 Asia/Bangkok** — GitLab canonical Source/CI local candidate
+**Updated: 2026-09-02 Asia/Bangkok** — Final Notes verb Source rewrite candidate
+
+## 2026-09-02 — Final Notes verb Source rewrite (`SOURCE_PASS / RELEASE_AUTHORIZED / PRODUCTION_UNCHANGED`)
+
+- Rewrote the reviewed verb Source to exactly 225 semantic records / 224 written verbs (167 single-syllable, 57 multi-syllable), all category `กริยา`, with explicit word-level `spellingTH` and `readingTH`. Per-syllable written text is now derived at runtime and omitted from synced JSON so it cannot diverge from those authorities.
+- Applied the approved meaning, level, romanization and syllable corrections, including the two distinct `ร้อง` senses and the exact `แชท` Tone special contract. Removed image/object metadata and set every reviewed verb's real-audio status to the unverified state `ยังไม่เช็ก`; sentence content remains untouched.
+- Prepared only backward-compatible Source/schema/Edge/client changes. Focused vocabulary, data-health, duplicate, protected-content, game, owner-race and network suites plus JavaScript syntax, whitespace and the full 1,024-file site gate pass. No Production SQL, database sync, Edge/static deploy or real-user/data mutation is authorized or performed.
+
+**Prior update: 2026-09-02 Asia/Bangkok** — GitLab canonical Source/CI local candidate
 
 ## 2026-09-02 — GitLab canonical Source/CI (`PASS_LOCAL / REMOTE_NOT_CREATED / PRODUCTION_UNCHANGED`)
 

@@ -125,11 +125,11 @@ serve(async (req) => {
     const [rl, w1, w2, sent] = await Promise.all([
       admin.rpc('game_content_rl_check', { p_key: rlKey, p_limit: 60, p_window: 60 }),
       readWithTransientAuthRetry(() => admin.from('game_words')
-        .select('content_key,word,en,zh,level,category,syls,reading_th,read_syls')
+        .select('content_key,word,en,zh,level,category,syls,spelling_th,reading_th,read_syls,tone_special,tone_override,tone_derivation')
         .eq('level', '初').eq('status', 'active').contains('surfaces', [surface])
         .order('review_priority', { ascending: false }).order('rank', { ascending: true }).limit(caps['初'])),
       readWithTransientAuthRetry(() => admin.from('game_words')
-        .select('content_key,word,en,zh,level,category,syls,reading_th,read_syls')
+        .select('content_key,word,en,zh,level,category,syls,spelling_th,reading_th,read_syls,tone_special,tone_override,tone_derivation')
         .eq('level', '中').eq('status', 'active').contains('surfaces', [surface])
         .order('review_priority', { ascending: false }).order('rank', { ascending: true }).limit(caps['中'])),
       readWithTransientAuthRetry(() => admin.from('game_sentences')
@@ -143,10 +143,23 @@ serve(async (req) => {
     if (sent.error) throw sent.error;
 
     // ── แปลงชื่อคอลัมน์ snake_case (DB) → ชื่อฟิลด์ที่ฝั่งเว็บใช้อยู่เดิม (เท่ากับรูปแบบ WORDS_MASTER/ADV_SENTENCES เดิม) ──
-    const toWord = (r) => ({
-      contentKey: r.content_key, word: r.word, en: r.en, zh: r.zh, level: r.level, category: r.category, syls: r.syls,
-      readingTH: r.reading_th, readSyls: r.read_syls,
-    });
+    const toWord = (r) => {
+      let syllables = r.syls;
+      if (r.spelling_th) {
+        const spellingParts = String(r.spelling_th).split('-');
+        const readingParts = String(r.reading_th || '').split('-');
+        if (!Array.isArray(syllables) || spellingParts.length !== syllables.length ||
+            readingParts.length !== syllables.length || spellingParts.join('') !== r.word) {
+          throw new Error('game_word_syllable_authority_mismatch:' + r.content_key);
+        }
+        syllables = syllables.map((syllable, index) => ({ ...syllable, th: spellingParts[index] }));
+      }
+      return {
+        contentKey: r.content_key, word: r.word, en: r.en, zh: r.zh, level: r.level, category: r.category, syls: syllables,
+        spellingTH: r.spelling_th, readingTH: r.reading_th, readSyls: r.read_syls,
+        toneSpecial: r.tone_special, toneOverride: r.tone_override, toneDerivation: r.tone_derivation,
+      };
+    };
     const toSentence = (r) => ({
       th: r.th, zh: r.zh, readingTH: r.reading_th, wc: r.wc, politeF: r.polite_f, words: r.words,
     });

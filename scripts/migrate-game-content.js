@@ -82,10 +82,13 @@ function toWordRow(w, level, rank) {
     level: level,
     category: w.category !== undefined ? w.category : null,
     syls: w.syls,
+    spelling_th: w.spellingTH !== undefined ? w.spellingTH : null,
     reading_th: w.readingTH !== undefined ? w.readingTH : null,
     read_syls: w.readSyls !== undefined ? w.readSyls : null,
-    image_status: w.imageStatus !== undefined ? w.imageStatus : null,
     audio_status: w.audioStatus !== undefined ? w.audioStatus : null,
+    tone_special: w.toneSpecial !== undefined ? w.toneSpecial : null,
+    tone_override: w.toneOverride !== undefined ? w.toneOverride : null,
+    tone_derivation: w.toneDerivation !== undefined ? w.toneDerivation : null,
     surfaces: Array.isArray(w.surfaces) ? w.surfaces : DEFAULT_WORD_SURFACES,
     review_priority: w.reviewPriority === true,
     status: 'active',
@@ -283,7 +286,11 @@ async function main() {
   console.log('✅ เสร็จแล้ว — game_words ' + wordRows.length + ' แถว · game_sentences ' + sentRows.length + ' แถว');
 }
 
-main().catch((err) => {
-  console.error('❌ migrate ล้มเหลว:', err.message || err);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((err) => {
+    console.error('❌ migrate ล้มเหลว:', err.message || err);
+    process.exit(1);
+  });
+}
+
+module.exports = { toWordRow };

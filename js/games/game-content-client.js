@@ -30,12 +30,27 @@
   // ════════════════════════════════════════════════════════════
   var LEVEL_TXT_TO_NUM = { '初': 1, '中': 2 };
 
+  function validateAndHydrateSyllableText(master) {
+    master.forEach(function (w) {
+      if (!w.spellingTH) return;
+      var spellingParts = String(w.spellingTH).split('-');
+      var readingParts = String(w.readingTH || '').split('-');
+      if (!Array.isArray(w.syls) || spellingParts.length !== w.syls.length ||
+          readingParts.length !== w.syls.length || spellingParts.join('') !== w.word) {
+        throw new Error('game-content: reviewed syllable authority mismatch (' + (w.contentKey || w.word) + ')');
+      }
+      w.syls.forEach(function (syllable, index) { syllable.th = spellingParts[index]; });
+    });
+    return master;
+  }
+
   // เกมเสียง (tone-finder.html) ใช้: word, readingTH, readingEN, zh, level(เลข 1/2), category, syls
   global.buildWordListForToneFinder = function (master) {
     return master.map(function (w) {
       return {
         word: w.word,
         contentKey: w.contentKey,
+        spellingTH: w.spellingTH,
         readingTH: (typeof w.readingTH === 'string' && w.readingTH.trim()) ? w.readingTH : w.word,
         readingEN: w.en,
         zh: w.zh,
@@ -43,6 +58,9 @@
         category: w.category,
         syls: w.syls,
         readSyls: w.readSyls,
+        toneSpecial: w.toneSpecial,
+        toneOverride: w.toneOverride,
+        toneDerivation: w.toneDerivation,
       };
     });
   };
@@ -52,7 +70,7 @@
   global.buildWordsForPhonicsGames = function (master) {
     return master.map(function (w) {
       var out = { th: w.word, zh: w.zh, en: w.en, level: w.level, contentKey: w.contentKey };
-      ['cons', 'lead', 'cluster', 'vowel', 'tone', 'final', 'tone_name', 'syls', 'readingTH', 'readSyls'].forEach(function (f) {
+      ['cons', 'lead', 'cluster', 'vowel', 'tone', 'final', 'tone_name', 'syls', 'spellingTH', 'readingTH', 'readSyls'].forEach(function (f) {
         if (w[f] !== undefined) out[f] = w[f];
       });
       return out;
@@ -337,7 +355,7 @@
           global.WordAudio.setAvailability(data.audioAvailable);
         }
         applyDirectReadingWordLevel(data);
-        global.WORDS_MASTER = data.words;
+        global.WORDS_MASTER = validateAndHydrateSyllableText(data.words);
         global.ADV_SENTENCES = data.sentences;
         var chain = Promise.resolve();
         (appScriptSrcs || []).forEach(function (src) {

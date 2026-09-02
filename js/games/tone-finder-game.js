@@ -2374,14 +2374,24 @@ var TONE_OVERRIDE = {
 
 // คำในนี้ = ไม่มีกฎมาตรฐานอธิบายได้จริง → ข้ามขั้นตอน推導 (เหมือน final-check/known-check)
 // แต่ตอบถูกครั้งแรกยังได้คะแนนเต็มปกติ (ไม่ใช่ noSoftPoints แบบ known-check)
+function tfCatalogToneOverride(word) {
+  var entry = session && session.words && session.words[session.index];
+  if (entry && entry.word === word && entry.toneSpecial === 1 && entry.toneDerivation === 0) {
+    var approved = Number(entry.toneOverride);
+    if (approved >= 1 && approved <= 5) return approved;
+  }
+  return TONE_OVERRIDE[word];
+}
+
 function tfCurWordIsToneSpecial() {
   if (!session) return false;
   var w = (typeof S !== 'undefined' && S.word) || (session.words[session.index] && session.words[session.index].word);
-  return !!(w && TONE_OVERRIDE[w] !== undefined);
+  return !!(w && tfCatalogToneOverride(w) !== undefined);
 }
 
 function computeTone(word) {
-  if (TONE_OVERRIDE[word] !== undefined) return TONE_OVERRIDE[word];
+  var catalogOverride = tfCatalogToneOverride(word);
+  if (catalogOverride !== undefined) return catalogOverride;
   var cls  = TH.getInitClass(word);
   var mark = TH.getToneMark(word);
   var live = TH.isLiveWord(word);

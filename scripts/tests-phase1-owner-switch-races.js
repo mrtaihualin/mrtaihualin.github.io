@@ -353,7 +353,7 @@ test('Reading exposes isolated Login Core while owner-safe account runtimes rema
     assert.match(read(page), /reading-auth\.js\?v=28/, page + ' reading-auth cache');
   }
   assert.doesNotMatch(read('lego.html'), /game-account\.js/);
-  assert.match(read('tone-finder.html'), /tone-finder-game\.min\.js\?v=79/);
+  assert.match(read('tone-finder.html'), /tone-finder-game\.min\.js\?v=80/);
   assert.match(read('reading-game.html'), /reading-game-app\.min\.js\?v=46/);
   assert.match(read('typing-game.html'), /typing-game-app\.min\.js\?v=44/);
   assert.match(read('word-order.html'), /word-order-app\.min\.js\?v=32/);

@@ -3,8 +3,11 @@
 
 alter table public.game_words
   add column if not exists content_key text,
-  add column if not exists image_status text,
+  add column if not exists spelling_th text,
   add column if not exists audio_status text,
+  add column if not exists tone_special smallint,
+  add column if not exists tone_override smallint,
+  add column if not exists tone_derivation smallint,
   add column if not exists surfaces text[],
   add column if not exists review_priority boolean,
   add column if not exists status text;

@@ -116,7 +116,7 @@ test('direct word boot binds the protected level before Reading starts and resto
   const bootEnd = gameContentClient.indexOf('// ════════════════════════════════════════════════════════════\n  // GLOBAL CRASH HANDLER', bootStart);
   assert.ok(bootStart >= 0 && bootEnd > bootStart, 'game-content boot block missing');
   const boot = gameContentClient.slice(bootStart, bootEnd);
-  assert.ok(boot.indexOf('applyDirectReadingWordLevel(data);') < boot.indexOf('global.WORDS_MASTER = data.words;'));
+  assert.ok(boot.indexOf('applyDirectReadingWordLevel(data);') < boot.indexOf('global.WORDS_MASTER = validateAndHydrateSyllableText(data.words);'));
   assert.ok(boot.indexOf('applyDirectReadingWordLevel(data);') < boot.indexOf('injectScript(src)'));
   assert.strictEqual((boot.match(/restoreDirectReadingWordLevelOverride\(\)/g) || []).length, 2);
 });
