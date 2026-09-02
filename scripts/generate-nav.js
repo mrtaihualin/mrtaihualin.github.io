@@ -87,6 +87,9 @@ const GAME_PAGES = new Set([
   'tone-finder.html', 'reading-game.html', 'listening-game.html',
   'typing-game.html', 'word-order.html', 'lego.html'
 ]);
+const MOBILE_LANDSCAPE_GATE_PAGES = new Set([
+  'tone-finder.html', 'reading-game.html', 'typing-game.html', 'word-order.html'
+]);
 const NO_ANNOUNCEMENT_PAGES = new Set([
   'games.html', 'games-practice.html', 'games-challenge.html',
   'tone-finder.html', 'reading-game.html', 'listening-game.html', 'typing-game.html', 'word-order.html', 'lego.html',
@@ -129,9 +132,11 @@ PAGES.forEach(function (file) {
   next = next.replace(/data\/nav-template\.js\?v=\d+/g, 'data/nav-template.js?v=4');
   next = next.replace(
     /js\/core\/shared\.min\.js\?v=\d+/g,
-    GAME_PAGES.has(file) || file === 'vault.html'
+    MOBILE_LANDSCAPE_GATE_PAGES.has(file)
+      ? 'js/core/shared.min.js?v=48'
+      : (GAME_PAGES.has(file) || file === 'vault.html'
       ? 'js/core/shared.min.js?v=47'
-      : (NO_ANNOUNCEMENT_PAGES.has(file) ? 'js/core/shared.min.js?v=45' : 'js/core/shared.min.js?v=42')
+      : (NO_ANNOUNCEMENT_PAGES.has(file) ? 'js/core/shared.min.js?v=45' : 'js/core/shared.min.js?v=42'))
   );
   next = next.replace(/js\/core\/minimum-guest-launch\.js\?v=\d+/g, 'js/core/minimum-guest-launch.js?v=5');
 

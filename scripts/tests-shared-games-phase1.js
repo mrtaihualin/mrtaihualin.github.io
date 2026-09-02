@@ -244,7 +244,7 @@ test('all scoped pages use one fail-closed Login surface and game pages permanen
     const html = fs.readFileSync(path.join(root, file), 'utf8');
     assert.doesNotMatch(html, /ANN-BAND|ann-band|avail-band|annDismissed|annGoTo|annPrev|annNext/, `${file}: announcement DOM/marker/script/style hook must be removed`);
     assert.match(html, /minimum-guest-launch\.js\?v=6/, `${file}: must load the Reading-authority Login gate`);
-    assert.match(html, /shared\.min\.js\?v=47/, `${file}: must load the announcement-free game runtime`);
+    assert.match(html, /shared\.min\.js\?v=(?:47|48)/, `${file}: must load the announcement-free game runtime`);
   }
   for (const file of nonGameScopedPages) {
     const html = fs.readFileSync(path.join(root, file), 'utf8');
@@ -447,7 +447,7 @@ test('all games omit the removed leave-game control and dialog', () => {
   const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
   assert.doesNotMatch(sharedJs, /要離開遊戲嗎？|繼續遊戲|離開遊戲/);
   assert.doesNotMatch(sharedJs, /data-act="exit"|openGameExit|gsh-game-exit-dialog/);
-  for (const g of games) assert.match(g.htmlText, /shared\.min\.js\?v=47/, `${g.id}: must load the exit-free shared runtime`);
+  for (const g of games) assert.match(g.htmlText, g.id === 'listening' ? /shared\.min\.js\?v=47/ : /shared\.min\.js\?v=48/, `${g.id}: must load the exit-free shared runtime`);
   assert.match(legoHtml, /shared\.min\.js\?v=47/, 'Lego must load the exit-free shared runtime');
 });
 
@@ -617,7 +617,7 @@ test('all six games keep learning helpers without any rice-button contract', () 
   assert.doesNotMatch(sharedMin, /wm-trigger|textContent\s*=\s*['"]🍚['"]/);
   for (const g of games) {
     assert.match(g.htmlText, /js\/games\/word-menu\.js\?v=10/, `${g.id}: must load the inline learning-tool binder`);
-    assert.match(g.htmlText, /js\/core\/shared\.min\.js\?v=47/, `${g.id}: must load the rice-button-free shared runtime`);
+    assert.match(g.htmlText, g.id === 'listening' ? /js\/core\/shared\.min\.js\?v=47/ : /js\/core\/shared\.min\.js\?v=48/, `${g.id}: must load the rice-button-free shared runtime`);
     assert.doesNotMatch(g.htmlText, /wm-trigger|點 🍚|<button[^>]*>[^<]*🍚/, `${g.id}: retired rice-button source contract remains`);
   }
   assert.match(legoHtml, /js\/core\/shared\.min\.js\?v=47/);
@@ -649,7 +649,7 @@ test('mobile resume uses one compact shared-copy line and three horizontal actio
   for (const g of games) {
     const sharedCssVersion = 36;
     assert.match(g.htmlText, new RegExp(`css/shared\\.css\\?v=${sharedCssVersion}`), `${g.id}: must load current shared game CSS`);
-    assert.match(g.htmlText, /js\/core\/shared\.min\.js\?v=47/, `${g.id}: must load shared resume copy`);
+    assert.match(g.htmlText, g.id === 'listening' ? /js\/core\/shared\.min\.js\?v=47/ : /js\/core\/shared\.min\.js\?v=48/, `${g.id}: must load shared resume copy`);
     assert.match(g.appText, /GameUiCopy\.resumeLine/, `${g.id}: resume detail must use shared semantic copy`);
   }
 });

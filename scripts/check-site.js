@@ -132,6 +132,7 @@ runTest(['scripts/tests-vocab-sense-scope.js'], 'Vocabulary sense/surface/identi
 runTest(['scripts/tests-word-order-phase1.js'], 'Phase 1 Word Order tests');
 runTest(['scripts/tests-account-export-phase1.js'], 'Phase 1 account-export tests');
 runTest(['scripts/tests-shared-games-phase1.js'], 'Phase 1 shared-game-system tests');
+runTest(['scripts/tests-mobile-landscape-temporary-gate.js'], 'Mobile Landscape temporary gate tests');
 runTest(['scripts/tests-tone-mobile-landscape.js'], 'Tone Mobile Landscape tests');
 runTest(['scripts/tests-game-flow-delta.js'], 'Locked five-game flow tests');
 runTest(['scripts/tests-study-plan-core.js'], 'Time Auto Plan core tests');
