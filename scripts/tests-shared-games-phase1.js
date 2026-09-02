@@ -218,7 +218,8 @@ test('all game pages permanently omit the automatic Login cap popup', () => {
   assert.doesNotMatch(gameContentClient, /免費內容你都練過一輪|登入帳號（完全免費）可以解鎖更多/);
   for (const g of games) {
     assert.doesNotMatch(g.htmlText, /gc-cap-banner/, `${g.id}: removed Login popup marker remains`);
-    assert.match(g.htmlText, /game-content-client\.js\?v=11/, `${g.id}: must load the popup-free game content client`);
+    const contentClientVersion = ['tone', 'reading', 'typing'].includes(g.id) ? 12 : 11;
+    assert.match(g.htmlText, new RegExp('game-content-client\\.js\\?v=' + contentClientVersion), `${g.id}: must load the popup-free game content client`);
   }
   assert.doesNotMatch(legoHtml, /gc-cap-banner|免費內容你都練過一輪|登入帳號（完全免費）可以解鎖更多/);
 });
@@ -829,7 +830,7 @@ test('Tone active-question guidance permanently locks that question to zero', ()
   assert.match(toneMin, /聲調選擇錯誤/, 'Tone: deployed minified bundle must charge a wrong initial tone answer');
   assert.match(toneMin, /開始練習/, 'Tone: deployed minified bundle must include the guided-question gate');
   assert.match(toneMin, /pageshow/, 'Tone: deployed minified bundle must include the page-return guard');
-  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=78/, 'Tone: page must request the rebuilt shared-framework runtime version');
+  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=79/, 'Tone: page must request the rebuilt shared-framework runtime version');
 });
 
 test('Tone mobile touch surfaces keep Desktop gameplay free of keyboard-only copy', () => {

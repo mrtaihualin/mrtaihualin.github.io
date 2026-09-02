@@ -43,6 +43,7 @@ const CAPS = {
   anon:  { '初': 50,  '中': 50,  sentences: 20 },
   login: { '初': 100, '中': 100, sentences: 40 },
 };
+const GAME_SURFACES = new Set(['tone', 'reading', 'typing', 'word_order', 'listening']);
 
 // โดเมนจริงของเว็บ (ตรงกับ allowedHosts ใน line-login/index.ts) — www เผื่อไว้แม้ CNAME ปัจจุบันไม่ใช้
 const ALLOWED_ORIGINS = [
@@ -90,6 +91,14 @@ serve(async (req) => {
     const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
     const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
+    let requestBody = {};
+    try { requestBody = await req.json(); } catch (_) { return json({ error: 'bad json' }, 400, origin); }
+    const requestedGame = typeof requestBody?.game === 'string' ? requestBody.game : '';
+    if (requestedGame && !GAME_SURFACES.has(requestedGame)) return json({ error: 'bad game surface' }, 400, origin);
+    // Empty body is the mixed-version compatibility path for cached clients. It sees only the
+    // established legacy catalog; newly scoped records become visible after a page requests its game.
+    const surface = requestedGame || 'legacy';
+
     // ── หา tier จาก JWT จริงฝั่งเซิร์ฟเวอร์เท่านั้น (ไม่อ่าน/ไม่เชื่อ body ใดๆ ที่ client ส่งมาเรื่อง tier) ──
     const authHeader = req.headers.get('Authorization') || '';
     const userClient = createClient(SUPABASE_URL, ANON_KEY, { global: { headers: { Authorization: authHeader } } });
@@ -116,11 +125,13 @@ serve(async (req) => {
     const [rl, w1, w2, sent] = await Promise.all([
       admin.rpc('game_content_rl_check', { p_key: rlKey, p_limit: 60, p_window: 60 }),
       readWithTransientAuthRetry(() => admin.from('game_words')
-        .select('word,en,zh,level,category,syls,reading_th,read_syls')
-        .eq('level', '初').order('rank', { ascending: true }).limit(caps['初'])),
+        .select('content_key,word,en,zh,level,category,syls,reading_th,read_syls')
+        .eq('level', '初').eq('status', 'active').contains('surfaces', [surface])
+        .order('review_priority', { ascending: false }).order('rank', { ascending: true }).limit(caps['初'])),
       readWithTransientAuthRetry(() => admin.from('game_words')
-        .select('word,en,zh,level,category,syls,reading_th,read_syls')
-        .eq('level', '中').order('rank', { ascending: true }).limit(caps['中'])),
+        .select('content_key,word,en,zh,level,category,syls,reading_th,read_syls')
+        .eq('level', '中').eq('status', 'active').contains('surfaces', [surface])
+        .order('review_priority', { ascending: false }).order('rank', { ascending: true }).limit(caps['中'])),
       readWithTransientAuthRetry(() => admin.from('game_sentences')
         .select('th,zh,reading_th,wc,polite_f,words')
         .order('rank', { ascending: true }).limit(caps.sentences)),
@@ -133,7 +144,7 @@ serve(async (req) => {
 
     // ── แปลงชื่อคอลัมน์ snake_case (DB) → ชื่อฟิลด์ที่ฝั่งเว็บใช้อยู่เดิม (เท่ากับรูปแบบ WORDS_MASTER/ADV_SENTENCES เดิม) ──
     const toWord = (r) => ({
-      word: r.word, en: r.en, zh: r.zh, level: r.level, category: r.category, syls: r.syls,
+      contentKey: r.content_key, word: r.word, en: r.en, zh: r.zh, level: r.level, category: r.category, syls: r.syls,
       readingTH: r.reading_th, readSyls: r.read_syls,
     });
     const toSentence = (r) => ({
@@ -169,7 +180,7 @@ serve(async (req) => {
       sentences: sent.data.length >= caps.sentences,
     };
 
-    return json({ tier, words, sentences, audioAvailable, capped }, 200, origin);
+    return json({ tier, game: requestedGame || null, words, sentences, audioAvailable, capped }, 200, origin);
   } catch (e) {
     return json({ error: String((e && e.message) || e) }, 500, origin);
   }

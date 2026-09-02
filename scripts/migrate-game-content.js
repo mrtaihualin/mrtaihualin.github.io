@@ -33,6 +33,12 @@
 
 const path = require('path');
 
+const DEFAULT_WORD_SURFACES = ['legacy', 'tone', 'reading', 'typing', 'word_order', 'listening'];
+
+function wordContentKey(w, level) {
+  return w.contentKey || (w.word + '@' + level);
+}
+
 // ── โหลดไฟล์ข้อมูล .js เดิม (ที่เขียนไว้สำหรับ browser: (function(global){...})(window)) ──
 // ใช้ trick เดียวกับ data/check-data-health.js: ทำให้ Node มองว่า global === window
 // (ไม่มี localStorage ใน Node → _looksLoggedInSync() คืน null เสมอ → ไฟล์จะ "ไม่ตัดเพดาน" ปล่อยชุดเต็มออกมา)
@@ -47,12 +53,21 @@ function loadBrowserDataFile(absPath) {
 // (เกมเลิกโหลดไฟล์นั้นตรงๆ) เหลือแค่สคริปต์นี้ที่ยังต้องคำนวณ rank จาก CAP_ORDER_TH_初/中)
 function buildCapOrderObjs(fullList, thOrder) {
   var byTh = {};
-  fullList.forEach(function (w) { if (byTh[w.word] === undefined) byTh[w.word] = w; });
+  fullList.forEach(function (w) {
+    if (!byTh[w.word]) byTh[w.word] = [];
+    byTh[w.word].push(w);
+  });
   var used = {}, order = [];
   thOrder.forEach(function (th) {
-    if (byTh[th] && !used[th]) { order.push(byTh[th]); used[th] = true; }
+    (byTh[th] || []).forEach(function (w) {
+      var key = wordContentKey(w, w.level);
+      if (!used[key]) { order.push(w); used[key] = true; }
+    });
   });
-  fullList.forEach(function (w) { if (!used[w.word]) { order.push(w); used[w.word] = true; } });
+  fullList.forEach(function (w) {
+    var key = wordContentKey(w, w.level);
+    if (!used[key]) { order.push(w); used[key] = true; }
+  });
   return order;
 }
 
@@ -60,6 +75,7 @@ function toWordRow(w, level, rank) {
   if (!w || !w.word) throw new Error('เจอคำที่ไม่มีฟิลด์ word ระดับ ' + level + ' อันดับ ' + rank);
   if (!w.syls) throw new Error('คำ "' + w.word + '" ไม่มี syls — ข้อมูลต้นฉบับผิดปกติ ห้าม migrate ต่อ');
   return {
+    content_key: wordContentKey(w, level),
     word: w.word,
     en: w.en !== undefined ? w.en : null,
     zh: w.zh !== undefined ? w.zh : null,
@@ -68,8 +84,53 @@ function toWordRow(w, level, rank) {
     syls: w.syls,
     reading_th: w.readingTH !== undefined ? w.readingTH : null,
     read_syls: w.readSyls !== undefined ? w.readSyls : null,
+    image_status: w.imageStatus !== undefined ? w.imageStatus : null,
+    audio_status: w.audioStatus !== undefined ? w.audioStatus : null,
+    surfaces: Array.isArray(w.surfaces) ? w.surfaces : DEFAULT_WORD_SURFACES,
+    review_priority: w.reviewPriority === true,
+    status: 'active',
     rank: rank,
   };
+}
+
+async function syncLearningWordIdentities(baseUrl, key, wordRows) {
+  const headers = { apikey: key, Authorization: 'Bearer ' + key };
+  const existingRes = await fetch(baseUrl + '/rest/v1/learning_items?select=item_id,content_key&content_source=eq.game_words&owner_user_id=is.null', { headers });
+  if (!existingRes.ok) throw new Error('อ่าน learning_items ล้มเหลว (HTTP ' + existingRes.status + '): ' + (await existingRes.text()));
+  const existing = new Set((await existingRes.json()).map((row) => row.content_key));
+  const missing = wordRows.filter((row) => !existing.has(row.content_key)).map((row) => ({
+    item_type: 'word',
+    status: 'active',
+    difficulty: row.level,
+    content_source: 'game_words',
+    content_key: row.content_key,
+  }));
+  if (!missing.length) {
+    console.log('  learning_items: ไม่มีตัวตนคำใหม่ที่ต้องสร้าง');
+    return;
+  }
+  const createRes = await fetch(baseUrl + '/rest/v1/learning_items', {
+    method: 'POST',
+    headers: { ...headers, 'Content-Type': 'application/json', Prefer: 'return=representation' },
+    body: JSON.stringify(missing),
+  });
+  if (!createRes.ok) throw new Error('สร้าง learning_items ล้มเหลว (HTTP ' + createRes.status + '): ' + (await createRes.text()));
+  const created = await createRes.json();
+  const auditRows = created.map((row) => ({
+    item_id: row.item_id,
+    action: 'created',
+    actor: 'script:migrate-game-content',
+    detail: { content_source: 'game_words', content_key: row.content_key },
+  }));
+  if (auditRows.length) {
+    const auditRes = await fetch(baseUrl + '/rest/v1/learning_item_audit', {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+      body: JSON.stringify(auditRows),
+    });
+    if (!auditRes.ok) throw new Error('จด learning_item_audit ล้มเหลว (HTTP ' + auditRes.status + '): ' + (await auditRes.text()));
+  }
+  console.log('  learning_items: สร้างตัวตนคำใหม่ ' + created.length + ' แถว');
 }
 
 function toSentRow(s, rank) {
@@ -107,9 +168,9 @@ async function upsertRows(baseUrl, key, table, rows, conflictCols) {
 }
 
 // ลบแถวในตารางที่ "ไม่มีอยู่แล้ว" ในไฟล์ต้นฉบับปัจจุบัน (เช่น Lin ลบคำ/ประโยคทิ้งจากไฟล์)
-async function pruneStale(baseUrl, key, table, currentRows, keyCols, allowPrune) {
+async function pruneStale(baseUrl, key, table, currentRows, keyCols, allowPrune, queryFilter) {
   const selectCols = ['id'].concat(keyCols).join(',');
-  const res = await fetch(baseUrl + '/rest/v1/' + table + '?select=' + selectCols, {
+  const res = await fetch(baseUrl + '/rest/v1/' + table + '?select=' + selectCols + (queryFilter || ''), {
     headers: { apikey: key, Authorization: 'Bearer ' + key },
   });
   if (!res.ok) throw new Error('อ่าน ' + table + ' เพื่อหาแถวเก่าล้มเหลว (HTTP ' + res.status + '): ' + (await res.text()));
@@ -199,14 +260,20 @@ async function main() {
 
   const wordRows = order初.map((w, i) => toWordRow(w, '初', i + 1))
     .concat(order中.map((w, i) => toWordRow(w, '中', i + 1)));
+  const wordContentKeys = wordRows.map((row) => row.content_key);
+  if (new Set(wordContentKeys).size !== wordContentKeys.length) {
+    throw new Error('content_key ของคำซ้ำกัน — ห้าม migrate ต่อ');
+  }
   const sentRows = sentencesFull.map((s, i) => toSentRow(s, i + 1));
 
   console.log('เตรียม migrate: คำ ' + wordRows.length + ' คำ (初 ' + order初.length + ' · 中 ' + order中.length + ') · ประโยค ' + sentRows.length + ' ประโยค');
 
   console.log('→ upsert game_words ...');
-  await upsertRows(SUPABASE_URL, SERVICE_KEY, 'game_words', wordRows, 'word,level');
+  await upsertRows(SUPABASE_URL, SERVICE_KEY, 'game_words', wordRows, 'content_key');
   console.log('→ เช็คแถวเก่าใน game_words ...');
-  await pruneStale(SUPABASE_URL, SERVICE_KEY, 'game_words', wordRows, ['word', 'level'], ALLOW_PRUNE);
+  await pruneStale(SUPABASE_URL, SERVICE_KEY, 'game_words', wordRows, ['content_key'], ALLOW_PRUNE, '&status=eq.active');
+  console.log('→ ซิงก์ตัวตนคำใน learning_items ...');
+  await syncLearningWordIdentities(SUPABASE_URL, SERVICE_KEY, wordRows);
 
   console.log('→ upsert game_sentences ...');
   await upsertRows(SUPABASE_URL, SERVICE_KEY, 'game_sentences', sentRows, 'th');

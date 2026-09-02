@@ -2347,3 +2347,12 @@ node scripts/check-site.js
 - Bound every descendant in the alphabet-practice dialog to Tone's live Standard/Modern body state, including home cards, expanded manual details, consonants, vowels, and endings.
 - Added collision-safe line height and row spacing to the active Tone, Reading, Typing, and Word Order vocabulary stacks for Desktop and Mobile, including long wrapping text and both font states. Lego lower gameplay and the parked Listening game are unchanged.
 - Verification: targeted alphabet, active-stack, shared-game, and Mobile Landscape regressions; browser geometry at `1440×900` and `390×844` with Standard → Modern → Standard; and the normal full-site gate before Preview handoff.
+
+# 2026-09-02 — Sense-safe seven-record vocabulary source candidate
+
+- Added only the seven Lin-approved verb records, including separate new identities for `ร้อง=唱` and `ร้อง=尖叫`; the old combined `ร้อง=唱/哭` identity remains legacy and separate.
+- Applied Lin's follow-up catalog wording: `นัด=約人` and `แชท=打字聊天`.
+- Scoped the records to Tone, Reading, and Typing only. Game-content requests now declare their surface, while cached clients retain the legacy response path.
+- Propagated `contentKey` through reports, SRS calls, direct practice, and Resume without changing existing single-meaning SRS keys; object-use metadata is intentionally absent from the catalog and review flow.
+- Added an unapplied database migration, safe release/rollback order, focused regressions, and refreshed generated game bundles. No Production SQL, content sync, Edge/static deploy, Auth, or user-data mutation was performed.
+- Verification: focused data/game/rollout/race checks, minified-source freshness, `git diff --check`, and the full site gate.

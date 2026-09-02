@@ -35,6 +35,7 @@
     return master.map(function (w) {
       return {
         word: w.word,
+        contentKey: w.contentKey,
         readingTH: (typeof w.readingTH === 'string' && w.readingTH.trim()) ? w.readingTH : w.word,
         readingEN: w.en,
         zh: w.zh,
@@ -50,7 +51,7 @@
   // ใช้: th, zh, en, level(初/中), cons/lead/cluster/vowel/tone/final/tone_name, syls
   global.buildWordsForPhonicsGames = function (master) {
     return master.map(function (w) {
-      var out = { th: w.word, zh: w.zh, en: w.en, level: w.level };
+      var out = { th: w.word, zh: w.zh, en: w.en, level: w.level, contentKey: w.contentKey };
       ['cons', 'lead', 'cluster', 'vowel', 'tone', 'final', 'tone_name', 'syls', 'readingTH', 'readSyls'].forEach(function (f) {
         if (w[f] !== undefined) out[f] = w[f];
       });
@@ -119,8 +120,10 @@
     } catch (e) { return null; }
   }
 
-  function fetchGameContent() {
+  var GAME_SURFACES = { tone: true, reading: true, typing: true, word_order: true, listening: true };
+  function fetchGameContent(game) {
     var cfg = currentConfig();
+    if (game != null && !GAME_SURFACES[game]) return Promise.reject(new Error('game-content: invalid game surface'));
     var minimumGuest = typeof global.isMinimumGuestOnly === 'function' && global.isMinimumGuestOnly();
     var token = minimumGuest ? cfg.anonKey : (readAccessTokenGuess(cfg.url) || cfg.anonKey);
     if (typeof navigator !== 'undefined' && navigator.onLine === false) {
@@ -132,7 +135,7 @@
     return global.NetworkGuard.request(fetch, cfg.url + '/functions/v1/game-content', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', apikey: cfg.anonKey, Authorization: 'Bearer ' + token },
-      body: '{}'
+      body: JSON.stringify(game ? { game: game } : {})
     }, 15000).then(function (res) {
       if (!res.ok) throw new Error('game-content HTTP ' + res.status);
       return res.json();
@@ -156,7 +159,7 @@
       if (!match) return null;
       var wanted = decodeURIComponent(match[1]);
       var rows = (data && Array.isArray(data.words) ? data.words : []).filter(function (row) {
-        return row && row.word === wanted && (row.level === '初' || row.level === '中');
+        return row && (row.contentKey === wanted || row.word === wanted) && (row.level === '初' || row.level === '中');
       });
       if (rows.length !== 1) return null;
       var level = rows[0].level;
@@ -323,11 +326,12 @@
   // ยังคงยิง showErrorBanner() ที่นี่เหมือนเดิมเมื่อพัง (ห้ามเงียบ) แล้ว "throw ต่อ" ให้ผู้เรียก
   // รู้ด้วยว่าพัง (ผู้เรียกไม่ต้องแสดง error ซ้ำ แค่ปล่อยปุ่มเป็น disabled ต่อไปตามที่ CSS ทำอยู่แล้ว)
   global.GameContentLoader = {
-    boot: function (appScriptSrcs) {
+    boot: function (appScriptSrcs, options) {
       if (document.body) showLoadingBanner();
       else document.addEventListener('DOMContentLoaded', showLoadingBanner);
 
-      return whenDeferredConfigReady().then(fetchGameContent).then(function (data) {
+      var game = options && options.game;
+      return whenDeferredConfigReady().then(function () { return fetchGameContent(game); }).then(function (data) {
         fireCapHitEvents(data);
         if (global.WordAudio && typeof global.WordAudio.setAvailability === 'function') {
           global.WordAudio.setAvailability(data.audioAvailable);

@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "mode": "catalog-audit",
-  "generatedAt": "2026-08-08T00:58:56.316Z",
+  "generatedAt": "2026-09-02T02:09:52.853Z",
   "summary": {
-    "totalEntries": 765,
+    "totalEntries": 767,
     "mismatchEntries": 5,
-    "totalSyllables": 1358,
+    "totalSyllables": 1361,
     "mismatchSyllables": 5
   },
   "entries": [
@@ -4505,10 +4505,10 @@
       "notes": ""
     },
     {
-      "id": "catalog:นอน",
+      "id": "catalog:นอน@初",
       "word": "นอน",
       "readingTH": "นอน",
-      "zh": "睡",
+      "zh": "睡／躺",
       "en": "norn",
       "level": "初",
       "category": "กริยา",
@@ -4629,10 +4629,10 @@
       "notes": ""
     },
     {
-      "id": "catalog:ร้อง",
+      "id": "catalog:ร้อง@初#sing",
       "word": "ร้อง",
       "readingTH": "ร้อง",
-      "zh": "唱/哭",
+      "zh": "唱",
       "en": "róong",
       "level": "初",
       "category": "กริยา",
@@ -4660,7 +4660,38 @@
       "notes": ""
     },
     {
-      "id": "catalog:คุย",
+      "id": "catalog:ร้อง@初#scream",
+      "word": "ร้อง",
+      "readingTH": "ร้อง",
+      "zh": "尖叫",
+      "en": "róong",
+      "level": "初",
+      "category": "กริยา",
+      "sourceFile": "words-data.js",
+      "status": "match",
+      "syllables": [
+        {
+          "th": "ร้อง",
+          "lead": null,
+          "cons": "ร",
+          "fullSpelling": "ร้อง",
+          "expectedToneName": "ตรี",
+          "computedToneName": "ตรี",
+          "match": true,
+          "cls": "low",
+          "clsZh": "低子音",
+          "mark": "้",
+          "markName": "ไม้โท",
+          "live": true,
+          "vowelType": "long",
+          "initChar": "ร",
+          "reason": "「ร」是低子音，加上聲調符「้」（ไม้โท）→ 組合成第四聲"
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "id": "catalog:คุย@初",
       "word": "คุย",
       "readingTH": "คุย",
       "zh": "聊天",
@@ -19093,7 +19124,7 @@
       "id": "catalog:แชท",
       "word": "แชท",
       "readingTH": "แชด",
-      "zh": "聊天（打字）",
+      "zh": "打字聊天",
       "en": "cháet",
       "level": "初",
       "category": "กริยา",
@@ -19124,7 +19155,7 @@
       "id": "catalog:นัด",
       "word": "นัด",
       "readingTH": "นัด",
-      "zh": "約（時間）",
+      "zh": "約人",
       "en": "nát",
       "level": "初",
       "category": "กริยา",
@@ -19183,12 +19214,12 @@
       "notes": ""
     },
     {
-      "id": "catalog:ร้องไห้",
+      "id": "catalog:ร้องไห้@中",
       "word": "ร้องไห้",
       "readingTH": "ร้อง-ไห้",
       "zh": "哭",
       "en": "róong-hâi",
-      "level": "初",
+      "level": "中",
       "category": "กริยา",
       "sourceFile": "words-data.js",
       "status": "match",
@@ -19434,10 +19465,10 @@
       "notes": ""
     },
     {
-      "id": "catalog:หลับ",
+      "id": "catalog:หลับ@初",
       "word": "หลับ",
       "readingTH": "หลับ",
-      "zh": "睡著/入睡",
+      "zh": "睡",
       "en": "làp",
       "level": "初",
       "category": "กริยา",
@@ -19460,6 +19491,54 @@
           "vowelType": "short",
           "initChar": "หล",
           "reason": "「หล」是前引字，這個音節是死音節（短母音或短尾音），沒有聲調符 → 固定念第二聲"
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "id": "catalog:ตื่นนอน@中",
+      "word": "ตื่นนอน",
+      "readingTH": "ตื่น-นอน",
+      "zh": "睡醒",
+      "en": "tʉ̀ʉn-norn",
+      "level": "中",
+      "category": "กริยา",
+      "sourceFile": "words-data.js",
+      "status": "match",
+      "syllables": [
+        {
+          "th": "ตื่น",
+          "lead": null,
+          "cons": "ต",
+          "fullSpelling": "ตื่น",
+          "expectedToneName": "เอก",
+          "computedToneName": "เอก",
+          "match": true,
+          "cls": "mid",
+          "clsZh": "中子音",
+          "mark": "่",
+          "markName": "ไม้เอก",
+          "live": true,
+          "vowelType": "long",
+          "initChar": "ต",
+          "reason": "「ต」是中子音，加上聲調符「่」（ไม้เอก）→ 組合成第二聲"
+        },
+        {
+          "th": "นอน",
+          "lead": null,
+          "cons": "น",
+          "fullSpelling": "นอน",
+          "expectedToneName": "สามัญ",
+          "computedToneName": "สามัญ",
+          "match": true,
+          "cls": "low",
+          "clsZh": "低子音",
+          "mark": null,
+          "markName": null,
+          "live": true,
+          "vowelType": "long",
+          "initChar": "น",
+          "reason": "「น」是低子音，這個音節是活音節（長母音或長尾音），沒有聲調符 → 固定念第一聲"
         }
       ],
       "notes": ""

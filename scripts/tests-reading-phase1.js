@@ -80,7 +80,7 @@ test('Reading counter follows active syllables without changing the round queue'
 });
 
 test('Reading loads the rebuilt crash-safe bundle with a fresh cache key', () => {
-  assert.match(html, /reading-game-app\.min\.js\?v=45/);
+  assert.match(html, /reading-game-app\.min\.js\?v=46/);
 });
 
 test('every Reading syllable uses the locked consonant-vowel-final-tone slot order', () => {

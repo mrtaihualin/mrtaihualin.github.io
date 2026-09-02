@@ -124,6 +124,16 @@ const validConfig = { url: 'https://project.supabase.co', anonKey: 'public-anon-
     assert.strictEqual(rows[1].readingTH, 'กิน');
     assert.strictEqual(rows[2].readingTH, 'เครื่อง-บิน');
   });
+  await test('sense identity survives the protected-content adapters without object-use metadata', async () => {
+    const harness = createBootHarness({ readyState: 'complete', config: validConfig });
+    const source = [{ word: 'ร้อง', contentKey: 'ร้อง@初#sing', level: '初', syls: [] }];
+    const tone = harness.sandbox.buildWordListForToneFinder(source);
+    const phonics = harness.sandbox.buildWordsForPhonicsGames(source);
+    assert.strictEqual(tone[0].contentKey, 'ร้อง@初#sing');
+    assert.strictEqual(phonics[0].contentKey, 'ร้อง@初#sing');
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(tone[0], 'objectUse'), false);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(phonics[0], 'objectUse'), false);
+  });
   await test('request rejects deterministically when fetch never settles', async () => {
     await assert.rejects(guard.request(() => new Promise(() => {}), '/hang', {}, 10, null), (error) => error.code === 'NETWORK_TIMEOUT');
   });
@@ -138,7 +148,8 @@ const validConfig = { url: 'https://project.supabase.co', anonKey: 'public-anon-
   });
   await test('Core 5 load the guard before the protected content client', async () => {
     ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html'].forEach((page) => {
-      assert.match(read(page), /network-guard\.js\?v=1[\s\S]*game-content-client\.js\?v=11/);
+      const version = /^(?:tone-finder|reading-game|typing-game)\.html$/.test(page) ? 12 : 11;
+      assert.match(read(page), new RegExp('network-guard\\.js\\?v=1[\\s\\S]*game-content-client\\.js\\?v=' + version));
     });
   });
   await test('optional same-origin errors do not show a false fatal game banner', async () => {
@@ -187,6 +198,14 @@ const validConfig = { url: 'https://project.supabase.co', anonKey: 'public-anon-
     const harness = createBootHarness({ readyState: 'complete', config: validConfig });
     await harness.sandbox.GameContentLoader.boot([]);
     assert.strictEqual(harness.requests.length, 1);
+  });
+  await test('scoped pages send the requested game while legacy pages keep an empty body', async () => {
+    const scoped = createBootHarness({ readyState: 'complete', config: validConfig });
+    await scoped.sandbox.GameContentLoader.boot([], { game: 'reading' });
+    assert.deepStrictEqual(JSON.parse(scoped.requests[0].requestOptions.body), { game: 'reading' });
+    const legacy = createBootHarness({ readyState: 'complete', config: validConfig });
+    await legacy.sandbox.GameContentLoader.boot([]);
+    assert.deepStrictEqual(JSON.parse(legacy.requests[0].requestOptions.body), {});
   });
   await test('offline and timeout errors use an understandable recovery branch', async () => {
     assert.match(client, /navigator\.onLine === false/);

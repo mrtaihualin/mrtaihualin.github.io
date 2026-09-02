@@ -123,7 +123,11 @@ const LEVEL_OVERRIDE_CONFIRMED = {
   'ไว้ใจ': '中',
   'ค้นคว้า': '中',
   'ตกแต่ง': '中',
-  'ทะเลาะ': '中'
+  'ทะเลาะ': '中',
+  // Lin approved these exact corrected records on 2026-09-02; content authority overrides
+  // the older automatic two-syllable heuristic.
+  'ตื่นนอน': '中',
+  'ร้องไห้': '中'
 };
 
 W.forEach(function (w) {
