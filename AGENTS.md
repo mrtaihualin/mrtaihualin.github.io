@@ -26,6 +26,12 @@
 - Keep UI, logic, data and tests separated when it improves maintenance without changing locked behavior.
 - Record verified code/structure evidence as a Delta in `MAINTENANCE.md`; do not copy Product or Current status there.
 
+## Website release command boundary
+
+- Lin's short instruction `เอาขึ้นเว็บ` (or an unqualified instruction with the same meaning) means release the complete approved public static website package to Cloudflare Production and verify the whole public package, routes and shared assets, even when the provider uploads only changed files.
+- That short instruction does not by itself authorize Production SQL/database/data, Supabase Auth/RLS/Edge configuration, Google or LINE configuration, DNS/custom-domain changes, AWS failover, Git-host migration, secrets, real-user data or another external-system mutation. Each applicable action retains its own exact scope, risk and authorization gate.
+- Before any release mutation, resolve the exact approved source/version, target environment, package scope, required gates and rollback. If any of these is missing, conflicting or stale, stop before mutation and warn Lin that the release instruction is unclear, stating only the smallest missing decision or approval needed.
+
 ## Human-owned content
 
 - Thai game words, sentences, translations and readings come from Lin. Computed language fields require Lin's 100% review before publish.

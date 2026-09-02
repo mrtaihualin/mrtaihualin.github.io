@@ -1,6 +1,14 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-08-29 Asia/Bangkok** — Tone phonics manual / alphabet overlay candidate
+**Updated: 2026-09-02 Asia/Bangkok** — GitLab canonical Source/CI local candidate
+
+## 2026-09-02 — GitLab canonical Source/CI (`PASS_LOCAL / REMOTE_NOT_CREATED / PRODUCTION_UNCHANGED`)
+
+- Prepared a GitLab-only required CI gate and Merge Request Write-Set enforcement on exact released source `fc7803479d7402421f8ee0a81aa6e7283c255a01`; added the repository release boundary and durable Source/CI/Cloudflare/GitHub/AWS route without changing website runtime.
+- The exact 5.9 write-set is repository governance/CI/documentation plus the existing Write-Set checker and tests. It excludes every 5.2 gameplay/runtime path; only `MAINTENANCE.md` overlaps the stopped 5.2 historical branch and must preserve both entries when 5.2 rebases.
+- Write-Set unit tests, GitLab non-MR behavior, secret scanner tests, current-tree secret scan, whitespace and the full site gate PASS. No GitLab project/remote, push, mirror, CI runtime, Cloudflare, DNS, AWS, Supabase, backend, database or real-data mutation occurred in this local checkpoint.
+
+**Prior update: 2026-08-29 Asia/Bangkok** — Tone phonics manual / alphabet overlay candidate
 
 ## 2026-08-29 — Tone phonics manual + state-preserving alphabet overlay (`PASS_LOCAL / HUMAN_REVIEW_PENDING / PRODUCTION_UNCHANGED`)
 
