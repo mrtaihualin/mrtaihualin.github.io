@@ -1,6 +1,15 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-09-02 Asia/Bangkok** — Compact all-page Cookie Consent candidate
+**Updated: 2026-09-02 Asia/Bangkok** — Extensionless Login surface activation candidate
+
+## 2026-09-02 — Extensionless Login surfaces (`SOURCE_PASS / LOCAL_RESPONSIVE_PASS / PREVIEW_PENDING / PRODUCTION_UNCHANGED`)
+
+- Fixed the shared Login controller's route key on Cloudflare extensionless URLs such as `/tone-finder`. The controller now maps those public routes to their canonical `.html` source keys before selecting the existing six-game or scoped non-game Login surface; no provider, Auth, RLS, schema, configuration or user-data behavior changed.
+- Bumped only the existing Login loader bindings across the six games and eleven already-scoped Login/account pages so browsers request the corrected controller instead of a cached pre-fix copy. Reading remains the sole provider/modal authority, Personal Data/Search stays inside the existing owner-scoped Vault runtime and parked account surfaces remain fail-closed.
+- Local browser verification passes all six games on Desktop and `390×844` Portrait with one visible `🔑 登入` surface, one Reading-authority header, zero horizontal overflow and no automatic Login modal. Eleven related non-game surfaces also show exactly one Login surface; Vault alone retains its existing Personal Data/Search root.
+- Minimum Guest, shared-game `52/52`, Auth/session `15/15`, owner-switch `12/12`, Personal Content `62/62`, Personal Search `10/10`, secret scan, whitespace and the full `1,025`-file site gate pass. GitHub, Cloudflare Preview/Production, Supabase, provider/session/account and real-user/data state remain unchanged.
+
+**Prior update: 2026-09-02 Asia/Bangkok** — Compact all-page Cookie Consent candidate
 
 ## 2026-09-02 — Compact all-page Cookie Consent (`SOURCE_PASS / LOCAL_VISUAL_PASS / PREVIEW_PENDING / PRODUCTION_UNCHANGED`)
 

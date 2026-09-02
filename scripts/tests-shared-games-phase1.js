@@ -243,13 +243,13 @@ test('all scoped pages use one fail-closed Login surface and game pages permanen
   for (const file of gamePages) {
     const html = fs.readFileSync(path.join(root, file), 'utf8');
     assert.doesNotMatch(html, /ANN-BAND|ann-band|avail-band|annDismissed|annGoTo|annPrev|annNext/, `${file}: announcement DOM/marker/script/style hook must be removed`);
-    assert.match(html, /minimum-guest-launch\.js\?v=6/, `${file}: must load the Reading-authority Login gate`);
+    assert.match(html, /minimum-guest-launch\.js\?v=8/, `${file}: must load the Reading-authority Login gate`);
     assert.match(html, /shared\.min\.js\?v=(?:47|48)/, `${file}: must load the announcement-free game runtime`);
   }
   for (const file of nonGameScopedPages) {
     const html = fs.readFileSync(path.join(root, file), 'utf8');
     assert.match(html, /<!--ANN-BAND:START--><!-- Login UI scope: no announcement strip\. --><!--ANN-BAND:END-->/, `${file}: existing non-game announcement capability boundary must remain`);
-    assert.match(html, file === 'games.html' ? /minimum-guest-launch\.js\?v=7/ : /minimum-guest-launch\.js\?v=6/, `${file}: must load the Reading-authority Login gate`);
+    assert.match(html, /minimum-guest-launch\.js\?v=8/, `${file}: must load the Reading-authority Login gate`);
     assert.match(html, file === 'vault.html' ? /shared\.min\.js\?v=47/ : /shared\.min\.js\?v=45/, `${file}: non-game cache binding must stay on its current runtime`);
   }
   assert.doesNotMatch(sharedJs, /suppressScopedAnnouncement|staleScopedAnnouncement|avail-band-placeholder/);
@@ -259,8 +259,10 @@ test('all scoped pages use one fail-closed Login surface and game pages permanen
   assert.match(sharedMin, /document\.body&&!document\.body\.hasAttribute\("data-gsh-game"\)\?document\.getElementById\("ann-band"\):null/, 'deployed shared runtime must keep the non-game announcement guard');
   assert.doesNotMatch(sharedCss, /(^|[},]\s*)\.avail-band\s*\{/m, 'announcement CSS must never target an unscoped game surface');
   assert.match(minimumGuest, /window\.MRT_PARKED_ACCOUNT_SURFACE = parked\.test\(path\)/);
+  assert.match(minimumGuest, /loginController\.src = 'js\/core\/login-surface\.js\?v=6'/, 'public pages must request the extensionless-route Login controller');
   assert.doesNotMatch(minimumGuest, /location\.replace\('\/games\.html\?guest_launch=1'\)/);
   assert.match(loginJs, /'tone-finder\.html'[\s\S]*'reading-game\.html'[\s\S]*'listening-game\.html'[\s\S]*'typing-game\.html'[\s\S]*'word-order\.html'[\s\S]*'lego\.html'/);
+  assert.match(loginJs, /if \(filename\.indexOf\('\.'\) === -1\) filename \+= '\.html'/, 'Cloudflare extensionless routes must resolve to canonical Login page keys');
   assert.match(loginJs, /function readingHeader\(title, subtitle\)/, 'all six game headers must use the one Reading template');
   assert.match(loginJs, /function readingSlot\(sourceSlot\) \{[\s\S]{0,120}document\.createElement\('div'\)/, 'every scoped page must use Reading exact DIV Login slot markup');
   assert.match(loginJs, /function readingSurface\(slot, withHelp, originalHelp\)/, 'all scoped pages must use the one Reading Account Bar template');

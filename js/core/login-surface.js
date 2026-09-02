@@ -4,6 +4,11 @@
   'use strict';
 
   var filename = String(window.location.pathname || '').split('/').pop().toLowerCase() || 'index.html';
+  // Cloudflare serves the public site on extensionless routes (for example
+  // /tone-finder). Normalize those routes to the canonical source filenames so
+  // the shared Login controller activates on Production as well as local .html
+  // previews.
+  if (filename.indexOf('.') === -1) filename += '.html';
   var gamePages = {
     'tone-finder.html': { root: '.tf-page.gsh-shell', header: '.tf-page-header.gsh-page-header', surface: '#rg-profile-wrap' },
     'reading-game.html': { root: '.v3-page.gsh-shell', header: '.page-header.gsh-page-header', surface: '#rg-profile-wrap' },
