@@ -262,7 +262,14 @@ test('all scoped pages use one fail-closed Login surface and game pages permanen
   assert.match(minimumGuest, /loginController\.src = 'js\/core\/login-surface\.js\?v=6'/, 'public pages must request the extensionless-route Login controller');
   assert.doesNotMatch(minimumGuest, /location\.replace\('\/games\.html\?guest_launch=1'\)/);
   assert.match(loginJs, /'tone-finder\.html'[\s\S]*'reading-game\.html'[\s\S]*'listening-game\.html'[\s\S]*'typing-game\.html'[\s\S]*'word-order\.html'[\s\S]*'lego\.html'/);
-  assert.match(loginJs, /if \(filename\.indexOf\('\.'\) === -1\) filename \+= '\.html'/, 'Cloudflare extensionless routes must resolve to canonical Login page keys');
+  assert.match(loginJs, /function sourceFilename\(pathname\)[\s\S]{0,520}if \(filename\.indexOf\('\.'\) === -1\) filename \+= '\.html'[\s\S]{0,120}var filename = sourceFilename\(window\.location\.pathname\)/, 'Cloudflare extensionless routes must resolve to canonical Login page keys');
+  const filenameStart = loginJs.indexOf('function sourceFilename(pathname)');
+  const filenameEnd = loginJs.indexOf('\n\n  var filename = sourceFilename', filenameStart);
+  const filenameContext = {};
+  vm.runInNewContext(loginJs.slice(filenameStart, filenameEnd) + '\nthis.sourceFilename = sourceFilename;', filenameContext);
+  assert.equal(filenameContext.sourceFilename('/tone-finder'), 'tone-finder.html', 'Production extensionless game route must activate the Tone Login surface');
+  assert.equal(filenameContext.sourceFilename('/vault'), 'vault.html', 'Production extensionless account route must activate the Vault Login surface');
+  assert.equal(filenameContext.sourceFilename('/reading-game.html'), 'reading-game.html', 'local .html preview route must remain unchanged');
   assert.match(loginJs, /function readingHeader\(title, subtitle\)/, 'all six game headers must use the one Reading template');
   assert.match(loginJs, /function readingSlot\(sourceSlot\) \{[\s\S]{0,120}document\.createElement\('div'\)/, 'every scoped page must use Reading exact DIV Login slot markup');
   assert.match(loginJs, /function readingSurface\(slot, withHelp, originalHelp\)/, 'all scoped pages must use the one Reading Account Bar template');
