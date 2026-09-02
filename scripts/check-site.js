@@ -128,6 +128,8 @@ runTest(['scripts/tests-listening-phase1.js'], 'Phase 1 Listening tests');
 runTest(['scripts/tests-phase1-game-content-rl-grants.mjs'], 'Phase 1 game-content rate-limit grant tests');
 runTest(['scripts/tests-typing-phase1.js'], 'Phase 1 Typing tests');
 runTest(['scripts/tests-reading-phase1.js'], 'Phase 1 Reading tests');
+runTest(['scripts/check-approved-vocabulary-catalog.js'], 'Lin-approved vocabulary catalog integrity check');
+runTest(['scripts/tests-approved-vocabulary-catalog.js'], 'Lin-approved vocabulary catalog immutability/source-only tests');
 runTest(['scripts/tests-vocab-sense-scope.js'], 'Vocabulary sense/surface/identity tests');
 runTest(['scripts/tests-word-order-phase1.js'], 'Phase 1 Word Order tests');
 runTest(['scripts/tests-account-export-phase1.js'], 'Phase 1 account-export tests');

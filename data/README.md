@@ -3,6 +3,9 @@
 > Content authority belongs to Lin and the Current Product/Brand sources. This file owns the source-data procedure.
 
 - `data/words-data.js` and `data/adv-sentences.js` are Lin's authoring sources.
+- `data/approved-vocabulary-catalog.json` is the new Lin-approved canonical vocabulary master under construction. It is Source-only and inactive until a separate completed-catalog cutover is explicitly authorized; the current live games continue using the old system.
+- `data/approved-vocabulary-catalog.lock.json` is the immutable receipt for that master. No AI, validator, calculator, adapter, migration, sync, runtime or other automated system may rewrite either file. A mismatch must stop and be reported to Lin; automatic repair is forbidden. Only Lin's later exact record/field approval can authorize a change. The notification channel and handling flow remain deferred until the catalog is complete.
+- `scripts/check-approved-vocabulary-catalog.js` is read-only: it checks the locked bytes, schema, counts, identities, approved sense boundaries and Source-only state. It never edits or approves content.
 - AI may not invent, add, remove or change words, sentences, translations or readings. Computed decomposition fields require Lin to review every word and every field before publish.
 - Builders such as `buildWordsForPhonicsGames` and `buildSentencesForPhonicsGames` must preserve every field used by games, including `readingTH`.
 - Reviewed verb rows require explicit `word`, `spellingTH` and `readingTH`. Split both authority strings on `-`; their part counts must equal `syls.length`, and the `spellingTH` parts must join exactly to `word`. A mismatch fails closed for manual review.

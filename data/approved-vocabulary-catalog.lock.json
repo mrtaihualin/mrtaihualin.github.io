@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "catalogId": "lin-approved-vocabulary-master",
+  "catalogSha256": "0e16935d11e7eed5b6ec3d66ebefa6382ac69c505f564f90e47d0e694fa2e472",
+  "approvedRecordCount": 273,
+  "reviewSetCounts": {
+    "verbs-225-final-notes": 225,
+    "pronouns-i-you-he": 15,
+    "numbers-18": 18,
+    "colors-15": 15
+  },
+  "lockedBy": "Lin",
+  "lockedAt": "2026-09-02",
+  "mutationRule": "Lin exact-record-and-field approval required; automated rewrite forbidden",
+  "productDecisionRefs": [
+    "PD-VOCAB-APPROVED-DATA-IMMUTABILITY-2026-09-02-A",
+    "PD-VOCAB-SINGLE-APPROVED-CANONICAL-CATALOG-2026-09-02-B",
+    "PD-VOCAB-CANONICAL-CUTOVER-2026-09-02-C"
+  ]
+}

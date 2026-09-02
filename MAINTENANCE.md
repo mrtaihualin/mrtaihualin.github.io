@@ -1,6 +1,15 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-09-02 Asia/Bangkok** — Extensionless Login surface activation candidate
+**Updated: 2026-09-02 Asia/Bangkok** — Lin-approved canonical vocabulary master initialization
+
+## 2026-09-02 — Lin-approved canonical vocabulary master (`SOURCE_PASS / SOURCE_ONLY_INACTIVE / PRODUCTION_UNCHANGED`)
+
+- Created one new canonical master containing only the exact vocabulary sets Lin has completed: 225 verb records, 15 `我／你／他` pronoun records, 18 number records and 15 color records, for 273 approved semantic records total. Deferred senses such as `ตัวเอง=自己`, `เขา=山`, other meanings of `มัน` and `เงิน=錢` remain outside this catalog; standalone `เขียว` remains replaced by `เขียวเข้ม／เขียวอ่อน` in the approved color set.
+- Added one immutable whole-catalog receipt and a read-only fail-closed checker. A byte, field, identity, count, sense-boundary or activation mismatch stops with a report-to-Lin error; the checker contains no write/repair path and cannot approve content. Only Lin's later exact record-and-field approval may authorize a revision; the notification channel and handling flow remain deferred.
+- Kept the new catalog Source-only and inactive. No game, runtime client, migration, Edge Function, Supabase table, database or Production consumer reads it; the current old vocabulary system remains the only live source until the new catalog is complete and a separately authorized cutover passes.
+- Catalog integrity, immutability/source-only negative tests, existing 225-record vocabulary contracts and data health pass. The full site gate and whitespace verification pass with no runtime, Supabase, Production or real-user/data mutation.
+
+**Prior update: 2026-09-02 Asia/Bangkok** — Extensionless Login surface activation candidate
 
 ## 2026-09-02 — Extensionless Login surfaces (`SOURCE_PASS / LOCAL_RESPONSIVE_PASS / PREVIEW_PENDING / PRODUCTION_UNCHANGED`)
 
