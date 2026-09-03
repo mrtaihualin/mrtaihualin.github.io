@@ -1,0 +1,589 @@
+{
+  "schemaVersion": 1,
+  "queueId": "paid-vocabulary-review-queue",
+  "authority": "Lin checkpoint routing",
+  "canonicalApprovedCatalog": false,
+  "state": "candidate-unreviewed-inactive",
+  "runtimeConsumption": "not-authorized",
+  "productionMutation": "not-authorized",
+  "checkpointRef": "04_WORKING/VOCAB_6_3_CURRENT/CHECKPOINT_CURRENT.md",
+  "candidateCount": 64,
+  "candidates": [
+    {
+      "candidateKey": "มัน@初#legacy-paid-review-candidate",
+      "formerFreeRank": 4,
+      "word": "มัน",
+      "zhTW": "它／他／她（不禮貌）",
+      "level": "初",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "ของ@初#legacy-paid-review-candidate",
+      "formerFreeRank": 6,
+      "word": "ของ",
+      "zhTW": "的／屬於",
+      "level": "初",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "แล้ว@初#legacy-paid-review-candidate",
+      "formerFreeRank": 7,
+      "word": "แล้ว",
+      "zhTW": "然後／已經",
+      "level": "初",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "อะไร@初#legacy-paid-review-candidate",
+      "formerFreeRank": 8,
+      "word": "อะไร",
+      "zhTW": "什麼",
+      "level": "初",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "ก็@初#legacy-paid-review-candidate",
+      "formerFreeRank": 9,
+      "word": "ก็",
+      "zhTW": "也／就",
+      "level": "初",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "กับ@初#legacy-paid-review-candidate",
+      "formerFreeRank": 15,
+      "word": "กับ",
+      "zhTW": "跟／和",
+      "level": "初",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "นี่@初#legacy-paid-review-candidate",
+      "formerFreeRank": 16,
+      "word": "นี่",
+      "zhTW": "這個",
+      "level": "初",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "ใน@初#legacy-paid-review-candidate",
+      "formerFreeRank": 17,
+      "word": "ใน",
+      "zhTW": "在...裡面",
+      "level": "初",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "ใช่@初#legacy-paid-review-candidate",
+      "formerFreeRank": 19,
+      "word": "ใช่",
+      "zhTW": "是／對",
+      "level": "初",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "และ@初#legacy-paid-review-candidate",
+      "formerFreeRank": 20,
+      "word": "และ",
+      "zhTW": "和／而且",
+      "level": "初",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "คน@初#legacy-paid-review-candidate",
+      "formerFreeRank": 21,
+      "word": "คน",
+      "zhTW": "個／位",
+      "level": "初",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "แต่@初#legacy-paid-review-candidate",
+      "formerFreeRank": 23,
+      "word": "แต่",
+      "zhTW": "但是",
+      "level": "初",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "ถ้า@初#legacy-paid-review-candidate",
+      "formerFreeRank": 25,
+      "word": "ถ้า",
+      "zhTW": "如果",
+      "level": "初",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "กัน@初#legacy-paid-review-candidate",
+      "formerFreeRank": 26,
+      "word": "กัน",
+      "zhTW": "彼此／互相",
+      "level": "初",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "อยาก@初#legacy-paid-review-candidate",
+      "formerFreeRank": 29,
+      "word": "อยาก",
+      "zhTW": "想要",
+      "level": "初",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "นั่น@初#legacy-paid-review-candidate",
+      "formerFreeRank": 31,
+      "word": "นั่น",
+      "zhTW": "那個",
+      "level": "初",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "ใคร@初#legacy-paid-review-candidate",
+      "formerFreeRank": 32,
+      "word": "ใคร",
+      "zhTW": "誰",
+      "level": "初",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "อย่าง@初#legacy-paid-review-candidate",
+      "formerFreeRank": 34,
+      "word": "อย่าง",
+      "zhTW": "種／樣（量詞）",
+      "level": "初",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "จาก@初#legacy-paid-review-candidate",
+      "formerFreeRank": 36,
+      "word": "จาก",
+      "zhTW": "從",
+      "level": "初",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "ถึง@初#legacy-paid-review-candidate",
+      "formerFreeRank": 40,
+      "word": "ถึง",
+      "zhTW": "到／直到",
+      "level": "初",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "หรือ@初#legacy-paid-review-candidate",
+      "formerFreeRank": 41,
+      "word": "หรือ",
+      "zhTW": "或者",
+      "level": "初",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "พวกเขา@初#legacy-paid-review-candidate",
+      "formerFreeRank": 42,
+      "word": "พวกเขา",
+      "zhTW": "他們／她們",
+      "level": "初",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "อย่า@初#legacy-paid-review-candidate",
+      "formerFreeRank": 44,
+      "word": "อย่า",
+      "zhTW": "別／不要",
+      "level": "初",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "เพราะ@初#legacy-paid-review-candidate",
+      "formerFreeRank": 45,
+      "word": "เพราะ",
+      "zhTW": "因為",
+      "level": "初",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "ไหน@初#legacy-paid-review-candidate",
+      "formerFreeRank": 47,
+      "word": "ไหน",
+      "zhTW": "哪裡／哪個",
+      "level": "初",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "ก่อน@初#legacy-paid-review-candidate",
+      "formerFreeRank": 49,
+      "word": "ก่อน",
+      "zhTW": "在...之前",
+      "level": "初",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "ชั้น@初#legacy-paid-review-candidate",
+      "formerFreeRank": 50,
+      "word": "ชั้น",
+      "zhTW": "層",
+      "level": "初",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "เพื่อ@初#legacy-paid-review-candidate",
+      "formerFreeRank": 51,
+      "word": "เพื่อ",
+      "zhTW": "為了",
+      "level": "初",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "พวกเรา@初#legacy-paid-review-candidate",
+      "formerFreeRank": 52,
+      "word": "พวกเรา",
+      "zhTW": "我們（同輩）",
+      "level": "初",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "ตัว@初#legacy-paid-review-candidate",
+      "formerFreeRank": 59,
+      "word": "ตัว",
+      "zhTW": "隻／條",
+      "level": "初",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "เมื่อ@初#legacy-paid-review-candidate",
+      "formerFreeRank": 61,
+      "word": "เมื่อ",
+      "zhTW": "當...時候",
+      "level": "初",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "ตัวเอง@初#legacy-paid-review-candidate",
+      "formerFreeRank": 74,
+      "word": "ตัวเอง",
+      "zhTW": "自己",
+      "level": "初",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "บน@初#legacy-paid-review-candidate",
+      "formerFreeRank": 79,
+      "word": "บน",
+      "zhTW": "在...上面",
+      "level": "初",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "ต่อ@初#legacy-paid-review-candidate",
+      "formerFreeRank": 80,
+      "word": "ต่อ",
+      "zhTW": "向／每／繼續",
+      "level": "初",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "ห้อง@初#legacy-paid-review-candidate",
+      "formerFreeRank": 84,
+      "word": "ห้อง",
+      "zhTW": "間",
+      "level": "初",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "ตาม@初#legacy-paid-review-candidate",
+      "formerFreeRank": 87,
+      "word": "ตาม",
+      "zhTW": "沿著／按照",
+      "level": "初",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "ครั้ง@初#legacy-paid-review-candidate",
+      "formerFreeRank": 91,
+      "word": "ครั้ง",
+      "zhTW": "次",
+      "level": "初",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "ขอโทษ@中#legacy-paid-review-candidate",
+      "formerFreeRank": 1,
+      "word": "ขอโทษ",
+      "zhTW": "對不起",
+      "level": "中",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "ขอบคุณ@中#legacy-paid-review-candidate",
+      "formerFreeRank": 2,
+      "word": "ขอบคุณ",
+      "zhTW": "謝謝",
+      "level": "中",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "สำหรับ@中#legacy-paid-review-candidate",
+      "formerFreeRank": 3,
+      "word": "สำหรับ",
+      "zhTW": "為了",
+      "level": "中",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "เกี่ยวกับ@中#legacy-paid-review-candidate",
+      "formerFreeRank": 4,
+      "word": "เกี่ยวกับ",
+      "zhTW": "關於",
+      "level": "中",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "ไม่เป็นไร@中#legacy-paid-review-candidate",
+      "formerFreeRank": 5,
+      "word": "ไม่เป็นไร",
+      "zhTW": "沒關係",
+      "level": "中",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "ดังนั้น@中#legacy-paid-review-candidate",
+      "formerFreeRank": 6,
+      "word": "ดังนั้น",
+      "zhTW": "因此／所以",
+      "level": "中",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "สวัสดี@中#legacy-paid-review-candidate",
+      "formerFreeRank": 7,
+      "word": "สวัสดี",
+      "zhTW": "你好／再見",
+      "level": "中",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "ตั้งแต่@中#legacy-paid-review-candidate",
+      "formerFreeRank": 8,
+      "word": "ตั้งแต่",
+      "zhTW": "自從／從...開始",
+      "level": "中",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "พวกคุณ@中#legacy-paid-review-candidate",
+      "formerFreeRank": 11,
+      "word": "พวกคุณ",
+      "zhTW": "你們（正式）",
+      "level": "中",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "ระหว่าง@中#legacy-paid-review-candidate",
+      "formerFreeRank": 13,
+      "word": "ระหว่าง",
+      "zhTW": "之間／期間",
+      "level": "中",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "จึง@中#legacy-paid-review-candidate",
+      "formerFreeRank": 17,
+      "word": "จึง",
+      "zhTW": "於是／所以",
+      "level": "中",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "จนกว่า@中#legacy-paid-review-candidate",
+      "formerFreeRank": 19,
+      "word": "จนกว่า",
+      "zhTW": "直到",
+      "level": "中",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "หาก@中#legacy-paid-review-candidate",
+      "formerFreeRank": 21,
+      "word": "หาก",
+      "zhTW": "如果（正式）",
+      "level": "中",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "เนื่องจาก@中#legacy-paid-review-candidate",
+      "formerFreeRank": 29,
+      "word": "เนื่องจาก",
+      "zhTW": "由於／因為",
+      "level": "中",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "ฉบับ@中#legacy-paid-review-candidate",
+      "formerFreeRank": 32,
+      "word": "ฉบับ",
+      "zhTW": "份／冊",
+      "level": "中",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "ขณะที่@中#legacy-paid-review-candidate",
+      "formerFreeRank": 33,
+      "word": "ขณะที่",
+      "zhTW": "當...的時候",
+      "level": "中",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "แม้ว่า@中#legacy-paid-review-candidate",
+      "formerFreeRank": 41,
+      "word": "แม้ว่า",
+      "zhTW": "儘管／雖然",
+      "level": "中",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "ทั้งที่@中#legacy-paid-review-candidate",
+      "formerFreeRank": 45,
+      "word": "ทั้งที่",
+      "zhTW": "儘管／雖然",
+      "level": "中",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "ท่ามกลาง@中#legacy-paid-review-candidate",
+      "formerFreeRank": 48,
+      "word": "ท่ามกลาง",
+      "zhTW": "在...之中／當中",
+      "level": "中",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "ถึงแม้@中#legacy-paid-review-candidate",
+      "formerFreeRank": 49,
+      "word": "ถึงแม้",
+      "zhTW": "即使／雖然",
+      "level": "中",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "เว้นแต่@中#legacy-paid-review-candidate",
+      "formerFreeRank": 51,
+      "word": "เว้นแต่",
+      "zhTW": "除非／除了",
+      "level": "中",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "เช็คอิน@中#legacy-paid-review-candidate",
+      "formerFreeRank": 74,
+      "word": "เช็คอิน",
+      "zhTW": "辦理入住",
+      "level": "中",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "เช็คเอาท์@中#legacy-paid-review-candidate",
+      "formerFreeRank": 75,
+      "word": "เช็คเอาท์",
+      "zhTW": "退房",
+      "level": "中",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "ลดราคา@中#legacy-paid-review-candidate",
+      "formerFreeRank": 76,
+      "word": "ลดราคา",
+      "zhTW": "打折",
+      "level": "中",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "ชำระเงิน@中#legacy-paid-review-candidate",
+      "formerFreeRank": 77,
+      "word": "ชำระเงิน",
+      "zhTW": "付款",
+      "level": "中",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "ไม่เข้าใจ@中#legacy-paid-review-candidate",
+      "formerFreeRank": 78,
+      "word": "ไม่เข้าใจ",
+      "zhTW": "我不懂",
+      "level": "中",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    },
+    {
+      "candidateKey": "ประชุมงาน@中#legacy-paid-review-candidate",
+      "formerFreeRank": 86,
+      "word": "ประชุมงาน",
+      "zhTW": "工作會議",
+      "level": "中",
+      "reviewStatus": "ยังไม่ตรวจ",
+      "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
+    }
+  ]
+}

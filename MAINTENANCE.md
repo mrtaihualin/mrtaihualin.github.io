@@ -1,6 +1,15 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-09-02 Asia/Bangkok** — Lin-approved canonical vocabulary master initialization
+**Updated: 2026-09-03 Asia/Bangkok** — Checkpoint vocabulary Source catalog
+
+## 2026-09-03 — Checkpoint vocabulary Source catalog (`SOURCE_PASS / SOURCE_ONLY_INACTIVE / PRODUCTION_UNCHANGED`)
+
+- Extended the inactive canonical vocabulary master from 273 to 389 Lin-approved semantic records by adding the passed weekday, month, adjective, noun, and two verb review suites from `04_WORKING/VOCAB_6_3_CURRENT/CHECKPOINT_CURRENT.md`.
+- Added one inactive tier partition: Guest Free 100, Login Free additional 100, and Paid approved 189. Kept the 64 displaced old Free words in a separate noncanonical, unreviewed Paid candidate queue.
+- Preserved the final level decision `สระผม=初`; `สัมผัส` fills the vacated `中` position and `เงียบ` remains in the reviewed Paid pool. Preserved the exact reviewed Thursday, month, `ออฟ`, `บัตร`, `สัมภาษณ์`, `นาย`, and `ห้องอาหาร` decisions.
+- No runtime consumer, game, migration, Supabase, Production, deployment, audio status, or cutover changed.
+
+**Prior update: 2026-09-02 Asia/Bangkok** — Lin-approved canonical vocabulary master initialization
 
 ## 2026-09-02 — Lin-approved canonical vocabulary master (`SOURCE_PASS / SOURCE_ONLY_INACTIVE / PRODUCTION_UNCHANGED`)
 
