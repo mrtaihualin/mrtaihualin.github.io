@@ -404,8 +404,9 @@
       return doc.querySelectorAll('#pool .opt').length > 0 && win.W && win.comps && win.correctVal;
     });
     assertSideGeometry(page.win, page.doc, '#pool .opt');
-    assertPositionTwo(page.win, page.doc);
+    var initialCheck = assertPositionTwo(page.win, page.doc, '檢查');
     var check = page.doc.getElementById('btn-check');
+    assert(initialCheck === check, 'Reading Position 2 reuses the original Desktop Check button');
     for (var syllablePass = 0; syllablePass < 10; syllablePass += 1) {
       for (var componentIndex = 0; componentIndex < page.win.comps.length; componentIndex += 1) {
         var component = page.win.comps[componentIndex];
@@ -445,6 +446,8 @@
     var page = await loadGame('typing-game.html', function (win, doc) {
       return doc.querySelectorAll('#rg-kbd .tk-key[data-code]').length === 47 && doc.querySelectorAll('#rg-kbd .rg-shift-key').length === 2;
     });
+    var check = assertPositionTwo(page.win, page.doc, '檢查');
+    assert(check === page.doc.getElementById('btn-check'), 'Typing Position 2 reuses the original Desktop Check button');
     var left = rect(page.doc.querySelector('[data-gsh-ml-slot="left"]'));
     var center = rect(page.doc.querySelector('[data-gsh-ml-slot="center"]'));
     var right = rect(page.doc.querySelector('[data-gsh-ml-slot="right"]'));

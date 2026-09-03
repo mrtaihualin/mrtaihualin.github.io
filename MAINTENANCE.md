@@ -2,6 +2,12 @@
 
 **Updated: 2026-09-03 Asia/Bangkok** — Hidden Login Free Review source reconciliation
 
+## 2026-09-03 — Mobile Landscape Position 2 controls (`PASS_LOCAL / HUMAN_PASS / PRODUCTION_UNCHANGED`)
+
+- Reused the original Desktop game actions in the lower-right Position 2 across the four active games: Tone `不確定`, Reading/Typing `檢查`, and Word Order `重新`, switching to each game's existing Next action when its state allows. No duplicate action or new gameplay handler was created.
+- Enlarged Tone's three vertical controls from 76px to 88px at 844×390. The first/last controls now keep equal 23px outer gaps, both internal gaps are 8px, and horizontal centering remains symmetric. Lin accepted this visual preview.
+- Advanced only the four-game shared Landscape CSS/controller cache keys. Focused Landscape 19/19, neutral-action 7/7 and the complete 1,024-file local site gate pass. No Desktop/Portrait behavior, gameplay, Auth, account, data, Supabase, deploy or Production state changed.
+
 ## 2026-09-03 — Hidden Login Free Review (`SOURCE_REBASED / DEFAULT_OFF / UI_DECISION_PENDING / PRODUCTION_UNCHANGED`)
 
 - Rebased the seven hidden Review candidate commits onto canonical GitLab main `3cc801b8e8e1fd9b1eee5b6eebdfc098f1ebc7b3`, preserving the canonical Free200 catalog, `contentKey` sense identity, Login Free SRS owner and `game-content` v31 source.

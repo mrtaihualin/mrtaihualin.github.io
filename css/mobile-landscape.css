@@ -30,7 +30,7 @@
   }
 
   body[data-gsh-game="tone"].gsh-ml-active {
-    --gsh-ml-tone-choice: clamp(56px, 20dvh, 76px);
+    --gsh-ml-tone-choice: clamp(64px, 22.5dvh, 88px);
   }
 
   body.gsh-ml-active > .avail-band,

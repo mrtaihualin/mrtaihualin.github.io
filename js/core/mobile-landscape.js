@@ -539,7 +539,7 @@
       }
     } else if (game === 'reading') {
       mountMany(['.word-area', '#syl-strip', '#slot-row'], slot('question'));
-      mountMany(['#btn-next', '#btn-next-syl'], slot('right'));
+      mountMany(['#btn-check', '#btn-next', '#btn-next-syl'], slot('right'));
     } else if (game === 'listening') {
       // Listening start / Choice / Typed / Reveal are state-owned and are
       // mounted by syncListeningGameplay(), never all at once.
@@ -689,7 +689,7 @@
     var skip = null;
     var check = null;
     if (game === 'tone') skip = q('.tf-known-btn', slot('skip')) || q('#tf-body .tf-known-btn');
-    else if (game === 'reading') { skip = q('#btn-skip'); check = q('#btn-check'); }
+    else if (game === 'reading') skip = q('#btn-skip');
     else if (game === 'listening') skip = q('#lg-skip-btn');
     else if (game === 'typing') skip = q('#btn-skip');
     else if (game === 'word-order') skip = q('#wo-skip-btn');
@@ -1115,18 +1115,20 @@
       actions = [toneAction, toneNext];
       activeAction = toneNext && !toneNext.hidden && toneNext.style.display !== 'none' ? toneNext : toneAction;
     } else if (game === 'reading') {
+      var readingCheck = q('#btn-check');
       var readingNextSyl = q('#btn-next-syl');
       var readingNext = q('#btn-next');
-      actions = [readingNextSyl, readingNext];
+      actions = [readingCheck, readingNextSyl, readingNext];
       activeAction = readingNext && !readingNext.hidden && readingNext.style.display !== 'none' && !readingNext.disabled
         ? readingNext
         : readingNextSyl && !readingNextSyl.hidden && readingNextSyl.style.display !== 'none' && !readingNextSyl.disabled
           ? readingNextSyl
-          : null;
+          : readingCheck;
     } else if (game === 'typing') {
+      var typingCheck = q('#btn-check');
       var typingNext = q('#btn-next');
-      actions = [typingNext];
-      activeAction = typingNext && !typingNext.hidden && typingNext.style.display !== 'none' && !typingNext.disabled ? typingNext : null;
+      actions = [typingCheck, typingNext];
+      activeAction = typingNext && !typingNext.hidden && typingNext.style.display !== 'none' && !typingNext.disabled ? typingNext : typingCheck;
     } else if (game === 'word-order') {
       var wordOrderReset = q('#wo-reset-btn');
       var wordOrderNext = q('#wo-next-btn');
@@ -1137,6 +1139,7 @@
     actions.filter(Boolean).forEach(function (node) {
       var text = (node.textContent || '').replace(/\s+/g, ' ').trim();
       if (node.id === 'wo-reset-btn') applyPositionTwoLabel(node, '重新', '重新');
+      else if (node.id === 'btn-check') applyPositionTwoLabel(node, '檢查', '檢查');
       else if (text.indexOf('下一個音節') >= 0) applyPositionTwoLabel(node, '下一個<br>音節', '下一個音節');
       else if (text.indexOf('下一題') >= 0) applyPositionTwoLabel(node, '下一題', '下一題');
       else if (node.id === 'tf-guide-start-btn') applyPositionTwoLabel(node, '開始練習', '開始練習');

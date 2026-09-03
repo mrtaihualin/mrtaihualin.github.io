@@ -79,9 +79,10 @@ test('Word Order auto-checks after the last word on every surface and neutral Sk
   assert.match(order, /if \(w\.skipped\) return '<span style="color:#777;">跳過<\/span>'/);
 });
 
-test('Mobile Landscape keeps Reading Check but Word Order uses only Desktop auto-check', () => {
+test('Mobile Landscape moves the existing Reading Check to position two while Word Order uses Desktop auto-check', () => {
   assert.match(stage, /mainAction\.append\(makeSlot\('skip'\), makeSlot\('check'\), makeSlot\('reset'\)\)/);
-  assert.match(stage, /game === 'reading'\) \{ skip = q\('#btn-skip'\); check = q\('#btn-check'\); \}/);
+  assert.match(stage, /game === 'reading'\) skip = q\('#btn-skip'\)/);
+  assert.match(stage, /game === 'reading'\) \{[\s\S]{0,180}readingCheck = q\('#btn-check'\)[\s\S]{0,220}actions = \[readingCheck, readingNextSyl, readingNext\]/);
   assert.match(stage, /game === 'word-order'\) skip = q\('#wo-skip-btn'\)/);
   assert.match(stage, /game === 'word-order'\) \{[\s\S]{0,160}#wo-slots[\s\S]{0,120}#wo-reset-btn[^\n]+#wo-next-btn/);
   assert.doesNotMatch(stage, /createWordOrderCheckAction|data-gsh-ml-owned-action="word-order-check"/);
