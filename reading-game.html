@@ -100,8 +100,8 @@ if (document.fonts && document.fonts.load) {
   document.fonts.load("400 14px 'Noto Sans Thai'", "◌่้๊๋").catch(function(){});
 }
 </script>
-<link rel="stylesheet" href="css/shared.css?v=37">
-<link rel="stylesheet" href="css/mobile-landscape.css?v=37">
+<link rel="stylesheet" href="css/shared.css?v=38">
+<link rel="stylesheet" href="css/mobile-landscape.css?v=45">
 <script src="js/games/thai-keyboard.js?v=2"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="js/core/supabase-config.js?v=10"></script>
@@ -279,6 +279,10 @@ body[data-gsh-game="reading"] .gsh-four-row-stack .word-th {
 /* combining char display: transparent ก + mark in SAME text run so browser shapes them together */
 .comb-disp{display:inline-block;line-height:1.3;}
 .comb-base{color:transparent;}
+/* Invisible NBSP anchors the combining glyph, so a tone choice shows only
+   the tone mark while keeping the original option node and click handler. */
+.opt[data-type="tone"] .comb-disp{display:none;}
+.opt[data-type="tone"]::before{content:"\00a0" attr(data-val);white-space:pre;}
 
 /* ── Options ── */
 .opts-wrap{width:100%;margin:10px 0 2px;}
@@ -787,7 +791,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 <script src="data/nav-template.js?v=4"></script>
 <script src="js/core/shared.min.js?v=48"></script>
 <script src="js/games/game-flow.js?v=12"></script>
-<script src="js/core/mobile-landscape.js?v=29"></script>
+<script src="js/core/mobile-landscape.js?v=31"></script>
 
 <!-- ── Game Switcher (fixed pill) ── -->
 <style>

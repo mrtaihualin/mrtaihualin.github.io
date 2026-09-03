@@ -5,6 +5,8 @@
   if (window.GSHMobileLandscape) return;
 
   var QUERY = '(orientation: landscape) and (max-width: 1024px) and (max-height: 600px)';
+  var POSITION_TWO_GAMES = ['tone', 'reading', 'typing', 'word-order'];
+  var POSITION_TWO_OPTION_ROW_LIMIT = 65;
   var media = window.matchMedia(QUERY);
   var stage = null;
   var slots = Object.create(null);
@@ -67,6 +69,7 @@
   }
 
   function slot(name) { return slots[name] || null; }
+  function reservesPositionTwoZone(game) { return POSITION_TWO_GAMES.indexOf(game) >= 0; }
 
   function makeSlot(name, tag) {
     var node = document.createElement(tag || 'div');
@@ -579,6 +582,7 @@
       child.removeAttribute('data-gsh-side-count');
       child.style.removeProperty('--gsh-ml-row-start');
       child.style.removeProperty('--gsh-ml-row-span');
+      child.style.removeProperty('--gsh-ml-inline-align');
     });
     var leftCount;
     if (game === 'tone') {
@@ -595,6 +599,21 @@
       leftCount = Math.ceil(children.length / 2);
     }
     container.dataset.gshMaxSideCount = String(Math.max(leftCount, children.length - leftCount));
+    var readingLayoutVariant = 0;
+    if (game === 'reading') {
+      var forcedReadingVariant = Number(window.__GSH_ML_READING_LAYOUT_PREVIEW);
+      if (forcedReadingVariant >= 1 && forcedReadingVariant <= 3) {
+        readingLayoutVariant = forcedReadingVariant - 1;
+      } else {
+        var readingSignature = children.map(function (child) {
+          return child.getAttribute('data-val') || child.textContent || '';
+        }).join('|');
+        for (var signatureIndex = 0; signatureIndex < readingSignature.length; signatureIndex++) {
+          readingLayoutVariant = (readingLayoutVariant * 31 + readingSignature.charCodeAt(signatureIndex)) % 3;
+        }
+      }
+      container.dataset.gshReadingLayoutVariant = String(readingLayoutVariant + 1);
+    }
     var leftIndex = 0;
     var rightIndex = 0;
     children.forEach(function (child, index) {
@@ -604,8 +623,23 @@
       var sideCount = side === 'left' ? leftCount : children.length - leftCount;
       child.dataset.gshSideIndex = String(sideIndex);
       child.dataset.gshSideCount = String(sideCount);
-      if (game === 'reading' || game === 'word-order') {
-        var availableRows = side === 'right' ? 65 : 100;
+      if (game === 'reading') {
+        var readingInlinePatterns = side === 'left'
+          ? [
+            ['start', 'center', 'end', 'center', 'start', 'end'],
+            ['end', 'start', 'center', 'end', 'center', 'start'],
+            ['center', 'end', 'start', 'start', 'end', 'center']
+          ]
+          : [
+            ['end', 'start', 'center'],
+            ['start', 'center', 'end'],
+            ['center', 'end', 'start']
+          ];
+        var readingInlinePattern = readingInlinePatterns[readingLayoutVariant];
+        child.style.setProperty('--gsh-ml-inline-align', readingInlinePattern[sideIndex % readingInlinePattern.length]);
+      }
+      if (reservesPositionTwoZone(game)) {
+        var availableRows = side === 'right' ? POSITION_TWO_OPTION_ROW_LIMIT : 100;
         var rowStart = Math.floor(sideIndex * availableRows / sideCount);
         var rowEnd = Math.floor((sideIndex + 1) * availableRows / sideCount);
         child.style.setProperty('--gsh-ml-row-start', String(rowStart + 1));
@@ -1248,6 +1282,7 @@
     try {
       cleanupStaleMovedNodes();
       var game = document.body.getAttribute('data-gsh-game') || '';
+      stage.setAttribute('data-gsh-ml-position-two-zone', reservesPositionTwoZone(game) ? 'reserved' : 'open');
       var exclusiveView = resolveExclusiveView(game);
       prepareExclusiveView(exclusiveView);
       mountStaticGameNodes(game);

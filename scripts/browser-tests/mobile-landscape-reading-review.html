@@ -27,8 +27,22 @@
       var frame = document.getElementById('game');
       var screen = frame.parentElement;
       var status = document.getElementById('status');
+      var requestedSurface = new URLSearchParams(location.search).get('surface') || 'landscape';
+      var surfaceSize = requestedSurface === 'desktop'
+        ? { width: 1024, height: 768, label: 'คอม' }
+        : requestedSurface === 'portrait'
+          ? { width: 390, height: 844, label: 'มือถือแนวตั้ง' }
+          : { width: 844, height: 390, label: 'มือถือแนวนอน' };
+      var requestedReview = new URLSearchParams(location.search).get('review') || '';
+      var requestedLayoutMatch = requestedReview.match(/([1-3])$/);
+      var requestedLayout = requestedLayoutMatch ? Number(requestedLayoutMatch[1]) : 1;
+      frame.style.width = surfaceSize.width + 'px';
+      frame.style.height = surfaceSize.height + 'px';
+      screen.style.maxWidth = surfaceSize.width + 'px';
+      screen.style.aspectRatio = surfaceSize.width + ' / ' + surfaceSize.height;
+      document.querySelector('h1').textContent = 'Reading — ' + surfaceSize.label + ' ' + surfaceSize.width + ' × ' + surfaceSize.height;
       function fitGame() {
-        frame.style.transform = 'scale(' + Math.min(1, screen.clientWidth / 844) + ')';
+        frame.style.transform = 'scale(' + Math.min(1, screen.clientWidth / surfaceSize.width) + ')';
       }
       fitGame();
       if (window.ResizeObserver) new ResizeObserver(fitGame).observe(screen);
@@ -40,7 +54,8 @@
         {word:'ดี',en:'dii',zh:'好',level:'初',category:'คำขยาย',syls:[{cons:'ด',vowel:'อี',tone_name:'สามัญ',th:'ดี'}]},
         {word:'บ้าน',en:'bâan',zh:'家',level:'初',category:'สถานที่',syls:[{cons:'บ',vowel:'อา',tone:'้',final:'น',tone_name:'โท',th:'บ้าน'}]}
       ];
-      var override = '<script>(function(){var rows=' + JSON.stringify(fixture) + ';window.GameContentLoader.boot=function(srcs){window.WORDS_MASTER=rows;window.ADV_SENTENCES=[];var chain=new Promise(function(resolve){if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",resolve,{once:true});else resolve();}).then(function(){if(window.GameResume&&typeof window.GameResume.load==="function")window.GameResume.load=function(){return null;};});(srcs||[]).forEach(function(src){chain=chain.then(function(){return new Promise(function(resolve,reject){var script=document.createElement("script");script.src=src;script.onload=resolve;script.onerror=reject;document.head.appendChild(script);});});});return chain;};})();<\/script>';
+      var previewFixture = [fixture[0]];
+      var override = '<script>(function(){var rows=' + JSON.stringify(previewFixture) + ';var seed=173;Math.random=function(){seed=(seed*9301+49297)%233280;return seed/233280;};window.__GSH_ML_READING_LAYOUT_PREVIEW=' + requestedLayout + ';window.GameContentLoader.boot=function(srcs){window.WORDS_MASTER=rows;window.ADV_SENTENCES=[];var chain=new Promise(function(resolve){if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",resolve,{once:true});else resolve();}).then(function(){if(window.GameResume&&typeof window.GameResume.load==="function")window.GameResume.load=function(){return null;};});(srcs||[]).forEach(function(src){chain=chain.then(function(){return new Promise(function(resolve,reject){var script=document.createElement("script");script.src=src;script.onload=resolve;script.onerror=reject;document.head.appendChild(script);});});});return chain;};})();<\/script>';
       var clientTag = '<script src="' + 'js/games/game-content-client.js?v=11"><\/script>';
 
       fetch('../../reading-game.html').then(function (response) {
@@ -53,8 +68,11 @@
           var doc = frame.contentDocument;
           var started = Date.now();
           (function ready() {
-            if (doc.documentElement.classList.contains('gc-ready') && doc.body.classList.contains('gsh-ml-active')) {
-              status.textContent = 'พร้อมตรวจ — ใช้หน้า Reading และปุ่มจริงจากไฟล์เกม';
+            var surfaceReady = requestedSurface === 'landscape'
+              ? doc.body.classList.contains('gsh-ml-active')
+              : !doc.body.classList.contains('gsh-ml-active');
+            if (doc.documentElement.classList.contains('gc-ready') && surfaceReady) {
+              status.textContent = 'พร้อมตรวจ ' + surfaceSize.label + ' แบบ ' + requestedLayout + ' — ใช้หน้า Reading และปุ่มจริงจากไฟล์เกม';
               return;
             }
             if (Date.now() - started > 15000) {

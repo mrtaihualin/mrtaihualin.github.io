@@ -8,6 +8,7 @@ const vm = require('vm');
 
 const root = path.resolve(__dirname, '..');
 const sharedCss = fs.readFileSync(path.join(root, 'css/shared.css'), 'utf8');
+const mobileLandscapeCss = fs.readFileSync(path.join(root, 'css/mobile-landscape.css'), 'utf8');
 const sharedJs = fs.readFileSync(path.join(root, 'js/core/shared.js'), 'utf8');
 const sharedMin = fs.readFileSync(path.join(root, 'js/core/shared.min.js'), 'utf8');
 const switcherJs = fs.readFileSync(path.join(root, 'js/games/game-switcher.js'), 'utf8');
@@ -146,7 +147,7 @@ test('all six games bind the locked two-hand mobile landscape layout', () => {
   };
   for (const [id, html] of Object.entries(expectedBodies)) {
     assert.match(html, new RegExp(`<body[^>]*data-gsh-game="${id}"[^>]*>`), `${id}: missing landscape scope marker`);
-    const sharedVersion = id === 'lego' ? 36 : 37;
+    const sharedVersion = ['tone', 'reading', 'typing', 'word-order'].includes(id) ? 38 : id === 'lego' ? 36 : 37;
     assert.match(html, new RegExp(`css/shared\\.css\\?v=${sharedVersion}`), `${id}: must load its locked shared CSS version`);
   }
   assert.match(sharedCss, /@media \(orientation:landscape\) and \(max-width:1024px\) and \(max-height:600px\)/);
@@ -159,14 +160,16 @@ test('all six games bind the locked two-hand mobile landscape layout', () => {
   assert.match(sharedCss, /\.rg-tools-row,[\s\S]{0,500}max-width:29% !important/);
   assert.match(sharedCss, /\[data-shared-result-ui="v1"\] \.gsh-result-primary-actions \{[\s\S]{0,180}right:var\(--gsh-safe-r\)/);
   assert.match(sharedCss, /\[data-shared-result-ui="v1"\] \.gsh-result-utility-actions,[\s\S]{0,240}left:var\(--gsh-safe-l\)/);
-  assert.match(sharedCss, /data-gsh-game="tone"\] #tf-body \.sg-tone-grid \{[\s\S]{0,160}grid-template-rows:repeat\(3,auto\); grid-auto-flow:column/);
-  assert.match(sharedCss, /data-gsh-game="tone"\] #tf-body \.tf-options:has\(> :nth-child\(3\):last-child\) > :first-child/);
-  for (const id of ['reading', 'typing']) {
-    assert.match(sharedCss, new RegExp(`data-gsh-game="${id}"\\] #pool`), `${id}: lower split-answer zone missing`);
-  }
+  assert.doesNotMatch(sharedCss, /data-gsh-game="tone"\] #tf-body \.sg-tone-grid/);
+  assert.doesNotMatch(sharedCss, /data-gsh-game="reading"\] #pool/);
+  assert.doesNotMatch(sharedCss, /data-gsh-game="typing"\] #pool/);
+  assert.doesNotMatch(sharedCss, /data-gsh-game="word-order"\] #wo-bank/);
+  assert.match(mobileLandscapeCss, /data-gsh-ml-split="tone"/);
+  assert.match(mobileLandscapeCss, /data-gsh-ml-split="reading"/);
+  assert.match(mobileLandscapeCss, /data-gsh-game="typing"/);
+  assert.match(mobileLandscapeCss, /data-gsh-ml-split="word-order"/);
   assert.match(sharedCss, /data-gsh-game="listening"\] #lg-mc-wrap[\s\S]{0,260}grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
   assert.match(sharedCss, /data-gsh-game="listening"\] #lg-type-wrap[\s\S]{0,180}left:29%; right:29%/);
-  assert.match(sharedCss, /data-gsh-game="word-order"\] #wo-bank[\s\S]{0,260}grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
   assert.match(sharedCss, /data-gsh-game="lego"\] #baseplate[\s\S]{0,260}left:var\(--gsh-safe-l\); width:28%/);
   assert.match(sharedCss, /data-gsh-game="lego"\] #baseplate \.slot-menu[\s\S]{0,220}right:var\(--gsh-safe-r\)/);
 });
@@ -309,7 +312,8 @@ test('all six games keep the right-side vertical control stack on Desktop and Po
   const lego = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
   const tone = games.find((g) => g.id === 'tone').htmlText;
   for (const game of games) {
-    assert.match(game.htmlText, /css\/shared\.css\?v=37/, `${game.id}: must bind the current shared positioning layer`);
+    const sharedVersion = game.id === 'listening' ? 37 : 38;
+    assert.match(game.htmlText, new RegExp(`css/shared\\.css\\?v=${sharedVersion}`), `${game.id}: must bind the current shared positioning layer`);
   }
   assert.match(lego, /css\/shared\.css\?v=36/, 'Lego must bind the current shared positioning layer');
   assert.match(sharedCss, /SHARED PAGE POSITIONING — Tone-authoritative Desktop \+ Portrait/);
@@ -655,7 +659,7 @@ test('mobile resume uses one compact shared-copy line and three horizontal actio
   assert.match(sharedCss, /@media\(max-width:480px\)[\s\S]{0,500}\.gsh-resume-actions \{ flex-direction:row; flex-wrap:nowrap;/, 'mobile resume actions must stay horizontal');
   assert.match(sharedCss, /\.gsh-resume-actions button \{ flex:1 1 0;[^}]*min-height:36px;/, 'mobile resume actions must stay compact');
   for (const g of games) {
-    const sharedCssVersion = 37;
+    const sharedCssVersion = g.id === 'listening' ? 37 : 38;
     assert.match(g.htmlText, new RegExp(`css/shared\\.css\\?v=${sharedCssVersion}`), `${g.id}: must load current shared game CSS`);
     assert.match(g.htmlText, g.id === 'listening' ? /js\/core\/shared\.min\.js\?v=47/ : /js\/core\/shared\.min\.js\?v=48/, `${g.id}: must load shared resume copy`);
     assert.match(g.appText, /GameUiCopy\.resumeLine/, `${g.id}: resume detail must use shared semantic copy`);
@@ -869,7 +873,7 @@ test('active Desktop D4-D5 keeps manual question/result flow and optional Hint c
   const flow = fs.readFileSync(path.join(root, 'js/games/game-flow.js'), 'utf8');
 
   for (const game of [tone, reading, typing, wordOrder]) {
-    assert.match(game.htmlText, /css\/shared\.css\?v=37/, `${game.id}: must request the current Desktop CSS`);
+    assert.match(game.htmlText, /css\/shared\.css\?v=38/, `${game.id}: must request the current Desktop CSS`);
     assert.match(game.appText, /GameFlow\.enhanceResult/, `${game.id}: Result must keep the shared manual replay flow`);
   }
   assert.doesNotMatch(flow, /下一輪將在|game_auto_next_pause/, 'shared question/Result flow must not restore countdown copy or pause controls');

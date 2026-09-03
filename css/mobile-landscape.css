@@ -20,6 +20,7 @@
     --gsh-ml-font: clamp(13px, 3.2dvh, 18px);
     --gsh-ml-control-h: clamp(34px, 10dvh, 48px);
     --gsh-ml-answer-h: clamp(38px, 16dvh, 56px);
+    --gsh-ml-position-two-size: clamp(64px, 22.5dvh, 88px);
     --gsh-ml-tone-choice: clamp(64px, 24dvh, 96px);
     --gsh-ml-key-h: clamp(40px, 11.5dvh, 56px);
     --gsh-ml-kbd-gap: clamp(1px, .2dvh, 1.5px);
@@ -30,7 +31,7 @@
   }
 
   body[data-gsh-game="tone"].gsh-ml-active {
-    --gsh-ml-tone-choice: clamp(64px, 22.5dvh, 88px);
+    --gsh-ml-tone-choice: var(--gsh-ml-position-two-size);
   }
 
   body.gsh-ml-active > .avail-band,
@@ -319,7 +320,6 @@
   [data-gsh-ml-split] > .used { display: none !important; }
   [data-gsh-ml-split] button,
   [data-gsh-ml-split] .btn,
-  [data-gsh-ml-split] .opt,
   [data-gsh-ml-split] .lg-opt,
   [data-gsh-ml-split] .wo-tile {
     min-width: 0;
@@ -1371,29 +1371,22 @@
     overscroll-behavior-y: none;
   }
   body[data-gsh-game="reading"].gsh-ml-active [data-gsh-ml-split="reading"] {
+    --gsh-ml-reading-choice-safe-x: clamp(28px, 4vw, 36px);
+    grid-template-columns: minmax(0, 30fr) minmax(0, 40fr) minmax(0, 30fr) !important;
     grid-template-rows: repeat(100, minmax(0, 1fr));
     grid-auto-rows: minmax(0, 1fr);
     align-content: stretch;
+    justify-content: stretch !important;
+    column-gap: var(--gsh-ml-gap) !important;
     row-gap: 0 !important;
+    padding-block: clamp(28px, 8dvh, 34px) !important;
     overflow-x: hidden;
   }
   body[data-gsh-game="reading"].gsh-ml-active [data-gsh-ml-split="reading"] > .opt {
     grid-row: var(--gsh-ml-row-start) / span var(--gsh-ml-row-span);
-    width: calc(100% - (2 * var(--gsh-ml-pad))) !important;
-    height: clamp(46px, 13dvh, 58px) !important;
-    min-height: 46px !important;
-    max-height: 58px !important;
-    justify-self: center;
+    justify-self: var(--gsh-ml-inline-align, center);
     align-self: center;
-    padding: clamp(8px, 2dvh, 12px) clamp(12px, 2vw, 18px) !important;
-    font-size: clamp(25px, 7dvh, 34px) !important;
-    animation: none;
-    will-change: auto;
-  }
-  body[data-gsh-game="reading"].gsh-ml-active [data-gsh-ml-split="reading"] > .opt:hover:not(.locked),
-  body[data-gsh-game="reading"].gsh-ml-active [data-gsh-ml-split="reading"] > .opt.sel {
-    transform: none !important;
-    transition: none !important;
+    margin-inline: var(--gsh-ml-reading-choice-safe-x) !important;
   }
   body[data-gsh-game="reading"].gsh-ml-active [data-gsh-ml-slot="question"] .word-area {
     flex: 0 1 auto;
@@ -1449,24 +1442,6 @@
     padding: 2px 4px;
     font-size: clamp(22px, 6dvh, 28px);
   }
-  body[data-gsh-game="reading"].gsh-ml-active [data-gsh-ml-slot="main-action"] > #btn-check,
-  body[data-gsh-game="reading"].gsh-ml-active [data-gsh-ml-slot="main-action"] > #btn-next,
-  body[data-gsh-game="reading"].gsh-ml-active [data-gsh-ml-slot="main-action"] > #btn-next-syl {
-    width: 0 !important;
-    height: var(--gsh-ml-control-h) !important;
-    min-width: 0 !important;
-    min-height: var(--gsh-ml-control-h) !important;
-    max-height: var(--gsh-ml-control-h) !important;
-    flex: 1 1 0;
-    align-items: center;
-    justify-content: center;
-    line-height: 1.05;
-  }
-  body[data-gsh-game="reading"].gsh-ml-active [data-gsh-ml-slot="main-action"] > #btn-check:disabled {
-    opacity: .32;
-    cursor: default;
-  }
-
   body.gsh-ml-active #gsh-ml-stage .grw-menu,
   body.gsh-ml-active #gsh-ml-stage .wm-panel {
     z-index: 1400;
@@ -1929,24 +1904,15 @@
     touch-action: pan-y;
   }
 
-  body[data-gsh-game="reading"].gsh-ml-active [data-gsh-ml-slot="right"] > #btn-check,
-  body[data-gsh-game="reading"].gsh-ml-active [data-gsh-ml-slot="right"] > #btn-next,
-  body[data-gsh-game="reading"].gsh-ml-active [data-gsh-ml-slot="right"] > #btn-next-syl,
-  body[data-gsh-game="typing"].gsh-ml-active [data-gsh-ml-slot="right"] > #btn-check,
-  body[data-gsh-game="typing"].gsh-ml-active [data-gsh-ml-slot="right"] > #btn-next,
-  body[data-gsh-game="listening"].gsh-ml-active [data-gsh-ml-slot="right"] > #lg-type-submit,
-  body[data-gsh-game="listening"].gsh-ml-active [data-gsh-ml-slot="right"] > #lg-next-btn,
-  body[data-gsh-game="word-order"].gsh-ml-active [data-gsh-ml-slot="right"] > #wo-hint-btn,
-  body[data-gsh-game="word-order"].gsh-ml-active [data-gsh-ml-slot="right"] > #wo-next-btn,
   body.gsh-ml-active [data-gsh-ml-slot="right"] > [data-gsh-ml-position="2"] {
     position: relative !important;
     z-index: 5;
-    width: var(--gsh-ml-tone-choice) !important;
-    min-width: var(--gsh-ml-tone-choice) !important;
-    max-width: var(--gsh-ml-tone-choice) !important;
-    height: var(--gsh-ml-tone-choice) !important;
-    min-height: var(--gsh-ml-tone-choice) !important;
-    max-height: var(--gsh-ml-tone-choice) !important;
+    width: var(--gsh-ml-position-two-size) !important;
+    min-width: var(--gsh-ml-position-two-size) !important;
+    max-width: var(--gsh-ml-position-two-size) !important;
+    height: var(--gsh-ml-position-two-size) !important;
+    min-height: var(--gsh-ml-position-two-size) !important;
+    max-height: var(--gsh-ml-position-two-size) !important;
     margin: var(--gsh-ml-gap) auto !important;
     padding: 5px !important;
     border-radius: 50% !important;
@@ -1960,12 +1926,9 @@
     display: none !important;
     pointer-events: none !important;
   }
-  body[data-gsh-game="tone"].gsh-ml-active [data-gsh-ml-slot="right"],
-  body[data-gsh-game="reading"].gsh-ml-active [data-gsh-ml-slot="right"],
-  body[data-gsh-game="typing"].gsh-ml-active [data-gsh-ml-slot="right"],
-  body[data-gsh-game="word-order"].gsh-ml-active [data-gsh-ml-slot="right"] {
+  body.gsh-ml-active #gsh-ml-stage[data-gsh-ml-position-two-zone="reserved"] [data-gsh-ml-slot="right"] {
     display: grid;
-    grid-template-rows: repeat(3, var(--gsh-ml-tone-choice));
+    grid-template-rows: repeat(3, var(--gsh-ml-position-two-size));
     align-content: center;
     justify-items: center;
     gap: var(--gsh-ml-gap);
@@ -1975,6 +1938,26 @@
     margin: 0 auto !important;
     font-size: var(--gsh-ml-font-sm) !important;
     line-height: 1.12 !important;
+  }
+  body.gsh-ml-active [data-gsh-ml-slot="right"] > [data-gsh-ml-position="2"]:disabled {
+    opacity: .32;
+    cursor: default;
+  }
+
+  /* Position 2 exclusively owns the lower-right 35% in all four approved
+     games. Current Reading/Word Order choices use this shared rule; any future
+     split-choice surface for Typing inherits it automatically. Tone keeps its
+     dedicated 4 / 5 / 不確定 rows, with 不確定 as Position 2 itself. */
+  body.gsh-ml-active #gsh-ml-stage[data-gsh-ml-position-two-zone="reserved"]
+  [data-gsh-ml-split]:not([data-gsh-ml-split="tone"]) {
+    grid-template-rows: repeat(100, minmax(0, 1fr));
+    grid-auto-rows: minmax(0, 1fr);
+    align-content: stretch;
+    row-gap: 0 !important;
+  }
+  body.gsh-ml-active #gsh-ml-stage[data-gsh-ml-position-two-zone="reserved"]
+  [data-gsh-ml-split]:not([data-gsh-ml-split="tone"]) > [data-gsh-side] {
+    grid-row: var(--gsh-ml-row-start) / span var(--gsh-ml-row-span);
   }
   body[data-gsh-game="word-order"].gsh-ml-active [data-gsh-ml-slot="right"] > #wo-reset-btn:disabled,
   body[data-gsh-game="word-order"].gsh-ml-active [data-gsh-ml-slot="right"] > #wo-next-btn:disabled {
@@ -2120,6 +2103,7 @@
     --gsh-ml-gap: 3px;
     --gsh-ml-pad: 2px;
     --gsh-ml-control-h: 30px;
-    --gsh-ml-tone-choice: clamp(46px, 22.5dvh, 58px);
+    --gsh-ml-position-two-size: clamp(46px, 22.5dvh, 58px);
+    --gsh-ml-tone-choice: var(--gsh-ml-position-two-size);
   }
 }

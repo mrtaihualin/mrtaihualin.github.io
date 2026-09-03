@@ -38,8 +38,8 @@ test('all pages bind the shared landscape system and the four in-scope games sha
     assert.match(html, /js\/games\/thai-keyboard\.js\?v=2/, `${file}: missing shared split keyboard`);
     const paused = game === 'listening' || game === 'lego';
     const fourGame = game === 'tone' || game === 'reading' || game === 'typing' || game === 'word-order';
-    assert.match(html, new RegExp(`css/mobile-landscape\\.css\\?v=${fourGame ? 37 : 34}`), `${file}: wrong shared Landscape CSS version`);
-    const controllerVersion = fourGame ? 29 : paused ? 24 : 25;
+    assert.match(html, new RegExp(`css/mobile-landscape\\.css\\?v=${fourGame ? 45 : 34}`), `${file}: wrong shared Landscape CSS version`);
+    const controllerVersion = fourGame ? 31 : paused ? 24 : 25;
     assert.match(html, new RegExp(`js/core/mobile-landscape\\.js\\?v=${controllerVersion}`), `${file}: wrong scoped controller version`);
     assert.match(html, /js\/games\/game-switcher\.js\?v=7/, `${file}: missing fixed six-game navigation`);
   }
@@ -90,7 +90,7 @@ test('Reading reuses Tone menu presentation without replacing Reading menu conte
   assert.ok(css.includes('body.gsh-ml-active #game-switcher[data-gsh-ml-utility-panel] .gs-tab'));
   assert.ok(css.includes('body.gsh-ml-active .grw-menu[data-gsh-ml-utility-panel] .grw-item'));
   assert.match(stage, /game === 'reading'[\s\S]{0,900}labeledNode\('#rg-howto-btn', '玩法', '📖'\)[\s\S]{0,900}labeledNode\('#rg-en-toggle', '英文讀音', '🔤'\)[\s\S]{0,900}labeledNode\('#rg-particle-toggle', '禮貌詞', '🙏'\)/);
-  assert.match(read('reading-game.html'), /css\/mobile-landscape\.css\?v=37/);
+  assert.match(read('reading-game.html'), /css\/mobile-landscape\.css\?v=45/);
 });
 
 test('all six Resume screens reuse Tone 640px geometry and exact three-action copy', () => {
@@ -100,7 +100,7 @@ test('all six Resume screens reuse Tone 640px geometry and exact three-action co
   for (const [game, file] of pages) {
     const html = read(file);
     const fourGame = game === 'tone' || game === 'reading' || game === 'typing' || game === 'word-order';
-    assert.match(html, new RegExp(`css/mobile-landscape\\.css\\?v=${fourGame ? 37 : 34}`), `${file}: must load its current shared Resume CSS`);
+    assert.match(html, new RegExp(`css/mobile-landscape\\.css\\?v=${fourGame ? 45 : 34}`), `${file}: must load its current shared Resume CSS`);
     assert.match(html, /js\/core\/shared\.min\.js\?v=48/, `${file}: must load exact Resume copy`);
   }
   const shared = read('js/core/shared.js');
@@ -137,7 +137,8 @@ test('Tone preserves three left, three right and reveal actions in the right slo
   assert.match(stage, /mountExistingNode\(uncertain, container\)/);
   assert.match(stage, /function syncToneRevealActions\([\s\S]{0,900}result-audio[\s\S]{0,260}result-english[\s\S]{0,260}result-next/);
   assert.match(toneApp, /skipCurrentWord:\s*function\(\)[\s\S]{0,1500}is_skipped:\s*true/);
-  assert.match(css, /data-gsh-game="tone"[^}]+--gsh-ml-tone-choice:\s*clamp\(64px, 22\.5dvh, 88px\)/);
+  assert.match(css, /--gsh-ml-position-two-size:\s*clamp\(64px, 22\.5dvh, 88px\)/);
+  assert.match(css, /data-gsh-game="tone"[^}]+--gsh-ml-tone-choice:\s*var\(--gsh-ml-position-two-size\)/);
   assert.match(css, /data-gsh-ml-split="tone"[^}]+align-content:\s*center/);
   assert.match(css, /data-gsh-ml-role="skip"[\s\S]{0,900}background:\s*#242322 !important/);
   assert.match(css, /--gsh-ml-top-control-gap:\s*5px/);
@@ -166,7 +167,7 @@ test('games reuse their requested Desktop top actions with neutral Skip and no i
   assert.doesNotMatch(stage, /data-gsh-ml-tool-label', '重排這句'/);
   assert.match(stage, /quickAction\('#wo-hint-btn', '提示 \(-2\)'\)/);
   assert.doesNotMatch(stage, /reset = q\('#wo-reset-btn'\)/);
-  assert.match(css, /data-gsh-game="word-order"[\s\S]{0,220}#wo-hint-btn/);
+  assert.doesNotMatch(css, /data-gsh-game="word-order"[^}]+#wo-hint-btn/);
 });
 
 test('approved position two reuses Tone uncertain geometry and exact labels', () => {
@@ -184,14 +185,23 @@ test('approved position two reuses Tone uncertain geometry and exact labels', ()
   assert.match(stage, /revealed = q\('#wo-slots \.wo-slot\.correct'\) !== null/);
   assert.match(css, /gsh-ml-position-two-inactive[\s\S]{0,120}display: none !important/);
   assert.match(css, /data-gsh-ml-position="2"[\s\S]{0,1200}grid-row: 3/);
+  assert.match(css, /data-gsh-ml-slot="right"\] > \[data-gsh-ml-position="2"\]/);
+  assert.doesNotMatch(css, /data-gsh-ml-slot="right"\] > #btn-check/);
+  assert.doesNotMatch(css, /data-gsh-ml-slot="main-action"\] > #btn-check/);
+  assert.match(css, /data-gsh-ml-position-two-zone="reserved"[\s\S]{0,180}data-gsh-ml-slot="right"[\s\S]{0,180}grid-template-rows: repeat\(3, var\(--gsh-ml-position-two-size\)\)/);
   assert.match(css, /#wo-reset-btn:disabled[\s\S]{0,180}#wo-next-btn:disabled[\s\S]{0,120}display: none !important/);
 });
 
-test('Reading and Word Order reserve the lower-right zone exclusively for position two', () => {
+test('all four approved games reserve the lower-right zone exclusively for position two', () => {
+  assert.match(stage, /POSITION_TWO_GAMES = \['tone', 'reading', 'typing', 'word-order'\]/);
+  assert.match(stage, /POSITION_TWO_OPTION_ROW_LIMIT = 65/);
+  assert.match(stage, /data-gsh-ml-position-two-zone/);
+  assert.match(stage, /reservesPositionTwoZone\(game\)[\s\S]{0,180}POSITION_TWO_OPTION_ROW_LIMIT/);
   assert.match(stage, /game === 'word-order'[\s\S]{0,420}children\.length \* 0\.6/);
-  assert.match(stage, /availableRows = side === 'right' \? 65 : 100/);
   assert.match(stage, /--gsh-ml-row-start/);
   assert.match(stage, /--gsh-ml-row-span/);
+  assert.match(css, /data-gsh-ml-position-two-zone="reserved"[\s\S]{0,260}data-gsh-ml-split\]:not\(\[data-gsh-ml-split="tone"\]\)[\s\S]{0,240}repeat\(100, minmax\(0, 1fr\)\)/);
+  assert.match(css, /data-gsh-ml-position-two-zone="reserved"[\s\S]{0,520}data-gsh-side[\s\S]{0,180}grid-row: var\(--gsh-ml-row-start\) \/ span var\(--gsh-ml-row-span\)/);
   assert.match(css, /data-gsh-ml-split="word-order"[\s\S]{0,300}repeat\(100, minmax\(0, 1fr\)\)/);
   assert.match(css, /data-gsh-ml-split="reading"[\s\S]{0,300}repeat\(100, minmax\(0, 1fr\)\)/);
   assert.match(css, /grid-row: var\(--gsh-ml-row-start\) \/ span var\(--gsh-ml-row-span\)/);
@@ -202,8 +212,23 @@ test('Reading and Word Order reserve the lower-right zone exclusively for positi
   assert.match(css, /data-gsh-ml-split="word-order"[^}]+grid-template-columns: minmax\(0, 30fr\) minmax\(0, 40fr\) minmax\(0, 30fr\) !important/);
 });
 
-test('Reading choices stay fixed after pointer and selected states', () => {
-  assert.match(css, /data-gsh-ml-split="reading"\] > \.opt:hover:not\(\.locked\),[\s\S]{0,220}data-gsh-ml-split="reading"\] > \.opt\.sel[\s\S]{0,180}transform: none !important;[\s\S]{0,80}transition: none !important/);
+test('Reading moves the original Desktop choices into two vertical sides without restyling them', () => {
+  assert.match(stage, /game === 'reading'[\s\S]{0,120}container = q\('#pool'\)/);
+  assert.match(stage, /mountExistingNode\(container, slot\('split-content'\)\)/);
+  assert.match(css, /data-gsh-game="reading"[\s\S]{0,180}data-gsh-ml-split="reading"\][\s\S]{0,220}grid-template-rows: repeat\(100, minmax\(0, 1fr\)\)/);
+  assert.match(css, /data-gsh-ml-split="reading"\][\s\S]{0,180}grid-template-columns: minmax\(0, 30fr\) minmax\(0, 40fr\) minmax\(0, 30fr\) !important/);
+  const landscapeOptBlock = css.match(/body\[data-gsh-game="reading"\]\.gsh-ml-active \[data-gsh-ml-split="reading"\] > \.opt \{([^}]*)\}/);
+  assert.ok(landscapeOptBlock, 'missing Reading split-placement rule');
+  assert.doesNotMatch(landscapeOptBlock[1], /(?:width|height|padding|font-size|animation):/);
+  assert.match(landscapeOptBlock[1], /justify-self: var\(--gsh-ml-inline-align, center\)/);
+  assert.match(landscapeOptBlock[1], /margin-inline: var\(--gsh-ml-reading-choice-safe-x\) !important/);
+  assert.match(read('reading-game.html'), /\.opt\[data-type="tone"\]::before\{content:"\\00a0" attr\(data-val\);white-space:pre;\}/);
+  assert.doesNotMatch(css, /content: "◌" attr\(data-val\)/);
+  assert.match(stage, /__GSH_ML_READING_LAYOUT_PREVIEW/);
+  assert.match(stage, /readingInlinePatterns[\s\S]{0,620}\['start', 'center', 'end'/);
+  assert.match(stage, /data\.gshReadingLayoutVariant|dataset\.gshReadingLayoutVariant/);
+  assert.match(stage, /game === 'reading'[\s\S]{0,1600}--gsh-ml-inline-align/);
+  assert.doesNotMatch(css, /data-gsh-ml-split="reading"\] > \.opt:hover[\s\S]{0,220}transform: none/);
   assert.match(css, /gsh-resume-banner\[style\*="display:none"\],[\s\S]{0,160}gsh-resume-banner\[style\*="display: none"\][\s\S]{0,100}display: none !important/);
 });
 
