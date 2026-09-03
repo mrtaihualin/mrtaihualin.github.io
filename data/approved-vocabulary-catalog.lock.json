@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 3,
+  "catalogId": "lin-approved-vocabulary-master",
+  "catalogVersion": "free-200-v1",
+  "catalogSha256": "f4b340436099aa5baab9ea1dbd7517470a6fd573f4f84c219266cedc995bc4a1",
+  "approvedHistorySha256": "2fbaf2ea2ecadf334791292ca741830e5c04afe88d96deb0dad390ef60145e2c",
+  "unreviewedHistorySha256": "df6d12586e39e946b9dee0e93fc4a70ee68b22e25fbaba8bac5ecf704336f86d",
+  "approvedRecordCount": 200,
+  "levelCounts": {
+    "初": 100,
+    "中": 100
+  },
+  "tierAllocationCounts": {
+    "guestFree": 100,
+    "loginFreeAdditional": 100
+  },
+  "lockedBy": "Lin",
+  "lockedAt": "2026-09-03",
+  "mutationRule": "Lin exact-record-and-field approval required; automated rewrite forbidden",
+  "checkpointRef": "04_WORKING/VOCAB_6_3_CURRENT/CHECKPOINT_CURRENT.md",
+  "productDecisionRefs": [
+    "LIN-FREE-200-CANONICAL-CUTOVER-2026-09-03",
+    "PD-VOCAB-APPROVED-DATA-IMMUTABILITY-2026-09-02-A",
+    "PD-VOCAB-SINGLE-APPROVED-CANONICAL-CATALOG-2026-09-02-B",
+    "PD-VOCAB-CANONICAL-CUTOVER-2026-09-02-C"
+  ]
+}

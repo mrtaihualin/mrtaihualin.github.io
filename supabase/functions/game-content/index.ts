@@ -52,6 +52,7 @@ const ALLOWED_ORIGINS = [
   'https://mrtaihualin.github.io',
   // 2026-08-10 (P7-02 staging): หน้าทดสอบ staging บน Netlify
   'https://gentle-moxie-bf64ad.netlify.app',
+  'https://mrtaihualin-release-7c823713.mrtaihualin.workers.dev',
 ];
 
 function corsHeaders(origin) {
@@ -95,10 +96,6 @@ serve(async (req) => {
     try { requestBody = await req.json(); } catch (_) { return json({ error: 'bad json' }, 400, origin); }
     const requestedGame = typeof requestBody?.game === 'string' ? requestBody.game : '';
     if (requestedGame && !GAME_SURFACES.has(requestedGame)) return json({ error: 'bad game surface' }, 400, origin);
-    // Empty body is the mixed-version compatibility path for cached clients. It sees only the
-    // established legacy catalog; newly scoped records become visible after a page requests its game.
-    const surface = requestedGame || 'legacy';
-
     // ── หา tier จาก JWT จริงฝั่งเซิร์ฟเวอร์เท่านั้น (ไม่อ่าน/ไม่เชื่อ body ใดๆ ที่ client ส่งมาเรื่อง tier) ──
     const authHeader = req.headers.get('Authorization') || '';
     const userClient = createClient(SUPABASE_URL, ANON_KEY, { global: { headers: { Authorization: authHeader } } });
@@ -125,13 +122,15 @@ serve(async (req) => {
     const [rl, w1, w2, sent] = await Promise.all([
       admin.rpc('game_content_rl_check', { p_key: rlKey, p_limit: 60, p_window: 60 }),
       readWithTransientAuthRetry(() => admin.from('game_words')
-        .select('content_key,word,en,zh,level,category,syls,spelling_th,reading_th,read_syls,tone_special,tone_override,tone_derivation')
-        .eq('level', '初').eq('status', 'active').contains('surfaces', [surface])
-        .order('review_priority', { ascending: false }).order('rank', { ascending: true }).limit(caps['初'])),
+        .select('content_key,word,en,zh,level,category,syls,spelling_th,reading_th,read_syls,type,subcategory,audio_status,access_tier,catalog_version')
+        .eq('level', '初').eq('status', 'active')
+        .in('access_tier', tier === 'login' ? ['guest', 'login'] : ['guest'])
+        .order('rank', { ascending: true }).limit(caps['初'])),
       readWithTransientAuthRetry(() => admin.from('game_words')
-        .select('content_key,word,en,zh,level,category,syls,spelling_th,reading_th,read_syls,tone_special,tone_override,tone_derivation')
-        .eq('level', '中').eq('status', 'active').contains('surfaces', [surface])
-        .order('review_priority', { ascending: false }).order('rank', { ascending: true }).limit(caps['中'])),
+        .select('content_key,word,en,zh,level,category,syls,spelling_th,reading_th,read_syls,type,subcategory,audio_status,access_tier,catalog_version')
+        .eq('level', '中').eq('status', 'active')
+        .in('access_tier', tier === 'login' ? ['guest', 'login'] : ['guest'])
+        .order('rank', { ascending: true }).limit(caps['中'])),
       readWithTransientAuthRetry(() => admin.from('game_sentences')
         .select('th,zh,reading_th,wc,polite_f,words')
         .order('rank', { ascending: true }).limit(caps.sentences)),
@@ -145,19 +144,28 @@ serve(async (req) => {
     // ── แปลงชื่อคอลัมน์ snake_case (DB) → ชื่อฟิลด์ที่ฝั่งเว็บใช้อยู่เดิม (เท่ากับรูปแบบ WORDS_MASTER/ADV_SENTENCES เดิม) ──
     const toWord = (r) => {
       let syllables = r.syls;
+      let runtimeSpelling = null;
       if (r.spelling_th) {
         const spellingParts = String(r.spelling_th).split('-');
         const readingParts = String(r.reading_th || '').split('-');
-        if (!Array.isArray(syllables) || spellingParts.length !== syllables.length ||
-            readingParts.length !== syllables.length || spellingParts.join('') !== r.word) {
+        if (!Array.isArray(syllables) || readingParts.length !== syllables.length ||
+            spellingParts.join('') !== r.word || syllables.some((syllable) => !syllable?.th) ||
+            syllables.map((syllable) => syllable.th).join('') !== r.word) {
           throw new Error('game_word_syllable_authority_mismatch:' + r.content_key);
         }
-        syllables = syllables.map((syllable, index) => ({ ...syllable, th: spellingParts[index] }));
+        // Old cached clients require one written segment per analyzed syllable. The seven approved
+        // spelling rows with a different segmentation already carry their reviewed runtime `syls.th`;
+        // omit only the optional top-level spelling field for those clients while retaining it in DB.
+        if (spellingParts.length === syllables.length) {
+          runtimeSpelling = r.spelling_th;
+          syllables = syllables.map((syllable, index) => ({ ...syllable, th: spellingParts[index] }));
+        }
       }
       return {
         contentKey: r.content_key, word: r.word, en: r.en, zh: r.zh, level: r.level, category: r.category, syls: syllables,
-        spellingTH: r.spelling_th, readingTH: r.reading_th, readSyls: r.read_syls,
-        toneSpecial: r.tone_special, toneOverride: r.tone_override, toneDerivation: r.tone_derivation,
+        spellingTH: runtimeSpelling, readingTH: r.reading_th, readSyls: r.read_syls,
+        type: r.type, subcategory: r.subcategory, audioStatus: r.audio_status,
+        accessTier: r.access_tier, catalogVersion: r.catalog_version,
       };
     };
     const toSentence = (r) => ({

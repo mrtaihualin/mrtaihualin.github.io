@@ -1,6 +1,32 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-09-02 Asia/Bangkok** — Extensionless Login surface activation candidate
+**Updated: 2026-09-03 Asia/Bangkok** — Canonical Free 200 cutover
+
+## 2026-09-03 — Canonical Free 200 (`AUTHORIZED / CUTOVER_IN_PROGRESS`)
+
+- Lin selected the exact reviewed 200 records as the only active vocabulary catalog: Guest Free receives 50 `初` + 50 `中`; Login Free adds 50 `初` + 50 `中`. Paid remains inactive.
+- Moved the other 189 approved records and 64 unreviewed candidates into immutable inactive history. They cannot return to runtime until the complete intended batch is reviewed and separately activated.
+- Prepared a transactional Supabase cutover that preserves all 735 prior rows and ranks in database history, activates exactly 200 rows, retains learning-item identity, blocks browser table reads, and includes a separately gated rollback. The game-content Edge gate reads only active Guest/Login entitlements from this one catalog.
+
+**Prior update: 2026-09-03 Asia/Bangkok** — Checkpoint vocabulary Source catalog
+
+## 2026-09-03 — Checkpoint vocabulary Source catalog (`SOURCE_PASS / SOURCE_ONLY_INACTIVE / PRODUCTION_UNCHANGED`)
+
+- Extended the inactive canonical vocabulary master from 273 to 389 Lin-approved semantic records by adding the passed weekday, month, adjective, noun, and two verb review suites from `04_WORKING/VOCAB_6_3_CURRENT/CHECKPOINT_CURRENT.md`.
+- Added one inactive tier partition: Guest Free 100, Login Free additional 100, and Paid approved 189. Kept the 64 displaced old Free words in a separate noncanonical, unreviewed Paid candidate queue.
+- Preserved the final level decision `สระผม=初`; `สัมผัส` fills the vacated `中` position and `เงียบ` remains in the reviewed Paid pool. Preserved the exact reviewed Thursday, month, `ออฟ`, `บัตร`, `สัมภาษณ์`, `นาย`, and `ห้องอาหาร` decisions.
+- No runtime consumer, game, migration, Supabase, Production, deployment, audio status, or cutover changed.
+
+**Prior update: 2026-09-02 Asia/Bangkok** — Lin-approved canonical vocabulary master initialization
+
+## 2026-09-02 — Lin-approved canonical vocabulary master (`SOURCE_PASS / SOURCE_ONLY_INACTIVE / PRODUCTION_UNCHANGED`)
+
+- Created one new canonical master containing only the exact vocabulary sets Lin has completed: 225 verb records, 15 `我／你／他` pronoun records, 18 number records and 15 color records, for 273 approved semantic records total. Deferred senses such as `ตัวเอง=自己`, `เขา=山`, other meanings of `มัน` and `เงิน=錢` remain outside this catalog; standalone `เขียว` remains replaced by `เขียวเข้ม／เขียวอ่อน` in the approved color set.
+- Added one immutable whole-catalog receipt and a read-only fail-closed checker. A byte, field, identity, count, sense-boundary or activation mismatch stops with a report-to-Lin error; the checker contains no write/repair path and cannot approve content. Only Lin's later exact record-and-field approval may authorize a revision; the notification channel and handling flow remain deferred.
+- Kept the new catalog Source-only and inactive. No game, runtime client, migration, Edge Function, Supabase table, database or Production consumer reads it; the current old vocabulary system remains the only live source until the new catalog is complete and a separately authorized cutover passes.
+- Catalog integrity, immutability/source-only negative tests, existing 225-record vocabulary contracts and data health pass. The full site gate and whitespace verification pass with no runtime, Supabase, Production or real-user/data mutation.
+
+**Prior update: 2026-09-02 Asia/Bangkok** — Extensionless Login surface activation candidate
 
 ## 2026-09-02 — Extensionless Login surfaces (`SOURCE_PASS / LOCAL_RESPONSIVE_PASS / PREVIEW_PENDING / PRODUCTION_UNCHANGED`)
 
