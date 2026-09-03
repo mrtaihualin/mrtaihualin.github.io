@@ -65,7 +65,7 @@ check('fresh verified user replaces cached UI user before link audit', () => {
 
 check('all existing Auth widget consumers load the fresh callback cache binding', () => {
   for (const file of authWidgetConsumers) {
-    assert.match(read(file), /js\/core\/auth-widget\.js\?v=17/, file + ' uses auth-widget v17');
+    assert.match(read(file), /js\/core\/auth-widget\.js\?v=18/, file + ' uses auth-widget v18');
   }
 });
 

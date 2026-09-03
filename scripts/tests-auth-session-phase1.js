@@ -29,7 +29,7 @@ function memoryStorage(initial) {
   };
 }
 
-function createHarness(getSession, initialStorage, signOut) {
+function createHarness(getSession, initialStorage, signOut, accountResponse) {
   const localStorage = memoryStorage(initialStorage);
   const sessionStorage = memoryStorage();
   const warnings = [];
@@ -79,6 +79,18 @@ function createHarness(getSession, initialStorage, signOut) {
     sessionStorage,
     location: { reload() {} },
     console: { warn() { warnings.push(Array.from(arguments).join(' ')); }, error() {}, log() {} },
+    fetch() {
+      const value = accountResponse || {
+        ok: true,
+        status: 200,
+        body: { ok: true, revoked: true, remaining_sessions: 0, remaining_refresh_tokens: 0 }
+      };
+      return Promise.resolve({
+        ok: value.ok !== false,
+        status: value.status || 200,
+        json() { return Promise.resolve(value.body); }
+      });
+    },
     setTimeout,
     clearTimeout,
     Promise
@@ -107,9 +119,11 @@ async function test(label, fn) {
 (async function run() {
   const user = { id: 'user-valid', email: 'mr.taihualin@gmail.com', user_metadata: {} };
 
-  await test('normal logout is local while logout-all is explicitly global', async () => {
+  await test('normal logout is local while logout-all requires server proof then local cleanup', async () => {
     assert.match(source, /function doLogout\(\)[\s\S]{0,260}signOut\(\{ scope: 'local' \}\)/);
-    assert.match(source, /function doLogoutAllDevices\(\)[\s\S]{0,260}signOut\(\{ scope: 'global' \}\)/);
+    assert.match(source, /function doLogoutAllDevices\(\)[\s\S]{0,260}callAccountFn\('account-delete', \{ action: 'logout_all' \}\)/);
+    assert.match(source, /function doLogoutAllDevices\(\)[\s\S]{0,700}signOut\(\{ scope: 'local' \}\)/);
+    assert.doesNotMatch(source, /signOut\(\{ scope: 'global' \}\)/);
     assert.doesNotMatch(source, /sb\.auth\.signOut\(\);/);
   });
 
@@ -205,17 +219,17 @@ async function test(label, fn) {
     assert.strictEqual(h.localStorage.getItem('rg_last_login_provider'), 'email');
   });
 
-  await test('logout-all remains explicitly global', async () => {
+  await test('logout-all performs local SDK cleanup only after server confirmation', async () => {
     const calls = [];
     const h = createHarness(
-      () => Promise.resolve({ data: { session: { user } }, error: null }),
+      () => Promise.resolve({ data: { session: { user, access_token: 'test-access-token' } }, error: null }),
       {},
       (options) => { calls.push(options); return Promise.resolve({ error: null }); }
     );
     await settle();
     await h.api.doLogoutAllDevices();
     assert.strictEqual(calls.length, 1);
-    assert.strictEqual(calls[0].scope, 'global');
+    assert.strictEqual(calls[0].scope, 'local');
   });
 
   await test('email OTP contract is six digits with duplicate-submit guards', async () => {

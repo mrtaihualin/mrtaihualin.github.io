@@ -623,18 +623,22 @@
     });
   }
 
-  // ── ข้อ 6: ออกจากระบบทุกอุปกรณ์ (ต่างจาก doLogout() ปกติที่ signOut scope 'local' แค่เครื่องนี้) ──
+  // ── ข้อ 6: ออกจากระบบทุกอุปกรณ์ ──
+  // Hosted Auth เคยตอบ 204 แต่ยังเหลือ session/refresh token จริง จึงให้ server ลบและยืนยัน 0 ก่อน
+  // แล้วค่อยล้าง session ของ SDK ในเครื่องนี้ ห้ามปิด UI แบบสำเร็จจาก HTTP logout อย่างเดียว
   function doLogoutAllDevices() {
-    return sb.auth.signOut({ scope: 'global' }).then(function (res) {
-      if (res && res.error) {
-        console.warn('[auth] global signOut failed:', res.error.message || res.error);
-        showAuthActionFailure('⚠️ 無法登出所有裝置，登入狀態仍保留，請檢查網路後再試一次');
-        return res;
+    return callAccountFn('account-delete', { action: 'logout_all' }).then(function (proof) {
+      if (!proof || proof.ok !== true || proof.revoked !== true ||
+          proof.remaining_sessions !== 0 || proof.remaining_refresh_tokens !== 0) {
+        throw clientFailureError('無法確認所有裝置都已登出', 'logout_not_confirmed', true);
       }
-      clearAuthUiCaches();
-      return res;
-    }, function (error) {
-      console.warn('[auth] global signOut failed:', (error && error.message) || error);
+      return sb.auth.signOut({ scope: 'local' }).then(function (res) {
+        if (res && res.error) throw res.error;
+        clearAuthUiCaches();
+        return { error: null, revoked: true };
+      });
+    }).catch(function (error) {
+      console.warn('[auth] verified logout-all failed:', (error && error.message) || error);
       showAuthActionFailure('⚠️ 無法登出所有裝置，登入狀態仍保留，請檢查網路後再試一次');
       return { error: error };
     });
