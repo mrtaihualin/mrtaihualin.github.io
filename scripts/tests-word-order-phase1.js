@@ -64,7 +64,7 @@ test('SRS lifecycle is the Phase 1 Day 1 / Day 7 path', () => {
 });
 
 test('Guest can play while account SRS writes remain login-gated', () => {
-  assert.match(app, /if \(woLoggedIn\(\) && !practiceMode\) \{/);
+  assert.match(app, /if \(woLoggedIn\(\) && !practiceMode && !woReviewOwns\(s\.th\)\) \{/);
   assert.match(app, /else \{\s*pool = allIdx\.slice\(\);/);
 });
 

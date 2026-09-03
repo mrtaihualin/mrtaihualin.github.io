@@ -27,7 +27,7 @@ function block(startText, endText) {
 
 test('attempt score and correction evidence reset for every new word', () => {
   const loadWord = block('function loadWord()', 'function loadSyl()');
-  assert.match(loadWord, /readingAttemptScore=null;readingCorrectionAttempts=0;readingFirstCheckDone=false/);
+  assert.match(loadWord, /readingAttemptScore=null;readingFirstCheckWrongCounts=null;readingCorrectionAttempts=0;readingFirstCheckDone=false/);
 });
 
 test('report captures only snapshots submitted by Check', () => {
@@ -80,7 +80,7 @@ test('Reading counter follows active syllables without changing the round queue'
 });
 
 test('Reading loads the rebuilt crash-safe bundle with a fresh cache key', () => {
-  assert.match(html, /reading-game-app\.min\.js\?v=47/);
+  assert.match(html, /reading-game-app\.min\.js\?v=48/);
 });
 
 test('every Reading syllable uses the locked consonant-vowel-final-tone slot order', () => {

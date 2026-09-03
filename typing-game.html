@@ -103,12 +103,15 @@ if (document.fonts && document.fonts.load) {
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="js/core/supabase-config.js?v=10"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script>
-<script defer src="js/games/round-report.js?v=3"></script>
+<script defer src="js/core/auth-widget.js?v=17"></script>
+<script defer src="js/games/reading-auth.js?v=30"></script>
+<script defer src="js/games/round-report.js?v=5"></script>
 <script defer src="js/games/typing-score.js?v=1"></script><!-- สูตร 無提示 ชุดเดียวกับ Listening Typing Bonus -->
-<script defer src="js/games/tone-server.js?v=5"></script><!-- Login Free SRS only; Review/Paid/Challenge remain parked -->
+<script defer src="js/games/tone-server.js?v=6"></script><!-- Login Free SRS owner; Paid/Challenge remain parked -->
 <script src="js/games/protected-word-audio.js?v=3"></script><!-- Core 5: isolated Guest audio client -->
 <script src="js/games/word-menu.js?v=10"></script><!-- เครื่องมือช่วยเรียนแบบแถวตรง -->
 <script src="js/core/network-guard.js?v=1"></script>
+<script src="js/games/learning-review.js?v=1"></script><!-- Login Free Review owner -->
 <script src="js/games/game-content-client.js?v=13"></script>
 <script src="data/tone-engine.js?v=3"></script>
 <style>
@@ -439,7 +442,7 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
   ]
 }
 </script>
-<script src="js/core/minimum-guest-launch.js?v=9"></script>
+<script src="js/core/minimum-guest-launch.js?v=10"></script>
 <script defer src="js/games/word-vault.js?v=8"></script>
 <script defer src="js/games/sentence-vault.js?v=4"></script>
 </head>
@@ -775,13 +778,13 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/typing-game-app.min.js?v=45'], {game:'typing'}).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/typing-game-app.min.js?v=46'], {game:'typing'}).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 </div><!-- /.v3-page -->
 <script src="data/nav-template.js?v=4"></script>
 <script src="js/core/shared.min.js?v=48"></script>
-<script src="js/games/game-flow.js?v=11"></script>
+<script src="js/games/game-flow.js?v=12"></script>
 
 <!-- ── Game Switcher (fixed pill) ── -->
 <style>

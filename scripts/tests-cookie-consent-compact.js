@@ -9,7 +9,7 @@ const { buildBannerBlock } = require('./apply-cookie-consent.js');
 
 const root = path.resolve(__dirname, '..');
 const excludedDirs = new Set([
-  '.git', 'node_modules', '_archive', '_to_delete', 'เลิกใช้แล้ว_ห้ามรัน', '_dev',
+  '.git', 'node_modules', '_archive', '_to_delete', 'เลิกใช้แล้ว_ห้ามรัน', '_dev', 'dev',
   '_แผนงาน', '_บทความ-เตรียมเขียน', 'scripts', 'supabase', 'data'
 ]);
 

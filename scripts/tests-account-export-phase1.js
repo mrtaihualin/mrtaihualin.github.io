@@ -26,7 +26,8 @@ test('Phase 1 session and per-skill SRS tables are exported', () => {
   for (const table of ['tone_sessions', 'reading_sessions', 'tone_srs_state']) {
     assert.match(source, new RegExp(`from\\('${table}'\\)[\\s\\S]{0,220}eq\\('user_id', callerUid\\)`));
   }
-  assert.match(source, /select\('level,word,stage,due_date,ever_failed,mastered,game,updated_at'\)/);
+  assert.match(source, /select\('level,word,item_id,stage,due_date,ever_failed,mastered,game,updated_at'\)/);
+  assert.match(source, /history:[\s\S]+phase1_learning_review_states: learningReviewRes\.data/);
 });
 
 test('all personal saved-item vault keys are exported for the owner', () => {
@@ -43,7 +44,7 @@ test('personal deletion tombstones are transparent in the export', () => {
 });
 
 test('service-role-only queries remain explicitly owner-filtered', () => {
-  for (const table of ['line_identities', 'account_audit_log']) {
+  for (const table of ['line_identities', 'account_audit_log', 'phase1_learning_review_states']) {
     assert.match(source, new RegExp(`admin\\.from\\('${table}'\\)[\\s\\S]{0,220}eq\\('user_id', callerUid\\)`));
   }
 });

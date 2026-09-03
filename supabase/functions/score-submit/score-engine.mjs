@@ -176,7 +176,7 @@ export function validateScoreSubmission(body) {
 // always recalculated above and never copied from client_score.
 export function validateCanonicalScoreEvidence(accepted, canonicalRows) {
   const rows = Array.isArray(canonicalRows) ? canonicalRows : [];
-  const byKey = new Map(rows.map((row) => [String(row.th || row.word || ''), row]));
+  const byKey = new Map(rows.map((row) => [String(row.content_key || row.th || row.word || ''), row]));
   let cleanStreak = 0;
   accepted.evidence.items.forEach((item) => {
     const row = byKey.get(item.key);

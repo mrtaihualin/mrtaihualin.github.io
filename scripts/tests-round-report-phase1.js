@@ -41,12 +41,14 @@ RR.addItem(report, {
     { answer: 'ผม กิน ข้าว', is_correct: true }
   ],
   correct_answer: 'ผม กิน ข้าว', is_correct: true, wrong_count: 1, item_score: 10,
+  learning_evidence: { hintCount: 1 },
   words: [{ th: 'ผม', zh: '我' }, { th: 'กิน', zh: '吃' }, { th: 'ข้าว', zh: '飯' }]
 });
 RR.finish(report, { score: 10, submission_id: null });
 assert.strictEqual(report.items[0].user_answer, 'ผม กิน ข้าว');
 assert.strictEqual(report.items[0].item_id, null);
 assert.strictEqual(report.items[0].content_version, null);
+assert.deepStrictEqual(JSON.parse(JSON.stringify(report.items[0].learning_evidence)), { hintCount: 1 });
 assert.deepStrictEqual(JSON.parse(JSON.stringify(report.items[0].words)), [{ th: 'ผม', zh: '我' }, { th: 'กิน', zh: '吃' }, { th: 'ข้าว', zh: '飯' }]);
 assert.strictEqual(RR.validate(report).ok, true);
 

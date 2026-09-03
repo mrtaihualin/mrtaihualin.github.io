@@ -149,8 +149,8 @@
   }
   // ===== LISTENING_SRS_RACE_GUARD_END =====
 
-  // ===== LISTENING_REVIEW_POLICY_START =====
-  function createListeningReviewPolicy(options) {
+  // ===== LISTENING_SRS_DUE_POLICY_START =====
+  function createListeningSrsDuePolicy(options) {
     var reviewKeys = Object.create(null);
     var attempts = Object.create(null);
     var submissions = Object.create(null);
@@ -163,9 +163,9 @@
       submissions = Object.create(null);
       limitPerItem = 0;
     }
-    function begin(selectedDue, reviewLimit) {
+    function begin(selectedDue) {
       reset();
-      limitPerItem = Math.max(0, Math.min(1, Math.floor(Number(reviewLimit) || 0)));
+      limitPerItem = (selectedDue || []).length ? 1 : 0;
       (selectedDue || []).forEach(function (word) {
         var key = keyOf(word);
         if (key) reviewKeys[key] = true;
@@ -226,7 +226,7 @@
       snapshot: snapshot
     };
   }
-  // ===== LISTENING_REVIEW_POLICY_END =====
+  // ===== LISTENING_SRS_DUE_POLICY_END =====
 
   function qs(id) { return document.getElementById(id); }
 
@@ -344,7 +344,9 @@
   }
 
   function srsKey(word) { return (word && word.th || '') + '@' + levelNumber(word); }
-  var listeningReviewPolicy = createListeningReviewPolicy({ keyOf: srsKey });
+  function listeningReviewRef(word){return {source:'game_words',key:word.contentKey||srsKey(word)};}
+  var listeningReviewPlan={all:[],selected:[],srsOwned:[]};
+  var listeningSrsDuePolicy = createListeningSrsDuePolicy({ keyOf: srsKey });
   function taipeiDate(value) {
     var d = value == null ? new Date() : new Date(value);
     try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(d); }
@@ -418,7 +420,7 @@
 
   function allocateListeningRound(pool, n) {
     if (!window.READING_AUTH || !READING_AUTH.srsUser || !window.GameFlow || !GameFlow.allocateSrs) {
-      listeningReviewPolicy.begin([], 0);
+      listeningSrsDuePolicy.begin([]);
       return sampleRound(pool, n);
     }
     var due = shuffle(pool.filter(isSrsDue));
@@ -426,12 +428,24 @@
       var rec = listeningSrs[srsKey(word)];
       return !isSrsDue(word) && !(rec && rec.mastered);
     }));
-    var allocation = GameFlow.allocateSrs({
-      tier: 'free', total: Math.min(n, due.length + regular.length),
-      due: due, regular: regular, idOf: srsKey, scope: 'listening'
-    });
-    listeningReviewPolicy.begin(allocation.selectedDue, allocation.reviewLimit);
+    var reviewDue=window.LearningReview&&LearningReview.matchQueue?LearningReview.matchQueue({game:'listening',level:levelNumber(pool[0]),items:pool,contentRefOf:listeningReviewRef}):[];
+    listeningReviewPlan={all:pool.slice(),selected:[],srsOwned:pool.filter(function(word){return !!listeningSrs[srsKey(word)];})};
+    var allocation=window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()?LearningReview.allocateRuntime({
+      total:Math.min(n,due.length+regular.length),reviewDue:shuffle(reviewDue),srsDue:due,regular:regular,
+      idOf:function(word){return LearningReview.keyOfRef(listeningReviewRef(word));},scope:'listening-'+levelNumber(pool[0]),srsScope:'listening',allocateSrs:GameFlow.allocateSrs
+    }):GameFlow.allocateSrs({tier:'free',total:Math.min(n,due.length+regular.length),due:due,regular:regular,idOf:srsKey,scope:'listening'});
+    listeningReviewPlan.selected=allocation.selectedReview||[];
+    listeningSrsDuePolicy.begin(allocation.selectedSrs||allocation.selectedDue||[]);
     return allocation.items;
+  }
+  function registerListeningRestoredReview(){
+    try{
+      if(!window.LearningReview||!state.report)return;
+      var selected=LearningReview.matchQueue({game:'listening',level:levelNumber(state.round[0]),items:state.round,contentRefOf:listeningReviewRef});
+      var srs=state.pool.filter(function(word){return !!listeningSrs[srsKey(word)];});
+      var seen=Object.create(null),duplicates=[];state.round.forEach(function(word){var key=LearningReview.keyOfRef(listeningReviewRef(word));if(seen[key])duplicates.push(word);seen[key]=true;});
+      LearningReview.registerRound({report:state.report,game:'listening',level:levelNumber(state.round[0]),allItems:state.pool,srsOwned:srs,selectedReview:selected,alreadyRetried:duplicates,idOf:function(word){return LearningReview.keyOfRef(listeningReviewRef(word));},contentRefOf:listeningReviewRef,retry:function(word){var future=false;for(var ri=state.idx+1;ri<state.round.length;ri++){if(state.round[ri]===word){future=true;break;}}if(!future){state.round.push(word);el.qt.textContent=String(state.round.length);}}});
+    }catch(e){}
   }
 
   function pickDistractors(correctWord, pool, n) {
@@ -530,7 +544,11 @@
     listeningSrsGuard.start(startRoundNow);
   }
 
-  function startRoundNow() {
+  function startRoundNow(reviewReady) {
+    if(!reviewReady&&window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()){
+      LearningReview.prime({game:'listening',level:({初:1,中:2,高:3})[state.level]||1,playSetSize:ROUND_SIZE}).then(function(){startRoundNow(true);});
+      return;
+    }
     state.pool = buildPool(state.level);
     if (!state.pool.length) {
       el.poolNote.textContent = '目前還沒有可以用的題目（缺少語音檔），麻煩告訴老師 Lin。';
@@ -553,6 +571,7 @@
     state.log = [];
     state.itemAttempts = [];
     state.report = window.RoundReport ? RoundReport.create({ game_type: 'listening', difficulty: state.level, mode: state.mode }) : null;
+    if(window.LearningReview&&LearningReview.registerRound)LearningReview.registerRound({report:state.report,game:'listening',level:({初:1,中:2,高:3})[state.level]||1,allItems:listeningReviewPlan.all,srsOwned:listeningReviewPlan.srsOwned,selectedReview:listeningReviewPlan.selected,idOf:function(word){return LearningReview.keyOfRef(listeningReviewRef(word));},contentRefOf:listeningReviewRef,retry:function(word){var future=false;for(var ri=state.idx+1;ri<state.round.length;ri++){if(state.round[ri]===word){future=true;break;}}if(!future){state.round.push(word);el.qt.textContent=String(state.round.length);}}});
     state._pendingResume = null;
     if (el.resumeBanner) el.resumeBanner.style.display = 'none';
     try { if (window.GameResume) window.GameResume.clear('listening-game'); } catch (e) {} // เริ่มรอบใหม่แบบสด = ล้างรอบค้างเก่าทิ้ง (ไม่ให้มีของค้าง 2 รอบชนกัน)
@@ -725,11 +744,11 @@
     state.audioFailed = false;
     state.itemAttempts = [];
     state.log.push({
-      th: w.th, zh: w.zh, userAnswer: '', correct: false, skipped: true,
+      th: w.th, contentKey: w.contentKey || (w.th + '@' + levelNumber(w)), zh: w.zh, userAnswer: '', correct: false, skipped: true,
       mode: state.mode, listens: state.listenCount,
       listeningScore: 0, typingBonus: 0, totalScore: 0,
       typingWrong: 0, wordCount: LISTENING_SCORE.wordCount(w.th),
-      unitCount: LISTENING_SCORE.typingUnitCount(w), attempts: []
+      unitCount: LISTENING_SCORE.typingUnitCount(w), level: w.level || '初', attempts: []
     });
     if (el.skipBtn) { el.skipBtn.style.display = 'none'; el.skipBtn.disabled = true; }
     el.resultBanner.className = 'result-banner gsh-feedback-slot show';
@@ -860,9 +879,9 @@
   function sendListeningSrs(word, primaryScore) {
     try {
       if (!window.TONE_SERVER || !TONE_SERVER.available()) return;
-      if (!listeningReviewPolicy.claimSubmission(word)) return;
+      if (!listeningSrsDuePolicy.claimSubmission(word)) return;
       // Persist the claim before starting the request. A refresh/restart cannot
-      // generate a second request id for the same Review Needed item.
+      // generate a second request id for the same in-SRS Due item.
       saveResumeState();
       TONE_SERVER.finishRound({
         game: 'listening', word: word.th, level: levelNumber(word),
@@ -903,29 +922,30 @@
     closeTypeKeyboard();
     state.audioFailed = false;
     if (el.skipBtn) { el.skipBtn.style.display = 'none'; el.skipBtn.disabled = true; }
-    if (!listeningReviewPolicy.claimAttempt(w)) return;
+    if (!listeningSrsDuePolicy.claimAttempt(w)) return;
     var existingSrs = listeningSrs[srsKey(w)] || {};
-    var isReviewAttempt = listeningReviewPolicy.isReview(w);
+    var isSrsDueAttempt = listeningSrsDuePolicy.isReview(w);
     if (isCorrect) state.correct++; else state.wrong++;
     var primary = Number(detail.primaryScore) || 0;
     var bonus = Number(detail.typingBonus) || 0;
     state.primaryTotal += primary;
     state.typingBonusTotal += bonus;
     state.log.push({
-      th: w.th, zh: w.zh, userAnswer: detail.userAnswer || '', correct: isCorrect,
+      th: w.th, contentKey: w.contentKey || (w.th + '@' + levelNumber(w)), zh: w.zh, userAnswer: detail.userAnswer || '', correct: isCorrect,
       mode: state.mode, listens: state.listenCount,
       listeningScore: primary, typingBonus: bonus, totalScore: primary + bonus,
       typingWrong: state.typingWrong,
       wordCount: LISTENING_SCORE.wordCount(w.th),
       unitCount: LISTENING_SCORE.typingUnitCount(w),
+      level: w.level || '初',
       srsDue: existingSrs.dueDate || '',
-      reviewNeeded: isReviewAttempt,
+      srsDueAttempt: isSrsDueAttempt,
       mastered: !!existingSrs.mastered,
       attempts: state.itemAttempts.slice()
     });
     if (state.report && window.RoundReport) {
       RoundReport.addItem(state.report, {
-        content_ref: { source: 'game_words', key: w.th + '@' + levelNumber(w) },
+        content_ref: { source: 'game_words', key: w.contentKey || (w.th + '@' + levelNumber(w)) },
         question: w.th, meaning: w.zh || '',
         attempts: state.itemAttempts,
         user_answer: state.itemAttempts.length ? state.itemAttempts[state.itemAttempts.length - 1].answer : (detail.userAnswer || ''),
@@ -934,12 +954,14 @@
         item_score: primary + bonus, listen_count: state.listenCount,
         linguistic: { reading_th: w.readingTH || '', reading_en: w.en || '', level: w.level || '', answer_mode: state.mode, listening_score: primary, typing_score: bonus },
         srs_state: existingSrs.stage == null ? null : existingSrs.stage,
-        review_state: isReviewAttempt ? 'needed' : 'not_due',
+        review_state: null,
         mastered_state: !!existingSrs.mastered
       });
     }
-    var requeueThisRound = listeningReviewPolicy.shouldRequeue(w, detail.requeue);
-    if (requeueThisRound) {
+    var _reviewRow=state.report&&state.report.items&&state.report.items[state.report.items.length-1];
+    var _reviewManaged=!!(window.LearningReview&&_reviewRow&&LearningReview.owns(state.report,_reviewRow.content_ref));
+    var requeueThisRound=_reviewManaged?LearningReview.shouldRetry(state.report,_reviewRow):listeningSrsDuePolicy.shouldRequeue(w,detail.requeue);
+    if (requeueThisRound&&!_reviewManaged) {
       state.round.push(w);
       el.qt.textContent = String(state.round.length);
     }
@@ -1004,7 +1026,7 @@
         answered: state.answered,
         nextMode: state.nextMode,
         itemAttempts: state.itemAttempts,
-        listeningReviewPolicy: listeningReviewPolicy.snapshot(),
+        listeningSrsDuePolicy: listeningSrsDuePolicy.snapshot(),
         log: state.log,
         report: state.report && window.RoundReport ? RoundReport.snapshot(state.report) : null
       });
@@ -1064,7 +1086,7 @@
       typingWrong: saved.answered ? 0 : (typeof saved.typingWrong === 'number' ? saved.typingWrong : 0),
       preserveAttempt: !saved.answered,
       itemAttempts: Array.isArray(saved.itemAttempts) ? saved.itemAttempts : [],
-      listeningReviewPolicy: saved.listeningReviewPolicy || null,
+      listeningSrsDuePolicy: saved.listeningSrsDuePolicy || saved.listeningReviewPolicy || null,
       log: Array.isArray(saved.log) ? saved.log : [],
       report: saved.report || null
     };
@@ -1084,13 +1106,13 @@
     if (!pend) return;
     // A v11 resume has no selected-Due ledger. Start fresh instead of guessing;
     // auth may still be resolving here, so this must not depend on current user.
-    if (!pend.listeningReviewPolicy) {
+    if (!pend.listeningSrsDuePolicy) {
       state._pendingResume = null;
       try { if (window.GameResume) window.GameResume.clear('listening-game'); } catch (e) {}
       startRound();
       return;
     }
-    listeningReviewPolicy.restore(pend.listeningReviewPolicy);
+    listeningSrsDuePolicy.restore(pend.listeningSrsDuePolicy);
     state.level = pend.level;
     renderLevelTabs();
     state.pool = buildPool(state.level);
@@ -1107,6 +1129,7 @@
     state.log = pend.log;
     state.itemAttempts = pend.itemAttempts;
     state.report = window.RoundReport ? RoundReport.restore(pend.report, { game_type: 'listening', difficulty: state.level, mode: pend.mode }) : null;
+    if(window.LearningReview)LearningReview.prime({game:'listening',level:levelNumber(state.round[0]),playSetSize:ROUND_SIZE}).then(registerListeningRestoredReview);
     state._pendingResume = null;
     setMode(pend.mode);
     state.roundActive = true;
@@ -1134,17 +1157,18 @@
     state._pendingResume = null;
     try { if (window.GameResume) window.GameResume.clear('listening-game'); } catch (e) {}
     if (!pend) return;
-    listeningReviewPolicy.restore(pend.listeningReviewPolicy);
+    listeningSrsDuePolicy.restore(pend.listeningSrsDuePolicy);
     state.level = pend.level;
     renderLevelTabs();
     state.pool = buildPool(state.level);
     state.round = pend.round.filter(function (word) {
-      return !listeningReviewPolicy.isReview(word) || !listeningReviewPolicy.hasAttempted(word);
+      return !listeningSrsDuePolicy.isReview(word) || !listeningSrsDuePolicy.hasAttempted(word);
     });
     if (!state.round.length) { startRound(); return; }
     state.idx = 0; state.correct = 0; state.wrong = 0;
     state.primaryTotal = 0; state.typingBonusTotal = 0; state.listenCount = 0; state.typingWrong = 0; state.nextMode = null; state.awaitingModeForCurrent = false; state.log = []; state.itemAttempts = [];
     state.report = window.RoundReport ? RoundReport.create({ game_type: 'listening', difficulty: state.level, mode: pend.mode }) : null;
+    if(window.LearningReview)LearningReview.prime({game:'listening',level:levelNumber(state.round[0]),playSetSize:ROUND_SIZE}).then(registerListeningRestoredReview);
     setMode(pend.mode); state.roundActive = true; renderLevelTabs(); state.roundSeq++;
     el.startScreen.style.display='none';el.endScreen.style.display='none';el.gameScreen.style.display='flex';el.qt.textContent=String(state.round.length);el.okCount.textContent='0';el.badCount.textContent='0';
     showQuestion();
@@ -1210,7 +1234,7 @@
       difficulty: state.level,
       items: state.log.map(function (entry) {
         return {
-          key: entry.th, points: entry.totalScore, wrong: entry.correct || entry.skipped ? 0 : 1,
+          key: entry.contentKey || (entry.th + '@' + levelNumber({ level: entry.level })), contentRef: { source: 'game_words', key: entry.contentKey || (entry.th + '@' + levelNumber({ level: entry.level })) }, points: entry.totalScore, wrong: entry.correct || entry.skipped ? 0 : 1,
           guide: false, failed: false, mastered: false,
           mode: entry.mode, listens: entry.listens, correct: entry.correct,
           wordCount: entry.wordCount, unitCount: entry.unitCount, typingWrong: entry.typingWrong

@@ -23,6 +23,17 @@
   function wait(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
   // ส่ง 1 รอบให้เซิร์ฟเวอร์ตัดสิน · คืน Promise { ok, correct, justMastered, stars, totalStars, reason }
   async function finishRound(args) {
+    try {
+      if (window.LearningReview && LearningReview.runtimeEnabled && LearningReview.runtimeEnabled()) {
+        var reviewKey = args.contentKey || args.word || '';
+        var gameKey = args.game === 'wordorder' ? 'word_order' : (args.game || 'tone');
+        if (LearningReview.ownsCurrent(gameKey, args.level, { source: 'game_words', key: reviewKey }) ||
+            LearningReview.ownsCurrent(gameKey, args.level, { source: 'game_words', key: (args.word || '') + '@' + args.level }) ||
+            LearningReview.ownsCurrent(gameKey, args.level, { source: 'game_sentences', key: args.word || reviewKey })) {
+          return { ok: false, reason: 'learning_review_owner' };
+        }
+      }
+    } catch (e) {}
     var sb = client();
     if (!sb || !sb.functions) return { ok: false, reason: 'no_client' };
     var payload = {

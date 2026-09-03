@@ -21,10 +21,11 @@
   }
 
   // LOGIN-L8 opens the Login Core entry. The separately approved Login Free
-  // SRS release enables only the authenticated five-game SRS owner; score,
-  // Review, Leaderboard, Paid and Challenge remain parked.
+  // SRS and Review releases enable only their authenticated Free owners;
+  // Leaderboard, Paid and Challenge remain parked.
   window.LOGIN_CORE_PUBLIC_ENTRY = true;
   window.LOGIN_FREE_SRS_PUBLIC_ENTRY = true;
+  window.LOGIN_FREE_REVIEW_PUBLIC_ENTRY = true;
   if (window.LOGIN_CORE_PUBLIC_ENTRY !== true) clearAuthCallbackFragment();
   window.MRT_MINIMUM_GUEST_LAUNCH = true;
   document.documentElement.classList.add('minimum-guest-launch');

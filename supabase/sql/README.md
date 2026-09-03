@@ -12,3 +12,4 @@
 - Inspect cron metadata without selecting/copying full secret-bearing command text.
 - Design SELECT/INSERT/UPDATE/DELETE policies from the actual access model. Do not assume every table needs all four commands; verify UPDATE `USING`/`WITH CHECK`, readback behavior and intentional omissions against current schema/evidence.
 - Files under `supabase/schema/` are reconstruction snapshots and follow `supabase/schema/README.md`; they are not Production migrations.
+- `migrations/20260903090000_phase1_learning_review_atomic_source.sql` is committed source only after Free SRS Day 8 and Free200 source reconciliation. It still requires fresh Security, migration-collision, rollback and exact Production approval gates; it does not authorize Paid or public activation by itself.

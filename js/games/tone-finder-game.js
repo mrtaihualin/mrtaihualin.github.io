@@ -537,6 +537,10 @@ function tfStateWord(entryOrWord) {
   }
   return entryOrWord;
 }
+function tfReviewWordRef(entry){return {source:'game_words',key:entry.contentKey||entry.word+'@'+(({1:'初',2:'中'})[selectedLevel]||selectedLevel||1)};}
+function tfReviewSentenceRef(index){return {source:'game_sentences',key:ADV_SENTENCES[index].th};}
+function tfReviewOwns(entry){try{var sentence=selectedLevel===3&&advSentenceCtx&&advSentenceCtx.th;return !!(window.LearningReview&&LearningReview.owns(roundReport,{source:sentence?'game_sentences':'game_words',key:sentence||(entry&&entry.contentKey)||((entry&&entry.word||'')+'@'+(({1:'初',2:'中'})[selectedLevel]||selectedLevel||1))}));}catch(e){return false;}}
+function tfRegisterRestoredReview(){try{if(!window.LearningReview||!roundReport||!session)return;if(selectedLevel===3&&advSentIdx>=0){var all=ADV_SENTENCES.map(function(_,i){return i;}),selected=LearningReview.matchQueue({game:'tone',level:3,items:[advSentIdx],contentRefOf:tfReviewSentenceRef}),refKey=LearningReview.keyOfRef(tfReviewSentenceRef(advSentIdx)),group={},groupSize=advSentenceCtx&&advSentenceCtx.words?advSentenceCtx.words.length:session.words.length;group[refKey]=groupSize;LearningReview.registerRound({report:roundReport,game:'tone',level:3,allItems:all,srsOwned:all.filter(function(i){return !!tfGetSrsRecord(ADV_SENTENCES[i].th,3);}),selectedReview:selected,alreadyRetried:session.words.length>groupSize?[advSentIdx]:[],idOf:function(i){return LearningReview.keyOfRef(tfReviewSentenceRef(i));},contentRefOf:tfReviewSentenceRef,groupSizeByRef:group,retry:function(){session.words=session.words.concat(session.words.slice(0,groupSize));}});}else{var pool=WORD_LIST.filter(function(w){return w.level===selectedLevel;}),selectedWords=LearningReview.matchQueue({game:'tone',level:selectedLevel,items:session.words,contentRefOf:tfReviewWordRef}),seen=Object.create(null),duplicates=[];session.words.forEach(function(w){var key=LearningReview.keyOfRef(tfReviewWordRef(w));if(seen[key])duplicates.push(w);seen[key]=true;});LearningReview.registerRound({report:roundReport,game:'tone',level:selectedLevel,allItems:pool,srsOwned:pool.filter(function(w){return !!tfGetSrsRecord(w,tfWordLevel(w));}),selectedReview:selectedWords,alreadyRetried:duplicates,idOf:function(w){return LearningReview.keyOfRef(tfReviewWordRef(w));},contentRefOf:tfReviewWordRef,retry:function(w){session.words.push(w);}});}}catch(e){}}
 function tfGetSrsRecord(entryOrWord, level) {
   var all = tfLoadSrs();
   var k = TF_SRS.keyFor(tfStateWord(entryOrWord), level);
@@ -1182,6 +1186,7 @@ function tfResetWordScoring() {
   //   สะสม "คะแนนฐานต่อพยางค์ (ยังไม่คูณทอง/คอมโบ)" ไว้ก่อน แล้วไปเฉลี่ย + คูณทอง/คอมโบ "ครั้งเดียวตอนจบคำ" ที่ tfCommitWordAndAdvance
     session.curWordSylRawSum = 0;        // ผลรวมคะแนนฐานทุกพยางค์ (ก่อนเฉลี่ย, ก่อนคูณ)
   session.curWordSylScoredCount = 0;   // จำนวนพยางค์ที่คิดคะแนนแล้ว (ตัวหารเฉลี่ย)
+  session.learningComponentWrongCounts = []; // หลักฐานดิบสำหรับตัวตรวจคะแนนฝั่ง server; ไม่ใช่คะแนนจาก client
   session.curWordWrongGuess = false;   // เคยเดาผิด/🤷 ในคำ/พยางค์นี้ไหม (กันโกง first-try)
   // ── Lin 2026-07-04: สถานะปุ่ม "?" (= ปุ่มแอบดู ตัวเดียวกัน) ต่อคำ/ประโยคนี้ ──
   session.hintUsed = false;      // กด ? ไปแล้วหรือยังในคำนี้ (ครั้งแรกนับผิด 1 ครั้ง, ครั้งถัดไปฟรี — ดู tfUseHint)
@@ -1366,6 +1371,7 @@ function tfScoreFirstTry() {
     session.scoredSyls[k] = true;
     // ── Lin 2026-07-04: สะสมคะแนน "ฐาน" ต่อพยางค์ (ยังไม่คูณทอง/คอมโบ) — ไปเฉลี่ย+คูณครั้งเดียวตอนจบคำ ──
     var sylBase = TF_SCORE.cfg.SCORE_FIRST_TRY;
+    session.learningComponentWrongCounts[k] = 0;
     session.curWordSylRawSum = (session.curWordSylRawSum || 0) + sylBase;
     session.curWordSylScoredCount = (session.curWordSylScoredCount || 0) + 1;
     // เด้งฟีดแบ็กรายพยางค์ (คะแนนฐาน) แต่ "ยังไม่บวกเข้า session.score" — คะแนนจริงบวกทีเดียวตอนจบคำ
@@ -1413,6 +1419,7 @@ function tfScoreDeduce() {
     session.scoredSyls[k] = true;
     // ── Lin 2026-07-04: คะแนนฐานต่อพยางค์ = บันได [10,7,4,1,0] ตาม "หักรวม" (กดผิด+แอบดูที่โดนหัก) — เฉลี่ย+คูณทอง/คอมโบครั้งเดียวตอนจบคำ ──
     var sylBase = TF_WORDSCORE.score(session);
+    session.learningComponentWrongCounts[k] = Math.min(session.currentWordDeduct || 0, 4);
     session.curWordSylRawSum = (session.curWordSylRawSum || 0) + sylBase;
     session.curWordSylScoredCount = (session.curWordSylScoredCount || 0) + 1;
     session.curWordAllFirstTry = false;
@@ -1485,6 +1492,7 @@ function tfForceRevealZero() {
     // ── Lin 2026-07-04: พยางค์ fail = 0 คะแนน แต่ยังนับเป็น 1 พยางค์ในตัวหารเฉลี่ย (บวก 0 เข้า rawSum) ──
     session.curWordSylRawSum = (session.curWordSylRawSum || 0) + 0;
     session.curWordSylScoredCount = (session.curWordSylScoredCount || 0) + 1;
+    session.learningComponentWrongCounts[k] = 4;
     session.curWordAllFirstTry = false;
     session.combo = 0;
     var sct = computeTone(syl);
@@ -1606,6 +1614,7 @@ function tfCommitWordAndAdvance(opts) {
     firstTry: firstTry,
     golden: !!session.currentWordGolden,
     forced: !!opts.forced,
+    learningEvidence: { componentWrongCounts: (session.learningComponentWrongCounts && session.learningComponentWrongCounts.length) ? session.learningComponentWrongCounts.slice() : [Math.min(session.currentWordDeduct || mistakes || 0, 4)] },
     needReview: !!opts.forced || mistakes > 0 || !firstTry
   });
   if (roundReport && window.RoundReport) {
@@ -1619,6 +1628,7 @@ function tfCommitWordAndAdvance(opts) {
       correct_answer: TONES[tone] ? TONES[tone].zh : String(tone || ''),
       is_correct: mistakes === 0 && firstTry && !opts.forced,
       wrong_count: mistakes, item_score: _tfResult.score, hint_used: _tfResult.hintUsed,
+      learning_evidence: _tfResult.learningEvidence,
       linguistic: { reading_th: entry.readingTH || '', syls: entry.syls || null, read_syls: entry.readSyls || null, correct_tone: tone },
       words: (_tfSentence && advSentenceCtx.words) ? advSentenceCtx.words.map(function(w){return {th:w.th||'',zh:w.zh||''};}) : [],
       srs_state: _tfRec && (_tfRec.dueDate || _tfRec.stage) || null,
@@ -1663,6 +1673,7 @@ function tfLevelWordCount(level) {
 function tfProcessSrsOnWordCommit(entry, mistakes, firstTry, forced) {
   if (!entry || !entry.word) return;
   if (!tfSrsLoggedIn()) return; // Guest Free ไม่มี SRS และห้ามนำรอบก่อน Login ไปนับย้อนหลัง
+  if (tfReviewOwns(entry)) return; // Review owns every pre-SRS transition; tone-round keeps existing SRS only.
   if (tfGuideMode || (session && session.currentWordGuideUsed)) return;
   var wasFinalCheck = !!(session && session.curWordIsFinalSrsCheck);
   var wasKnownCheck = !!(session && session.curWordIsKnownCheck);
@@ -2620,7 +2631,7 @@ function stepSessionSummary() {
     try{
       if(window.READING_AUTH && READING_AUTH.saveScore) _tfSubmissionId=READING_AUTH.saveScore(weightedScore,1,'tone',results.filter(function(r){return r.mistakes>0;}).map(function(r){return {word:r.entry.word,wrong:r.mistakes||0};}),{
         difficulty:({1:'初',2:'中',3:'高'})[selectedLevel]||'初',
-        items:results.map(function(r){return {key:r.entry.contentKey||r.entry.word,points:Number(r.score)||0,wrong:Number(r.mistakes)||0,guide:false,failed:!!r.forced,skipped:!!r.skipped,mastered:false};}),
+        items:results.map(function(r){return {key:r.entry.contentKey||r.entry.word,contentRef:{source:selectedLevel===3?'game_sentences':'game_words',key:selectedLevel===3&&advSentenceCtx?advSentenceCtx.th:(r.entry.contentKey||r.entry.word+'@'+(selectedLevel||1))},points:Number(r.score)||0,wrong:Number(r.mistakes)||0,guide:!!r.hintUsed,failed:!!r.forced,skipped:!!r.skipped,mastered:false,learningEvidence:r.learningEvidence||null};}),
         roundBonus:Number(session.bonusAwarded)||0,
         srsBonus:Number(session.srsReviewBonus)||0
       });
@@ -2992,6 +3003,7 @@ function tfRestoreSavedProgress(data) {
   session.maxCombo = Number(data.maxCombo) || 0;
   session.hardStarsEarned = Number(data.hardStarsEarned) || 0;
   roundReport = window.RoundReport ? RoundReport.restore(data.report,{game_type:'tone',difficulty:({1:'初',2:'中',3:'高'})[selectedLevel]||'初',mode:selectedCategory||'全部'}) : null;
+  if(window.LearningReview)LearningReview.prime({game:'tone',level:selectedLevel||1,playSetSize:selectedLevel===3?1:5}).then(tfRegisterRestoredReview);
   hist = []; histPos = -1;
   tfSetupNextWord();
   tfSaveResumeState();
@@ -4008,9 +4020,18 @@ var TF = {
     }
   },
   // สุ่ม 5 คำจาก level ที่เลือก แล้ว loop ต่อเนื่อง
-  _startRandom5: function() {
+  _startRandom5: function(reviewReady) {
+    if(!reviewReady&&window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()){
+      LearningReview.prime({game:'tone',level:selectedLevel||1,playSetSize:selectedLevel===3?1:5}).then(function(){TF._startRandom5(true);});
+      return;
+    }
     if (selectedLevel === 3) { // 高級 ไม่มีคำใน WORD_LIST → สุ่มประโยคใหม่แทน (Lin 2026-07-03)
-      TF.startAdvSentence(Math.floor(Math.random() * ADV_SENTENCES.length));
+      var _allSentences=ADV_SENTENCES.map(function(_,i){return i;});
+      var _reviewSentences=window.LearningReview&&LearningReview.matchQueue?LearningReview.matchQueue({game:'tone',level:3,items:_allSentences,contentRefOf:tfReviewSentenceRef}):[];
+      var _sentenceAllocation=window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()?LearningReview.allocateRuntime({total:1,reviewDue:_reviewSentences,srsDue:[],regular:_allSentences,idOf:function(i){return LearningReview.keyOfRef(tfReviewSentenceRef(i));},scope:'tone-3'}):{items:[Math.floor(Math.random()*ADV_SENTENCES.length)],selectedReview:[]};
+      var _sentenceIndex=_sentenceAllocation.items.length?_sentenceAllocation.items[0]:Math.floor(Math.random()*ADV_SENTENCES.length);
+      TF.startAdvSentence(_sentenceIndex);
+      if(window.LearningReview&&LearningReview.registerRound){var _sentenceRefKey=LearningReview.keyOfRef(tfReviewSentenceRef(_sentenceIndex)),_group={};_group[_sentenceRefKey]=session&&session.words?session.words.length:1;LearningReview.registerRound({report:roundReport,game:'tone',level:3,allItems:_allSentences,srsOwned:_allSentences.filter(function(i){return !!tfGetSrsRecord(ADV_SENTENCES[i].th,3);}),selectedReview:_sentenceAllocation.selectedReview,idOf:function(i){return LearningReview.keyOfRef(tfReviewSentenceRef(i));},contentRefOf:tfReviewSentenceRef,groupSizeByRef:_group,retry:function(){if(session&&session.words&&session.words.length){session.words=session.words.concat(session.words.slice());}}});}
       return;
     }
     // F5 (2026-08-10): จำ "คำสุดท้ายของชุดก่อนหน้า" ไว้ก่อนที่ session ตัวแปรจะถูกทับด้วยชุดใหม่ (ใช้กันคำแรกของชุดใหม่ซ้ำกับคำสุดท้ายของชุดก่อน)
@@ -4028,7 +4049,15 @@ var TF = {
     }
     pool = tfExcludeMasteredWords(pool, 5); // Lin 2026-07-04: กันคำที่จำได้แล้ว (mastered) โผล่ซ้ำในสุ่ม 5 คำ
     var words;
-    if (tfSrsLoggedIn() && window.GameFlow && GameFlow.allocateSrs) {
+    var _reviewSelected=[],_srsOwned=pool.filter(function(w){return !!tfGetSrsRecord(w,tfWordLevel(w));});
+    var _reviewDue=window.LearningReview&&LearningReview.matchQueue?LearningReview.matchQueue({game:'tone',level:selectedLevel,items:pool,contentRefOf:tfReviewWordRef}):[];
+    if (tfSrsLoggedIn() && window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()&&window.GameFlow&&GameFlow.allocateSrs) {
+      var _now=Date.now();
+      var _due=pool.filter(function(w){var r=tfGetSrsRecord(w,tfWordLevel(w));return !!(r&&!r.mastered&&TF_SRS.isDue(r,_now));});
+      var _regular=pool.filter(function(w){return _due.indexOf(w)===-1;});
+      var _allocation=LearningReview.allocateRuntime({total:Math.min(5,pool.length),reviewDue:_reviewDue,srsDue:_due.slice().sort(function(){return Math.random()-0.5;}),regular:_regular.slice().sort(function(){return Math.random()-0.5;}),idOf:function(w){return LearningReview.keyOfRef(tfReviewWordRef(w));},scope:'tone-'+selectedLevel,srsScope:'tone-'+selectedLevel,allocateSrs:GameFlow.allocateSrs});
+      words=_allocation.items;_reviewSelected=_allocation.selectedReview;
+    } else if (tfSrsLoggedIn() && window.GameFlow && GameFlow.allocateSrs) {
       var _now=Date.now();
       var _due=pool.filter(function(w){var r=tfGetSrsRecord(w,tfWordLevel(w));return !!(r&&!r.mastered&&TF_SRS.isDue(r,_now));});
       var _regular=pool.filter(function(w){return _due.indexOf(w)===-1;});
@@ -4042,6 +4071,7 @@ var TF = {
       var _tmp = words[0]; words[0] = words[1]; words[1] = _tmp;
     }
     startSetSession(words,{keepOrder:true});
+    if(window.LearningReview&&LearningReview.registerRound)LearningReview.registerRound({report:roundReport,game:'tone',level:selectedLevel,allItems:pool,srsOwned:_srsOwned,selectedReview:_reviewSelected,idOf:function(w){return LearningReview.keyOfRef(tfReviewWordRef(w));},contentRefOf:tfReviewWordRef,retry:function(w){if(session&&session.words)session.words.push(w);}});
   },
   // Lin 2026-07-04: ตัด selectCategory/selectSet/openSpecial ทิ้งแล้ว — หน้าเลือกหมวด/ชุด + 特訓區 ไม่ใช้แล้ว
   // ⭐ Lin 2026-07-25: ปุ่มดาว แยกออกจากปุ่ม勳章(showBadges) — โชว์แค่จำนวนดาวสะสม ไม่มีตารางแบดจ์

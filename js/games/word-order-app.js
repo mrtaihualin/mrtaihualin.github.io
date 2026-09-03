@@ -66,6 +66,9 @@
   function woSrsRank(r){ if(!r) return -1; if(r.mastered) return 3; return (r.stage||0); }
   function woSrsPickAdvanced(a,b){ if(!a)return b; if(!b)return a; var ra=woSrsRank(a),rb=woSrsRank(b); if(ra!==rb)return ra>rb?a:b; var da=a.dueDate||'',db=b.dueDate||''; if(da!==db)return (da>db)?a:b; return a; }
   function woSrsKey(th){ return (th||'')+'@'+LEVEL_NUM; }
+  function woReviewRef(i){return {source:'game_sentences',key:ADV_SENTENCES[i].th};}
+  function woReviewOwns(th){try{return !!(window.LearningReview&&LearningReview.owns(roundReport,{source:'game_sentences',key:th}));}catch(e){return false;}}
+  function woRegisterRestoredReview(){try{if(!window.LearningReview||!roundReport)return;var all=ADV_SENTENCES.map(function(_,i){return i;}),selected=LearningReview.matchQueue({game:'word_order',level:LEVEL_NUM,items:SET,contentRefOf:woReviewRef}),srs=all.filter(function(i){return !!srsRecords[woSrsKey(ADV_SENTENCES[i].th)];}),seen=Object.create(null),duplicates=[];SET.forEach(function(i){var key=LearningReview.keyOfRef(woReviewRef(i));if(seen[key])duplicates.push(i);seen[key]=true;});LearningReview.registerRound({report:roundReport,game:'word_order',level:LEVEL_NUM,allItems:all,srsOwned:srs,selectedReview:selected,alreadyRetried:duplicates,idOf:function(i){return LearningReview.keyOfRef(woReviewRef(i));},contentRefOf:woReviewRef,retry:function(i){SET.push(i);var qt=document.getElementById('wo-qt');if(qt)qt.textContent=SET.length;}});}catch(e){}}
   function woSentenceExists(sentThai){
     for(var i=0;i<ADV_SENTENCES.length;i++){ if(ADV_SENTENCES[i].th===sentThai) return true; }
     return false; // ไม่มีใน ADV_SENTENCES แล้ว = ประโยคผี → ข้าม
@@ -186,6 +189,7 @@
   var used = {};          // orig index -> true 表示已被放進格子
   var attemptedWrongThisSentence = false;
   var hintUsedThisSentence = false;
+  var hintCountThisSentence = 0;
   var locked = false;     // 這句已經答對/公佈答案，鎖住不能再改
   var wrongCount = 0;     // จำนวนครั้งที่เรียงผิด (สะสมทั้งประโยคนี้ — ใช้กำหนดว่าผิดครั้งถัดไปหักเท่าไหร่)
   var life = SENTENCE_LIFE_START; // "ชีวิต" ของประโยคนี้ — หักจากทั้งเรียงผิดและ提示 พูลเดียวกัน (ข้อ3.6) ถึง 0 = ตาย
@@ -421,10 +425,10 @@
       // กันประโยคยาวไม่มีเว้นวรรค (เขียนไทยจริงไม่เว้นวรรคระหว่างคำ) ตกขอบหน้ากระดาษ/ถูกตัดกลางคำ — Lin 2026-07-31
       var wordsArr = (s && s.words && s.words.length) ? s.words.map(function(w){return w.th;}) : null;
       var wordGlosses = (s && s.words && s.words.length) ? s.words.map(function(w){return {th:w.th||'', zh:w.zh||''};}) : null;
-      var base = {th:s?s.th:'', wordsArr:wordsArr, wordGlosses:wordGlosses, zh:s?s.zh:'', userAnswer:lastSubmittedAnswer||'', correctAnswer:s&&s.words?s.words.map(function(w){return w.th;}).join(' '):(s?s.th:''), wrong:(typeof wrongCount!=='undefined'?wrongCount:0), attempts:submittedAttempts.slice(), failed:false, guide:false, pts:0, srsDue:'', mastered:false};
+      var base = {th:s?s.th:'', wordsArr:wordsArr, wordGlosses:wordGlosses, zh:s?s.zh:'', userAnswer:lastSubmittedAnswer||'', correctAnswer:s&&s.words?s.words.map(function(w){return w.th;}).join(' '):(s?s.th:''), wrong:(typeof wrongCount!=='undefined'?wrongCount:0), attempts:submittedAttempts.slice(), learningEvidence:{hintCount:hintCountThisSentence}, failed:false, guide:hintCountThisSentence>0, pts:0, srsDue:'', mastered:false};
       for (var k in o) { if (Object.prototype.hasOwnProperty.call(o,k)) base[k] = o[k]; }
       roundLog.push(base);
-      if(roundReport&&window.RoundReport)RoundReport.addItem(roundReport,{content_ref:{source:'game_sentences',key:base.th},question:base.th,meaning:base.zh,attempts:base.attempts,user_answer:base.userAnswer,correct_answer:base.correctAnswer,is_correct:!base.failed&&!base.guide&&base.wrong===0,wrong_count:base.wrong,item_score:base.pts,hint_used:!!base.guide,words:wordGlosses||[],srs_state:base.srsDue||null,mastered_state:!!base.mastered});
+      if(roundReport&&window.RoundReport)RoundReport.addItem(roundReport,{content_ref:{source:'game_sentences',key:base.th},question:base.th,meaning:base.zh,attempts:base.attempts,user_answer:base.userAnswer,correct_answer:base.correctAnswer,is_correct:!base.failed&&!base.guide&&base.wrong===0,wrong_count:base.wrong,item_score:base.pts,hint_used:!!base.guide,learning_evidence:base.learningEvidence,words:wordGlosses||[],srs_state:base.srsDue||null,mastered_state:!!base.mastered});
     } catch(e){}
   }
   // 2026-07-13 Lin：ดึงประโยคที่พลาดในรอบนี้จาก roundLog ไปเก็บลง reading_sessions.wrong_items (ฐานข้อมูลจุดอ่อน)
@@ -735,6 +739,7 @@
     if(!_woPendingResume){hideResumeBanner();startFreshRound();return;}
     var p=_woPendingResume;_woPendingResume=null;hideResumeBanner();woClearResume();
     SET=p.restoredSet;idx=0;score=0;correctFirstTry=0;cleanC=0;curCombo=0;maxCombo=0;roundLog=[];submittedAttempts=[];roundReport=window.RoundReport?RoundReport.create({game_type:'wordorder',difficulty:'高',mode:'sentence'}):null;practiceMode=false;
+    if(window.LearningReview)LearningReview.prime({game:'word_order',level:LEVEL_NUM,playSetSize:WO_ROUND_SIZE}).then(woRegisterRestoredReview);
     document.getElementById('end').style.display='none';document.getElementById('game').style.display='flex';refreshUI();loadSentence();woSaveResume();
   };
   window.woResumeNewRoundClick = function(){
@@ -754,6 +759,7 @@
     curCombo = state.curCombo||0; maxCombo = state.maxCombo||0;
     roundLog = Array.isArray(state.roundLog)?state.roundLog:[];
     roundReport = window.RoundReport?RoundReport.restore(state.report,{game_type:'wordorder',difficulty:'高',mode:'sentence'}):null;
+    if(window.LearningReview)LearningReview.prime({game:'word_order',level:LEVEL_NUM,playSetSize:WO_ROUND_SIZE}).then(woRegisterRestoredReview);
     practiceMode = false;
     var savedSentence = ADV_SENTENCES[SET[idx]];
     if (woResumeCompletedCurrent(state, savedSentence&&savedSentence.th)) idx++;
@@ -793,7 +799,11 @@
     startFreshRound();
   }
 
-  function startFreshRound(){
+  function startFreshRound(reviewReady){
+    if(!reviewReady&&window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()){
+      LearningReview.prime({game:'word_order',level:LEVEL_NUM,playSetSize:WO_ROUND_SIZE}).then(function(){startFreshRound(true);});
+      return;
+    }
     hideResumeBanner();
     var now = Date.now();
     var allIdx = ADV_SENTENCES.map(function(_, i){ return i; });
@@ -827,6 +837,7 @@
       }
     }
     var pool;
+    var _reviewAllIdx=[],_reviewSelected=[],_reviewSrsOwned=[];
     var _srsAllocated = false;
     // งานที่7 (SRS): กรองด้วย stage-based SRS เฉพาะตอนล็อกอินเท่านั้น — ไม่ล็อกอิน = เล่นได้ทุกประโยค ไม่จำ (ข้อ0/ข้อ7)
     if (woLoggedIn()) {
@@ -835,7 +846,14 @@
         return !!(rec && !rec.mastered && WO_SRS.isDue(rec, now));
       });
       var _regularIdx = allIdx.filter(function(i){ var rec=srsRecords[woSrsKey(ADV_SENTENCES[i].th)]; return !(rec&&rec.mastered)&&_dueIdx.indexOf(i)===-1; });
-      if (window.GameFlow && GameFlow.allocateSrs && (_dueIdx.length || _regularIdx.length)) {
+      _reviewAllIdx=allIdx.slice();
+      _reviewSrsOwned=allIdx.filter(function(i){return !!srsRecords[woSrsKey(ADV_SENTENCES[i].th)];});
+      var _reviewDue=window.LearningReview&&LearningReview.matchQueue?LearningReview.matchQueue({game:'word_order',level:LEVEL_NUM,items:allIdx,contentRefOf:woReviewRef}):[];
+      if(window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()&&window.GameFlow&&GameFlow.allocateSrs&&(_reviewDue.length||_dueIdx.length||_regularIdx.length)){
+        var _reviewAllocation=LearningReview.allocateRuntime({total:Math.min(WO_ROUND_SIZE,_dueIdx.length+_regularIdx.length),reviewDue:shuffle(_reviewDue),srsDue:shuffle(_dueIdx),regular:shuffle(_regularIdx),idOf:function(i){return LearningReview.keyOfRef(woReviewRef(i));},scope:'word-order',srsScope:'word-order',allocateSrs:GameFlow.allocateSrs});
+        pool=_reviewAllocation.items;_reviewSelected=_reviewAllocation.selectedReview;
+        _srsAllocated=true;
+      }else if (window.GameFlow && GameFlow.allocateSrs && (_dueIdx.length || _regularIdx.length)) {
         pool = GameFlow.allocateSrs({tier:'free',total:Math.min(WO_ROUND_SIZE,_dueIdx.length+_regularIdx.length),due:shuffle(_dueIdx),regular:shuffle(_regularIdx),idOf:function(i){return woSrsKey(ADV_SENTENCES[i].th);},scope:'word-order'}).items;
         _srsAllocated = true;
       } else pool = _dueIdx.concat(_regularIdx);
@@ -858,6 +876,7 @@
     cleanC = 0; curCombo = 0; maxCombo = 0;
     roundLog = [];
     roundReport = window.RoundReport?RoundReport.create({game_type:'wordorder',difficulty:'高',mode:'sentence'}):null;
+    if(window.LearningReview&&LearningReview.registerRound)LearningReview.registerRound({report:roundReport,game:'word_order',level:LEVEL_NUM,allItems:_reviewAllIdx,srsOwned:_reviewSrsOwned,selectedReview:_reviewSelected,idOf:function(i){return LearningReview.keyOfRef(woReviewRef(i));},contentRefOf:woReviewRef,retry:function(i){SET.push(i);var qt=document.getElementById('wo-qt');if(qt)qt.textContent=SET.length;}});
     if (window.GAME_ACCOUNT) { totalStars = GAME_ACCOUNT.getStars(); totalBadges = GAME_ACCOUNT.earnedBadges().length; }
     refreshUI();
     try { rgRenderGameBar(); } catch(e){}
@@ -874,6 +893,7 @@
     answer = []; used = {};
     attemptedWrongThisSentence = false;
     hintUsedThisSentence = false;
+    hintCountThisSentence = 0;
     locked = false;
     wrongCount = 0; sentenceFailed = false;
     submittedAttempts = [];
@@ -1033,7 +1053,7 @@
     var _wob0=document.getElementById('wo-bank'); if(_wob0)_wob0.style.display='none';
     updateHintWarning();
     var srsKey = woSrsKey(s.th);
-    if (woLoggedIn() && !practiceMode) {
+    if (woLoggedIn() && !practiceMode && !woReviewOwns(s.th)) {
       srsRecords[srsKey] = WO_SRS.resetOnFail(srsRecords[srsKey]); // ผิด/ตาย = กลับวันแรกเสมอ (MASTER ข้อ7)
       woSaveSrs();
       woServerFinish(s.th, false); // Phase 4: ตาย/ล้มเหลว = รีเซ็ตฝั่งเซิร์ฟเวอร์ด้วย
@@ -1060,7 +1080,7 @@
       if (curSentenceIsKnownCheck) {
         var passedClean = !attemptedWrongThisSentence;
         curSentenceIsKnownCheck = false;
-        if (woLoggedIn() && !practiceMode) {
+        if (woLoggedIn() && !practiceMode && !woReviewOwns(s.th)) {
           if (passedClean) {
             var recK = srsRecords[srsKey] || WO_SRS.blank();
             recK.mastered = true;
@@ -1102,7 +1122,7 @@
       document.getElementById('wo-score').textContent = score;
 
       // ── SRS (เฉพาะล็อกอิน+ไม่ใช่ practiceMode) ──
-      if (woLoggedIn() && !practiceMode) {
+      if (woLoggedIn() && !practiceMode && !woReviewOwns(s.th)) {
         var existingRec = srsRecords[srsKey] || null;
         var srsPassed = life === SENTENCE_LIFE_START && !attemptedWrongThisSentence && !hintUsedThisSentence;
         // Phase 1 entry/checkpoint: คะแนนฐานต้อง 10/10 เท่านั้น; bonus/combo/golden ห้ามช่วยผ่าน
@@ -1234,6 +1254,7 @@
     answer.push(correctPrefixLen);
     used[correctPrefixLen] = true;
     hintUsedThisSentence = true;
+    hintCountThisSentence++;
     life -= HINT_DEDUCT; // ข้อ3.6: 提示หักครั้งละ2 พูลเดียวกับผิด ไม่จำกัดจำนวนครั้ง
     renderSlots(s);
     renderBank();
@@ -1378,7 +1399,7 @@
         var _woSrsBonus=Math.max(0,score-roundBonus-_woItemScore);
         var _woSubmissionId=READING_AUTH.saveScore(weightedScore,1,'word_order',rgWrongItemsFromLog(),{
           difficulty:'高',
-          items:roundLog.map(function(w){return {key:w.th,points:Number(w.pts)||0,wrong:Number(w.wrong)||0,guide:!!w.guide,failed:!!w.failed,mastered:!!w.mastered};}),
+          items:roundLog.map(function(w){return {key:w.th,contentRef:{source:'game_sentences',key:w.th},points:Number(w.pts)||0,wrong:Number(w.wrong)||0,guide:!!w.guide,failed:!!w.failed,mastered:!!w.mastered,learningEvidence:w.learningEvidence||null};}),
           roundBonus:roundBonus,srsBonus:_woSrsBonus
         });
         if(roundReport)roundReport.submission_id=_woSubmissionId||null;

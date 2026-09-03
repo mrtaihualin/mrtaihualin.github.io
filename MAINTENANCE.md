@@ -1,6 +1,15 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-09-03 Asia/Bangkok** — Canonical Free 200 cutover
+**Updated: 2026-09-03 Asia/Bangkok** — Hidden Login Free Review source reconciliation
+
+## 2026-09-03 — Hidden Login Free Review (`SOURCE_REBASED / DEFAULT_OFF / UI_DECISION_PENDING / PRODUCTION_UNCHANGED`)
+
+- Rebased the seven hidden Review candidate commits onto canonical GitLab main `3cc801b8e8e1fd9b1eee5b6eebdfc098f1ebc7b3`, preserving the canonical Free200 catalog, `contentKey` sense identity, Login Free SRS owner and `game-content` v31 source.
+- Review source now resolves protected vocabulary by exact Free200 `content_key`, including same-spelling sense suffixes, while keeping per-user/per-game/per-level/stable-item isolation, atomic CAS/idempotency and no SRS backflow. The server verifier, client bridge and public entry remain default OFF; Paid and Challenge remain OFF.
+- Moved the unapplied Review migration after the Free200/SRS migrations and added a fail-closed zero-data schema rollback. An in-use rollback preserves data by disabling the runtime; destructive schema removal is blocked whenever Review or stable-item SRS data exists.
+- Hidden candidate, integration, verifier, PostgreSQL migration/RLS/isolation/rollback, SRS, five-game and Free200 regressions pass. Final Product placement/copy remains a Lin decision; no Staging/Production mutation, deploy, public activation or real-user action was performed.
+
+**Prior update: 2026-09-03 Asia/Bangkok** — Canonical Free 200 cutover
 
 ## 2026-09-03 — Canonical Free 200 (`AUTHORIZED / CUTOVER_IN_PROGRESS`)
 
@@ -159,6 +168,20 @@
 - Hidden the parked Leaderboard/Progress links only on the exact Login candidate badge through a reversible `showParkedAccountLinks: false` option; the underlying routes and systems remain intact.
 - Replaced score/Leaderboard promises in the guest entry and Login modal with neutral Login-only copy while preserving Email OTP, Google, Facebook, LINE and the existing account-method safety warning.
 - Advanced `reading-auth.js` on Vault from v27 to v28 and `auth-widget.js` on its seven existing consumers from v15 to v16. Public Login and the Minimum Guest gate remain unchanged.
+
+**Prior update: 2026-08-27 Asia/Bangkok** — Hidden five-game learning-score verifier source
+
+## 2026-08-27 — Hidden five-game learning-score verifier source (`PASS_LOCAL / DEFAULT_OFF`)
+
+- Added a default-OFF server verifier beside `score-submit` for Tone, Reading, Listening, Typing and Word Order. It derives integer `0–10` learning evidence from each game's existing pre-bonus primitives and protected canonical content, never from a client-computed learning score.
+- Core game result source now carries exact existing `contentRef` plus only the primitive evidence needed by the verifier. `round-report-v1` preserves that hidden evidence without adding storage or a public entry.
+- Review/SRS mutation remains owned by the separate atomic RPC source. No Staging/Production apply, Edge/client deploy, public activation, navigation or UI change is part of this checkpoint.
+## 2026-08-27 — Hidden pre-SRS Review integration seam (`PASS_LOCAL / OWNER_STORAGE_GATE_OPEN`)
+
+- Reused exact clean Hidden Candidate commit `80a78346ec3a3178a9cc88325adb1a8f8d5b6524` and added one default-OFF bridge from the existing `round-report-v1` completion shape to an explicitly injected atomic learning-state/SRS owner. The bridge performs no network, storage, Supabase, Auth or SRS mutation itself.
+- The bridge requires a stable item identity, an explicit canonical integer learning score `0–10`, action-token idempotency, state-token compare-and-swap and one owner that is atomic across pre-SRS replacement and SRS entry. In-SRS evidence bypasses the pre-SRS candidate and remains SRS-owner-only with no Review/Weak backflow; Paid runtime remains disabled.
+- Source audit found the current Core-5 RoundReport does not yet provide the required stable `item_id` plus canonical `learning_score`, and the current SRS owner cannot atomically replace a pre-SRS state because no authorized durable pre-SRS state binding exists. The bridge therefore stays unlinked/default OFF and fails closed until the shared authority/schema/security gate is resolved.
+- Verification: integration `6/6`, Hidden Candidate `29/29`, syntax and diff checks PASS. No public HTML/runtime entry, Staging/Production call, schema/RPC/Edge/Auth/identity/automation mutation, push, PR, merge or deploy occurred.
 
 **Prior update: 2026-08-26 Asia/Bangkok** — Login callback credential-fragment fail-closed fix
 
@@ -2417,3 +2440,17 @@ node scripts/check-site.js
 - Propagated `contentKey` through reports, SRS calls, direct practice, and Resume without changing existing single-meaning SRS keys; object-use metadata is intentionally absent from the catalog and review flow.
 - Added an unapplied database migration, safe release/rollback order, focused regressions, and refreshed generated game bundles. No Production SQL, content sync, Edge/static deploy, Auth, or user-data mutation was performed.
 - Verification: focused data/game/rollout/race checks, minified-source freshness, `git diff --check`, and the full site gate.
+## 2026-08-27 — Review Needed hidden/local candidate
+
+- Added a standalone read-only five-game contract and adapter over the existing `tone_srs_state` read shape; no game, Auth, Supabase, navigation, or public runtime file loads it.
+- Raw attempts are rejected as state, histories remain per game, not-due/same-day records do not advance, and Mastered rows stay outside the due queue.
+- Historical initial candidate configuration used Free Due `20%` / Review Needed `1` and dormant Paid Due `30%` / maximum `4`; later candidate commits supersede this metadata with the current pre-SRS Free `1` / Paid `3` attempt and `20%` / `30%` allocation contract without enabling Paid runtime.
+- Added synthetic Day 0/1/8 and empty/loading/error/access-denied fixtures plus a developer-only preview that is default OFF, localhost-only, explicitly enabled, initially hidden, unlinked, and `noindex`.
+- Verification: hidden-candidate tests `12/12`; existing Phase 1 SRS `17/17`; game-flow and Listening regressions PASS; local browser confirmed OFF produces no visible content and explicit localhost Day 1 shows five isolated rows with no links/forms or console warnings/errors; `node scripts/check-site.js` PASS across 1,021 files including secret scan.
+- No Production/Staging call or mutation, database/schema/RPC/Edge/Auth/test-identity/automation change, public activation, push, PR, merge, or deploy.
+
+## 2026-08-27 — Hidden Review atomic source preparation
+
+- Added source-only Free pre-SRS tables and one service-role RPC that resolves the existing `content_ref` to exactly one `learning_items.item_id`, applies transitions atomically with compare-and-swap, stores exact replay results, rejects changed replay, and enters the existing SRS owner at stage 0 without backflow.
+- Browser roles receive no table or RPC write privilege. The bridge ignores client item IDs and client score values; it requires a game-specific server verification seam and keeps canonical learning scores before every combo/golden/level/end-round/SRS bonus.
+- Local PostgreSQL verification compiles the migration and passes deny-by-default, missing/duplicate identity, Free Review timing/attempts, idempotency/conflict/CAS, stage-0/no-backflow, five-game isolation and concurrent exactly-once checks. The source is not applied to Staging or Production; Paid and public runtime remain OFF.

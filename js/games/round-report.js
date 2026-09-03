@@ -102,6 +102,7 @@
       attempts: attempts,
       hint_used: input.hint_used == null ? null : !!input.hint_used,
       listen_count: input.listen_count == null ? null : Math.max(0, number(input.listen_count, 0)),
+      learning_evidence: input.learning_evidence ? clone(input.learning_evidence) : null,
       linguistic: input.linguistic ? clone(input.linguistic) : null,
       words: words,
       srs_state: input.srs_state || null,
@@ -148,6 +149,7 @@
     row.ordinal = report.items.length + 1;
     report.items.push(row);
     report.total_items = report.items.length;
+    dispatchRoundEvent('gsh:item-complete', { game_type: report.game_type, round_id: report.round_id, item: row });
     return row;
   }
 
