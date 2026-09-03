@@ -17,7 +17,7 @@
 </head>
 <body>
   <main>
-    <h1>Word Order — 6 ตัวเลือก (มากที่สุดในชุดปัจจุบัน) · 844 × 390</h1>
+    <h1>Word Order — จำลอง 10 ตัวเลือก · 844 × 390</h1>
     <div class="screen"><iframe id="game" title="Word Order Mobile Landscape"></iframe></div>
     <output id="status">กำลังเปิดหน้า Word Order…</output>
   </main>
@@ -35,18 +35,22 @@
       else window.addEventListener('resize', fitGame);
 
       var fixture = [{
-        th: 'ผมกินข้าวอยู่ที่บ้าน',
-        zh: '我在家吃飯',
-        readingTH: 'ผม-กิน-ข้าว-อยู่-ที่-บ้าน',
-        wc: 6,
+        th: 'วันนี้ผมอยากไปกินข้าวกับเพื่อนที่ร้านอาหาร',
+        zh: '今天我想去餐廳和朋友吃飯',
+        readingTH: 'วัน-นี้-ผม-อยาก-ไป-กิน-ข้าว-กับ-เพื่อน-ที่-ร้าน-อา-หาร',
+        wc: 10,
         politeF: null,
         words: [
-          {th:'ผม',zh:'我',syls:[{th:'ผม',en:'phǎm'}]},
+          {th:'วันนี้',zh:'今天',syls:[{th:'วันนี้',en:'wan-níi'}]},
+          {th:'ผม',zh:'我',syls:[{th:'ผม',en:'phǒm'}]},
+          {th:'อยาก',zh:'想',syls:[{th:'อยาก',en:'yàak'}]},
+          {th:'ไป',zh:'去',syls:[{th:'ไป',en:'pai'}]},
           {th:'กิน',zh:'吃',syls:[{th:'กิน',en:'gin'}]},
           {th:'ข้าว',zh:'飯',syls:[{th:'ข้าว',en:'khâao'}]},
-          {th:'อยู่',zh:'在（進行）',syls:[{th:'อยู่',en:'yùu'}]},
-          {th:'ที่',zh:'在（地點）',syls:[{th:'ที่',en:'thîi'}]},
-          {th:'บ้าน',zh:'家',syls:[{th:'บ้าน',en:'bâan'}]}
+          {th:'กับ',zh:'和',syls:[{th:'กับ',en:'gàp'}]},
+          {th:'เพื่อน',zh:'朋友',syls:[{th:'เพื่อน',en:'phʉ̂an'}]},
+          {th:'ที่',zh:'在',syls:[{th:'ที่',en:'thîi'}]},
+          {th:'ร้านอาหาร',zh:'餐廳',syls:[{th:'ร้านอาหาร',en:'ráan-aa-hǎan'}]}
         ]
       }];
       var expectedCount = fixture[0].words.length;
@@ -70,7 +74,7 @@
               doc.querySelectorAll('#wo-bank .wo-tile').length === expectedCount &&
               !doc.getElementById('wo-check-btn');
             if (readyNow) {
-              status.textContent = 'พร้อมตรวจ Word Order — 6 ตัวเลือกคือจำนวนมากที่สุดใน Guest/Login ชุดปัจจุบัน';
+              status.textContent = 'พร้อมตรวจ Word Order — จำลอง 10 ตัวเลือกเพื่อทดสอบพื้นที่ (ระบบปัจจุบันมากที่สุด 6)';
               return;
             }
             if (Date.now() - started > 15000) {
