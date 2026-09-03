@@ -312,6 +312,8 @@ test('local Landscape review pages load current game assets from the site root',
   assert.match(toneReview, /new URL\('\.\.\/\.\.\/', location\.href\)\.href/);
   assert.match(readingReview, /new URL\('\.\.\/\.\.\/', location\.href\)\.href/);
   assert.match(wordOrderReview, /new URL\('\.\.\/\.\.\/', location\.href\)\.href/);
+  assert.match(wordOrderReview, /th: 'ผมกินข้าวอยู่ที่บ้าน'[\s\S]{0,700}wc: 6/);
+  assert.match(wordOrderReview, /var expectedCount = fixture\[0\]\.words\.length/);
   assert.match(wordOrderReview, /!doc\.getElementById\('wo-check-btn'\)/);
 });
 

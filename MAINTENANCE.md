@@ -2552,4 +2552,5 @@ node scripts/check-site.js
 - Updated the local Tone review fixture to intercept the current `game-content-client.js?v=13` binding and made the Tone/Reading `srcdoc` base absolute so current game assets load from the site root.
 - Added a focused regression for the Tone, Reading, and Word Order review routes. Product gameplay, the rotate-to-Portrait gate, deployment, and Production are unchanged.
 - Added a real-page Word Order layout fixture that preserves Current main's auto-check flow and deliberately contains no Check button.
+- Expanded that fixture to the verified current maximum of six choices; the Guest 20-row and Login 40-row sets share the same six-word maximum sentence.
 - Verification: Mobile Landscape `20/20`, Reading `18/18`, neutral actions `7/7`, shared games `52/52`, plus real-browser Tone, Reading, and Word Order review pages at `844×390`.
