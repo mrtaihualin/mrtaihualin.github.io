@@ -55,8 +55,16 @@ begin
   if (select md5(string_agg(record_hash, E'\n' order by content_key collate "C")) from _canonical_free_200) <> '4be1d6442da1c2980b1e084aafc45394' then
     raise exception 'canonical Free 200 record hash aggregate mismatch';
   end if;
-  if (select count(*) from public.game_words g join _canonical_free_200 p using(word,level)) <> 200 then
-    raise exception 'all 200 canonical words must match one preserved legacy row';
+  if (select count(*) from public.game_words g join _canonical_free_200 p using(word,level)) <> 196 then
+    raise exception 'expected 196 canonical words at their preserved legacy level';
+  end if;
+  if (select count(*) from public.game_words where word='สระผม' and level='中') <> 1 then
+    raise exception 'สระผม legacy identity required for approved re-level to 初';
+  end if;
+  if exists(
+    select 1 from public.game_words where word in('วันพฤหัสบดี','พฤษภาคม','พฤศจิกายน')
+  ) then
+    raise exception 'three new reviewed calendar identities unexpectedly exist';
   end if;
   if exists (
     select 1 from public.game_words g join _canonical_free_200 p on p.content_key=g.content_key
@@ -76,8 +84,7 @@ set history_rank = coalesce(history_rank, rank),
     status = 'history', access_tier = null, catalog_version = 'legacy-pre-free-200',
     canonical_record = null, record_hash = null, rank = 1000000 + id;
 
--- Every canonical record matched exactly one preserved legacy row above. Update those same rows so
--- their bigint ids and all external references remain stable; this cutover never inserts or deletes.
+-- Reuse the 196 exact legacy rows and the one สระผม row whose reviewed level changed 中→初.
 update public.game_words g set
   content_key=p.content_key,en=p.en,zh=p.zh,category=p.category,syls=p.syls,
   reading_th=p.reading_th,rank=p.rank,spelling_th=p.spelling_th,audio_status=p.audio_status,
@@ -85,6 +92,24 @@ update public.game_words g set
   record_hash=p.record_hash,canonical_record=p.canonical_record,status='active',updated_at=now()
 from _canonical_free_200 p
 where g.word=p.word and g.level=p.level;
+
+update public.game_words g set
+  level=p.level,content_key=p.content_key,en=p.en,zh=p.zh,category=p.category,syls=p.syls,
+  reading_th=p.reading_th,rank=p.rank,spelling_th=p.spelling_th,audio_status=p.audio_status,
+  type=p.type,subcategory=p.subcategory,access_tier=p.access_tier,catalog_version=p.catalog_version,
+  record_hash=p.record_hash,canonical_record=p.canonical_record,status='active',updated_at=now()
+from _canonical_free_200 p
+where p.content_key='สระผม@初' and g.word=p.word and g.history_record->>'level'='中';
+
+-- These three reviewed calendar words never existed in the 735-row legacy catalog.
+insert into public.game_words(
+  content_key,word,en,zh,level,category,syls,reading_th,rank,spelling_th,audio_status,type,subcategory,
+  access_tier,catalog_version,record_hash,canonical_record,status,updated_at
+)
+select content_key,word,en,zh,level,category,syls,reading_th,rank,spelling_th,audio_status,type,subcategory,
+       access_tier,catalog_version,record_hash,canonical_record,'active',now()
+from _canonical_free_200
+where content_key in('วันพฤหัสบดี@中#weekday','พฤษภาคม@中#month','พฤศจิกายน@中#month');
 
 create unique index if not exists uq_game_words_content_key on public.game_words(content_key);
 create index if not exists idx_game_words_active_tier_level_rank on public.game_words(access_tier,level,rank) where status='active';
@@ -100,14 +125,23 @@ begin
 end
 $constraints$;
 
--- Preserve learning identity and all user history when a canonical sense-safe key replaces word@level.
+-- Preserve learning identity and all user history when a canonical sense-safe key or approved level
+-- replaces the legacy word@level key. New calendar records receive new stable identities.
+create temporary table _canonical_learning_map on commit drop as
+select p.*,coalesce(
+  (g.history_record->>'word')||'@'||(g.history_record->>'level'),
+  p.word||'@'||p.level
+) as old_content_key
+from _canonical_free_200 p join public.game_words g on g.content_key=p.content_key and g.status='active';
+
 do $learning_precheck$
 begin
   if exists(
     select 1 from _canonical_free_200 p
-    join public.learning_items old_i on old_i.content_source='game_words' and old_i.owner_user_id is null and old_i.content_key=p.word||'@'||p.level
+    join _canonical_learning_map m on m.content_key=p.content_key
+    join public.learning_items old_i on old_i.content_source='game_words' and old_i.owner_user_id is null and old_i.content_key=m.old_content_key
     join public.learning_items new_i on new_i.content_source='game_words' and new_i.owner_user_id is null and new_i.content_key=p.content_key
-    where p.content_key <> p.word||'@'||p.level and old_i.item_id <> new_i.item_id
+    where p.content_key <> m.old_content_key and old_i.item_id <> new_i.item_id
   ) then
     raise exception 'learning identity collision requires manual reconciliation';
   end if;
@@ -116,23 +150,33 @@ $learning_precheck$;
 
 insert into public.learning_item_key_history(item_id,old_content_key,new_content_key,note)
 select li.item_id,li.content_key,p.content_key,'Lin-approved canonical Free 200 key; item identity preserved'
-from public.learning_items li join _canonical_free_200 p
-  on li.content_source='game_words' and li.owner_user_id is null and li.content_key=p.word||'@'||p.level
+from public.learning_items li join _canonical_learning_map p
+  on li.content_source='game_words' and li.owner_user_id is null and li.content_key=p.old_content_key
 where li.content_key<>p.content_key
   and not exists(select 1 from public.learning_item_key_history h where h.item_id=li.item_id and h.old_content_key=li.content_key and h.new_content_key=p.content_key);
 
 update public.learning_items li
 set content_key=p.content_key,difficulty=p.level,updated_at=now()
-from _canonical_free_200 p
+from _canonical_learning_map p
 where li.content_source='game_words' and li.owner_user_id is null
-  and li.content_key=p.word||'@'||p.level and li.content_key<>p.content_key;
+  and li.content_key=p.old_content_key and li.content_key<>p.content_key;
+
+insert into public.learning_items(item_type,status,difficulty,content_source,content_key,payload)
+select 'word','active',p.level,'game_words',p.content_key,
+       jsonb_build_object('word',p.word,'zh',p.zh,'level',p.level,'catalog_version',p.catalog_version)
+from _canonical_free_200 p
+where not exists(
+  select 1 from public.learning_items li
+  where li.content_source='game_words' and li.owner_user_id is null and li.content_key=p.content_key
+);
 
 insert into public.learning_item_audit(item_id,action,actor,detail)
 select li.item_id,'key_changed','migration:canonical_free_200_catalog',
        jsonb_build_object('to',li.content_key,'reason','Lin-approved canonical Free 200 cutover')
-from public.learning_items li join _canonical_free_200 p
+from public.learning_items li join _canonical_learning_map p
   on li.content_source='game_words' and li.owner_user_id is null and li.content_key=p.content_key
-where p.content_key<>p.word||'@'||p.level
+join public.learning_item_key_history h on h.item_id=li.item_id and h.old_content_key=p.old_content_key and h.new_content_key=p.content_key
+where p.content_key<>p.old_content_key
   and not exists(select 1 from public.learning_item_audit a where a.item_id=li.item_id and a.actor='migration:canonical_free_200_catalog' and a.action='key_changed');
 
 alter table public.game_words enable row level security;
@@ -142,12 +186,13 @@ grant select on table public.game_words to service_role;
 do $postcheck$
 begin
   if (select count(*) from public.game_words where status='active')<>200
-     or (select count(*) from public.game_words where status='history')<>535
+     or (select count(*) from public.game_words where status='history')<>538
      or (select count(*) from public.game_words where status='active' and level='初')<>100
      or (select count(*) from public.game_words where status='active' and level='中')<>100
      or (select count(*) from public.game_words where status='active' and access_tier='guest')<>100
      or (select count(*) from public.game_words where status='active' and access_tier='login')<>100
      or (select count(*) from public.game_words where status='active' and canonical_record is null)<>0
+     or (select count(*) from public.learning_items li join public.game_words g on g.status='active' and g.content_key=li.content_key where li.content_source='game_words' and li.owner_user_id is null)<>200
      or (select md5(string_agg(record_hash,E'\n' order by content_key collate "C")) from public.game_words where status='active')<>'4be1d6442da1c2980b1e084aafc45394' then
     raise exception 'canonical Free 200 postcheck failed';
   end if;

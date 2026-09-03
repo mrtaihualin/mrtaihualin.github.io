@@ -28,5 +28,8 @@ update public.game_words set
   read_syls=history_record->'read_syls',rank=history_rank,content_key=(history_record->>'word')||'@'||(history_record->>'level'),
   status='active',access_tier=null,catalog_version='legacy-pre-free-200',canonical_record=null,record_hash=null,updated_at=now()
 where history_record is not null;
+update public.game_words set
+  status='history',access_tier=null,rank=1000000+id,updated_at=now()
+where history_record is null and catalog_version='free-200-v1';
 notify pgrst,'reload schema';
 commit;
