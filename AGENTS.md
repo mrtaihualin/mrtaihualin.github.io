@@ -36,6 +36,7 @@
 
 - Thai game words, sentences, translations and readings come from Lin. Computed language fields require Lin's 100% review before publish.
 - Detailed game-content procedure: `data/README.md`.
+- `data/words-data.js`, `data/history/vocabulary/`, `data/approved-vocabulary-catalog.lock.json` and every copy/history/prior-chat/derivative of the former 735-word corpus are `LEGACY_CONTENT_READ_DENY`. AI must not open, search inside, parse, index, summarize, copy or use them unless Lin explicitly orders retrieval of the old/legacy corpus for the exact task. The Current player-accessible vocabulary is the server-gated 200-word set (`初 100 + 中 100`) in `supabase/functions/game-content/index.ts`.
 - Visual/brand changes use the Current Brand/Product authority and applicable Human verification; do not invent new style decisions from historical repo text.
 
 ## Technical procedure pointers
