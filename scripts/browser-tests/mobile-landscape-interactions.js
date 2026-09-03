@@ -157,7 +157,7 @@
     var nonce = Date.now() + '-' + Math.random().toString(16).slice(2);
     if (file === 'listening-game.html') {
       frame.srcdoc = '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">' +
-        '<link rel="stylesheet" href="../../css/mobile-landscape.css?v=34"></head>' +
+        '<link rel="stylesheet" href="../../css/mobile-landscape.css?v=35"></head>' +
         '<body data-gsh-game="listening" class="gsh-ml-active"><div id="gsh-ml-stage" data-gsh-ml-view="resume">' +
         '<div class="gsh-ml-exclusive"><div data-gsh-ml-slot="exclusive-left"></div>' +
         '<div data-gsh-ml-slot="exclusive-center"><div class="gsh-resume-banner">' +
@@ -305,7 +305,64 @@
     await closeGameplayBlockers(win, doc);
     await waitFor(function () { return ready(win, doc); }, file + ' gameplay ready', 10000);
     assert(doc.documentElement.scrollWidth <= 844 && doc.body.scrollWidth <= 844, file + ' has no horizontal overflow at 844x390');
+    var loginSlot = doc.querySelector('[data-gsh-ml-slot="dropdowns"] > #rg-login-slot');
+    assert(loginSlot && shown(win, loginSlot), file + ' keeps the real Login first at the left safe edge');
+    var title = doc.querySelector('[data-gsh-ml-slot="shared-controls"] > .tf-page-title, [data-gsh-ml-slot="shared-controls"] > .page-title');
+    var titleBox = rect(title);
+    assert(Math.abs((titleBox.left + titleBox.right) / 2 - 422) <= 2, file + ' keeps its title independently centred');
     return { win: win, doc: doc, runtimeErrors: runtimeErrors };
+  }
+
+  async function assertLoggedInAccountMenu(page, file) {
+    var login = page.doc.querySelector('[data-gsh-ml-slot="dropdowns"] > #rg-login-slot');
+    var badge = page.doc.createElement('span');
+    badge.id = 'sa-badge-rg-login-slot';
+    badge.style.display = 'inline-flex';
+    badge.innerHTML = '<div style="display:flex;align-items:center;gap:7px;background:#fff;border:1.5px solid rgba(200,151,58,.45);border-radius:20px;padding:5px 12px 5px 8px;box-shadow:0 2px 8px rgba(139,99,16,.12);font-family:Noto Sans TC,sans-serif">' +
+      '<span style="font-size:15px;flex-shrink:0">👤</span>' +
+      '<span class="sa-nick" style="color:#5c4410;font-weight:700;font-size:12.5px;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer">Lin</span>' +
+      '<button class="sa-edit" style="border:none;background:none;color:#a07a1e;cursor:pointer;font-size:12px;padding:0;line-height:1">✏️</button>' +
+      '<button class="sa-logout" style="border:none;background:rgba(139,99,16,.12);color:#8b6310;border-radius:20px;padding:3px 10px;cursor:pointer;font-size:11.5px;font-weight:700">登出</button>' +
+      '</div>';
+    login.replaceChildren(badge);
+    page.win.GSHMobileLandscape.sync();
+    await waitFor(function () { return !!login.querySelector('#gsh-ml-account-trigger'); }, file + ' signed-in trigger');
+
+    var trigger = login.querySelector('#gsh-ml-account-trigger');
+    var edit = badge.querySelector('.sa-edit');
+    var logout = badge.querySelector('.sa-logout');
+    assert(trigger.textContent === '已登入', file + ' shows the compact 已登入 control');
+    assert(!shown(page.win, badge) && badge.inert, file + ' keeps the reused Desktop account actions closed initially');
+
+    trigger.click();
+    await wait(30);
+    var triggerBox = rect(trigger);
+    var popupBox = rect(badge);
+    assert(shown(page.win, badge) && !badge.inert, file + ' opens the reused Desktop account actions');
+    assert(popupBox.top >= triggerBox.bottom && popupBox.left >= 0 && popupBox.right <= 844, file + ' account popup opens below its owner inside the viewport');
+    assert(badge.querySelector('.sa-nick') && edit && logout, file + ' account popup keeps the original name, edit and logout controls');
+
+    var editClicks = 0;
+    edit.addEventListener('click', function () { editClicks += 1; });
+    edit.click();
+    await wait(30);
+    assert(editClicks === 1, file + ' original edit control executes exactly once');
+    assert(!shown(page.win, badge), file + ' account popup closes after the original edit action');
+
+    trigger.click();
+    await wait(30);
+    var logoutClicks = 0;
+    logout.addEventListener('click', function () { logoutClicks += 1; });
+    logout.click();
+    await wait(30);
+    assert(logoutClicks === 1, file + ' original logout control executes exactly once');
+    assert(!shown(page.win, badge), file + ' account popup closes after the original logout action');
+
+    trigger.click();
+    await wait(30);
+    page.doc.querySelector('[data-gsh-ml-slot="center"]').click();
+    await wait(30);
+    assert(!shown(page.win, badge) && trigger.getAttribute('aria-expanded') === 'false', file + ' outside click closes the account popup');
   }
 
   async function testTone() {
@@ -313,6 +370,11 @@
       return doc.querySelectorAll('.sg-tone-grid .sg-tone-btn').length === 5 && shown(win, doc.querySelector('.sg-dontknow-btn'));
     });
     var choices = assertSideGeometry(page.win, page.doc, '.sg-tone-grid > .sg-tone-btn, .sg-tone-grid > .sg-dontknow-btn');
+    var levelTrigger = page.doc.querySelector('[data-gsh-dropdown="level"] .gsh-ml-dropdown-trigger');
+    levelTrigger.click();
+    await wait(30);
+    assert(shown(page.win, page.doc.getElementById('tf-alpha-btn')), 'Tone Level exposes the original Desktop 字母練習區 button');
+    levelTrigger.click();
     var numbered = choices.filter(function (node) { return node.classList.contains('sg-tone-btn'); });
     assert(numbered.slice(0, 3).every(function (node) { return node.dataset.gshSide === 'left'; }), 'Tone 1-3 stay in the left frame');
     assert(numbered.slice(3).every(function (node) { return node.dataset.gshSide === 'right'; }), 'Tone 4-5 stay in the right frame');
@@ -334,6 +396,7 @@
     await waitFor(function () { return page.doc.querySelector('#tf-body').textContent !== before; }, 'Tone uncertain transition');
     assert(page.doc.querySelector('#tf-body').textContent !== before, 'Tone 不確定 click changes the gameplay state');
     assertPositionTwo(page.win, page.doc);
+    await assertLoggedInAccountMenu(page, 'Tone');
   }
 
   async function testReading() {
@@ -375,6 +438,7 @@
       return ((page.doc.getElementById('qn').textContent || '') + '|' + (page.doc.getElementById('wth').textContent || '')) !== before;
     }, 'Reading next transition');
     assert(true, 'Reading next action changes syllable or question state');
+    await assertLoggedInAccountMenu(page, 'Reading');
   }
 
   async function testTyping() {
@@ -414,12 +478,16 @@
     assert(shifts.every(function (key) { return key.classList.contains('active'); }), 'Right Shift uses the same shared state');
     characterKeys[1].click();
     assert(shifts.every(function (key) { return !key.classList.contains('active'); }), 'Right Shift also releases after one character');
+    await assertLoggedInAccountMenu(page, 'Typing');
   }
 
   async function testWordOrder() {
     var page = await loadGame('word-order.html', function (win, doc) {
       return doc.querySelectorAll('#wo-bank .wo-tile[data-gsh-original-index]').length > 0;
     });
+    var vaultSlot = page.doc.getElementById('wo-vault-btn-slot');
+    assert(vaultSlot.getAttribute('data-gsh-ml-unavailable') === 'true' && !vaultSlot.querySelector('button'), 'Word Order 單字庫 is visibly unavailable before reveal');
+    assert(!page.doc.querySelector('[data-gsh-dropdown="level"]'), 'Word Order leaves no Level control or empty Level gap');
     assertSideGeometry(page.win, page.doc, '#wo-bank .wo-tile');
     var reset = assertPositionTwo(page.win, page.doc, '重新');
     for (var partial = 0; partial < 2; partial += 1) {
@@ -439,13 +507,15 @@
       tile.click();
       await wait(30);
     }
-    var check = page.doc.getElementById('wo-check-btn');
-    assert(!check.disabled, 'Word Order check becomes enabled after real tile clicks');
+    assert(!page.doc.getElementById('wo-check-btn'), 'Word Order does not invent a Landscape Check button');
     var before = page.doc.getElementById('gsh-ml-word-order-question').textContent;
-    check.click();
     await wait(500);
     assert(!!page.doc.querySelector('#wo-slots .wo-slot.correct'), 'Word Order correct state' +
       (page.runtimeErrors.length ? ' (runtime: ' + page.runtimeErrors.join(' | ') + ')' : ''));
+    await waitFor(function () {
+      return vaultSlot.getAttribute('data-gsh-ml-unavailable') === 'false' && !!vaultSlot.querySelector('button');
+    }, 'Word Order original SentenceVault button after reveal');
+    assert(true, 'Word Order 單字庫 enables the original SentenceVault button only after reveal');
     var next = assertPositionTwo(page.win, page.doc, '下一題');
     assert(!shown(page.win, page.doc.getElementById('wo-reset-btn')), 'Word Order never shows 重新 together with 下一題');
     next.click();
@@ -453,6 +523,7 @@
     assert(true, 'Word Order 下一題 changes the Chinese question');
     assertPositionTwo(page.win, page.doc, '重新');
     assertSideGeometry(page.win, page.doc, '#wo-bank .wo-tile');
+    await assertLoggedInAccountMenu(page, 'Word Order');
   }
 
   (async function run() {

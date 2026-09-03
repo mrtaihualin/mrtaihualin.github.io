@@ -68,23 +68,23 @@ test('Listening Skip is always available in a live question and bypasses answer 
   assert.match(listening, /function showQuestion\([\s\S]{0,1200}skipBtn\.style\.display = 'inline-flex'/);
 });
 
-test('Word Order uses manual Check only on Mobile Landscape and neutral Skip never touches SRS', () => {
+test('Word Order auto-checks after the last word on every surface and neutral Skip never touches SRS', () => {
   const skipBody = between(order, 'window.woSkip = function(){', '\n  window.woCheck = function(){');
   assert.match(skipBody, /skipped:true/);
   assert.match(skipBody, /window\.woNext\(\)/);
   assert.doesNotMatch(skipBody, /woServerFinish|srsRecords|score\s*[+\-]=|curCombo/);
-  assert.match(order, /function woManualCheckSurface\(\)[\s\S]{0,240}orientation: landscape/);
-  assert.match(order, /answer\.length === s\.words\.length && !woManualCheckSurface\(\)\) checkAnswer\(\)/);
+  assert.doesNotMatch(order, /woManualCheckSurface|orientation: landscape[^\n]+max-height: 600px/);
+  assert.match(order, /answer\.length === s\.words\.length\) checkAnswer\(\)/);
   assert.match(order, /window\.woCheck = function\(\)[\s\S]{0,180}checkAnswer\(\)/);
   assert.match(order, /if \(w\.skipped\) return '<span style="color:#777;">跳過<\/span>'/);
 });
 
-test('Mobile Landscape keeps Skip and Check in the top actions while Word Order state actions stay in Position 2', () => {
+test('Mobile Landscape keeps Reading Check but Word Order uses only Desktop auto-check', () => {
   assert.match(stage, /mainAction\.append\(makeSlot\('skip'\), makeSlot\('check'\), makeSlot\('reset'\)\)/);
   assert.match(stage, /game === 'reading'\) \{ skip = q\('#btn-skip'\); check = q\('#btn-check'\); \}/);
-  assert.match(stage, /game === 'word-order'\) \{[\s\S]{0,120}#wo-skip-btn[\s\S]{0,220}createWordOrderCheckAction/);
+  assert.match(stage, /game === 'word-order'\) skip = q\('#wo-skip-btn'\)/);
   assert.match(stage, /game === 'word-order'\) \{[\s\S]{0,160}#wo-slots[\s\S]{0,120}#wo-reset-btn[^\n]+#wo-next-btn/);
-  assert.match(stage, /createWordOrderCheckAction/);
+  assert.doesNotMatch(stage, /createWordOrderCheckAction|data-gsh-ml-owned-action="word-order-check"/);
   assert.match(stage, /name === 'reset'[\s\S]{0,260}node\.textContent = '重新'/);
   assert.match(read('word-order.html'), /id="wo-reset-btn"[^>]*>↺ 重排這句<\/button>/);
 });

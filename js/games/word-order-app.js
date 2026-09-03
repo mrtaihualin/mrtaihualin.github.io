@@ -1024,10 +1024,6 @@
     });
   }
 
-  function woManualCheckSurface(){
-    return !!(window.matchMedia && window.matchMedia('(orientation: landscape) and (max-width: 1024px) and (max-height: 600px)').matches);
-  }
-
   function updateCheckButton(){
     var button = document.getElementById('wo-check-btn');
     if (!button) return;
@@ -1043,7 +1039,7 @@
     renderBank();
     updatePowerBar(s);
     updateCheckButton();
-    if (answer.length === s.words.length && !woManualCheckSurface()) checkAnswer();
+    if (answer.length === s.words.length) checkAnswer();
   }
 
   function removeFromAnswer(slotIndex){
@@ -1312,7 +1308,7 @@
     }
     updateHintWarning();
     updateCheckButton();
-    if (answer.length === s.words.length && !woManualCheckSurface()) checkAnswer();
+    if (answer.length === s.words.length) checkAnswer();
   };
 
   // Neutral skip: advance without answer, score, Combo, life, or SRS mutation.

@@ -31,14 +31,15 @@ function test(name, fn) {
   console.log('✓ ' + name);
 }
 
-test('all six pages bind the shared landscape menu system and Resume parity owns this CSS cache delta', () => {
+test('all pages bind the shared landscape system and the four in-scope games share one exact asset version', () => {
   for (const [game, file] of pages) {
     const html = read(file);
     assert.match(html, new RegExp(`<body[^>]*data-gsh-game="${game}"`), `${file}: missing game marker`);
     assert.match(html, /js\/games\/thai-keyboard\.js\?v=2/, `${file}: missing shared split keyboard`);
     const paused = game === 'listening' || game === 'lego';
-    assert.match(html, /css\/mobile-landscape\.css\?v=34/, `${file}: wrong shared Resume CSS version`);
-    const controllerVersion = game === 'tone' || game === 'reading' || game === 'word-order' ? 26 : paused ? 24 : 25;
+    const fourGame = game === 'tone' || game === 'reading' || game === 'typing' || game === 'word-order';
+    assert.match(html, new RegExp(`css/mobile-landscape\\.css\\?v=${fourGame ? 36 : 34}`), `${file}: wrong shared Landscape CSS version`);
+    const controllerVersion = fourGame ? 28 : paused ? 24 : 25;
     assert.match(html, new RegExp(`js/core/mobile-landscape\\.js\\?v=${controllerVersion}`), `${file}: wrong scoped controller version`);
     assert.match(html, /js\/games\/game-switcher\.js\?v=7/, `${file}: missing fixed six-game navigation`);
   }
@@ -55,6 +56,18 @@ test('top band is Login, Chinese menus, title, Game, More and ordered action slo
   assert.match(stage, /mountExistingNode\(title, slot\('shared-controls'\)\)/);
   assert.match(stage, /insertBefore\(controls, slot\('skip'\)\)/);
   assert.match(css, /data-gsh-ml-slot="skip"[\s\S]{0,120}data-gsh-ml-slot="check"[\s\S]{0,120}data-gsh-ml-slot="reset"[\s\S]{0,220}flex: 0 0 var\(--gsh-ml-control-h\)/);
+});
+
+test('four-game signed-in control reuses the Desktop account badge behind one compact trigger', () => {
+  assert.match(stage, /\['tone', 'reading', 'typing', 'word-order'\]\.indexOf\(game\) >= 0/);
+  assert.match(stage, /trigger\.id = 'gsh-ml-account-trigger'/);
+  assert.match(stage, /trigger\.textContent = '已登入'/);
+  assert.match(stage, /badge\.setAttribute\('data-gsh-ml-account-panel', 'true'\)/);
+  assert.match(stage, /positionPanelBelow\(trigger, badge, 190\)/);
+  assert.doesNotMatch(stage, /className = 'sa-(?:nick|edit|logout)'/);
+  assert.match(read('js/core/auth-widget.js'), /class="sa-nick"[\s\S]{0,600}class="sa-edit"[\s\S]{0,600}class="sa-logout"/);
+  assert.match(css, /#gsh-ml-account-trigger[\s\S]{0,1400}#sa-badge-rg-login-slot/);
+  assert.match(css, /\.sa-edit::after[\s\S]{0,100}編輯個人檔案/);
 });
 
 test('five standard games lock visible 30 / 40 / 30 outer cards', () => {
@@ -77,16 +90,17 @@ test('Reading reuses Tone menu presentation without replacing Reading menu conte
   assert.ok(css.includes('body.gsh-ml-active #game-switcher[data-gsh-ml-utility-panel] .gs-tab'));
   assert.ok(css.includes('body.gsh-ml-active .grw-menu[data-gsh-ml-utility-panel] .grw-item'));
   assert.match(stage, /game === 'reading'[\s\S]{0,900}labeledNode\('#rg-howto-btn', '玩法', '📖'\)[\s\S]{0,900}labeledNode\('#rg-en-toggle', '英文讀音', '🔤'\)[\s\S]{0,900}labeledNode\('#rg-particle-toggle', '禮貌詞', '🙏'\)/);
-  assert.match(read('reading-game.html'), /css\/mobile-landscape\.css\?v=34/);
+  assert.match(read('reading-game.html'), /css\/mobile-landscape\.css\?v=36/);
 });
 
 test('all six Resume screens reuse Tone 640px geometry and exact three-action copy', () => {
   assert.match(css, /body\[data-gsh-game\]\.gsh-ml-active #gsh-ml-stage\[data-gsh-ml-view="resume"\] \[data-gsh-ml-slot="exclusive-center"\][\s\S]{0,220}grid-column:\s*1 \/ 4[\s\S]{0,120}width:\s*min\(100%, 680px\)/);
   assert.match(css, /body\[data-gsh-game\]\.gsh-ml-active #gsh-ml-stage\[data-gsh-ml-view="resume"\] \.gsh-resume-banner[\s\S]{0,180}max-width:\s*640px !important/);
   assert.match(css, /body\[data-gsh-game\]\.gsh-ml-active #gsh-ml-stage\[data-gsh-ml-view="resume"\] \.gsh-resume-actions[\s\S]{0,180}grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/);
-  for (const [, file] of pages) {
+  for (const [game, file] of pages) {
     const html = read(file);
-    assert.match(html, /css\/mobile-landscape\.css\?v=34/, `${file}: must load Resume parity CSS`);
+    const fourGame = game === 'tone' || game === 'reading' || game === 'typing' || game === 'word-order';
+    assert.match(html, new RegExp(`css/mobile-landscape\\.css\\?v=${fourGame ? 36 : 34}`), `${file}: must load its current shared Resume CSS`);
     assert.match(html, /js\/core\/shared\.min\.js\?v=48/, `${file}: must load exact Resume copy`);
   }
   const shared = read('js/core/shared.js');
@@ -133,16 +147,19 @@ test('Tone preserves three left, three right and reveal actions in the right slo
   assert.match(css, /body\.gsh-ml-active \[data-gsh-ml-slot="main-action"\] \.rg-ctl-wrap[^}]+position:\s*static !important[^}]+gap:\s*var\(--gsh-ml-top-control-gap\)/);
 });
 
-test('five games expose the requested ordered top actions with neutral Skip', () => {
+test('games reuse their requested Desktop top actions with neutral Skip and no invented Word Order Check', () => {
   assert.match(stage, /game === 'reading'\) \{ skip = q\('#btn-skip'\); check = q\('#btn-check'\); \}/);
   assert.match(stage, /game === 'listening'\) skip = q\('#lg-skip-btn'\)/);
   assert.match(stage, /game === 'typing'\) skip = q\('#btn-skip'\)/);
-  assert.match(stage, /game === 'word-order'[\s\S]{0,260}#wo-skip-btn[\s\S]{0,260}word-order-check/);
+  assert.match(stage, /game === 'word-order'\) skip = q\('#wo-skip-btn'\)/);
+  assert.doesNotMatch(stage, /createWordOrderCheckAction|data-gsh-ml-owned-action="word-order-check"/);
   assert.match(readingApp, /function skipWord\(\)[\s\S]{0,420}skipped:true[\s\S]{0,180}nextWord\(\)/);
   assert.match(typingApp, /function skipWord\(\)[\s\S]{0,420}skipped:true[\s\S]{0,180}nextWord\(\)/);
   assert.match(listeningApp, /function skipCurrentQuestion\(\)[\s\S]{0,900}is_skipped: true[\s\S]{0,500}state\.idx\+\+/);
   assert.match(wordOrderApp, /window\.woSkip = function\(\)[\s\S]{0,500}skipped:true[\s\S]{0,160}window\.woNext\(\)/);
   assert.match(wordOrderApp, /window\.woCheck = function\(\)[\s\S]{0,180}checkAnswer\(\)/);
+  assert.doesNotMatch(wordOrderApp, /woManualCheckSurface|orientation: landscape[^\n]+max-height: 600px/);
+  assert.match(wordOrderApp, /answer\.length === s\.words\.length\) checkAnswer\(\)/);
   assert.match(stage, /mountMany\(\['#btn-next', '#btn-next-syl'\], slot\('right'\)\)/);
   assert.match(stage, /mountMany\(\['#btn-check', '#btn-next'\], slot\('right'\)\)/);
   assert.match(stage, /mountMany\(\['#wo-reset-btn', '#wo-next-btn'\], slot\('right'\)\)/);
@@ -231,6 +248,17 @@ test('Landscape input and popup policies stay bounded and reversible', () => {
   assert.match(stage, /function restoreInputs\(\)/);
   assert.match(css, /gsh-confirm-card[\s\S]{0,420}width: min\(72vw, 640px\)[\s\S]{0,220}max-height:/);
   assert.match(css, /@media \(orientation: landscape\) and \(max-width: 1024px\) and \(max-height: 600px\)/);
+});
+
+test('four-game refinements expose original controls and one shared modal shell', () => {
+  const tone = read('tone-finder.html');
+  const wordOrder = read('word-order.html');
+  assert.doesNotMatch(tone, /Mobile Landscape keeps the accepted three-level[\s\S]{0,220}#tf-alpha-btn \{ display:none !important; \}/);
+  assert.match(stage, /labeledNode\('#wo-vault-btn-slot', '單字庫', '📚'\)/);
+  assert.match(stage, /data-gsh-ml-unavailable[\s\S]{0,500}!control \|\| !!control\.disabled/);
+  assert.match(css, /data-gsh-ml-unavailable="true"[\s\S]{0,180}cursor: not-allowed/);
+  assert.match(css, /#tf-howto-modal,[\s\S]{0,180}#rg-howto-modal,[\s\S]{0,180}#wo-howto-modal[\s\S]{0,180}z-index: 100002 !important/);
+  assert.match(wordOrder, /word-order-app\.min\.js\?v=37/);
 });
 
 console.log(`\n✅ Mobile Landscape 5.2 tests passed (${passed} checks)`);

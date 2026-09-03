@@ -93,7 +93,7 @@ if (document.fonts && document.fonts.load) {
 }
 </script>
 <link rel="stylesheet" href="css/shared.css?v=37">
-<link rel="stylesheet" href="css/mobile-landscape.css?v=34">
+<link rel="stylesheet" href="css/mobile-landscape.css?v=36">
 <script src="js/games/thai-keyboard.js?v=2"></script>
 <style>
   /* P6-28 (2026-08-08): ปุ่มเรียกฟังก์ชันเกม (TF.* มาจาก tone-finder-game.min.js โหลดแบบ async
@@ -979,11 +979,6 @@ if (document.fonts && document.fonts.load) {
       background:linear-gradient(180deg,#FFF9EC 0%,#F5E6C7 100%);
       border:1.5px solid rgba(139,99,16,.25); border-radius:14px; padding:12px;
     }
-  }
-
-  /* Mobile Landscape keeps the accepted three-level Switch surface unchanged. */
-  @media (orientation:landscape) and (max-width:1024px) and (max-height:600px) {
-    body[data-gsh-game="tone"] #tf-alpha-btn { display:none !important; }
   }
 
   /* ── 依難度漸層配色 difficulty colour-grading ── */
@@ -2236,7 +2231,7 @@ document.addEventListener('contextmenu', function(e){
 <script src="data/nav-template.js?v=4"></script>
 <script src="js/core/shared.min.js?v=48"></script>
 <script src="js/games/game-flow.js?v=12"></script>
-<script src="js/core/mobile-landscape.js?v=26"></script>
+<script src="js/core/mobile-landscape.js?v=28"></script>
 <script>
 // ── GA4 Extra Events: tone-finder.html ──────────────────────────────
 // (tone_finder_start / complete / answer_correct / answer_wrong ติดอยู่แล้วในโค้ดเกม)

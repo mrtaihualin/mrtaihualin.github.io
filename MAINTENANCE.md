@@ -2491,3 +2491,9 @@ node scripts/check-site.js
 
 - Screen-recording review found Tone's Skip action alternating between its original `#tf-body` owner and the shared top slot on successive observer syncs. The controller now resolves the already-mounted action first, so the same live button remains in one owner instead of being restored and remounted every animation frame.
 - Added a browser regression that observes the top slot across multiple frames and fails on any child-list churn. The interaction gate now also completes every Reading syllable before Check, so randomized multi-syllable questions cannot create a false failure. A randomized live Preview question then exposed a final right-choice overlap at the Position 2 boundary; Reading and Word Order now stop at row 65 with fresh controller keys. Typing, Listening, Lego and Production behavior remain unchanged.
+
+# 2026-09-03 — Mobile Landscape signed-in account menu
+
+- Replaced the clipped signed-in badge at the left safe edge with one compact `已登入` Landscape trigger on Tone, Reading, Typing, and Word Order.
+- Opening it presents the original Desktop account badge and its existing name, profile-edit, and logout controls; no account action or handler is cloned. The popup closes on its action, another menu, outside click, or Escape, and the untouched Desktop badge is restored on Landscape exit.
+- Verification: focused four-game browser interaction `4/4`, shared Landscape source checks `19/19`, shared game tests `52/52`, owner-switch races `12/12`, neutral actions `7/7`, and the full `1,021`-file site gate passed. Listening, Lego, Auth data, Supabase, deployment, and Production are unchanged.

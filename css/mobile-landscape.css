@@ -779,9 +779,15 @@
     background: linear-gradient(135deg, var(--gold-bright, #c8973a), var(--gold-deep, #8b6310)) !important;
     color: #fff !important;
   }
-  [data-gsh-dropdown="tools"] .gsh-ml-dropdown-panel > [data-gsh-ml-tool-label]:not(:has(button, a, [role="button"])) {
-    opacity: .52;
-    cursor: default;
+  [data-gsh-dropdown="tools"] .gsh-ml-dropdown-panel > [data-gsh-ml-tool-label][data-gsh-ml-unavailable="true"] {
+    opacity: .42;
+    cursor: not-allowed;
+    pointer-events: none;
+    filter: grayscale(.75);
+  }
+  [data-gsh-dropdown="tools"] .gsh-ml-dropdown-panel > [data-gsh-ml-tool-label][data-gsh-ml-unavailable="false"] {
+    opacity: 1;
+    filter: none;
   }
 
   /* Floating utility menus always open below their trigger. */
@@ -1641,15 +1647,23 @@
   }
   [data-gsh-ml-slot="dropdowns"] #rg-login-slot {
     order: -1;
-    flex: 0 0 clamp(40px, 6vw, 58px);
+    position: relative;
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    height: var(--gsh-ml-control-h);
+    margin: 0 !important;
+    overflow: visible;
+  }
+  [data-gsh-ml-slot="dropdowns"] #rg-login-slot:not(.gsh-ml-account-ready) {
+    flex-basis: clamp(40px, 6vw, 58px);
     width: clamp(40px, 6vw, 58px);
     min-width: clamp(40px, 6vw, 58px);
     max-width: clamp(40px, 6vw, 58px);
-    height: var(--gsh-ml-control-h);
-    margin: 0 !important;
     overflow: hidden;
   }
-  [data-gsh-ml-slot="dropdowns"] #rg-login-slot > * {
+  [data-gsh-ml-slot="dropdowns"] #rg-login-slot:not(.gsh-ml-account-ready) > * {
     width: 100% !important;
     min-width: 0 !important;
     height: var(--gsh-ml-control-h) !important;
@@ -1661,6 +1675,129 @@
     justify-content: center !important;
     font-size: var(--gsh-ml-font-sm) !important;
     white-space: nowrap;
+  }
+  [data-gsh-ml-slot="dropdowns"] #gsh-ml-account-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    min-width: 0;
+    height: var(--gsh-ml-control-h);
+    min-height: var(--gsh-ml-control-h);
+    margin: 0;
+    padding: 5px clamp(7px, 1.2vw, 12px);
+    border: 1.5px solid var(--gold-bright, #c8973a);
+    border-radius: 999px;
+    background: #fff;
+    color: var(--gold-deep, #8b6310);
+    font: 700 var(--gsh-ml-font-sm)/1 'Noto Sans TC', sans-serif;
+    white-space: nowrap;
+    cursor: pointer;
+    pointer-events: auto;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  [data-gsh-ml-slot="dropdowns"] #gsh-ml-account-trigger[aria-expanded="true"] {
+    background: var(--gold-deep, #8b6310);
+    color: #fff;
+  }
+  body.gsh-ml-active #rg-login-slot.gsh-ml-account-ready > #sa-badge-rg-login-slot {
+    display: none !important;
+  }
+  body.gsh-ml-active #rg-login-slot.gsh-ml-account-ready[data-gsh-ml-account-open="true"] > #sa-badge-rg-login-slot {
+    position: fixed !important;
+    z-index: 1300;
+    display: inline-flex !important;
+    box-sizing: border-box;
+    width: min(190px, calc(100vw - var(--gsh-ml-safe-l) - var(--gsh-ml-safe-r))) !important;
+    min-width: 0 !important;
+    max-width: calc(100vw - var(--gsh-ml-safe-l) - var(--gsh-ml-safe-r)) !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 9px !important;
+    border: 1.5px solid var(--gold-bright, #c8973a);
+    border-radius: 13px;
+    background: #fffdf7;
+    box-shadow: 0 10px 28px rgba(58, 42, 10, .25);
+    overflow: visible;
+    pointer-events: auto;
+  }
+  body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] > div {
+    display: grid !important;
+    grid-template-columns: 30px minmax(0, 1fr) auto;
+    align-items: center !important;
+    gap: 7px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] > div > span:first-child {
+    grid-column: 1;
+    grid-row: 1;
+    width: 30px !important;
+    height: 30px !important;
+  }
+  body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] .sa-nick {
+    grid-column: 2;
+    grid-row: 1;
+    max-width: none !important;
+    font-size: 14px !important;
+  }
+  body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] > div > span:not(:first-child):not(.sa-nick) {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] .sa-edit,
+  body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] .sa-logout {
+    grid-column: 1 / 4;
+    display: flex !important;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 9px;
+    width: 100% !important;
+    min-height: 36px;
+    margin: 0 !important;
+    padding: 6px 8px !important;
+    border: 0 !important;
+    border-radius: 9px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    line-height: 1 !important;
+    text-align: left;
+  }
+  body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] .sa-edit {
+    grid-row: 2;
+    color: #5c4410 !important;
+    font-size: 0 !important;
+  }
+  body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] .sa-edit::before {
+    content: '✏️';
+    font-size: 13px;
+  }
+  body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] .sa-edit::after {
+    content: '編輯個人檔案';
+    font-size: 13px;
+  }
+  body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] .sa-logout {
+    grid-row: 3;
+    color: #8b3c20 !important;
+  }
+  body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] .sa-logout::before {
+    content: '↪';
+  }
+  body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] .sa-edit:hover,
+  body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] .sa-edit:focus-visible,
+  body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] .sa-logout:hover,
+  body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] .sa-logout:focus-visible {
+    background: #fbf2dc !important;
+    outline: none;
   }
 
   [data-gsh-ml-slot="shared-controls"] > .tf-page-title,
@@ -1939,6 +2076,26 @@
     max-width: calc(100vw - var(--gsh-ml-safe-l) - var(--gsh-ml-safe-r)) !important;
     max-height: calc(78dvh - var(--gsh-ml-safe-t) - var(--gsh-ml-safe-b)) !important;
     overflow: auto !important;
+    overscroll-behavior: contain;
+  }
+
+  /* The four original how-to dialogs keep their own content and controls,
+     but share one Landscape shell above the Switch-style stage. */
+  body.gsh-ml-active #tf-howto-modal,
+  body.gsh-ml-active #rg-howto-modal,
+  body.gsh-ml-active #wo-howto-modal {
+    z-index: 100002 !important;
+    box-sizing: border-box;
+    padding: max(var(--gsh-ml-pad), var(--gsh-ml-safe-t)) max(var(--gsh-ml-pad), var(--gsh-ml-safe-r)) max(var(--gsh-ml-pad), var(--gsh-ml-safe-b)) max(var(--gsh-ml-pad), var(--gsh-ml-safe-l)) !important;
+  }
+  body.gsh-ml-active #tf-howto-modal > :first-child,
+  body.gsh-ml-active #rg-howto-modal > :first-child,
+  body.gsh-ml-active #wo-howto-modal > :first-child {
+    box-sizing: border-box;
+    width: min(72vw, 640px) !important;
+    max-width: calc(100vw - var(--gsh-ml-safe-l) - var(--gsh-ml-safe-r)) !important;
+    max-height: calc(100dvh - var(--gsh-ml-safe-t) - var(--gsh-ml-safe-b) - (2 * var(--gsh-ml-pad))) !important;
+    overflow-y: auto !important;
     overscroll-behavior: contain;
   }
 

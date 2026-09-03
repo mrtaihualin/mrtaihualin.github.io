@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ตรวจเมนู Mobile Landscape</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: #ece7de; color: #49350d; font-family: system-ui, sans-serif; }
+    body { display: grid; place-items: start center; padding: 18px; }
+    .review { width: min(100%, 900px); }
+    .review__header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+    .review__title { margin: 0; font-size: 16px; }
+    .review__games { display: flex; flex-wrap: wrap; gap: 6px; }
+    .review__games button { border: 1px solid #d8bd83; border-radius: 999px; background: #fffaf0; color: #6e5015; padding: 6px 12px; font: 700 13px system-ui, sans-serif; cursor: pointer; }
+    .review__games button[aria-pressed="true"] { background: #8b6310; color: #fff; }
+    .review__screen { width: 844px; max-width: 100%; aspect-ratio: 844 / 390; border: 1px solid #c9b27e; border-radius: 14px; background: #f5f0e8; box-shadow: 0 10px 28px rgba(73,53,13,.16); overflow: hidden; }
+    iframe { display: block; width: 844px; height: 390px; border: 0; transform-origin: top left; }
+    @media (max-width: 880px) {
+      .review__header { align-items: flex-start; flex-direction: column; }
+      .review__screen { overflow: auto; }
+    }
+  </style>
+</head>
+<body>
+  <main class="review">
+    <div class="review__header">
+      <h1 class="review__title">เมนูหลังล็อกอิน — ตัวจริงขนาด 844 × 390</h1>
+      <nav class="review__games" aria-label="เลือกเกม">
+        <button type="button" data-game="tone" aria-pressed="true">Tone</button>
+        <button type="button" data-game="reading" aria-pressed="false">Reading</button>
+        <button type="button" data-game="typing" aria-pressed="false">Typing</button>
+        <button type="button" data-game="word-order" aria-pressed="false">Word Order</button>
+      </nav>
+    </div>
+    <div class="review__screen">
+      <iframe id="game-preview" title="ตัวอย่างเมนู Mobile Landscape" src="mobile-landscape-account-menu.html?game=tone&amp;preview=1"></iframe>
+    </div>
+  </main>
+  <script>
+    (function () {
+      'use strict';
+      var frame = document.getElementById('game-preview');
+      document.querySelectorAll('[data-game]').forEach(function (button) {
+        button.addEventListener('click', function () {
+          document.querySelectorAll('[data-game]').forEach(function (item) {
+            item.setAttribute('aria-pressed', item === button ? 'true' : 'false');
+          });
+          frame.src = 'mobile-landscape-account-menu.html?game=' + encodeURIComponent(button.getAttribute('data-game')) + '&preview=1';
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

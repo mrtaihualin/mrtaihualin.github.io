@@ -34,6 +34,8 @@
   var toneSummaryScrollPad = null;
   var toneSummaryDrag = null;
   var toneSummaryDragMoved = false;
+  var accountPanelRegistryEntry = null;
+  var accountPanelRegistered = false;
 
   function q(selector, root) { return (root || document).querySelector(selector); }
   function qa(selector, root) { return Array.prototype.slice.call((root || document).querySelectorAll(selector)); }
@@ -165,6 +167,26 @@
     moveOrder = moveOrder.filter(function (node) { return moved.has(node); });
   }
 
+  function accountElements() {
+    var login = q('#rg-login-slot');
+    return {
+      login: login,
+      trigger: login ? q('#gsh-ml-account-trigger', login) : null,
+      badge: login ? q('#sa-badge-rg-login-slot', login) : null
+    };
+  }
+
+  function closeAccountMenu() {
+    var parts = accountElements();
+    if (!parts.login) return;
+    parts.login.setAttribute('data-gsh-ml-account-open', 'false');
+    if (parts.trigger) parts.trigger.setAttribute('aria-expanded', 'false');
+    if (parts.badge) {
+      parts.badge.inert = true;
+      parts.badge.setAttribute('aria-hidden', 'true');
+    }
+  }
+
   function closeDropdowns() {
     qa('.gsh-ml-dropdown', stage).forEach(function (root) {
       var trigger = q('.gsh-ml-dropdown-trigger', root);
@@ -172,6 +194,7 @@
       if (panel) panel.hidden = true;
       if (trigger) trigger.setAttribute('aria-expanded', 'false');
     });
+    closeAccountMenu();
   }
 
   function visualViewportBox() {
@@ -211,6 +234,76 @@
     panel.style.setProperty('left', Math.round(left) + 'px', 'important');
     panel.style.setProperty('right', 'auto', 'important');
     panel.style.setProperty('bottom', 'auto', 'important');
+  }
+
+  function clearAccountPresentation(login, badge) {
+    if (!login) return;
+    var trigger = q('#gsh-ml-account-trigger', login);
+    if (trigger) trigger.remove();
+    login.classList.remove('gsh-ml-account-ready');
+    login.removeAttribute('data-gsh-ml-account-open');
+    if (!badge) return;
+    badge.inert = false;
+    badge.removeAttribute('aria-hidden');
+    badge.removeAttribute('data-gsh-ml-account-panel');
+    badge.removeAttribute('role');
+    badge.removeAttribute('aria-label');
+    ['top', 'left', 'right', 'bottom'].forEach(function (name) { badge.style.removeProperty(name); });
+  }
+
+  function syncAccountMenu(game) {
+    var login = q('#rg-login-slot');
+    if (!login) return;
+    var badge = q('#sa-badge-rg-login-slot', login);
+    var inScope = ['tone', 'reading', 'typing', 'word-order'].indexOf(game) >= 0;
+    var loggedIn = inScope && badge && badge.innerHTML.trim() && badge.style.display !== 'none';
+    if (!loggedIn) {
+      clearAccountPresentation(login, badge);
+      return;
+    }
+    if (window.GamePanels && accountPanelRegistryEntry && !accountPanelRegistered) {
+      window.GamePanels.add(accountPanelRegistryEntry);
+      accountPanelRegistered = true;
+    }
+
+    var trigger = q('#gsh-ml-account-trigger', login);
+    if (!trigger) {
+      trigger = document.createElement('button');
+      trigger.type = 'button';
+      trigger.id = 'gsh-ml-account-trigger';
+      trigger.textContent = '已登入';
+      trigger.setAttribute('aria-haspopup', 'dialog');
+      trigger.setAttribute('aria-controls', badge.id);
+      trigger.setAttribute('aria-expanded', 'false');
+      trigger.addEventListener('click', function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        var open = login.getAttribute('data-gsh-ml-account-open') !== 'true';
+        closeDropdowns();
+        if (!open) return;
+        if (window.GamePanels && accountPanelRegistryEntry) window.GamePanels.closeOthers(accountPanelRegistryEntry);
+        login.setAttribute('data-gsh-ml-account-open', 'true');
+        trigger.setAttribute('aria-expanded', 'true');
+        badge.inert = false;
+        badge.removeAttribute('aria-hidden');
+        positionPanelBelow(trigger, badge, 190);
+      });
+      login.prepend(trigger);
+    }
+    if (!login.hasAttribute('data-gsh-ml-account-open')) login.setAttribute('data-gsh-ml-account-open', 'false');
+    login.classList.add('gsh-ml-account-ready');
+    badge.setAttribute('data-gsh-ml-account-panel', 'true');
+    badge.setAttribute('role', 'dialog');
+    badge.setAttribute('aria-label', '帳戶');
+    var open = login.getAttribute('data-gsh-ml-account-open') === 'true';
+    trigger.setAttribute('aria-expanded', String(open));
+    badge.inert = !open;
+    if (open) {
+      badge.removeAttribute('aria-hidden');
+      positionPanelBelow(trigger, badge, 190);
+    } else {
+      badge.setAttribute('aria-hidden', 'true');
+    }
   }
 
   function syncUtilityPanels() {
@@ -303,6 +396,8 @@
 
   function ensureToolLabelText(node) {
     if (!node) return;
+    var directControl = node.getAttribute('data-gsh-ml-proxy-tool') !== 'true' && node.matches('button, a, [role="button"]');
+    var control = directControl ? node : q('button, a, [role="button"]', node);
     var text = q(':scope > .gsh-ml-tool-text', node);
     if (!text) {
       text = document.createElement('span');
@@ -310,10 +405,17 @@
       node.appendChild(text);
     }
     text.textContent = node.getAttribute('data-gsh-ml-tool-label') || '';
-    if (!node.matches('button, a, [role="button"]') && q('button, a, [role="button"]', node)) {
+    node.setAttribute('data-gsh-ml-unavailable', String(!control || !!control.disabled));
+    if (!directControl && control) {
       node.setAttribute('role', 'button');
       node.setAttribute('tabindex', '0');
       node.setAttribute('data-gsh-ml-proxy-tool', 'true');
+      node.setAttribute('aria-disabled', String(!!control.disabled));
+    } else if (!directControl) {
+      node.removeAttribute('role');
+      node.removeAttribute('tabindex');
+      node.removeAttribute('data-gsh-ml-proxy-tool');
+      node.setAttribute('aria-disabled', 'true');
     }
   }
 
@@ -428,6 +530,7 @@
     var login = q('#rg-login-slot');
     mountExistingNode(login, slot('dropdowns'));
     if (login && slot('dropdowns').firstChild !== login) slot('dropdowns').prepend(login);
+    syncAccountMenu(game);
     if (game === 'tone') {
       mountMany(['#tf-banner'], slot('question'));
       var toneBody = q('#tf-body');
@@ -582,20 +685,6 @@
     mountExistingNode(node, target);
   }
 
-  function createWordOrderCheckAction() {
-    var button = document.createElement('button');
-    button.type = 'button';
-    button.id = 'wo-check-btn';
-    button.className = 'btn btn-primary';
-    button.textContent = '檢查';
-    button.setAttribute('data-gsh-ml-owned-action', 'word-order-check');
-    button.addEventListener('click', function () {
-      if (!button.disabled && typeof window.woCheck === 'function') window.woCheck();
-    });
-    slot('check').appendChild(button);
-    return button;
-  }
-
   function syncTopActions(game) {
     var skip = null;
     var check = null;
@@ -603,16 +692,9 @@
     else if (game === 'reading') { skip = q('#btn-skip'); check = q('#btn-check'); }
     else if (game === 'listening') skip = q('#lg-skip-btn');
     else if (game === 'typing') skip = q('#btn-skip');
-    else if (game === 'word-order') {
-      skip = q('#wo-skip-btn');
-      check = q('[data-gsh-ml-owned-action="word-order-check"]', slot('check')) || createWordOrderCheckAction();
-      check.disabled = !window.woCheck || q('#wo-slots .wo-slot.empty') !== null;
-    }
+    else if (game === 'word-order') skip = q('#wo-skip-btn');
     mountTopAction('skip', skip);
-    if (game === 'word-order') {
-      clearTopAction('check', check);
-      check.setAttribute('data-gsh-ml-role', 'check');
-    } else mountTopAction('check', check);
+    mountTopAction('check', check);
     mountTopAction('reset', null);
   }
 
@@ -1248,6 +1330,8 @@
     if (observer) observer.disconnect();
     observer = null;
     closeDropdowns();
+    var account = accountElements();
+    clearAccountPresentation(account.login, account.badge);
     restoreInputs();
     restoreControls();
     qa('[data-gsh-side], [data-gsh-side-index], [data-gsh-side-count], [data-gsh-max-side-count], [data-gsh-ml-split], [data-gsh-ml-role], [data-gsh-ml-custom-input], [data-gsh-ml-position-two-active]').forEach(function (node) {
@@ -1266,11 +1350,13 @@
       node.removeAttribute('data-gsh-ml-tool-label');
       node.removeAttribute('data-gsh-ml-tool-icon');
       node.removeAttribute('data-gsh-ml-direct-tool');
+      node.removeAttribute('data-gsh-ml-unavailable');
       if (node.getAttribute('data-gsh-ml-proxy-tool') === 'true') {
         node.removeAttribute('role');
         node.removeAttribute('tabindex');
         node.removeAttribute('data-gsh-ml-proxy-tool');
       }
+      if (!node.matches('button, a')) node.removeAttribute('aria-disabled');
       var text = q(':scope > .gsh-ml-tool-text', node);
       if (text) text.remove();
     });
@@ -1341,7 +1427,10 @@
   }
   function documentClick(event) {
     if (!active) return;
-    if (!event.target.closest('.gsh-ml-dropdown')) closeDropdowns();
+    if (!event.target.closest('.gsh-ml-dropdown, #rg-login-slot')) closeDropdowns();
+    if (event.target.closest('#sa-badge-rg-login-slot .sa-nick, #sa-badge-rg-login-slot .sa-edit, #sa-badge-rg-login-slot .sa-logout')) {
+      window.setTimeout(closeAccountMenu, 0);
+    }
     scheduleSync();
   }
   function exclusiveRegion() { return stage && q('.gsh-ml-exclusive', stage); }
@@ -1377,6 +1466,18 @@
       if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
       scheduleSync();
     }
+  }
+
+  accountPanelRegistryEntry = {
+    isOpen: function () {
+      var parts = accountElements();
+      return !!(parts.login && parts.login.getAttribute('data-gsh-ml-account-open') === 'true');
+    },
+    close: closeAccountMenu
+  };
+  if (window.GamePanels) {
+    window.GamePanels.add(accountPanelRegistryEntry);
+    accountPanelRegistered = true;
   }
 
   function visualViewportChanged() {

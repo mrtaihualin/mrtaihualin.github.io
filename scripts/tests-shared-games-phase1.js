@@ -105,7 +105,7 @@ test('active Desktop games keep the canonical level, status and gameplay order',
   assert.ok(woSessionAt > -1 && woGameplayAt > woSessionAt && woScoreAt > woGameplayAt, 'Word Order keeps its game-owned single-level status in the shared fixed Session slot before the item-score row');
 });
 
-test('Tone keeps one equal four-button Level and alphabet row on Desktop and Portrait', () => {
+test('Tone keeps one original four-button Level and alphabet row on every supported surface', () => {
   const tone = games.find((g) => g.id === 'tone').htmlText;
   const header = tone.slice(tone.indexOf('<div class="gsh-session-header">'), tone.indexOf('<div class="gsh-resume-banner"'));
   assert.strictEqual((header.match(/class="tf-ltab"/g) || []).length, 4, 'Tone header must contain exactly four equal buttons');
@@ -116,7 +116,7 @@ test('Tone keeps one equal four-button Level and alphabet row on Desktop and Por
   assert.match(tone, /@media \(max-width:768px\) and \(orientation:portrait\)[\s\S]{0,1900}\.tf-level-tabs \{[\s\S]{0,180}grid-template-columns:repeat\(4,minmax\(0,1fr\)\)[\s\S]{0,100}max-width:none !important/, 'Portrait must show four equal buttons across the available width');
   assert.match(tone, /@media \(max-width:768px\) and \(orientation:portrait\)[\s\S]{0,1500}\.gsh-session-header \{[\s\S]{0,140}flex-direction:column; flex-wrap:nowrap; gap:10px; padding:0 0 10px;[\s\S]{0,180}\.gsh-session-header > \.gsh-level-selector \{ flex:none; \}[\s\S]{0,120}\.gsh-gameplay \{ margin-top:0; \}/, 'Tone Portrait round status must keep equal 10px gaps between Level and gameplay');
   assert.match(tone, /#tf-alpha-btn \{[\s\S]{0,180}font-size:11\.5px !important; white-space:nowrap;[\s\S]{0,100}#tf-alpha-btn \.tf-alpha-icon \{ display:none; \}/, 'Portrait alphabet label must fit without changing the four equal button widths');
-  assert.match(tone, /@media \(orientation:landscape\) and \(max-width:1024px\) and \(max-height:600px\)[\s\S]{0,180}#tf-alpha-btn \{ display:none !important; \}/, 'Mobile Landscape must preserve the accepted three-level Switch surface');
+  assert.doesNotMatch(tone, /@media \(orientation:landscape\) and \(max-width:1024px\) and \(max-height:600px\)[\s\S]{0,180}#tf-alpha-btn \{ display:none !important; \}/, 'Mobile Landscape must expose the original Desktop alphabet action');
   assert.doesNotMatch(tone.slice(tone.indexOf('<div class="tf-tools-row">'), tone.indexOf('<div class="gsh-session-header">')), /id="tf-alpha-btn"/, 'Account bar must no longer share width with the alphabet button');
 });
 
