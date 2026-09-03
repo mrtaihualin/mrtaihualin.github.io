@@ -2503,3 +2503,27 @@ node scripts/check-site.js
 - Replaced the clipped signed-in badge at the left safe edge with one compact `已登入` Landscape trigger on Tone, Reading, Typing, and Word Order.
 - Opening it presents the original Desktop account badge and its existing name, profile-edit, and logout controls; no account action or handler is cloned. The popup closes on its action, another menu, outside click, or Escape, and the untouched Desktop badge is restored on Landscape exit.
 - Verification: focused four-game browser interaction `4/4`, shared Landscape source checks `19/19`, shared game tests `52/52`, owner-switch races `12/12`, neutral actions `7/7`, and the full `1,021`-file site gate passed. Listening, Lego, Auth data, Supabase, deployment, and Production are unchanged.
+
+# 2026-09-03 — Reading standalone tone-mark vectors
+
+- Replaced the carrier-consonant/cropping workaround for `่ ้ ๊ ๋` with four inline SVG drawings used by the original Reading option and answer-slot nodes on Mobile Landscape, Mobile Portrait, and Desktop.
+- Preserved the original option identity, selection/replacement/removal behavior, `檢查`, and next-state handlers; the SVG markup contains no consonant carrier or dotted circle and exposes the original mark through `aria-label`.
+- Verification: focused Reading/neutral/shared/Landscape tests and real-browser answer flow passed on all three surfaces. Deployment and Production are unchanged.
+
+# 2026-09-03 — Reading Landscape option collision correction
+
+- Kept the original Desktop Reading choice nodes, random offsets, rotation, animation, and click handlers, but assigned adjacent Landscape choices to safely separated horizontal lanes inside their existing left/right owners.
+- Verified all three Reading review layouts at `844×390`: no live choice rectangles overlap, every one of the ten visible choices can be selected and removed by a real pointer click, and the lower-right Position 2 zone remains choice-free.
+- Advanced the shared Core-4 Landscape controller cache key. Portrait, Desktop, Listening, Lego, deployment, and Production are unchanged.
+
+# 2026-09-03 — Reading Portrait/Desktop option collision correction
+
+- Preserved the original Reading option nodes, handlers, box dimensions, scattered placement, and animation while bounding their random offsets/rotation inside a wider flex gap on Portrait and Desktop.
+- Kept each standalone tone SVG at `.82em × .72em` inside the same unmodified option box used by ordinary single-character choices; no carrier consonant or dotted circle was added.
+- Verification compares live option rectangles and real selection behavior on Portrait, Desktop, and Mobile Landscape. Deployment and Production are unchanged.
+
+# 2026-09-03 — Reading Sarabun standalone tone-mark outlines
+
+- Replaced the provisional standalone drawings for `่ ้ ๊ ๋` with the Human-selected Sarabun Bold font outlines while keeping the original Reading option nodes, handlers, and `54 × 58px` option boxes.
+- Set the visible outline height to approximately `9px`, with width following each mark's natural Sarabun proportion; no carrier consonant, dotted circle, or bundled font file was added.
+- Verification covers live size, overlap, and real option clicks on Desktop, Mobile Portrait, and Mobile Landscape. Deployment and Production are unchanged.

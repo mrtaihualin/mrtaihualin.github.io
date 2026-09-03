@@ -624,16 +624,20 @@
       child.dataset.gshSideIndex = String(sideIndex);
       child.dataset.gshSideCount = String(sideCount);
       if (game === 'reading') {
+        // Dense Reading choices keep the Desktop button's random offset,
+        // rotation, and bob animation. Alternating the two safely separated
+        // horizontal lanes prevents those original transforms from making
+        // neighbouring choices overlap in the shorter Landscape side frames.
         var readingInlinePatterns = side === 'left'
           ? [
-            ['start', 'center', 'end', 'center', 'start', 'end'],
-            ['end', 'start', 'center', 'end', 'center', 'start'],
-            ['center', 'end', 'start', 'start', 'end', 'center']
+            ['start', 'end', 'start', 'end', 'start', 'end'],
+            ['end', 'start', 'end', 'start', 'end', 'start'],
+            ['start', 'end', 'start', 'end', 'start', 'end']
           ]
           : [
-            ['end', 'start', 'center'],
-            ['start', 'center', 'end'],
-            ['center', 'end', 'start']
+            ['end', 'start', 'end', 'start'],
+            ['start', 'end', 'start', 'end'],
+            ['end', 'start', 'end', 'start']
           ];
         var readingInlinePattern = readingInlinePatterns[readingLayoutVariant];
         child.style.setProperty('--gsh-ml-inline-align', readingInlinePattern[sideIndex % readingInlinePattern.length]);

@@ -279,25 +279,33 @@ body[data-gsh-game="reading"] .gsh-four-row-stack .word-th {
 /* combining char display: transparent ก + mark in SAME text run so browser shapes them together */
 .comb-disp{display:inline-block;line-height:1.3;}
 .comb-base{color:transparent;}
-/* Invisible NBSP anchors the combining glyph, so a tone choice shows only
-   the tone mark while keeping the original option node and click handler. */
-.opt[data-type="tone"] .comb-disp{display:none;}
-.opt[data-type="tone"]::before{content:"\00a0" attr(data-val);white-space:pre;}
+/* Standalone tone marks are custom vectors, independent of font shaping. */
+.tone-drawn{
+  display:inline-block;
+  overflow:visible;
+  fill:currentColor;
+  vertical-align:middle;
+}
 
 /* ── Options ── */
 .opts-wrap{width:100%;margin:10px 0 2px;}
-.opts{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;padding:4px 0;}
+.opts{display:flex;flex-wrap:wrap;gap:20px;justify-content:center;padding:4px 0;}
 
 @keyframes floatUp{
   0%  {opacity:0;transform:translate(var(--tx,0px),var(--ty,30px)) rotate(var(--rot,0deg)) scale(.6);}
-  65% {opacity:1;transform:translate(var(--jx,0px),var(--jy,0px)) rotate(var(--jr,0deg)) scale(1.06);}
-  100%{opacity:1;transform:translate(var(--jx,0px),var(--jy,0px)) rotate(var(--jr,0deg)) scale(1);}
+  65% {opacity:1;transform:translate(var(--opt-safe-jx),var(--opt-safe-jy)) rotate(var(--opt-safe-jr)) scale(1.06);}
+  100%{opacity:1;transform:translate(var(--opt-safe-jx),var(--opt-safe-jy)) rotate(var(--opt-safe-jr)) scale(1);}
 }
 @keyframes bob{
-  0%,100%{transform:translate(var(--jx,0px),var(--jy,0px)) rotate(var(--jr,0deg));}
-  50%    {transform:translate(var(--jx,0px),calc(var(--jy,0px) - 5px)) rotate(var(--jr,0deg));}
+  0%,100%{transform:translate(var(--opt-safe-jx),var(--opt-safe-jy)) rotate(var(--opt-safe-jr));}
+  50%    {transform:translate(var(--opt-safe-jx),calc(var(--opt-safe-jy) - 5px)) rotate(var(--opt-safe-jr));}
 }
 .opt{
+  /* Keep the original scattered motion without letting transformed boxes
+     consume the 20px collision-safe gap on Portrait or Desktop. */
+  --opt-safe-jx:clamp(-4px,var(--jx,0px),4px);
+  --opt-safe-jy:clamp(-3px,var(--jy,0px),3px);
+  --opt-safe-jr:clamp(-4deg,var(--jr,0deg),4deg);
   position:relative;
   min-width:54px;padding:9px 12px;border-radius:14px;
   border:2px solid #d4b87a;background:#fff;color:#5a3e10;
@@ -310,7 +318,7 @@ body[data-gsh-game="reading"] .gsh-four-row-stack .word-th {
 }
 .opt:hover:not(.locked){
   background:#ffeedd;border-color:#c07030;
-  transform:translate(var(--jx,0px),calc(var(--jy,0px) - 4px)) rotate(var(--jr,0deg)) scale(1.1) !important;
+  transform:translate(var(--opt-safe-jx),calc(var(--opt-safe-jy) - 4px)) rotate(var(--opt-safe-jr)) scale(1.1) !important;
   animation-play-state:paused,paused;
   transition:transform .12s;
 }
@@ -784,14 +792,14 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/reading-game-app.min.js?v=48'], {game:'reading'}).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/reading-game-app.min.js?v=52'], {game:'reading'}).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 </div><!-- /.v3-page -->
 <script src="data/nav-template.js?v=4"></script>
 <script src="js/core/shared.min.js?v=48"></script>
 <script src="js/games/game-flow.js?v=12"></script>
-<script src="js/core/mobile-landscape.js?v=31"></script>
+<script src="js/core/mobile-landscape.js?v=32"></script>
 
 <!-- ── Game Switcher (fixed pill) ── -->
 <style>

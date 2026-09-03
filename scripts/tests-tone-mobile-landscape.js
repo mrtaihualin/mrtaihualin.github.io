@@ -39,7 +39,7 @@ test('all pages bind the shared landscape system and the four in-scope games sha
     const paused = game === 'listening' || game === 'lego';
     const fourGame = game === 'tone' || game === 'reading' || game === 'typing' || game === 'word-order';
     assert.match(html, new RegExp(`css/mobile-landscape\\.css\\?v=${fourGame ? 45 : 34}`), `${file}: wrong shared Landscape CSS version`);
-    const controllerVersion = fourGame ? 31 : paused ? 24 : 25;
+    const controllerVersion = fourGame ? 32 : paused ? 24 : 25;
     assert.match(html, new RegExp(`js/core/mobile-landscape\\.js\\?v=${controllerVersion}`), `${file}: wrong scoped controller version`);
     assert.match(html, /js\/games\/game-switcher\.js\?v=7/, `${file}: missing fixed six-game navigation`);
   }
@@ -222,10 +222,23 @@ test('Reading moves the original Desktop choices into two vertical sides without
   assert.doesNotMatch(landscapeOptBlock[1], /(?:width|height|padding|font-size|animation):/);
   assert.match(landscapeOptBlock[1], /justify-self: var\(--gsh-ml-inline-align, center\)/);
   assert.match(landscapeOptBlock[1], /margin-inline: var\(--gsh-ml-reading-choice-safe-x\) !important/);
-  assert.match(read('reading-game.html'), /\.opt\[data-type="tone"\]::before\{content:"\\00a0" attr\(data-val\);white-space:pre;\}/);
+  assert.match(read('reading-game.html'), /\.tone-drawn\{[\s\S]{0,100}overflow:visible;[\s\S]{0,80}fill:currentColor;[\s\S]{0,80}vertical-align:middle/);
+  assert.match(readingApp, /var TONE_SVG=\{[\s\S]{0,2800}'่':[\s\S]*'้':[\s\S]*'๊':[\s\S]*'๋':/);
+  assert.match(readingApp, /if\(TONE_SVG\[v\]\)return TONE_SVG\[v\]/);
+  assert.match(readingApp, /'่':'<svg class="tone-drawn" width="\.18em" height="\.34em" viewBox="-18\.6 -90\.3 11\.8 21\.9"/);
+  assert.match(readingApp, /'้':'<svg class="tone-drawn" width="\.48em" height="\.34em" viewBox="-37\.2 -97\.1 40\.8 28\.7"/);
+  assert.match(readingApp, /'๊':'<svg class="tone-drawn" width="\.63em" height="\.34em" viewBox="-48\.3 -95\.5 50\.4 27\.1"/);
+  assert.match(readingApp, /'๋':'<svg class="tone-drawn" width="\.41em" height="\.34em" viewBox="-27 -92\.3 28\.5 23\.9"/);
+  assert.match(readingApp, /if\(t\.type==='tone'\)el\.setAttribute\('aria-label',t\.val\)/);
+  const toneSvgBlock = readingApp.match(/var TONE_SVG=\{([\s\S]*?)\n\};/);
+  assert.ok(toneSvgBlock, 'missing standalone tone SVG map');
+  assert.doesNotMatch(toneSvgBlock[1], /(?:comb-base|>ก<|◌)/);
+  assert.doesNotMatch(read('reading-game.html'), /clip-path:inset\(0 0 72% 0\)/);
   assert.doesNotMatch(css, /content: "◌" attr\(data-val\)/);
   assert.match(stage, /__GSH_ML_READING_LAYOUT_PREVIEW/);
-  assert.match(stage, /readingInlinePatterns[\s\S]{0,620}\['start', 'center', 'end'/);
+  assert.match(stage, /readingInlinePatterns[\s\S]{0,620}\['start', 'end', 'start', 'end', 'start', 'end'/);
+  assert.match(stage, /neighbouring choices overlap/);
+  assert.doesNotMatch(stage, /readingInlinePatterns[\s\S]{0,620}\['(?:start|end)', 'center'/);
   assert.match(stage, /data\.gshReadingLayoutVariant|dataset\.gshReadingLayoutVariant/);
   assert.match(stage, /game === 'reading'[\s\S]{0,1600}--gsh-ml-inline-align/);
   assert.doesNotMatch(css, /data-gsh-ml-split="reading"\] > \.opt:hover[\s\S]{0,220}transform: none/);

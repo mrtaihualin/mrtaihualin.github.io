@@ -354,10 +354,10 @@ test('Five games expose isolated Login Core while owner-safe account runtimes re
     assert.match(read(page), /reading-auth\.js\?v=28/, page + ' reading-auth cache');
   }
   assert.doesNotMatch(read('lego.html'), /game-account\.js/);
-  assert.match(read('tone-finder.html'), /tone-finder-game\.min\.js\?v=82/);
-  assert.match(read('reading-game.html'), /reading-game-app\.min\.js\?v=48/);
-  assert.match(read('typing-game.html'), /typing-game-app\.min\.js\?v=46/);
-  assert.match(read('word-order.html'), /word-order-app\.min\.js\?v=37/);
+  assert.match(read('tone-finder.html'), /tone-finder-game\.min\.js\?v=83/);
+  assert.match(read('reading-game.html'), /reading-game-app\.min\.js\?v=52/);
+  assert.match(read('typing-game.html'), /typing-game-app\.min\.js\?v=47/);
+  assert.match(read('word-order.html'), /word-order-app\.min\.js\?v=38/);
   assert.match(read('listening-game.html'), /Preserved paused runtime: js\/games\/listening-game-app\.js\?v=19/);
   assert.doesNotMatch(read('listening-game.html'), /GameContentLoader\.boot\(\['js\/games\/listening-game-app\.js/);
 });

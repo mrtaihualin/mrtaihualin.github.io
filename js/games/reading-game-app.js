@@ -1,8 +1,15 @@
 // ════════════════════════════════════════════
 // FILE MAP: display helpers → config/state/scoring/SRS → sync + round selection → tile/answer UI → results/account → controls/analytics/init
 // TONE MARK DISPLAY HELPER
-// renders tone mark without ◌ — uses hidden ก as base via CSS ::before
+// Draw the four Thai tone marks as standalone vectors. This avoids relying on
+// a hidden carrier consonant or the browser's dotted-circle fallback.
 // ════════════════════════════════════════════
+var TONE_SVG={
+  '่':'<svg class="tone-drawn" width=".18em" height=".34em" viewBox="-18.6 -90.3 11.8 21.9" aria-hidden="true" focusable="false"><path d="M-18.6-68.4V-90.3H-6.8V-68.4Z"/></svg>',
+  '้':'<svg class="tone-drawn" width=".48em" height=".34em" viewBox="-37.2 -97.1 40.8 28.7" aria-hidden="true" focusable="false"><path fill-rule="evenodd" d="M-6.8-95.9H3.6Q3-87.7-1.75-81.45Q-6.5-75.2-14.35-71.8Q-22.2-68.4-31.8-68.4H-36.8V-73.7Q-31.6-75.8-27.9-79.2H-28.2Q-32.3-79.2-34.75-81.6Q-37.2-84-37.2-88.2Q-37.2-92.1-34.45-94.6Q-31.7-97.1-27.5-97.1Q-23.2-97.1-20.5-94.45Q-17.8-91.8-17.8-87.4Q-17.8-84.9-18.75-82Q-19.7-79.1-21.8-76.8Q-17.6-77.9-14.25-81Q-10.9-84.1-9-88.1Q-7.1-92.1-6.8-95.9ZM-31.1-88Q-31.1-84.5-27.5-84.5Q-24-84.5-24-88Q-24-91.6-27.5-91.6Q-31.1-91.6-31.1-88Z"/></svg>',
+  '๊':'<svg class="tone-drawn" width=".63em" height=".34em" viewBox="-48.3 -95.5 50.4 27.1" aria-hidden="true" focusable="false"><path fill-rule="evenodd" d="M-7.9-95.4H2.1Q2.1-82.8-4.85-75.6Q-11.8-68.4-24.9-68.4V-74.2Q-20.1-76.8-20.1-82.7Q-20.1-87.3-23.1-88.7L-29.1-84.4L-35.1-88.5Q-37.3-87.2-38.8-84.7Q-30.3-84.7-30.3-76.5Q-30.3-68.4-38.9-68.4Q-48.3-68.4-48.3-78.8Q-48.3-90.8-35.2-95.5L-29.1-91.1L-23-95.4Q-11.9-93.6-11.9-83.7Q-11.9-79.6-15-76.1Q-7.9-81.4-7.9-95.4ZM-35.8-76.5Q-35.8-79.6-39-79.6Q-42.2-79.6-42.2-76.5Q-42.2-73.3-39-73.3Q-35.8-73.3-35.8-76.5Z"/></svg>',
+  '๋':'<svg class="tone-drawn" width=".41em" height=".34em" viewBox="-27 -92.3 28.5 23.9" aria-hidden="true" focusable="false"><path d="M1.5-84.6V-76.2H-7.2V-68.4H-18.2V-76.2H-27V-84.6H-18.2V-92.3H-7.2V-84.6Z"/></svg>'
+};
 function isCombining(s){
   if(!s||s.length===0)return false;
   var c=s.charCodeAt(0);
@@ -20,6 +27,7 @@ function isCombining(s){
 var FRONT_V_SET={'เ':1,'แ':1,'โ':1,'ไ':1,'ใ':1};
 function dispHTML(v){
   if(!v)return'◌';
+  if(TONE_SVG[v])return TONE_SVG[v];
   var fc=v[0];
   if(isCombining(fc)){
     // case 1: combining char needs base before it
@@ -36,12 +44,15 @@ function dispHTML(v){
 // comp='vowel' → v คือ "เสียงอ่านเต็มคำ" (VOWEL_READ ผ่าน dispOpt แล้ว) เป็นข้อความสมบูรณ์อยู่แล้ว
 //   ไม่ต้องแทรก base ก แบบสระสัญลักษณ์เดิม (ไม่งั้นจะเพี้ยน เช่น "โอ" จะกลายเป็น "โกอ")
 function setSlotContent(box, v, stateClass, comp){
+  var isToneSlot=comp==='tone'||box.id==='sb-tone';
   if(!v){
     box.textContent='◌';
     box.className='slot-box empty-slot';
+    if(isToneSlot)box.removeAttribute('aria-label');
   } else {
     box.innerHTML=(comp==='vowel')?v:dispHTML(v);
     box.className='slot-box '+(stateClass||'filled');
+    if(isToneSlot)box.setAttribute('aria-label',v);
   }
 }
 
@@ -1041,6 +1052,7 @@ function renderOptions(tiles){
     // Use innerHTML for combining chars
     // t.val สระ = เสียงอ่านเต็มคำอยู่แล้ว (VOWEL_READ) ไม่ต้องแทรก base ก แบบสระสัญลักษณ์เดิม
     el.innerHTML=(t.type==='vowel')?t.val:dispHTML(t.val);
+    if(t.type==='tone')el.setAttribute('aria-label',t.val);
 
     var jx=(Math.random()*22-11).toFixed(1)+'px';
     var jy=(Math.random()*18-9).toFixed(1)+'px';

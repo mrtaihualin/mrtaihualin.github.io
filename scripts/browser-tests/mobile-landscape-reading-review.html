@@ -38,6 +38,7 @@
       var requestedLayout = requestedLayoutMatch ? Number(requestedLayoutMatch[1]) : 1;
       frame.style.width = surfaceSize.width + 'px';
       frame.style.height = surfaceSize.height + 'px';
+      document.querySelector('main').style.maxWidth = surfaceSize.width + 'px';
       screen.style.maxWidth = surfaceSize.width + 'px';
       screen.style.aspectRatio = surfaceSize.width + ' / ' + surfaceSize.height;
       document.querySelector('h1').textContent = 'Reading — ' + surfaceSize.label + ' ' + surfaceSize.width + ' × ' + surfaceSize.height;
@@ -58,7 +59,7 @@
       var override = '<script>(function(){var rows=' + JSON.stringify(previewFixture) + ';var seed=173;Math.random=function(){seed=(seed*9301+49297)%233280;return seed/233280;};window.__GSH_ML_READING_LAYOUT_PREVIEW=' + requestedLayout + ';window.GameContentLoader.boot=function(srcs){window.WORDS_MASTER=rows;window.ADV_SENTENCES=[];var chain=new Promise(function(resolve){if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",resolve,{once:true});else resolve();}).then(function(){if(window.GameResume&&typeof window.GameResume.load==="function")window.GameResume.load=function(){return null;};});(srcs||[]).forEach(function(src){chain=chain.then(function(){return new Promise(function(resolve,reject){var script=document.createElement("script");script.src=src;script.onload=resolve;script.onerror=reject;document.head.appendChild(script);});});});return chain;};})();<\/script>';
       var clientTag = '<script src="' + 'js/games/game-content-client.js?v=11"><\/script>';
 
-      fetch('../../reading-game.html').then(function (response) {
+      fetch('../../reading-game.html?review-cache=' + Date.now(), {cache:'no-store'}).then(function (response) {
         if (!response.ok) throw new Error('เปิดไฟล์ Reading ไม่สำเร็จ');
         return response.text();
       }).then(function (html) {
