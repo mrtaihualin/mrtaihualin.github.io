@@ -210,7 +210,7 @@ test('floating controls use the locked switcher, focus and More Menu copy', () =
   assert.match(sharedJs, /fitMenuToViewport\(\)/);
   assert.match(sharedJs, /fitMoreMenuToViewport\(\)/);
   assert.match(sharedJs, /path\.indexOf\('listening-game'\) > -1\) GAME_ID = 'listening'/, 'Listening must use the shared More mapping');
-  assert.match(games.find((g) => g.id === 'listening').htmlText, /shared\.min\.js\?v=48/, 'Listening must load the announcement-free shared mapping version');
+  assert.match(games.find((g) => g.id === 'listening').htmlText, /shared\.min\.js\?v=47/, 'Listening keeps its unchanged announcement-free shared runtime');
 });
 
 test('all game pages permanently omit the automatic Login cap popup', () => {
@@ -245,13 +245,13 @@ test('all scoped pages use one fail-closed Login surface and game pages permanen
   for (const file of gamePages) {
     const html = fs.readFileSync(path.join(root, file), 'utf8');
     assert.doesNotMatch(html, /ANN-BAND|ann-band|avail-band|annDismissed|annGoTo|annPrev|annNext/, `${file}: announcement DOM/marker/script/style hook must be removed`);
-    assert.match(html, file === 'lego.html' ? /minimum-guest-launch\.js\?v=8/ : /minimum-guest-launch\.js\?v=10/, `${file}: must load the Reading-authority Login gate`);
-    assert.match(html, /shared\.min\.js\?v=(?:47|48)/, `${file}: must load the announcement-free game runtime`);
+    assert.match(html, file === 'lego.html' ? /minimum-guest-launch\.js\?v=9/ : /minimum-guest-launch\.js\?v=11/, `${file}: must load the Reading-authority Login gate`);
+    assert.match(html, /shared\.min\.js\?v=(?:47|49)/, `${file}: must load the announcement-free game runtime`);
   }
   for (const file of nonGameScopedPages) {
     const html = fs.readFileSync(path.join(root, file), 'utf8');
     assert.match(html, /<!--ANN-BAND:START--><!-- Login UI scope: no announcement strip\. --><!--ANN-BAND:END-->/, `${file}: existing non-game announcement capability boundary must remain`);
-    assert.match(html, /minimum-guest-launch\.js\?v=8/, `${file}: must load the Reading-authority Login gate`);
+    assert.match(html, /minimum-guest-launch\.js\?v=9/, `${file}: must load the Reading-authority Login gate`);
     assert.match(html, file === 'vault.html' ? /shared\.min\.js\?v=47/ : /shared\.min\.js\?v=45/, `${file}: non-game cache binding must stay on its current runtime`);
   }
   assert.doesNotMatch(sharedJs, /suppressScopedAnnouncement|staleScopedAnnouncement|avail-band-placeholder/);
@@ -261,7 +261,7 @@ test('all scoped pages use one fail-closed Login surface and game pages permanen
   assert.match(sharedMin, /document\.body&&!document\.body\.hasAttribute\("data-gsh-game"\)\?document\.getElementById\("ann-band"\):null/, 'deployed shared runtime must keep the non-game announcement guard');
   assert.doesNotMatch(sharedCss, /(^|[},]\s*)\.avail-band\s*\{/m, 'announcement CSS must never target an unscoped game surface');
   assert.match(minimumGuest, /window\.MRT_PARKED_ACCOUNT_SURFACE = parked\.test\(path\)/);
-  assert.match(minimumGuest, /loginController\.src = 'js\/core\/login-surface\.js\?v=7'/, 'public pages must request the extensionless-route Login controller');
+  assert.match(minimumGuest, /loginController\.src = 'js\/core\/login-surface\.js\?v=8'/, 'public pages must request the one-minute OTP Login controller');
   assert.doesNotMatch(minimumGuest, /location\.replace\('\/games\.html\?guest_launch=1'\)/);
   assert.match(loginJs, /'tone-finder\.html'[\s\S]*'reading-game\.html'[\s\S]*'listening-game\.html'[\s\S]*'typing-game\.html'[\s\S]*'word-order\.html'[\s\S]*'lego\.html'/);
   assert.match(loginJs, /function sourceFilename\(pathname\)[\s\S]{0,520}if \(filename\.indexOf\('\.'\) === -1\) filename \+= '\.html'[\s\S]{0,120}var filename = sourceFilename\(window\.location\.pathname\)/, 'Cloudflare extensionless routes must resolve to canonical Login page keys');
@@ -349,7 +349,7 @@ test('Lego keeps PR98 lower gameplay and participates only through Login', () =>
   const lego = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
   assert.match(lego, /id="rg-login-slot"/, 'Lego must retain the PR98 Login host');
   assert.match(lego, /css\/shared\.css\?v=36/);
-  assert.match(lego, /js\/core\/shared\.min\.js\?v=48/);
+  assert.match(lego, /js\/core\/shared\.min\.js\?v=47/);
   assert.doesNotMatch(lego, /gsh-session-placeholder|gsh-question-surface|gsh-wordorder-content-slot/);
   assert.match(lego, /<div class="card out">[\s\S]{0,220}<div class="out-banner">[\s\S]{0,220}id="sentTh"[\s\S]{0,160}id="sentZh"[\s\S]{0,160}id="sentZhFull"/);
   assert.match(lego, /id="lego-reveal" class="card lego-flow-card hidden"[\s\S]{0,160}id="lego-reveal-th"[\s\S]{0,160}id="lego-reveal-zh"/);
@@ -459,7 +459,7 @@ test('all games omit the removed leave-game control and dialog', () => {
   const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
   assert.doesNotMatch(sharedJs, /要離開遊戲嗎？|繼續遊戲|離開遊戲/);
   assert.doesNotMatch(sharedJs, /data-act="exit"|openGameExit|gsh-game-exit-dialog/);
-  for (const g of games) assert.match(g.htmlText, g.id === 'listening' ? /shared\.min\.js\?v=47/ : /shared\.min\.js\?v=48/, `${g.id}: must load the exit-free shared runtime`);
+  for (const g of games) assert.match(g.htmlText, g.id === 'listening' ? /shared\.min\.js\?v=47/ : /shared\.min\.js\?v=49/, `${g.id}: must load the exit-free shared runtime`);
   assert.match(legoHtml, /shared\.min\.js\?v=47/, 'Lego must load the exit-free shared runtime');
 });
 
@@ -506,7 +506,7 @@ test('Tone question words and advanced sentences both follow the shared font mod
 test('Lego consumes the shared two-mode font path without a particle control', () => {
   const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
   const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
-  assert.match(legoHtml, /shared\.min\.js\?v=48/, 'Lego must load the current shared game runtime');
+  assert.match(legoHtml, /shared\.min\.js\?v=47/, 'Lego keeps the unchanged shared game runtime');
   assert.match(legoHtml, /lego-game-app\.js\?v=12/, 'Lego must load its Guest-only quota runtime');
   assert.match(legoApp, /window\.rgToggleFont\s*=\s*function/, 'Lego must expose the shared font adapter API');
   assert.match(legoApp, /classList\.toggle\('rg-modern-font'\)/, 'Lego must preserve the existing standard/modern modes');
@@ -629,10 +629,10 @@ test('all six games keep learning helpers without any rice-button contract', () 
   assert.doesNotMatch(sharedMin, /wm-trigger|textContent\s*=\s*['"]🍚['"]/);
   for (const g of games) {
     assert.match(g.htmlText, /js\/games\/word-menu\.js\?v=10/, `${g.id}: must load the inline learning-tool binder`);
-    assert.match(g.htmlText, g.id === 'listening' ? /js\/core\/shared\.min\.js\?v=47/ : /js\/core\/shared\.min\.js\?v=48/, `${g.id}: must load the rice-button-free shared runtime`);
+    assert.match(g.htmlText, g.id === 'listening' ? /js\/core\/shared\.min\.js\?v=47/ : /js\/core\/shared\.min\.js\?v=49/, `${g.id}: must load the rice-button-free shared runtime`);
     assert.doesNotMatch(g.htmlText, /wm-trigger|點 🍚|<button[^>]*>[^<]*🍚/, `${g.id}: retired rice-button source contract remains`);
   }
-  assert.match(legoHtml, /js\/core\/shared\.min\.js\?v=48/);
+  assert.match(legoHtml, /js\/core\/shared\.min\.js\?v=47/);
   assert.doesNotMatch(legoHtml, /wm-trigger|點 🍚|<button[^>]*>[^<]*🍚/);
   for (const app of [readingApp, typingApp, listeningApp]) assert.doesNotMatch(app, /#wm-trigger/);
   assert.match(games.find((g) => g.id === 'listening').htmlText, /id="zh-toggle-slot"/, 'Listening: translation control ต้องอยู่ใน inline learning tools');
@@ -661,7 +661,7 @@ test('mobile resume uses one compact shared-copy line and three horizontal actio
   for (const g of games) {
     const sharedCssVersion = g.id === 'listening' ? 37 : 38;
     assert.match(g.htmlText, new RegExp(`css/shared\\.css\\?v=${sharedCssVersion}`), `${g.id}: must load current shared game CSS`);
-    assert.match(g.htmlText, g.id === 'listening' ? /js\/core\/shared\.min\.js\?v=47/ : /js\/core\/shared\.min\.js\?v=48/, `${g.id}: must load shared resume copy`);
+    assert.match(g.htmlText, g.id === 'listening' ? /js\/core\/shared\.min\.js\?v=47/ : /js\/core\/shared\.min\.js\?v=49/, `${g.id}: must load shared resume copy`);
     assert.match(g.appText, /GameUiCopy\.resumeLine/, `${g.id}: resume detail must use shared semantic copy`);
   }
 });
@@ -842,7 +842,7 @@ test('Tone active-question guidance permanently locks that question to zero', ()
   assert.match(toneMin, /聲調選擇錯誤/, 'Tone: deployed minified bundle must charge a wrong initial tone answer');
   assert.match(toneMin, /開始練習/, 'Tone: deployed minified bundle must include the guided-question gate');
   assert.match(toneMin, /pageshow/, 'Tone: deployed minified bundle must include the page-return guard');
-  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=82/, 'Tone: page must request the rebuilt shared-framework runtime version');
+  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=83/, 'Tone: page must request the rebuilt shared-framework runtime version');
 });
 
 test('Tone mobile touch surfaces keep Desktop gameplay free of keyboard-only copy', () => {

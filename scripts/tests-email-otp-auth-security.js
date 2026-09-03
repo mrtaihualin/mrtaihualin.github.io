@@ -15,6 +15,7 @@ const mailer = read('supabase/functions/send-transactional-email/index.ts');
 const proof = read('scripts/prove-email-otp-native-bypass.mjs');
 const sqlTest = read('supabase/tests/2026-08-16_email_otp_auth_security_TEST.sql');
 const retention = read('supabase/migrations/20260824025500_phase1_email_otp_retention_cron.sql');
+const resendMigration = read('supabase/migrations/20260903125640_email_otp_resend_one_minute.sql');
 
 let passed = 0;
 function test(label, fn) {
@@ -90,15 +91,22 @@ test('expiry boundary and reuse fail closed', () => {
   assert.strictEqual(expired.state, 'expired');
 });
 
-test('request and verify abuse controls enforce 15m then repeated 60m cooldowns', () => {
+test('request controls allow one-minute resend while preserving abuse escalation', () => {
   assert.match(sql, /last_request_at > v_now - interval '15 minutes'/);
+  assert.match(sql, /v_reason := 'email_15m_limit'/);
   assert.match(sql, /v_ip_15m >= 10 or v_ip_60m >= 30/);
   assert.match(sql, /v_ip_attempts >= 25/);
   assert.ok(sql.indexOf('v_ip_attempts >= 25') < sql.indexOf('if not v_challenge_found then'));
   assert.match(sql, /when v_previous is not null and v_previous >= p_now - interval '60 minutes' then 3600/);
   assert.match(sql, /else 900/);
   assert.match(sql, /perform private\.register_email_otp_violation\('email',[\s\S]*verify_lockout/);
-  assert.match(client, /otpBrokerEnabled\(\) \? 15 \* 60 : 60/);
+  assert.match(client, /otpCooldown = 60/);
+  assert.doesNotMatch(client, /otpCooldown = otpBrokerEnabled\(\) \? 15 \* 60 : 60/);
+  assert.match(resendMigration, /create or replace function public\.begin_email_otp_challenge_internal/);
+  assert.match(resendMigration, /last_request_at > v_now - interval '1 minute'/);
+  assert.match(resendMigration, /v_reason := 'email_1m_limit'/);
+  assert.match(resendMigration, /v_ip_15m >= 10 or v_ip_60m >= 30/);
+  assert.match(resendMigration, /private\.register_email_otp_violation/);
 });
 
 test('Turnstile managed flow is required on both public broker actions', () => {

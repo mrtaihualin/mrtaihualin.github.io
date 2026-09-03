@@ -32,14 +32,14 @@ function ok(value, message) {
 activePages.concat(['vault.html', 'games-challenge.html']).forEach(function (file) {
   var html = read(file);
   var loginFreeSrsPages = ['tone-finder.html', 'reading-game.html', 'listening-game.html', 'typing-game.html', 'word-order.html'];
-  var binding = 'js/core/minimum-guest-launch.js?v=' + (loginFreeSrsPages.indexOf(file) !== -1 ? '10' : '8');
+  var binding = 'js/core/minimum-guest-launch.js?v=' + (loginFreeSrsPages.indexOf(file) !== -1 ? '11' : '9');
   ok(html.indexOf(binding) !== -1, file + ' loads the current Login-entry launch gate');
   ok(html.indexOf(binding) < html.indexOf('</head>'), file + ' loads the launch gate in head');
 });
 
 staticParkedPages.filter(function (file) { return file !== 'line-callback.html'; }).forEach(function (file) {
   var html = read(file);
-  ok(html.indexOf('js/core/minimum-guest-launch.js?v=8') !== -1, file + ' keeps the parked runtime gate with public Login visible');
+  ok(html.indexOf('js/core/minimum-guest-launch.js?v=9') !== -1, file + ' keeps the parked runtime gate with public Login visible');
 });
 ok(read('line-callback.html').indexOf('minimum-guest-launch.js') === -1,
   'LINE callback remains owned by the provider return flow');
@@ -47,7 +47,7 @@ ok(read('line-callback.html').indexOf('minimum-guest-launch.js') === -1,
 var gate = read('js/core/minimum-guest-launch.js');
 ok(gate.indexOf('MRT_MINIMUM_GUEST_LAUNCH = true') !== -1, 'launch flag is explicit');
 ok(gate.indexOf('LOGIN_FREE_SRS_PUBLIC_ENTRY = true') !== -1, 'Login Free SRS entry flag is explicit');
-ok(gate.indexOf("login-surface.js?v=7") !== -1, 'Login surface cache key activates the dedicated SRS identity channel');
+ok(gate.indexOf("login-surface.js?v=8") !== -1, 'Login surface cache key activates the one-minute OTP client');
 ok(gate.indexOf('MRT_PARKED_ACCOUNT_SURFACE = parked.test(path)') !== -1, 'parked account surfaces remain fail-closed');
 ok(gate.indexOf('my-progress') !== -1 && gate.indexOf('games-challenge') !== -1, 'account and Challenge routes are parked');
 ok(gate.indexOf('vault-btn-slot') === -1 && gate.indexOf('a[href="vault.html"]') === -1,

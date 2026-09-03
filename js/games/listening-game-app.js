@@ -626,7 +626,7 @@
     el.reveal.innerHTML = '';
     el.nextBtn.style.display = 'none';
     el.nextBtn.disabled = true;
-    if (el.skipBtn) { el.skipBtn.style.display = 'inline-flex'; el.skipBtn.disabled = false; }
+    if (el.skipBtn) { el.skipBtn.style.display = 'none'; el.skipBtn.disabled = true; }
     updateAttemptHud(w);
 
     if (window.WordAudio) window.WordAudio.setCurrent(w.th);
@@ -678,7 +678,7 @@
     el.nextBtn.style.display = 'none';
     el.nextBtn.disabled = true;
     state.audioFailed = false;
-    if (el.skipBtn) { el.skipBtn.style.display = 'inline-flex'; el.skipBtn.disabled = false; }
+    if (el.skipBtn) { el.skipBtn.style.display = 'none'; el.skipBtn.disabled = true; }
     el.resultBanner.className = 'result-banner gsh-feedback-slot show';
     el.resultBanner.textContent = '請先選擇這一題要用「選擇答案」或「輸入答案」';
   }
@@ -721,13 +721,15 @@
         state.audioFailed = true;
         updateAttemptHud(w);
         el.resultBanner.className = 'result-banner no show';
-        el.resultBanner.textContent = '音檔暫時無法播放，可以按「跳過」進入下一題';
+        el.resultBanner.textContent = '音檔暫時無法播放，請點「跳過此題」';
+        if (el.skipBtn) { el.skipBtn.style.display = 'inline-flex'; el.skipBtn.disabled = false; }
         return;
       }
       if (state.audioFailed) {
         state.audioFailed = false;
         el.resultBanner.className = 'result-banner';
         el.resultBanner.textContent = '';
+        if (el.skipBtn) { el.skipBtn.style.display = 'none'; el.skipBtn.disabled = true; }
       }
       saveResumeState();
       if (listeningScore(state.mode, w, state.listenCount) === 0) finishListeningAtZero(w);
@@ -735,9 +737,8 @@
   }
 
   function skipCurrentQuestion() {
-    if (state.answered) return;
+    if (state.answered || !state.audioFailed) return;
     var w = currentWord();
-    if (!w) return;
     state.answered = true;
     closeTypeKeyboard();
     state.audioFailed = false;
@@ -749,22 +750,20 @@
       typingWrong: 0, wordCount: LISTENING_SCORE.wordCount(w.th),
       unitCount: LISTENING_SCORE.typingUnitCount(w), level: w.level || '初', attempts: []
     });
-    if (state.report && window.RoundReport) {
-      RoundReport.addItem(state.report, {
-        content_ref: { source: 'game_words', key: w.th + '@' + levelNumber(w) },
-        question: w.th, meaning: w.zh || '', attempts: [], user_answer: '',
-        correct_answer: w.th, is_correct: false, is_skipped: true,
-        skip_reason: 'user_skip', wrong_count: 0, item_score: 0, hint_used: false
-      });
-    }
     if (el.skipBtn) { el.skipBtn.style.display = 'none'; el.skipBtn.disabled = true; }
+    el.resultBanner.className = 'result-banner gsh-feedback-slot show';
+    el.resultBanner.textContent = '已跳過這題：不加分、不扣分，也不算作答';
+    state.lastAnswered = w;
+    el.reveal.classList.add('show');
+    renderReveal();
+    var hasNextQuestion = state.idx + 1 < state.round.length;
     state.nextMode = null;
-    state.idx++;
-    if (state.idx >= state.round.length) showEnd();
-    else {
-      saveResumeState();
-      showModeSelectionForCurrent();
-    }
+    el.nextBtn.style.display = 'inline-flex';
+    el.nextBtn.disabled = hasNextQuestion;
+    el.nextBtn.textContent = hasNextQuestion ? '請先選擇下一題模式' : '看結果 →';
+    if (hasNextQuestion) renderModeTabs(null);
+    saveResumeState();
+    if (!hasNextQuestion && window.GameFlow) window.GameFlow.start({ key: 'listening-game', nextButton: el.nextBtn, delaySeconds: 3 });
   }
 
   function renderMC(w) {

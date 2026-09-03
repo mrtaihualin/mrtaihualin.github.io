@@ -101,7 +101,7 @@ test('all six Resume screens reuse Tone 640px geometry and exact three-action co
     const html = read(file);
     const fourGame = game === 'tone' || game === 'reading' || game === 'typing' || game === 'word-order';
     assert.match(html, new RegExp(`css/mobile-landscape\\.css\\?v=${fourGame ? 45 : 34}`), `${file}: must load its current shared Resume CSS`);
-    assert.match(html, /js\/core\/shared\.min\.js\?v=48/, `${file}: must load exact Resume copy`);
+    assert.match(html, new RegExp(`js/core/shared\\.min\\.js\\?v=${fourGame ? 49 : 47}`), `${file}: must load exact Resume copy`);
   }
   const shared = read('js/core/shared.js');
   assert.match(shared, /continueAction: '繼續上次練習'/);
@@ -148,7 +148,7 @@ test('Tone preserves three left, three right and reveal actions in the right slo
   assert.match(css, /body\.gsh-ml-active \[data-gsh-ml-slot="main-action"\] \.rg-ctl-wrap[^}]+position:\s*static !important[^}]+gap:\s*var\(--gsh-ml-top-control-gap\)/);
 });
 
-test('games reuse their requested Desktop top actions with neutral Skip and no invented Word Order Check', () => {
+test('active games reuse their requested Desktop top actions while Listening preserves its audio-failure recovery', () => {
   assert.match(stage, /game === 'reading'\) skip = q\('#btn-skip'\)/);
   assert.match(stage, /game === 'listening'\) skip = q\('#lg-skip-btn'\)/);
   assert.match(stage, /game === 'typing'\) skip = q\('#btn-skip'\)/);
@@ -156,7 +156,8 @@ test('games reuse their requested Desktop top actions with neutral Skip and no i
   assert.doesNotMatch(stage, /createWordOrderCheckAction|data-gsh-ml-owned-action="word-order-check"/);
   assert.match(readingApp, /function skipWord\(\)[\s\S]{0,420}skipped:true[\s\S]{0,180}nextWord\(\)/);
   assert.match(typingApp, /function skipWord\(\)[\s\S]{0,420}skipped:true[\s\S]{0,180}nextWord\(\)/);
-  assert.match(listeningApp, /function skipCurrentQuestion\(\)[\s\S]{0,900}is_skipped: true[\s\S]{0,500}state\.idx\+\+/);
+  assert.match(listeningApp, /function skipCurrentQuestion\(\)[\s\S]{0,180}state\.answered \|\| !state\.audioFailed/);
+  assert.match(listeningApp, /function skipCurrentQuestion\(\)[\s\S]{0,1200}已跳過這題：不加分、不扣分，也不算作答/);
   assert.match(wordOrderApp, /window\.woSkip = function\(\)[\s\S]{0,500}skipped:true[\s\S]{0,160}window\.woNext\(\)/);
   assert.match(wordOrderApp, /window\.woCheck = function\(\)[\s\S]{0,180}checkAnswer\(\)/);
   assert.doesNotMatch(wordOrderApp, /woManualCheckSurface|orientation: landscape[^\n]+max-height: 600px/);
@@ -254,7 +255,7 @@ test('Typing exposes 47 character keys and two synchronized one-shot Shift contr
   assert.match(typingApp, /KeyB:'ฺ'/);
   assert.match(typingApp, /rgKeyboardLabelHTML\(sh\)[\s\S]{0,100}rgKeyboardLabelHTML\(un\)/);
   assert.match(read('typing-game.html'), /\.tkbd\.shift-on \.tk-key \.tk-shift[^{]*\{font-size:15px/);
-  assert.match(read('typing-game.html'), /typing-game-app\.min\.js\?v=45/);
+  assert.match(read('typing-game.html'), /typing-game-app\.min\.js\?v=47/);
   assert.match(css, /data-gsh-game="typing"[\s\S]{0,180}#rg-kbd[^}]+max-width: none !important/);
   assert.match(css, /#rg-kbd \.gsh-split-kbd-row[^}]+grid-template-columns: minmax\(0, 30fr\) minmax\(0, 40fr\) minmax\(0, 30fr\) !important/);
   assert.match(css, /#rg-kbd\.shift-on \.tk-key \.tk-shift[\s\S]{0,160}font-weight: 700/);
@@ -298,7 +299,7 @@ test('four-game refinements expose original controls and one shared modal shell'
   assert.match(stage, /data-gsh-ml-unavailable[\s\S]{0,500}!control \|\| !!control\.disabled/);
   assert.match(css, /data-gsh-ml-unavailable="true"[\s\S]{0,180}cursor: not-allowed/);
   assert.match(css, /#tf-howto-modal,[\s\S]{0,180}#rg-howto-modal,[\s\S]{0,180}#wo-howto-modal[\s\S]{0,180}z-index: 100002 !important/);
-  assert.match(wordOrder, /word-order-app\.min\.js\?v=37/);
+  assert.match(wordOrder, /word-order-app\.min\.js\?v=38/);
 });
 
 console.log(`\n✅ Mobile Landscape 5.2 tests passed (${passed} checks)`);

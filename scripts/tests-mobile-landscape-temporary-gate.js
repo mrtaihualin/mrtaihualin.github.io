@@ -28,50 +28,26 @@ function test(name, fn) {
   }
 }
 
-test('gate is allowlisted to the exact current four-game scope only', () => {
-  assert.match(shared, /var games = \['tone', 'reading', 'typing', 'word-order'\]/);
-  assert.match(shared, /games\.indexOf\(game\) === -1/);
-  assert.doesNotMatch(shared, /var games = \[[^\]]*(?:listening|lego|challenge|games|practice)/);
+test('accepted four-game Mobile Landscape no longer has the temporary blocker', () => {
+  [shared, min].forEach((source) => {
+    assert.doesNotMatch(source, /gsh-landscape-temporary-gate/);
+    assert.doesNotMatch(source, /手機橫向模式目前尚未開放/);
+    assert.doesNotMatch(source, /請使用直向模式/);
+  });
+});
+
+test('the exact four accepted games fetch the released shared Landscape runtime', () => {
   games.forEach(([game, file]) => {
     const html = read(file);
     assert.match(html, new RegExp('<body[^>]+data-gsh-game="' + game + '"'));
-    assert.match(html, /js\/core\/shared\.min\.js\?v=48/);
+    assert.match(html, /js\/core\/shared\.min\.js\?v=49/);
+    assert.match(html, /js\/core\/mobile-landscape\.js\?v=32/);
   });
+});
+
+test('Listening and Lego remain outside the four-game activation cache key', () => {
   assert.match(read('listening-game.html'), /js\/core\/shared\.min\.js\?v=47/);
   assert.match(read('lego.html'), /js\/core\/shared\.min\.js\?v=47/);
 });
 
-test('only the current short-screen landscape contract activates the gate', () => {
-  assert.match(shared, /matchMedia\('\(orientation: landscape\) and \(max-width: 1024px\) and \(max-height: 600px\)'\)/);
-  assert.match(shared, /if \(query\.matches\) enterGate\(\);[\s\S]{0,80}else leaveGate\(\);/);
-  assert.match(shared, /query\.addEventListener\('change', syncGate\)/);
-  assert.match(shared, /window\.addEventListener\('orientationchange', syncGate\)/);
-});
-
-test('Traditional Chinese copy preserves the temporary Portrait instruction', () => {
-  assert.match(shared, /請使用直向模式/);
-  assert.match(shared, /手機橫向模式目前尚未開放，請先將手機轉回直向繼續使用。/);
-  assert.ok(min.includes('請使用直向模式'));
-  assert.ok(min.includes('手機橫向模式目前尚未開放'));
-});
-
-test('landscape surface is a blocking accessible dialog', () => {
-  assert.match(shared, /overlay\.id = 'gsh-landscape-temporary-gate'/);
-  assert.match(shared, /setAttribute\('role', 'dialog'\)/);
-  assert.match(shared, /setAttribute\('aria-modal', 'true'\)/);
-  assert.match(shared, /z-index:2147483647/);
-  assert.match(shared, /touch-action:none/);
-  assert.match(shared, /overlay\.focus/);
-  assert.match(shared, /new MutationObserver/);
-});
-
-test('underlying interaction and accessibility state are restored on Portrait', () => {
-  assert.match(shared, /node\.setAttribute\('aria-hidden', 'true'\)/);
-  assert.match(shared, /node\.setAttribute\('inert', ''\)/);
-  assert.match(shared, /entry\.ariaHidden === null[\s\S]{0,100}removeAttribute\('aria-hidden'\)/);
-  assert.match(shared, /entry\.hadInert[\s\S]{0,100}removeAttribute\('inert'\)/);
-  assert.match(shared, /previousFocus\.focus/);
-  assert.match(shared, /overlay\.hidden = true/);
-});
-
-console.log('\n✅ Mobile Landscape temporary gate tests passed (' + passed + ' checks)');
+console.log('\n✅ Mobile Landscape release-gate tests passed (' + passed + ' checks)');

@@ -1,6 +1,19 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-09-03 Asia/Bangkok** — Hidden Login Free Review source reconciliation
+**Updated: 2026-09-03 Asia/Bangkok** — Combined Mobile Landscape + Email OTP release candidate
+
+## 2026-09-03 — Mobile Landscape accepted UI (`SOURCE_PASS / HUMAN_PASS / RELEASE_AUTHORIZED`)
+
+- Consolidated the accepted shared Landscape presentation and controls for Tone, Reading, Typing and Word Order onto current GitLab `main`. The temporary rotate-to-Portrait blocker is removed only for these four released surfaces; Listening and Lego keep their existing runtime cache boundary.
+- Reused the existing Desktop game actions and account behavior. The shared menu, `已登入` account popup, lower-right Position 2 action, reserved no-option zone and Reading split choices use the game-owned handlers; no parallel gameplay handler was introduced.
+- Reading now renders standalone Thai tone marks as proportioned inline SVG paths without a carrier consonant or dotted circle. Desktop, Mobile Portrait and Mobile Landscape browser checks show ten choices with zero overlap; the accepted Landscape check remains in its reserved Position 2 area.
+- Focused Mobile Landscape 19/19, Reading 18/18, neutral action 7/7, owner-race 12/12, shared-game 52/52, launch/Login and nav checks pass. The protected legacy 735-word corpus was not read or used.
+
+## 2026-09-03 — Email OTP one-minute resend (`SOURCE_PASS / PRODUCTION_AUTHORIZED`)
+
+- Lin explicitly authorized changing the same-email Email OTP resend interval from 15 minutes to 1 minute and releasing it with the accepted UI. Added one atomic forward migration that replaces only `public.begin_email_otp_challenge_internal` at that boundary.
+- The client countdown is exactly 60 seconds across every public Login surface. Existing 10-minute OTP expiry, five-attempt limit, IP 15m/60m request windows, Turnstile, generic responses, private HMAC-only storage and 15m/60m abuse escalation remain unchanged.
+- Email OTP security verification passes 14/14, including the immutable historical SQL checksum, the new migration contract and the refreshed Login cache chain. Paid, Challenge and unrelated Production work remain outside this release.
 
 ## 2026-09-03 — Mobile Landscape Position 2 controls (`PASS_LOCAL / HUMAN_PASS / PRODUCTION_UNCHANGED`)
 

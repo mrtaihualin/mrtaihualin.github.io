@@ -19,20 +19,20 @@ check(/games-challenge/.test(gate), 'Challenge remains parked');
 var pages = ['tone-finder.html', 'reading-game.html', 'listening-game.html', 'typing-game.html', 'word-order.html'];
 pages.forEach(function (file) {
   var html = read(file);
-  check(html.indexOf('js/core/minimum-guest-launch.js?v=10') !== -1, file + ' fetches the SRS-enabled launch gate with a fresh cache key');
+  check(html.indexOf('js/core/minimum-guest-launch.js?v=11') !== -1, file + ' fetches the SRS-enabled launch gate with a fresh cache key');
   check(html.indexOf('js/games/tone-server.js?v=6') !== -1, file + ' loads the authenticated SRS transport');
   check(html.indexOf('game-account.js') === -1, file + ' does not activate score/gamification account runtime');
   check(html.indexOf('practice-events.js') === -1, file + ' does not activate durable score/progress reporting');
   check(html.indexOf('games-challenge-app.js') === -1, file + ' does not activate Challenge runtime');
 });
 check(read('lego.html').indexOf('tone-server.js') === -1, 'Lego receives no SRS runtime');
-check(read('js/core/minimum-guest-launch.js').indexOf('login-surface.js?v=7') !== -1, 'SRS pages fetch the Login surface with a fresh cache key');
-check(read('js/core/login-surface.js').indexOf('reading-auth.js?v=30') !== -1, 'Login surface fetches the dedicated SRS identity channel with a fresh cache key');
-check(read('reading-game.html').indexOf('reading-auth.js?v=30') !== -1, 'Reading direct provider flow fetches the dedicated SRS identity channel');
-check(read('tone-finder.html').indexOf('tone-finder-game.min.js?v=82') !== -1, 'Tone fetches the SRS-enabled game runtime');
-check(read('reading-game.html').indexOf('reading-game-app.min.js?v=48') !== -1, 'Reading fetches the SRS-enabled game runtime');
-check(read('typing-game.html').indexOf('typing-game-app.min.js?v=46') !== -1, 'Typing fetches the SRS-enabled game runtime');
-check(read('word-order.html').indexOf('word-order-app.min.js?v=34') !== -1, 'Word Order fetches the SRS-enabled game runtime');
+check(read('js/core/minimum-guest-launch.js').indexOf('login-surface.js?v=8') !== -1, 'SRS pages fetch the Login surface with a fresh cache key');
+check(read('js/core/login-surface.js').indexOf('reading-auth.js?v=31') !== -1, 'Login surface fetches the one-minute OTP client');
+check(read('reading-game.html').indexOf('reading-auth.js?v=31') !== -1, 'Reading direct provider flow fetches the one-minute OTP client');
+check(read('tone-finder.html').indexOf('tone-finder-game.min.js?v=83') !== -1, 'Tone fetches the current game runtime');
+check(read('reading-game.html').indexOf('reading-game-app.min.js?v=52') !== -1, 'Reading fetches the current game runtime');
+check(read('typing-game.html').indexOf('typing-game-app.min.js?v=47') !== -1, 'Typing fetches the current game runtime');
+check(read('word-order.html').indexOf('word-order-app.min.js?v=38') !== -1, 'Word Order fetches the current game runtime');
 
 [
   ['js/games/tone-finder-game.js', /tfMinimumGuestOnly\(\) && window\.LOGIN_FREE_SRS_PUBLIC_ENTRY !== true/],

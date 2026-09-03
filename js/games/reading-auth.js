@@ -536,7 +536,7 @@
       }, failVerify).catch(failVerify);
   }
   function startCooldown() {
-    otpCooldown = otpBrokerEnabled() ? 15 * 60 : 60;
+    otpCooldown = 60;
     if (otpTimer) clearInterval(otpTimer);
     function tick() {
       var b = rgGate && rgGate.querySelector('#rg-resend');

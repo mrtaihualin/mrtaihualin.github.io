@@ -60,12 +60,14 @@ test('Reading and Typing Skip log neutral evidence then advance without SRS call
   });
 });
 
-test('Listening Skip is always available in a live question and bypasses answer or SRS mutation', () => {
+test('Listening preserves its audio-failure-only recovery without answer or SRS mutation', () => {
   const body = between(listening, 'function skipCurrentQuestion() {', '\n  function renderMC(w) {');
-  assert.match(body, /is_skipped: true/);
-  assert.match(body, /state\.idx\+\+/);
+  assert.match(body, /state\.answered \|\| !state\.audioFailed/);
+  assert.match(body, /已跳過這題：不加分、不扣分，也不算作答/);
+  assert.doesNotMatch(body, /is_skipped: true|state\.idx\+\+/);
   assert.doesNotMatch(body, /finishAnswer\(|claimAttempt\(|sendListeningSrs\(|state\.(correct|wrong|primaryTotal|typingBonusTotal)\+\+/);
-  assert.match(listening, /function showQuestion\([\s\S]{0,1200}skipBtn\.style\.display = 'inline-flex'/);
+  assert.match(listening, /function showQuestion\([\s\S]{0,1200}skipBtn\.style\.display = 'none'/);
+  assert.match(listening, /if \(!ok\) \{[\s\S]{0,700}skipBtn\.style\.display = 'inline-flex'/);
 });
 
 test('Word Order auto-checks after the last word on every surface and neutral Skip never touches SRS', () => {
