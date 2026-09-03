@@ -115,7 +115,7 @@ check('Listening Score และ Typing Bonus เก็บแยกใน eviden
 check('Listening DTO เก็บเฉพาะค่าที่ Submit และ listen count', /itemAttempts\.push\(\{ answer: val, is_correct: isCorrect, mode: 'type' \}\)/.test(app) && /listen_count: state\.listenCount/.test(app) && !/rawKeystrokes|raw_keystrokes/.test(app));
 check('จบรอบบันทึก account session เป็น game=listening', /READING_AUTH\.saveScore\(state\.primaryTotal \+ state\.typingBonusTotal, 1, 'listening'/.test(app));
 check('reading-auth รองรับ route/game listening', /listening-game/.test(auth) && /'listening'/.test(auth) && /score-submit/.test(auth));
-check('Listening parks auth/server but keeps shared Guest score before app boot', !/reading-auth\.js/.test(html) && !/tone-server\.js/.test(html) && /typing-score\.js\?v=1/.test(html) && /listening-score\.js\?v=1/.test(html));
+check('Listening keeps gameplay parked while loading only the approved SRS transport', !/reading-auth\.js/.test(html) && /tone-server\.js\?v=5/.test(html) && /typing-score\.js\?v=1/.test(html) && /listening-score\.js\?v=1/.test(html));
 check('Listening มี 玩法 ที่เปิดดูซ้ำได้และอธิบายกติกา 0 แยกสอง score', /id="lg-howto-modal"/.test(html) && /📖 玩法/.test(html) && /打字加分降到 0/.test(html) && /聽力分數降到 0/.test(html));
 check('Edge แยก SRS game=listening', /"reading", "listening", "typing"/.test(edge));
 check('item ใหม่ต่ำกว่า 10 ไม่สร้าง SRS', /below_entry_score/.test(edge));

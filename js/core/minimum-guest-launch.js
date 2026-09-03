@@ -20,10 +20,11 @@
     }
   }
 
-  // LOGIN-L8 opens only the Login Core entry. Minimum Guest continues to own
-  // gameplay, score, SRS, Leaderboard and Challenge isolation. Task 3 opens
-  // only the authenticated Personal Data/Search surface inside this boundary.
+  // LOGIN-L8 opens the Login Core entry. The separately approved Login Free
+  // SRS release enables only the authenticated five-game SRS owner; score,
+  // Review, Leaderboard, Paid and Challenge remain parked.
   window.LOGIN_CORE_PUBLIC_ENTRY = true;
+  window.LOGIN_FREE_SRS_PUBLIC_ENTRY = true;
   if (window.LOGIN_CORE_PUBLIC_ENTRY !== true) clearAuthCallbackFragment();
   window.MRT_MINIMUM_GUEST_LAUNCH = true;
   document.documentElement.classList.add('minimum-guest-launch');
@@ -37,7 +38,7 @@
   }
   if (!document.querySelector('script[src*="login-surface.js"]')) {
     var loginController = document.createElement('script');
-    loginController.src = 'js/core/login-surface.js?v=6';
+    loginController.src = 'js/core/login-surface.js?v=7';
     loginController.defer = true;
     document.head.appendChild(loginController);
   }

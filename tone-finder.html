@@ -55,6 +55,7 @@
 <script defer src="js/core/supabase-config.js?v=10"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script>
 <script defer src="js/games/round-report.js?v=4"></script>
+<script defer src="js/games/tone-server.js?v=5"></script><!-- Login Free SRS only; Review/Paid/Challenge remain parked -->
 <script src="js/games/protected-word-audio.js?v=3"></script><!-- Core 5: isolated Guest audio client -->
 <script src="js/games/word-menu.js?v=10"></script><!-- เครื่องมือช่วยเรียนแบบแถวตรง -->
 <script src="js/core/network-guard.js?v=1"></script>
@@ -2004,7 +2005,7 @@ document.addEventListener('contextmenu', function(e){
   ]
 }
 </script>
-<script src="js/core/minimum-guest-launch.js?v=8"></script>
+<script src="js/core/minimum-guest-launch.js?v=9"></script>
 <script defer src="js/games/word-vault.js?v=8"></script>
 <script defer src="js/games/sentence-vault.js?v=4"></script>
 </head>
@@ -2211,7 +2212,7 @@ document.addEventListener('contextmenu', function(e){
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/tone-finder-game.min.js?v=80'], {game:'tone'}).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/tone-finder-game.min.js?v=81'], {game:'tone'}).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 

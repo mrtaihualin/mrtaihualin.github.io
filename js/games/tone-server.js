@@ -91,7 +91,7 @@
   function loggedIn() {
     try {
       if (window.TF_AUTH && window.TF_AUTH.loggedIn && window.TF_AUTH.loggedIn()) return true;
-      if (window.READING_AUTH && window.READING_AUTH.user) return true;
+      if (window.READING_AUTH && window.READING_AUTH.srsUser) return true;
     } catch (e) {}
     return false;
   }

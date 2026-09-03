@@ -180,7 +180,7 @@ test('Reading exposes Login Core while other Core 5 pages keep Auth parked and a
   });
   const reading = read('reading-game.html');
   assert.match(reading, /auth-widget\.js\?v=17/);
-  assert.match(reading, /reading-auth\.js\?v=29/);
+  assert.match(reading, /reading-auth\.js\?v=30/);
   assert.doesNotMatch(reading, /game-account\.js|learning-summary\.js|practice-events\.js/);
   assert.match(reading, /protected-word-audio\.js\?v=3/);
 });

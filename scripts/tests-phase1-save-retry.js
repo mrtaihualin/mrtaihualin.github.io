@@ -87,18 +87,20 @@ test('personal vault saves and deletes use bounded owner-safe online retry', () 
   assert.match(wordVault, /if \(!_ownerIsCurrent\(owner\)\) return;[\s\S]{0,180}delete _saveInFlight\[th\]/);
   assert.match(sentenceVault, /if \(!ownerIsCurrent\(owner\)\) return;[\s\S]{0,180}delete _saveInFlight\[th\]/);
 });
-test('Reading exposes Login Core while Core 5 personal round-save clients remain parked', () => {
+test('Login Core exposes only the idempotent SRS round client', () => {
   ['tone-finder.html','listening-game.html','typing-game.html','word-order.html'].forEach((page) => {
     const html = read(page);
-    assert.doesNotMatch(html, /tone-server\.js/);
+    assert.match(html, /tone-server\.js\?v=5/);
     assert.match(html, /network-guard\.js\?v=1/);
     assert.doesNotMatch(html, /reading-auth\.js/);
+    assert.doesNotMatch(html, /game-account\.js|practice-events\.js/);
   });
   const reading = read('reading-game.html');
-  assert.doesNotMatch(reading, /tone-server\.js/);
+  assert.match(reading, /tone-server\.js\?v=5/);
   assert.match(reading, /network-guard\.js\?v=1/);
-  assert.match(reading, /reading-auth\.js\?v=29/);
+  assert.match(reading, /reading-auth\.js\?v=30/);
   assert.match(readingAuth, /if \(publicLoginOnly\) return null;/);
+  assert.match(readingAuth, /API\.srsUser = publicLoginSrs \? loginUser : API\.user/);
 });
 
 if (!process.exitCode) console.log('\n✅ Phase 1 API/Edge/save/retry safety passed (' + passed + ' checks)');

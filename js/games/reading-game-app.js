@@ -282,7 +282,7 @@ var sylWrongCount=[];          // งานที่1: จำนวนครั�
 var wordUsedGuide=false;       // งานที่3: เปิดคำใบ้ระหว่างเช็คคำตอบหน่วยนี้ไหม (ถ้าใช่ = 0 คะแนน + ไม่นับ SRS)
 var curWordIsKnownCheck=false; // งานที่7: กำลังอยู่ในด่านพิสูจน์ "已記得" ของคำนี้ไหม (ไม่มีคำใบ้ ไม่ได้แต้ม/ดาว)
 function rgMinimumGuestOnly(){return typeof window.isMinimumGuestOnly==='function'&&window.isMinimumGuestOnly();}
-function rgLoggedIn(){ if(rgMinimumGuestOnly())return false;try{ return !!(window.READING_AUTH && READING_AUTH.user); }catch(e){ return false; } }
+function rgLoggedIn(){ if(rgMinimumGuestOnly()&&window.LOGIN_FREE_SRS_PUBLIC_ENTRY!==true)return false;try{ return !!(window.READING_AUTH && READING_AUTH.srsUser); }catch(e){ return false; } }
 // ── SRS ใหม่ (งานที่4 — ลอกจาก TF_SRS ในเกมเสียง tone-finder.html ~2939-3018 ทุกจุด) ──
 // แทนที่ masteredSet/correctCountMap/reviewDates เดิม (นับถูกติดกันธรรมดา ไม่รีเซ็ตเมื่อผิด) ด้วย stage-based 1→7→16 วัน
 var RG_SRS_CFG={INTERVALS:[1,7],CLEAN_ROUNDS_TO_MASTER:3}; // New → Day 1 → Day 7 → Mastered
@@ -609,7 +609,7 @@ var __rgLearningOwnerEpoch=0;
 var __rgSrsRequestSequence=0;
 var __rgLatestSrsRequest=0;
 function rgSrsOwnerCurrent(ownerId,ownerEpoch,requestId){
-  var currentId=(window.READING_AUTH&&READING_AUTH.user&&String(READING_AUTH.user.id))||'';
+  var currentId=(window.READING_AUTH&&READING_AUTH.srsUser&&String(READING_AUTH.srsUser.id))||'';
   var currentEpoch=Number(window.SITE_AUTH&&SITE_AUTH.learningOwnerEpoch)||0;
   if(currentId!==ownerId||currentEpoch!==ownerEpoch)return false;
   if(requestId!=null&&requestId!==__rgLatestSrsRequest)return false;
@@ -630,7 +630,7 @@ function rgSyncSrsFromServer(force){
   if(!sb||!sb.from) return Promise.resolve(false);
   // dedupe fetch 2026-07-20: rgWireSrsSync รีเซ็ต __rgSrsSyncPromise แล้วเรียกฟังก์ชันนี้ใหม่ทุกครั้งที่ SITE_AUTH.onChange ยิง
   //   (หลายรอบต่อโหลดหน้าเดียว) → ห่อ fetch ด้วย getCachedFetch กันยิง Supabase ซ้ำทั้งที่ user เดิม
-  var _uid=String(READING_AUTH.user.id);
+  var _uid=String(READING_AUTH.srsUser.id);
   var _ownerEpoch=Number(window.SITE_AUTH&&SITE_AUTH.learningOwnerEpoch)||0;
   var _requestId=++__rgSrsRequestSequence;__rgLatestSrsRequest=_requestId;
   var _fetchSrs = window.getCachedFetch
@@ -678,7 +678,7 @@ function rgWireSrsSync(){
     _rgT++;
     try{
       if(window.__rgSrsSyncedOnce){ clearInterval(_rgIv); return; }
-      if(rgLoggedIn()){ var ownerId=String(READING_AUTH.user.id),ownerEpoch=Number(SITE_AUTH&&SITE_AUTH.learningOwnerEpoch)||0; rgSyncSrsFromServer(true).then(function(){ if(!rgSrsOwnerCurrent(ownerId,ownerEpoch))return; try{ initGame(); }catch(e){} }); }
+      if(rgLoggedIn()){ var ownerId=String(READING_AUTH.srsUser.id),ownerEpoch=Number(SITE_AUTH&&SITE_AUTH.learningOwnerEpoch)||0; rgSyncSrsFromServer(true).then(function(){ if(!rgSrsOwnerCurrent(ownerId,ownerEpoch))return; try{ initGame(); }catch(e){} }); }
     }catch(e){}
     if(_rgT>=24) clearInterval(_rgIv);
   }, 500);

@@ -105,8 +105,9 @@ if (document.fonts && document.fonts.load) {
 <script defer src="js/core/supabase-config.js?v=10"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script>
 <script defer src="js/core/auth-widget.js?v=17"></script>
-<script defer src="js/games/reading-auth.js?v=29"></script>
+<script defer src="js/games/reading-auth.js?v=30"></script>
 <script defer src="js/games/round-report.js?v=3"></script>
+<script defer src="js/games/tone-server.js?v=5"></script><!-- Login Free SRS only; Review/Paid/Challenge remain parked -->
 <script src="js/games/protected-word-audio.js?v=3"></script><!-- Core 5: isolated Guest audio client -->
 <script src="js/games/word-menu.js?v=10"></script><!-- เครื่องมือช่วยเรียนแบบแถวตรง -->
 <script src="js/core/network-guard.js?v=1"></script>
@@ -463,7 +464,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   ]
 }
 </script>
-<script src="js/core/minimum-guest-launch.js?v=8"></script>
+<script src="js/core/minimum-guest-launch.js?v=9"></script>
 <script defer src="js/games/word-vault.js?v=8"></script>
 <script defer src="js/games/sentence-vault.js?v=4"></script>
 </head>
@@ -776,7 +777,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/reading-game-app.min.js?v=46'], {game:'reading'}).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/reading-game-app.min.js?v=47'], {game:'reading'}).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 </div><!-- /.v3-page -->

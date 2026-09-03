@@ -243,7 +243,7 @@ test('all scoped pages use one fail-closed Login surface and game pages permanen
   for (const file of gamePages) {
     const html = fs.readFileSync(path.join(root, file), 'utf8');
     assert.doesNotMatch(html, /ANN-BAND|ann-band|avail-band|annDismissed|annGoTo|annPrev|annNext/, `${file}: announcement DOM/marker/script/style hook must be removed`);
-    assert.match(html, /minimum-guest-launch\.js\?v=8/, `${file}: must load the Reading-authority Login gate`);
+    assert.match(html, file === 'lego.html' ? /minimum-guest-launch\.js\?v=8/ : /minimum-guest-launch\.js\?v=9/, `${file}: must load the Reading-authority Login gate`);
     assert.match(html, /shared\.min\.js\?v=(?:47|48)/, `${file}: must load the announcement-free game runtime`);
   }
   for (const file of nonGameScopedPages) {
@@ -259,7 +259,7 @@ test('all scoped pages use one fail-closed Login surface and game pages permanen
   assert.match(sharedMin, /document\.body&&!document\.body\.hasAttribute\("data-gsh-game"\)\?document\.getElementById\("ann-band"\):null/, 'deployed shared runtime must keep the non-game announcement guard');
   assert.doesNotMatch(sharedCss, /(^|[},]\s*)\.avail-band\s*\{/m, 'announcement CSS must never target an unscoped game surface');
   assert.match(minimumGuest, /window\.MRT_PARKED_ACCOUNT_SURFACE = parked\.test\(path\)/);
-  assert.match(minimumGuest, /loginController\.src = 'js\/core\/login-surface\.js\?v=6'/, 'public pages must request the extensionless-route Login controller');
+  assert.match(minimumGuest, /loginController\.src = 'js\/core\/login-surface\.js\?v=7'/, 'public pages must request the extensionless-route Login controller');
   assert.doesNotMatch(minimumGuest, /location\.replace\('\/games\.html\?guest_launch=1'\)/);
   assert.match(loginJs, /'tone-finder\.html'[\s\S]*'reading-game\.html'[\s\S]*'listening-game\.html'[\s\S]*'typing-game\.html'[\s\S]*'word-order\.html'[\s\S]*'lego\.html'/);
   assert.match(loginJs, /function sourceFilename\(pathname\)[\s\S]{0,520}if \(filename\.indexOf\('\.'\) === -1\) filename \+= '\.html'[\s\S]{0,120}var filename = sourceFilename\(window\.location\.pathname\)/, 'Cloudflare extensionless routes must resolve to canonical Login page keys');
@@ -839,7 +839,7 @@ test('Tone active-question guidance permanently locks that question to zero', ()
   assert.match(toneMin, /聲調選擇錯誤/, 'Tone: deployed minified bundle must charge a wrong initial tone answer');
   assert.match(toneMin, /開始練習/, 'Tone: deployed minified bundle must include the guided-question gate');
   assert.match(toneMin, /pageshow/, 'Tone: deployed minified bundle must include the page-return guard');
-  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=80/, 'Tone: page must request the rebuilt shared-framework runtime version');
+  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=81/, 'Tone: page must request the rebuilt shared-framework runtime version');
 });
 
 test('Tone mobile touch surfaces keep Desktop gameplay free of keyboard-only copy', () => {
