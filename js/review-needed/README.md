@@ -111,10 +111,17 @@ Earlier commits and checklist rows remain history. This Delta starts at `c3b0d78
 - Complete SRS natural-time evidence and any required Human/Product UI/public-release gates.
 - Obtain separate authorization for public flag/entry/navigation, push/PR/merge/deploy, Production/Staging and activation.
 
+## Canonical Free200 rebase checkpoint — 2026-09-03
+
+- Rebased onto GitLab main `3cc801b8e8e1fd9b1eee5b6eebdfc098f1ebc7b3` after protected MR !8 and retained the Login Free SRS owner already on that main.
+- Word identity now follows exact protected `game_words.content_key`, including sense suffixes; display text is never used to collapse two canonical meanings.
+- The migration is ordered after the Free200 and Login Free SRS migrations. Its empty-schema rollback refuses to remove any Review or stable-item SRS data.
+- Source remains default OFF and unlinked. Final public placement, copy and within-group presentation require Lin's Product decision before UI implementation.
+
 ## Integration source checkpoint — 2026-08-27
 
 - The hidden bridge now requires two server-owner seams before reading state: exact `content_ref` resolution to one stable item and a per-game server-verified learning score. It never reads client `item_id` or `learning_score` as authority.
-- `supabase/migrations/20260827111028_phase1_learning_review_atomic_source.sql` prepares the Free-only atomic owner, CAS, durable idempotency, exact replay/conflict handling, stable-id SRS stage-0 entry and deny-by-default privileges.
+- `supabase/migrations/20260903090000_phase1_learning_review_atomic_source.sql` prepares the Free-only atomic owner after the canonical Free200 and Login Free SRS migrations, with CAS, durable idempotency, exact replay/conflict handling, stable-id SRS stage-0 entry and deny-by-default privileges.
 - The source is committed preparation only. It is not applied anywhere and must wait for Free SRS Day 8 PASS plus fresh Pre-Work, Security, migration-collision and rollback gates. Paid/Public/Production remain disabled.
 - The five-game server verifier source is now prepared under `score-submit` with a hard default-OFF constant. Tone recomputes the raw ladder/component average, Reading recomputes the first-check syllable average, Listening keeps primary listening score only, Typing derives its quota from protected canonical units, and Word Order derives remaining life from wrong/hint primitives. Every path excludes combo/golden/level/end-round/SRS bonuses, rejects client learning-score authority and fails closed on missing/ambiguous content. No Review/RPC mutation is wired or activated.
 

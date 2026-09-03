@@ -1,6 +1,15 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-09-03 Asia/Bangkok** — Canonical Free 200 cutover
+**Updated: 2026-09-03 Asia/Bangkok** — Hidden Login Free Review source reconciliation
+
+## 2026-09-03 — Hidden Login Free Review (`SOURCE_REBASED / DEFAULT_OFF / UI_DECISION_PENDING / PRODUCTION_UNCHANGED`)
+
+- Rebased the seven hidden Review candidate commits onto canonical GitLab main `3cc801b8e8e1fd9b1eee5b6eebdfc098f1ebc7b3`, preserving the canonical Free200 catalog, `contentKey` sense identity, Login Free SRS owner and `game-content` v31 source.
+- Review source now resolves protected vocabulary by exact Free200 `content_key`, including same-spelling sense suffixes, while keeping per-user/per-game/per-level/stable-item isolation, atomic CAS/idempotency and no SRS backflow. The server verifier, client bridge and public entry remain default OFF; Paid and Challenge remain OFF.
+- Moved the unapplied Review migration after the Free200/SRS migrations and added a fail-closed zero-data schema rollback. An in-use rollback preserves data by disabling the runtime; destructive schema removal is blocked whenever Review or stable-item SRS data exists.
+- Hidden candidate, integration, verifier, PostgreSQL migration/RLS/isolation/rollback, SRS, five-game and Free200 regressions pass. Final Product placement/copy remains a Lin decision; no Staging/Production mutation, deploy, public activation or real-user action was performed.
+
+**Prior update: 2026-09-03 Asia/Bangkok** — Canonical Free 200 cutover
 
 ## 2026-09-03 — Canonical Free 200 (`AUTHORIZED / CUTOVER_IN_PROGRESS`)
 

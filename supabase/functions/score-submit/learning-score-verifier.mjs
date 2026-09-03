@@ -40,6 +40,13 @@ function canonicalKey(row) {
   return String(row && (row.th || row.word) || '').trim();
 }
 
+function canonicalContentRefKey(row, source, difficulty) {
+  if (source === 'game_sentences') return canonicalKey(row);
+  const stableKey = String(row && row.content_key || '').trim();
+  if (stableKey) return stableKey;
+  return canonicalKey(row) + '@' + levelNumber(difficulty, row);
+}
+
 function itemContentRef(game, difficulty, item, requireExplicit) {
   const raw = item.contentRef || item.content_ref;
   if (!raw) {
@@ -57,17 +64,15 @@ function itemContentRef(game, difficulty, item, requireExplicit) {
 
 function exactCanonicalRow(game, difficulty, item, rows, requireExplicit) {
   const ref = itemContentRef(game, difficulty, item, requireExplicit);
-  const lookupKey = ref.source === 'game_words' ? ref.key.replace(/@[123]$/, '') : ref.key;
-  const refLevel = ref.source === 'game_words' ? Number((ref.key.match(/@([123])$/) || [])[1]) : null;
   const matches = (Array.isArray(rows) ? rows : []).filter((row) => {
-    if (canonicalKey(row) !== lookupKey) return false;
-    return ref.source !== 'game_words' || levelNumber(difficulty, row) === refLevel;
+    return canonicalContentRefKey(row, ref.source, difficulty) === ref.key;
   });
   if (matches.length !== 1) fail('content_ref_not_unique');
   const row = matches[0];
   if (ref.source === 'game_words') {
-    const expected = canonicalKey(row) + '@' + levelNumber(difficulty, row);
-    if (ref.key !== expected || own(row, 'th')) fail('content_ref_identity_mismatch');
+    if (!own(row, 'word') || ref.key !== canonicalContentRefKey(row, ref.source, difficulty)) {
+      fail('content_ref_identity_mismatch');
+    }
   } else if (!own(row, 'th') || ref.key !== canonicalKey(row)) {
     fail('content_ref_identity_mismatch');
   }

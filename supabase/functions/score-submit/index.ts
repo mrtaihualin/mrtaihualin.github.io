@@ -104,12 +104,12 @@ serve(async (req) => {
     } else if (isSentence) {
       canonical = await admin.from('game_sentences').select('th,wc').in('th', keys);
     } else {
-      let query = admin.from('game_words').select('word,level,syls,read_syls,reading_th').in('word', keys);
+      let query = admin.from('game_words').select('content_key,word,level,syls,read_syls,reading_th').in('content_key', keys);
       if (accepted.difficulty !== 'mixed') query = query.eq('level', accepted.difficulty);
       canonical = await query;
     }
     if (canonical.error) return reply(origin, { error: 'content_validation_unavailable' }, 503);
-    const canonicalKeys = new Set((canonical.data || []).map((row) => row.th || row.word));
+    const canonicalKeys = new Set((canonical.data || []).map((row) => row.content_key || row.th || row.word));
     if (keys.some((key) => !canonicalKeys.has(key))) return reply(origin, { error: 'invalid_content_evidence' }, 400);
     try { validateCanonicalScoreEvidence(accepted, canonical.data || []); }
     catch (error) { return reply(origin, { error: error?.code || 'invalid_content_evidence' }, 400); }

@@ -32,6 +32,7 @@ const user1 = '00000000-0000-4000-8000-000000000001';
 const user2 = '00000000-0000-4000-8000-000000000002';
 const day = '2026-08-27';
 const round = '10000000-0000-4000-8000-000000000001';
+const rollbackPath = path.join(root, 'supabase/recovery/phase1-learning-review/rollback-empty-schema.sql');
 
 function uuid(n) {
   return `20000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
@@ -93,7 +94,8 @@ insert into public.learning_items(item_id,content_source,content_key) values
   ('30000000-0000-4000-8000-000000000005','game_words','shared@初'),
   ('30000000-0000-4000-8000-000000000006','game_words','duplicate@初'),
   ('30000000-0000-4000-8000-000000000007','game_words','duplicate@初'),
-  ('30000000-0000-4000-8000-000000000008','game_words','legacy@初');
+  ('30000000-0000-4000-8000-000000000008','game_words','legacy@初'),
+  ('30000000-0000-4000-8000-000000000009','game_words','เขา@初#noun-mountain');
 insert into public.tone_srs_state(user_id,game,level,word)
 values ('${user1}','tone',1,'legacy');
 `;
@@ -160,6 +162,12 @@ try {
   assert.equal(psql("select count(*) from public.phase1_learning_review_states where item_id='30000000-0000-4000-8000-000000000003';"), '0');
   console.log('Atomic stage-0 entry and no SRS backflow: PASS');
 
+  const stableSense = rpc({ op: uuid(34), key: 'เขา@初#noun-mountain', score: 10, requestHash: hash('e') });
+  assert.equal(stableSense.to_state, 'srs');
+  assert.equal(psql("select concat(word,':',item_id) from public.tone_srs_state where item_id='30000000-0000-4000-8000-000000000009';"),
+    'เขา@初#noun-mountain:30000000-0000-4000-8000-000000000009');
+  console.log('Canonical Free200 sense identity: PASS');
+
   for (const [index, game] of ['tone', 'reading', 'listening', 'typing', 'wordorder'].entries()) {
     const result = rpc({ op: uuid(20 + index), key: 'shared@初', score: 4,
       requestHash: hash(String(5 + index)), game, verifier: `edge:${game}:v1` });
@@ -190,7 +198,16 @@ try {
   assert.equal(psql("select count(*) from public.phase1_learning_review_operations where operation_id in ('20000000-0000-4000-8000-000000000031','20000000-0000-4000-8000-000000000032');"), '1');
   console.log('Concurrent commit exactly once: PASS');
 
-  console.log('PHASE1_LEARNING_REVIEW_DB_PASS 8');
+  const blockedRollback = spawnSync('psql', ['-X', '-v', 'ON_ERROR_STOP=1', '-h', socket, '-p', port, '-d', 'postgres', '-f', rollbackPath], { encoding: 'utf8' });
+  assert.notEqual(blockedRollback.status, 0);
+  assert.match((blockedRollback.stdout || '') + (blockedRollback.stderr || ''), /rollback blocked:/);
+  psql('truncate table public.phase1_learning_review_operations, public.phase1_learning_review_states; delete from public.tone_srs_state where item_id is not null;');
+  run('psql', ['-X', '-v', 'ON_ERROR_STOP=1', '-h', socket, '-p', port, '-d', 'postgres', '-f', rollbackPath]);
+  assert.equal(psql("select pg_catalog.to_regclass('public.phase1_learning_review_states') is null;"), 't');
+  assert.equal(psql("select not exists(select 1 from pg_catalog.pg_attribute where attrelid='public.tone_srs_state'::regclass and attname='item_id' and not attisdropped);"), 't');
+  console.log('Rollback blocks data loss and removes only empty schema: PASS');
+
+  console.log('PHASE1_LEARNING_REVIEW_DB_PASS 10');
 } finally {
   if (started) spawnSync('pg_ctl', ['-D', data, '-m', 'fast', '-w', 'stop'], { encoding: 'utf8' });
   fs.rmSync(temp, { recursive: true, force: true });

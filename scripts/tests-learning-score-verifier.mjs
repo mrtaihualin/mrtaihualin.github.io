@@ -18,8 +18,8 @@ function rejects(code, fn) {
   assert.throws(fn, (error) => error && error.code === code);
 }
 
-const word = { word: 'กา', level: '初', syls: [{ th: 'กา' }], read_syls: null, reading_th: 'กา' };
-const longWord = { word: 'มหาวิทยาลัย', level: '中', syls: new Array(6).fill({}), read_syls: null, reading_th: 'มะ-หา-วิด-ทะ-ยา-ไล' };
+const word = { content_key: 'กา@1', word: 'กา', level: '初', syls: [{ th: 'กา' }], read_syls: null, reading_th: 'กา' };
+const longWord = { content_key: 'มหาวิทยาลัย@2', word: 'มหาวิทยาลัย', level: '中', syls: new Array(6).fill({}), read_syls: null, reading_th: 'มะ-หา-วิด-ทะ-ยา-ไล' };
 const sentence = { th: 'ฉัน เรียน ภาษา ไทย', wc: 8, reading_th: 'ฉัน-เรียน-พา-สา-ไท-ทุก-วัน-เลย', words: [] };
 
 check('hidden verifier is default OFF and versioned', () => {
@@ -82,10 +82,28 @@ check('Missing and duplicate canonical content both fail closed', () => {
 });
 
 check('Listening stable level suffix disambiguates the same word across levels', () => {
-  const otherLevel = { ...word, level: '中' };
+  const otherLevel = { ...word, content_key: 'กา@2', level: '中' };
   const out = verifyLearningScore({ game: 'listening', difficulty: 'mixed', item: { key: 'กา', contentRef: { source: 'game_words', key: 'กา@2' }, wrong: 0, correct: true, mode: 'type', listens: 1 }, canonicalRows: [word, otherLevel] });
   assert.equal(out.score, 10);
   assert.deepEqual(out.contentRef, { source: 'game_words', key: 'กา@2' });
+});
+
+check('Canonical Free200 sense suffix selects one stable item without display-word ambiguity', () => {
+  const senses = [
+    { ...word, content_key: 'เขา@1#pronoun-he', word: 'เขา' },
+    { ...word, content_key: 'เขา@1#noun-mountain', word: 'เขา' },
+  ];
+  const out = verifyLearningScore({
+    game: 'tone', difficulty: '初', requireExplicitContentRef: true,
+    item: { key: senses[1].content_key, contentRef: { source: 'game_words', key: senses[1].content_key }, wrong: 0 },
+    canonicalRows: senses,
+  });
+  assert.deepEqual(out.contentRef, { source: 'game_words', key: 'เขา@1#noun-mountain' });
+  rejects('content_ref_not_unique', () => verifyLearningScore({
+    game: 'tone', difficulty: '初', requireExplicitContentRef: true,
+    item: { key: 'เขา@1', contentRef: { source: 'game_words', key: 'เขา@1' }, wrong: 0 },
+    canonicalRows: senses,
+  }));
 });
 
 check('One round cannot emit the same stable item twice', () => {
@@ -121,7 +139,17 @@ check('real five-game source supplies explicit stable refs and required primitiv
   assert.match(sources.reading, /firstCheckSyllableWrongCounts/);
   assert.match(sources.wordOrder, /hintCount/);
   assert.match(sources.listening, /mode: entry\.mode, listens: entry\.listens, correct: entry\.correct/);
+  assert.match(sources.listening, /key: entry\.contentKey/);
   assert.match(sources.typing, /wrong:Number\(w\.wrong\)/);
+});
+
+check('score-submit resolves protected Free200 words by exact content_key', () => {
+  const root = new URL('../', import.meta.url);
+  const edge = fs.readFileSync(new URL('supabase/functions/score-submit/index.ts', root), 'utf8');
+  const engine = fs.readFileSync(new URL('supabase/functions/score-submit/score-engine.mjs', root), 'utf8');
+  assert.match(edge, /select\('content_key,word,level,syls,read_syls,reading_th'\)\.in\('content_key', keys\)/);
+  assert.match(edge, /row\.content_key \|\| row\.th \|\| row\.word/);
+  assert.match(engine, /row\.content_key \|\| row\.th \|\| row\.word/);
 });
 
 process.stdout.write('LEARNING_SCORE_VERIFIER_PASS ' + passed + '\n');

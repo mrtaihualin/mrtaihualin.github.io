@@ -725,7 +725,7 @@
     state.audioFailed = false;
     state.itemAttempts = [];
     state.log.push({
-      th: w.th, zh: w.zh, userAnswer: '', correct: false, skipped: true,
+      th: w.th, contentKey: w.contentKey || (w.th + '@' + levelNumber(w)), zh: w.zh, userAnswer: '', correct: false, skipped: true,
       mode: state.mode, listens: state.listenCount,
       listeningScore: 0, typingBonus: 0, totalScore: 0,
       typingWrong: 0, wordCount: LISTENING_SCORE.wordCount(w.th),
@@ -912,7 +912,7 @@
     state.primaryTotal += primary;
     state.typingBonusTotal += bonus;
     state.log.push({
-      th: w.th, zh: w.zh, userAnswer: detail.userAnswer || '', correct: isCorrect,
+      th: w.th, contentKey: w.contentKey || (w.th + '@' + levelNumber(w)), zh: w.zh, userAnswer: detail.userAnswer || '', correct: isCorrect,
       mode: state.mode, listens: state.listenCount,
       listeningScore: primary, typingBonus: bonus, totalScore: primary + bonus,
       typingWrong: state.typingWrong,
@@ -926,7 +926,7 @@
     });
     if (state.report && window.RoundReport) {
       RoundReport.addItem(state.report, {
-        content_ref: { source: 'game_words', key: w.th + '@' + levelNumber(w) },
+        content_ref: { source: 'game_words', key: w.contentKey || (w.th + '@' + levelNumber(w)) },
         question: w.th, meaning: w.zh || '',
         attempts: state.itemAttempts,
         user_answer: state.itemAttempts.length ? state.itemAttempts[state.itemAttempts.length - 1].answer : (detail.userAnswer || ''),
@@ -1211,7 +1211,7 @@
       difficulty: state.level,
       items: state.log.map(function (entry) {
         return {
-          key: entry.th, contentRef: { source: 'game_words', key: entry.th + '@' + levelNumber({ level: entry.level }) }, points: entry.totalScore, wrong: entry.correct || entry.skipped ? 0 : 1,
+          key: entry.contentKey || (entry.th + '@' + levelNumber({ level: entry.level })), contentRef: { source: 'game_words', key: entry.contentKey || (entry.th + '@' + levelNumber({ level: entry.level })) }, points: entry.totalScore, wrong: entry.correct || entry.skipped ? 0 : 1,
           guide: false, failed: false, mastered: false,
           mode: entry.mode, listens: entry.listens, correct: entry.correct,
           wordCount: entry.wordCount, unitCount: entry.unitCount, typingWrong: entry.typingWrong

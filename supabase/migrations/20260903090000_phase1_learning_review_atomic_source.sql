@@ -1,6 +1,6 @@
 -- SOURCE ONLY — hidden Free pre-SRS Review owner.
--- Do not apply before the existing Free SRS natural-time Day 8 checkpoint passes.
--- A fresh Pre-Work, Security, migration-collision and rollback gate is required.
+-- Free SRS natural-time Day 8 and canonical Free200 source reconciliation are complete.
+-- Do not apply without fresh Security/rollback evidence and exact Production approval.
 -- Production, Paid and public activation remain prohibited.
 
 begin;
