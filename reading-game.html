@@ -100,12 +100,14 @@ if (document.fonts && document.fonts.load) {
   document.fonts.load("400 14px 'Noto Sans Thai'", "◌่้๊๋").catch(function(){});
 }
 </script>
-<link rel="stylesheet" href="css/shared.css?v=36">
+<link rel="stylesheet" href="css/shared.css?v=38">
+<link rel="stylesheet" href="css/mobile-landscape.css?v=45">
+<script src="js/games/thai-keyboard.js?v=2"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="js/core/supabase-config.js?v=10"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script>
 <script defer src="js/core/auth-widget.js?v=17"></script>
-<script defer src="js/games/reading-auth.js?v=30"></script>
+<script defer src="js/games/reading-auth.js?v=31"></script>
 <script defer src="js/games/round-report.js?v=5"></script>
 <script defer src="js/games/tone-server.js?v=6"></script><!-- Login Free SRS owner; Paid/Challenge remain parked -->
 <script src="js/games/protected-word-audio.js?v=3"></script><!-- Core 5: isolated Guest audio client -->
@@ -121,7 +123,7 @@ if (document.fonts && document.fonts.load) {
    ใช้ attribute selector คุมตั้งแต่ CSS parse (ไม่มีช่วงเวลาที่กดหลุดก่อน JS ทำงานทัน) —
    ปลดล็อกจริงด้วย JS เพิ่ม class .gc-ready ที่ <html> ตอน boot() สำเร็จ (ดูสคริปต์ท้ายไฟล์) */
 html:not(.gc-ready) [onclick*="check("],html:not(.gc-ready) [onclick*="next("],
-html:not(.gc-ready) [onclick*="remember("],html:not(.gc-ready) [onclick*="restart("],
+html:not(.gc-ready) [onclick*="skipWord("],html:not(.gc-ready) [onclick*="restart("],
 html:not(.gc-ready) [onclick*="setLevel("],html:not(.gc-ready) [onclick*="rgGotoSyl("],
 html:not(.gc-ready) [onclick*="rgToggleParticleMode("],html:not(.gc-ready) [onclick*="setRgEnMode("],
 html:not(.gc-ready) [onclick*="setRgGuideMode("],html:not(.gc-ready) [onclick*="setRgPronMode("],
@@ -277,21 +279,33 @@ body[data-gsh-game="reading"] .gsh-four-row-stack .word-th {
 /* combining char display: transparent ก + mark in SAME text run so browser shapes them together */
 .comb-disp{display:inline-block;line-height:1.3;}
 .comb-base{color:transparent;}
+/* Standalone tone marks are custom vectors, independent of font shaping. */
+.tone-drawn{
+  display:inline-block;
+  overflow:visible;
+  fill:currentColor;
+  vertical-align:middle;
+}
 
 /* ── Options ── */
 .opts-wrap{width:100%;margin:10px 0 2px;}
-.opts{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;padding:4px 0;}
+.opts{display:flex;flex-wrap:wrap;gap:20px;justify-content:center;padding:4px 0;}
 
 @keyframes floatUp{
   0%  {opacity:0;transform:translate(var(--tx,0px),var(--ty,30px)) rotate(var(--rot,0deg)) scale(.6);}
-  65% {opacity:1;transform:translate(var(--jx,0px),var(--jy,0px)) rotate(var(--jr,0deg)) scale(1.06);}
-  100%{opacity:1;transform:translate(var(--jx,0px),var(--jy,0px)) rotate(var(--jr,0deg)) scale(1);}
+  65% {opacity:1;transform:translate(var(--opt-safe-jx),var(--opt-safe-jy)) rotate(var(--opt-safe-jr)) scale(1.06);}
+  100%{opacity:1;transform:translate(var(--opt-safe-jx),var(--opt-safe-jy)) rotate(var(--opt-safe-jr)) scale(1);}
 }
 @keyframes bob{
-  0%,100%{transform:translate(var(--jx,0px),var(--jy,0px)) rotate(var(--jr,0deg));}
-  50%    {transform:translate(var(--jx,0px),calc(var(--jy,0px) - 5px)) rotate(var(--jr,0deg));}
+  0%,100%{transform:translate(var(--opt-safe-jx),var(--opt-safe-jy)) rotate(var(--opt-safe-jr));}
+  50%    {transform:translate(var(--opt-safe-jx),calc(var(--opt-safe-jy) - 5px)) rotate(var(--opt-safe-jr));}
 }
 .opt{
+  /* Keep the original scattered motion without letting transformed boxes
+     consume the 20px collision-safe gap on Portrait or Desktop. */
+  --opt-safe-jx:clamp(-4px,var(--jx,0px),4px);
+  --opt-safe-jy:clamp(-3px,var(--jy,0px),3px);
+  --opt-safe-jr:clamp(-4deg,var(--jr,0deg),4deg);
   position:relative;
   min-width:54px;padding:9px 12px;border-radius:14px;
   border:2px solid #d4b87a;background:#fff;color:#5a3e10;
@@ -304,7 +318,7 @@ body[data-gsh-game="reading"] .gsh-four-row-stack .word-th {
 }
 .opt:hover:not(.locked){
   background:#ffeedd;border-color:#c07030;
-  transform:translate(var(--jx,0px),calc(var(--jy,0px) - 4px)) rotate(var(--jr,0deg)) scale(1.1) !important;
+  transform:translate(var(--opt-safe-jx),calc(var(--opt-safe-jy) - 4px)) rotate(var(--opt-safe-jr)) scale(1.1) !important;
   animation-play-state:paused,paused;
   transition:transform .12s;
 }
@@ -393,7 +407,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 .btn-primary  {background:linear-gradient(135deg,#e8a020,#d85a30);color:#fff;}
 .btn-primary:disabled{opacity:.35;cursor:default;}
 .btn-secondary{background:#f0e8d8;color:#8b6310;}
-.btn-remember {background:#e8f5e9;color:#2e7d32;border:1.5px solid #a5d6a7;}
+.btn-skip {background:#e8f5e9;color:#2e7d32;border:1.5px solid #a5d6a7;}
 
 .score-pop{position:fixed;top:26%;left:50%;transform:translateX(-50%);font-family:'Noto Serif TC',serif;font-weight:900;color:#d9a400;pointer-events:none;z-index:60;opacity:0;font-size:44px;animation:spop 1.8s cubic-bezier(.22,1,.36,1) forwards;}
 /* ยืดเวลาเห็นคะแนนชัดๆ ให้นานพอ — เดิม fade ต่อเนื่องตลอดจนแทบไม่ทันอ่าน (Lin 2026-07-07): เพิ่มช่วง "ค้างเต็มดวง" 15%-65% ก่อนค่อยจางหาย */
@@ -465,7 +479,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   ]
 }
 </script>
-<script src="js/core/minimum-guest-launch.js?v=10"></script>
+<script src="js/core/minimum-guest-launch.js?v=11"></script>
 <script defer src="js/games/word-vault.js?v=8"></script>
 <script defer src="js/games/sentence-vault.js?v=4"></script>
 </head>
@@ -525,8 +539,8 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
       <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">💡🔥 兩種模式</div>
       <p style="margin:0 0 10px;"><strong>💡 有提示（練習模式）</strong>：零件區會反白提示這一步該點哪個，方便剛學或想穩基礎時用——但只要看過提示的音節，那個音節這次會直接算 0 分，也不算進複習進度。<strong>🔥 無提示（挑戰模式）</strong>：沒提示全靠自己拼，答對才有分數、複習進度。畫面上按鈕可以隨時切換兩種模式。</p>
 
-      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">✓「已記得」按鈕是什麼意思</div>
-      <p style="margin:0 0 10px;">覺得這個字已經很熟，可按「已記得」跳過提示直接自測。不會加分、不會加星星，就算全拼對也一樣——純粹標記「已精通」，用在複習系統。</p>
+      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">「跳過」按鈕是什麼意思</div>
+      <p style="margin:0 0 10px;">不想做這題時可按「跳過」直接進入下一題；不算答對或答錯、不加減分，也不影響連擊或複習進度。是否已記住由複習系統依實際作答決定。</p>
 
       <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🧰 好用小工具</div>
       <p style="margin:0 0 10px;">題目上方的工具列可直接使用：🔊發音（AI 語音）・讀音顯示・英文讀音・翻譯顯示・🔖加入單字庫（收藏這個字，之後可在別處複習）・💡／🔥提示模式切換・字體切換・🙏禮貌詞（只在高級句子出現，切換句尾要不要顯示 ครับ／ค่ะ／คะ，純顯示不影響拼字或計分）。</p>
@@ -671,11 +685,11 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 
   <!-- ปุ่มแอ็คชัน — อยู่เหนือกล่องคำอธิบายเฉลย (Lin 2026-07-10) -->
   <div class="btn-row">
-    <button class="btn btn-remember"  id="btn-remember" onclick="remember()">已記得</button>
+    <button class="btn btn-skip"  id="btn-skip" onclick="skipWord()">跳過</button>
     <button class="btn btn-primary"   id="btn-check"    onclick="check()" disabled>檢查</button>
     <button class="btn btn-primary"   id="btn-next"     onclick="next()" style="display:none">下一題 →</button>
     <button class="btn btn-secondary gsh-desktop-hint-off" id="rg-hint-off-next" type="button" data-visible="false" onclick="setRgGuideMode(false)">關閉提示</button>
-    <!-- Lin 2026-07-31: ย้ายปุ่ม 下一個音節 เข้ามาอยู่ในแถวเดียวกับ 已記得/檢查 (เดิมอยู่นอก .btn-row ทำให้ตกไปอีกบรรทัด) -->
+    <!-- Lin 2026-07-31: ย้ายปุ่ม 下一個音節 เข้ามาอยู่ในแถวเดียวกับปุ่มแอ็คชัน (เดิมอยู่นอก .btn-row ทำให้ตกไปอีกบรรทัด) -->
     <button class="btn btn-secondary" id="btn-next-syl" onclick="try{gtag('event','reading_game_syllable_nav',{category:'game',syllable:sylIdx+2})}catch(e){}rgGotoSyl(sylIdx+1)" style="display:none">下一個音節 →</button>
   </div>
 
@@ -752,7 +766,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 <script>
 (function(){
   // P6-28 (2026-08-08): ปิดปุ่มเกม (ดู CSS ต้นไฟล์) จนกว่า GameContentLoader.boot() จะโหลดสคริปต์เกมสำเร็จจริง
-  var GC_SEL = '[onclick*="check("],[onclick*="next("],[onclick*="remember("],[onclick*="restart("],'
+  var GC_SEL = '[onclick*="check("],[onclick*="next("],[onclick*="skipWord("],[onclick*="restart("],'
     + '[onclick*="setLevel("],[onclick*="rgGotoSyl("],[onclick*="rgToggleParticleMode("],[onclick*="setRgEnMode("],'
     + '[onclick*="setRgGuideMode("],[onclick*="setRgPronMode("],[onclick*="rgDownloadReport("],[onclick*="openBadge("],'
     + '[onclick*="openStar("],[onclick*="trackBookCTA("],[onclick*="trackToneLink("],'
@@ -778,13 +792,14 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/reading-game-app.min.js?v=48'], {game:'reading'}).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/reading-game-app.min.js?v=52'], {game:'reading'}).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 </div><!-- /.v3-page -->
 <script src="data/nav-template.js?v=4"></script>
-<script src="js/core/shared.min.js?v=48"></script>
+<script src="js/core/shared.min.js?v=49"></script>
 <script src="js/games/game-flow.js?v=12"></script>
+<script src="js/core/mobile-landscape.js?v=32"></script>
 
 <!-- ── Game Switcher (fixed pill) ── -->
 <style>
@@ -796,7 +811,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 @media(max-width:768px){#game-switcher{bottom:calc(120px + env(safe-area-inset-bottom,0px));}.gs-tab{padding:8px 13px;font-size:12px;}}
 </style>
 <div id="game-switcher" data-current="reading_game"></div>
-<script src="js/games/game-switcher.js?v=6"></script>
+<script src="js/games/game-switcher.js?v=7"></script>
 <!-- 單字庫徽章：移除了 — 單字庫已經在 #game-switcher（🎮 選單）裡有分頁，這裡放重複了 — Lin 2026-07-24 -->
 <script>
 // ── 提示泡泡（給其他頁面共用的函式，這頁不再自動觸發小泡泡，改用下面完整導覽）— Lin 2026-07-31 ──

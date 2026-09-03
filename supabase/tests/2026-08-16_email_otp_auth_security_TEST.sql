@@ -1,4 +1,5 @@
--- Run only after 2026-08-16_email_otp_auth_security.sql in a disposable/local DB.
+-- Run only after 2026-08-16_email_otp_auth_security.sql and
+-- 20260903125640_email_otp_resend_one_minute.sql in a disposable/local DB.
 -- The transaction rolls back all challenge, abuse, and log fixtures.
 
 begin;
@@ -91,19 +92,28 @@ begin
   v_result := public.begin_email_otp_challenge_internal(
     '40000000-0000-4000-8000-000000000004', repeat('6', 64), repeat('7', 64), repeat('8', 64)
   );
+  update private.email_otp_abuse_state
+     set last_request_at = clock_timestamp() - interval '61 seconds'
+   where subject_kind = 'email' and subject_hmac = repeat('6', 64);
   v_result := public.begin_email_otp_challenge_internal(
     '40000000-0000-4000-8000-000000000005', repeat('6', 64), repeat('7', 64), repeat('8', 64)
+  );
+  if (v_result->>'accepted')::boolean is not true then
+    raise exception 'same-email resend after one minute was rejected';
+  end if;
+  v_result := public.begin_email_otp_challenge_internal(
+    '40000000-0000-4000-8000-000000000006', repeat('6', 64), repeat('7', 64), repeat('8', 64)
   );
   select cooldown_until into v_cooldown from private.email_otp_abuse_state
    where subject_kind = 'email' and subject_hmac = repeat('6', 64);
   if (v_result->>'accepted')::boolean is not false or v_cooldown < clock_timestamp() + interval '14 minutes' then
-    raise exception 'same-email 15 minute cooldown missing';
+    raise exception 'premature resend did not trigger the preserved 15 minute abuse cooldown';
   end if;
   select cooldown_until into v_cooldown from private.email_otp_abuse_state
    where subject_kind = 'ip' and subject_hmac = repeat('8', 64);
   if v_cooldown is not null then raise exception 'single-email resend blocked the shared IP'; end if;
   perform public.begin_email_otp_challenge_internal(
-    '40000000-0000-4000-8000-000000000006', repeat('6', 64), repeat('7', 64), repeat('8', 64)
+    '40000000-0000-4000-8000-000000000007', repeat('6', 64), repeat('7', 64), repeat('8', 64)
   );
   select cooldown_until into v_cooldown from private.email_otp_abuse_state
    where subject_kind = 'email' and subject_hmac = repeat('6', 64);

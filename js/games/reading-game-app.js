@@ -1,8 +1,15 @@
 // ════════════════════════════════════════════
 // FILE MAP: display helpers → config/state/scoring/SRS → sync + round selection → tile/answer UI → results/account → controls/analytics/init
 // TONE MARK DISPLAY HELPER
-// renders tone mark without ◌ — uses hidden ก as base via CSS ::before
+// Draw the four Thai tone marks as standalone vectors. This avoids relying on
+// a hidden carrier consonant or the browser's dotted-circle fallback.
 // ════════════════════════════════════════════
+var TONE_SVG={
+  '่':'<svg class="tone-drawn" width=".18em" height=".34em" viewBox="-18.6 -90.3 11.8 21.9" aria-hidden="true" focusable="false"><path d="M-18.6-68.4V-90.3H-6.8V-68.4Z"/></svg>',
+  '้':'<svg class="tone-drawn" width=".48em" height=".34em" viewBox="-37.2 -97.1 40.8 28.7" aria-hidden="true" focusable="false"><path fill-rule="evenodd" d="M-6.8-95.9H3.6Q3-87.7-1.75-81.45Q-6.5-75.2-14.35-71.8Q-22.2-68.4-31.8-68.4H-36.8V-73.7Q-31.6-75.8-27.9-79.2H-28.2Q-32.3-79.2-34.75-81.6Q-37.2-84-37.2-88.2Q-37.2-92.1-34.45-94.6Q-31.7-97.1-27.5-97.1Q-23.2-97.1-20.5-94.45Q-17.8-91.8-17.8-87.4Q-17.8-84.9-18.75-82Q-19.7-79.1-21.8-76.8Q-17.6-77.9-14.25-81Q-10.9-84.1-9-88.1Q-7.1-92.1-6.8-95.9ZM-31.1-88Q-31.1-84.5-27.5-84.5Q-24-84.5-24-88Q-24-91.6-27.5-91.6Q-31.1-91.6-31.1-88Z"/></svg>',
+  '๊':'<svg class="tone-drawn" width=".63em" height=".34em" viewBox="-48.3 -95.5 50.4 27.1" aria-hidden="true" focusable="false"><path fill-rule="evenodd" d="M-7.9-95.4H2.1Q2.1-82.8-4.85-75.6Q-11.8-68.4-24.9-68.4V-74.2Q-20.1-76.8-20.1-82.7Q-20.1-87.3-23.1-88.7L-29.1-84.4L-35.1-88.5Q-37.3-87.2-38.8-84.7Q-30.3-84.7-30.3-76.5Q-30.3-68.4-38.9-68.4Q-48.3-68.4-48.3-78.8Q-48.3-90.8-35.2-95.5L-29.1-91.1L-23-95.4Q-11.9-93.6-11.9-83.7Q-11.9-79.6-15-76.1Q-7.9-81.4-7.9-95.4ZM-35.8-76.5Q-35.8-79.6-39-79.6Q-42.2-79.6-42.2-76.5Q-42.2-73.3-39-73.3Q-35.8-73.3-35.8-76.5Z"/></svg>',
+  '๋':'<svg class="tone-drawn" width=".41em" height=".34em" viewBox="-27 -92.3 28.5 23.9" aria-hidden="true" focusable="false"><path d="M1.5-84.6V-76.2H-7.2V-68.4H-18.2V-76.2H-27V-84.6H-18.2V-92.3H-7.2V-84.6Z"/></svg>'
+};
 function isCombining(s){
   if(!s||s.length===0)return false;
   var c=s.charCodeAt(0);
@@ -20,6 +27,7 @@ function isCombining(s){
 var FRONT_V_SET={'เ':1,'แ':1,'โ':1,'ไ':1,'ใ':1};
 function dispHTML(v){
   if(!v)return'◌';
+  if(TONE_SVG[v])return TONE_SVG[v];
   var fc=v[0];
   if(isCombining(fc)){
     // case 1: combining char needs base before it
@@ -36,12 +44,15 @@ function dispHTML(v){
 // comp='vowel' → v คือ "เสียงอ่านเต็มคำ" (VOWEL_READ ผ่าน dispOpt แล้ว) เป็นข้อความสมบูรณ์อยู่แล้ว
 //   ไม่ต้องแทรก base ก แบบสระสัญลักษณ์เดิม (ไม่งั้นจะเพี้ยน เช่น "โอ" จะกลายเป็น "โกอ")
 function setSlotContent(box, v, stateClass, comp){
+  var isToneSlot=comp==='tone'||box.id==='sb-tone';
   if(!v){
     box.textContent='◌';
     box.className='slot-box empty-slot';
+    if(isToneSlot)box.removeAttribute('aria-label');
   } else {
     box.innerHTML=(comp==='vowel')?v:dispHTML(v);
     box.className='slot-box '+(stateClass||'filled');
+    if(isToneSlot)box.setAttribute('aria-label',v);
   }
 }
 
@@ -199,11 +210,17 @@ var readingAttemptScore=null;  // Phase 1: snapshot จาก 檢查 ครั�
 var readingFirstCheckWrongCounts=null; // primitive evidence for server verifier; never a client-computed score
 var readingCorrectionAttempts=0;
 var readingFirstCheckDone=false;
+function rgScoreSylCount(){
+  var list=(typeof sylList!=='undefined'&&sylList)?sylList:[];
+  var n=list.length||((typeof sylWrongCount!=='undefined'&&sylWrongCount&&sylWrongCount.length)?sylWrongCount.length:1);
+  if(list.length&&list[list.length-1]&&list[list.length-1].isParticle)n--;
+  return Math.max(1,n);
+}
 // ใช้สูตรเดิมของเกมเท่านั้น เพราะ exact component-error mapping ยังรอ Lin re-lock; ฟังก์ชันนี้แค่ snapshot ไม่สร้างสูตรใหม่
 function rgSnapshotExistingAttemptScore(){
   if(wordUsedGuide)return 0;
   readingFirstCheckWrongCounts=(sylWrongCount&&sylWrongCount.length)?sylWrongCount.slice():[typeof wrongCount!=='undefined'?wrongCount:0];
-  var n=(sylWrongCount&&sylWrongCount.length)?sylWrongCount.length:1;
+  var n=rgScoreSylCount();
   var avgCount=Math.max(1,Math.min(n,HIGH_RAW_START_IDX));
   var sum=0,i;
   for(i=0;i<avgCount;i++)sum+=rgSyllableScore((sylWrongCount&&sylWrongCount[i])||0);
@@ -235,7 +252,7 @@ function rgLogWord(o){
     var base={th:w?w.th:'',contentKey:rgContentKey(w),zh:w?w.zh:'',wordGlosses:wordGlosses,reading:w&&w.readingTH?w.readingTH:'',userAnswer:readingSubmittedAttempts.length?readingSubmittedAttempts[readingSubmittedAttempts.length-1].answer:'',correctAnswer:w&&w.readingTH?w.readingTH:(w?w.th:''),wrong:totalWrong,attempts:readingSubmittedAttempts.slice(),attemptScore:readingAttemptScore,correctionAttempts:readingCorrectionAttempts,learningEvidence:{firstCheckSyllableWrongCounts:(readingFirstCheckWrongCounts||sylWrongCount||[]).slice()},failed:false,guide:false,pts:0,srsDue:'',mastered:false};
     for(var k in o){ if(Object.prototype.hasOwnProperty.call(o,k)) base[k]=o[k]; }
     roundLog.push(base);
-    if(roundReport&&window.RoundReport)RoundReport.addItem(roundReport,{content_ref:{source:(w&&w.words&&w.words.length)?'game_sentences':'game_words',key:rgContentKey(w)},question:base.th,meaning:base.zh,attempts:base.attempts,user_answer:base.userAnswer,correct_answer:base.correctAnswer,is_correct:!base.failed&&!base.guide&&base.wrong===0,wrong_count:base.wrong,item_score:base.pts,hint_used:!!base.guide,learning_evidence:base.learningEvidence,linguistic:{reading_th:base.reading,syls:w&&w.syls||null,read_syls:w&&w.readSyls||null},words:wordGlosses||[],srs_state:base.srsDue||null,mastered_state:!!base.mastered});
+    if(roundReport&&window.RoundReport)RoundReport.addItem(roundReport,{content_ref:{source:(w&&w.words&&w.words.length)?'game_sentences':'game_words',key:rgContentKey(w)},question:base.th,meaning:base.zh,attempts:base.attempts,user_answer:base.userAnswer,correct_answer:base.correctAnswer,is_correct:!base.skipped&&!base.failed&&!base.guide&&base.wrong===0,is_skipped:!!base.skipped,skip_reason:base.skipped?'user_skip':null,wrong_count:base.wrong,item_score:base.pts,hint_used:!!base.guide,learning_evidence:base.learningEvidence,linguistic:{reading_th:base.reading,syls:w&&w.syls||null,read_syls:w&&w.readSyls||null},words:wordGlosses||[],srs_state:base.srsDue||null,mastered_state:!!base.mastered});
   }catch(e){}
 }
 // 2026-07-13 Lin：ดึงคำที่พลาดในรอบนี้จาก roundLog ไปเก็บลง reading_sessions.wrong_items (ฐานข้อมูลจุดอ่อน)
@@ -397,7 +414,12 @@ setRgGuideMode(rgGuideMode); // ตั้งสถานะปุ่มตาม
 // ── ปุ่มเปิด/ปิดคำอ่านที่โชว์ตั้งแต่คำเพิ่งโหลด — Lin 2026-07-16
 // 🐣 มีนาเจี๊ยบออกเสียง = คำอ่านโชว์อยู่ · 🥚 ไข่เงียบ = คำอ่านซ่อนอยู่ — icon เลือกโดย Lin
 // Lin 2026-07-26: เดิมตอนเฉลย (checked=true) จะบังคับโชว์讀音เสมอ กดปุ่ม🐣/🥚ไม่มีผลตอนเฉลย → แก้ให้ปุ่มกดเปิด/ปิดได้จริงแม้ตอนเฉลยแล้ว
-// ── ปุ่มครับ/ค่ะ/คะ ท้ายประโยค高級 (Lin 2026-08-01) — ไม่เกี่ยวกับกล่องฝึกเขียน/คะแนนเลย แค่ต่อท้ายชื่อประโยคเต็ม (#wth) เท่านั้น
+// 禮貌詞在高級是真正的拼讀音節，但不計分。
+var RG_PARTICLE_SYLS={
+  'ครับ':{th:'ครับ',read:'ครับ',cons:'ค',cluster:'ร',vowel:'อะ',final:'บ',tone_name:'ตรี',en:'kráp',isParticle:true},
+  'ค่ะ':{th:'ค่ะ',read:'ค่ะ',cons:'ค',vowel:'อะ',tone:'่',tone_name:'เอก',en:'khà',isParticle:true},
+  'คะ':{th:'คะ',read:'คะ',cons:'ค',vowel:'อะ',tone_name:'ตรี',en:'khá',isParticle:true}
+};
 //   เดียวกับเกมเสียงทุกอย่าง: ใช้ localStorage key เดียวกัน (games_particle_mode) ให้ค่าติดกันข้ามเกม, politeF อ่านจากข้อมูล adv-sentences.js ผ่าน buildSentencesForPhonicsGames
 var rgParticleMode=(function(){try{return localStorage.getItem('games_particle_mode')||'off';}catch(e){return 'off';}})();
 function rgShowParticleFor(w){
@@ -425,8 +447,8 @@ function rgSyncParticleBtn(){
 function rgToggleParticleMode(){
   rgParticleMode=(rgParticleMode==='off')?'m':(rgParticleMode==='m'?'f':'off');
   try{localStorage.setItem('games_particle_mode',rgParticleMode);}catch(e){}
-  rgApplyParticleToTitle();
-  rgSyncParticleBtn();
+  if(typeof WORD!=='undefined'&&WORD&&WORD.level==='高')loadWord();
+  else{rgApplyParticleToTitle();rgSyncParticleBtn();}
 }
 var rgPronMode=(function(){try{var v=localStorage.getItem('rg_pron_mode');return v===null?false:v==='1';}catch(e){return false;}})(); // default = ซ่อน (ผู้เล่นกดเปิดเอง) — Lin 2026-07-16
 function setRgPronMode(on){
@@ -904,10 +926,12 @@ function updateSyllableCounter(){
 }
 function loadWord(){
   rememberStep=0;clearTimeout(rememberTimer);
-  var rb=document.getElementById('btn-remember');
-  if(rb){rb.textContent='已記得';rb.style.cssText='';rb.style.display='';}
+  var rb=document.getElementById('btn-skip');
+  if(rb){rb.textContent='跳過';rb.style.cssText='';rb.style.display='';}
   WORD=WORDS[roundQueue[cur]];
   sylList=buildSyls(WORD);
+  var _rgParticle=(WORD.level==='高')?rgShowParticleFor(WORD):null;
+  if(_rgParticle&&RG_PARTICLE_SYLS[_rgParticle])sylList=sylList.concat([RG_PARTICLE_SYLS[_rgParticle]]);
   sylIdx=0;wordHadWrong=false;wordFailed=false;wrongCount=0;sylCache=[];readingSubmittedAttempts=[]; // sylCache: เก็บ state แต่ละพยางค์ ให้เลือกพยางค์ไหนก่อนก็ได้ (คำใหม่ = ล้าง)
   sylWrongCount=new Array(sylList.length).fill(0); // งานที่1: ตัวนับผิดแยกรายพยางค์ (คำใหม่ = ล้าง)
   readingAttemptScore=null;readingFirstCheckWrongCounts=null;readingCorrectionAttempts=0;readingFirstCheckDone=false;
@@ -1028,6 +1052,7 @@ function renderOptions(tiles){
     // Use innerHTML for combining chars
     // t.val สระ = เสียงอ่านเต็มคำอยู่แล้ว (VOWEL_READ) ไม่ต้องแทรก base ก แบบสระสัญลักษณ์เดิม
     el.innerHTML=(t.type==='vowel')?t.val:dispHTML(t.val);
+    if(t.type==='tone')el.setAttribute('aria-label',t.val);
 
     var jx=(Math.random()*22-11).toFixed(1)+'px';
     var jy=(Math.random()*18-9).toFixed(1)+'px';
@@ -1186,7 +1211,7 @@ function finalizeWord(){
   }
 
   // ── กฎ MASTER: คะแนนต่อพยางค์เฉลี่ย (ดิบ ไม่คูณระดับที่นี่ — ไปคูณทั้งรอบตอนจบ) + 高 พยางค์ 8+ บวกดิบ ──
-  var n=sylWrongCount.length;
+  var n=rgScoreSylCount();
   var avgCount=Math.min(n,HIGH_RAW_START_IDX);
   var sum=0,i;
   for(i=0;i<avgCount;i++) sum+=rgSyllableScore(sylWrongCount[i]);
@@ -1389,16 +1414,12 @@ function rgToggleDetail(){
   }
 }
 
-// งานที่7 (2026-07-04 แบบเข้ม ลอกเกมเสียง markKnown()): กดแล้ว "ไม่ตัดคำทันที" —
-// ต้องตอบคำนี้ต่อให้ผ่านแบบสะอาด (ไม่ผิดเลย ไม่ใช้คำใบ้) 1 ครั้งก่อน ถึงจะตัดคำออก (ดู finalizeWord curWordIsKnownCheck)
-function remember(){
-  try{ if(typeof gtag==='function') gtag('event','reading_game_remember_click',{category:'game', word: (typeof WORD!=='undefined'&&WORD)?WORD.th:''}); }catch(e){}
-  curWordIsKnownCheck=true;
-  updateActiveSlot();updateOptHint(); // ซ่อนคำใบ้ที่อาจค้างอยู่ทันที
-  var b=document.getElementById('banner');
-  if(b){b.textContent='證明你真的記得：接下來不會有提示，答對才會標記熟練 ✓';b.className='result-banner show';}
-  var rb=document.getElementById('btn-remember');
-  if(rb)rb.style.display='none';
+// Neutral skip: advance without answer, score, Combo, life, or SRS mutation.
+function skipWord(){
+  try{ if(typeof gtag==='function') gtag('event','reading_game_skip_click',{category:'game', word:(typeof WORD!=='undefined'&&WORD)?WORD.th:''}); }catch(e){}
+  curWordIsKnownCheck=false;
+  rgLogWord({skipped:true,wrong:0,attempts:[],userAnswer:'',attemptScore:null,correctionAttempts:0,pts:0});
+  nextWord();
 }
 function next(){
   try{ if(typeof gtag==='function') gtag('event','reading_game_next_click',{category:'game', word: (typeof WORD!=='undefined'&&WORD)?WORD.th:''}); }catch(e){}
@@ -1523,6 +1544,7 @@ function rgDownloadReport(){
     return '<div style="font-size:10px;font-weight:400;color:#777;line-height:1.5;margin-top:4px;">逐字：'+w.wordGlosses.map(function(g){return esc(g.th)+'＝'+esc(g.zh);}).join('・')+'</div>';
   }
   function statusLabel(w){
+    if(w.skipped) return '<span style="color:#777;">跳過</span>';
     if(w.mastered) return '<span style="color:#8B6310;">✓ 已精通</span>';
     if(w.guide) return '<span style="color:#b06020;">💡 用提示</span>';
     if(w.failed) return '<span style="color:#c62828;">✗ 待加強</span>';
@@ -1638,7 +1660,7 @@ function updateCombo(){
 }
 
 function setGameBtns(mode){
-  var re=document.getElementById('btn-remember');
+  var re=document.getElementById('btn-skip');
   var ch=document.getElementById('btn-check');
   var nx=document.getElementById('btn-next');
   if(mode==='normal'){
@@ -1971,7 +1993,7 @@ function rgCaptureSylState(){
 function rgSylFilled(st){ return st.comps.every(function(c){return st.slotFills[c]!=null;}); }
 function rgAllSylsFilled(){
   if(sylList.length<=1) return allSlotsFilled();
-  for(var i=0;i<sylList.length;i++){
+  for(var i=0;i<rgScoreSylCount();i++){
     if(i===sylIdx){ if(!allSlotsFilled())return false; }
     else{ var st=sylCache[i]; if(!st || !rgSylFilled(st))return false; }
   }
@@ -2075,14 +2097,17 @@ function rgCheckWholeWord(){
     refreshUI();
   } else {
     var wasCorrectionCheck=readingFirstCheckDone;
-    wordHadWrong=true;streak=0;badC++;
+    var particleOnly=!!(sylList[wrongIdx]&&sylList[wrongIdx].isParticle);
+    if(!particleOnly){wordHadWrong=true;streak=0;badC++;}
     // งานที่1: นับผิดแยกรายพยางค์ (พยางค์ไหนโผล่มาว่าผิด ก็ +1 เฉพาะพยางค์นั้น) แทนนับรวมทั้งคำแบบเดิม
     sylWrongCount[wrongIdx]=(sylWrongCount[wrongIdx]||0)+1;
-    if(wasCorrectionCheck)readingCorrectionAttempts++;
-    else{readingFirstCheckDone=true;readingAttemptScore=rgSnapshotExistingAttemptScore();}
-    try{ if(typeof gtag==='function') gtag('event','reading_game_wrong',{category:'game',word: WORD.th, wrongs: sylWrongCount[wrongIdx], syllable: wrongIdx+1}); }catch(e){}
-    try{ if(typeof gtag==='function') gtag('event','game_wrong',{category:'game',game:'reading_game'}); }catch(e){}
-    wrongCount=sylWrongCount[wrongIdx]; // ให้ retry-hint อ้างอิงจำนวนผิดของพยางค์นี้เอง
+    if(!particleOnly){
+      if(wasCorrectionCheck)readingCorrectionAttempts++;
+      else{readingFirstCheckDone=true;readingAttemptScore=rgSnapshotExistingAttemptScore();}
+      try{ if(typeof gtag==='function') gtag('event','reading_game_wrong',{category:'game',word: WORD.th, wrongs: sylWrongCount[wrongIdx], syllable: wrongIdx+1}); }catch(e){}
+      try{ if(typeof gtag==='function') gtag('event','game_wrong',{category:'game',game:'reading_game'}); }catch(e){}
+    }
+    wrongCount=particleOnly?Math.min(sylWrongCount[wrongIdx],3):sylWrongCount[wrongIdx]; // 禮貌詞必須拼對，但不進入扣分/失敗計數
     rgJumpForCheck(wrongIdx);
     refreshUI(); // Lin 2026-07-06: หลอด 本題分數 ลดสด+ไล่สีตอนกดผิด (พยางค์ปัจจุบัน)
     if(wrongCount<4){

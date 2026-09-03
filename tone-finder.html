@@ -55,7 +55,7 @@
 <script defer src="js/core/supabase-config.js?v=10"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script>
 <script defer src="js/core/auth-widget.js?v=17"></script>
-<script defer src="js/games/reading-auth.js?v=30"></script>
+<script defer src="js/games/reading-auth.js?v=31"></script>
 <script defer src="js/games/round-report.js?v=5"></script>
 <script defer src="js/games/tone-server.js?v=6"></script><!-- Login Free SRS owner; Paid/Challenge remain parked -->
 <script src="js/games/protected-word-audio.js?v=3"></script><!-- Core 5: isolated Guest audio client -->
@@ -92,8 +92,9 @@ if (document.fonts && document.fonts.load) {
   document.fonts.load("400 14px 'Noto Sans Thai'", "◌่้๊๋").catch(function(){});
 }
 </script>
-<link rel="stylesheet" href="css/shared.css?v=36">
-<link rel="stylesheet" href="css/tone-mobile-landscape.css?v=2">
+<link rel="stylesheet" href="css/shared.css?v=38">
+<link rel="stylesheet" href="css/mobile-landscape.css?v=45">
+<script src="js/games/thai-keyboard.js?v=2"></script>
 <style>
   /* P6-28 (2026-08-08): ปุ่มเรียกฟังก์ชันเกม (TF.* มาจาก tone-finder-game.min.js โหลดแบบ async
      ผ่าน GameContentLoader.boot()) ต้องกดไม่ได้ก่อนสคริปต์โหลดเสร็จ — ดูสคริปต์ปลดล็อกท้ายไฟล์ */
@@ -678,8 +679,6 @@ if (document.fonts && document.fonts.load) {
   }
   .tf-alpha-entry:hover { border-color: rgba(184,134,40,0.65); background: linear-gradient(180deg, #F0E0A8 0%, #FDFAF2 100%); }
 
-  .tf-desktop-skip-copy { display:none; }
-
   /* Cookie consent stays above the shared right-side controls and menus.
      Their axis and anchoring are owned by css/shared.css for all six games. */
   @media (min-width:1025px),
@@ -804,8 +803,6 @@ if (document.fonts && document.fonts.load) {
       gap:10px; width:100%; max-width:640px; margin:20px auto 0;
     }
     body[data-gsh-game="tone"] .gsh-result-home-actions { margin:18px auto 0; }
-    .tf-desktop-skip-copy { display:inline; }
-    .tf-nondesktop-remember-copy { display:none; }
   }
 
   /* Tone Mobile Portrait: Desktop content/gameplay with compact touch controls. */
@@ -977,18 +974,11 @@ if (document.fonts && document.fonts.load) {
     body[data-gsh-game="tone"] [data-game-flow-status],
     body[data-gsh-game="tone"] [data-game-flow-pause] { display:none !important; }
     body[data-gsh-game="tone"] .gsh-desktop-only { display:none !important; }
-    body[data-gsh-game="tone"] .tf-desktop-skip-copy { display:inline; }
-    body[data-gsh-game="tone"] .tf-nondesktop-remember-copy { display:none; }
 
     body[data-gsh-game="tone"] .tf-alpha-surface {
       background:linear-gradient(180deg,#FFF9EC 0%,#F5E6C7 100%);
       border:1.5px solid rgba(139,99,16,.25); border-radius:14px; padding:12px;
     }
-  }
-
-  /* Mobile Landscape keeps the accepted three-level Switch surface unchanged. */
-  @media (orientation:landscape) and (max-width:1024px) and (max-height:600px) {
-    body[data-gsh-game="tone"] #tf-alpha-btn { display:none !important; }
   }
 
   /* ── 依難度漸層配色 difficulty colour-grading ── */
@@ -2008,7 +1998,7 @@ document.addEventListener('contextmenu', function(e){
   ]
 }
 </script>
-<script src="js/core/minimum-guest-launch.js?v=10"></script>
+<script src="js/core/minimum-guest-launch.js?v=11"></script>
 <script defer src="js/games/word-vault.js?v=8"></script>
 <script defer src="js/games/sentence-vault.js?v=4"></script>
 </head>
@@ -2073,8 +2063,8 @@ document.addEventListener('contextmenu', function(e){
         <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">💡🔥 兩種模式</div>
         <p style="margin:0 0 10px;"><strong>💡 有提示（練習模式）</strong>：每一步會反白正確答案，方便熟悉規則——這個模式整輪都不計分、不算星星、不算複習進度，純粹拿來練習規則用。<strong>🔥 無提示（挑戰模式）</strong>：沒提示全靠自己推導，答對才有分數。畫面上按鈕可以切換。</p>
 
-        <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;"><span class="tf-desktop-skip-copy">「跳過」按鈕是什麼意思</span><span class="tf-nondesktop-remember-copy">✓「已記得」按鈕是什麼意思</span></div>
-        <p style="margin:0 0 10px;"><span class="tf-desktop-skip-copy">不想做這題時可按「跳過」直接進入下一題；不算答對或答錯、不加減分，也不影響 Combo 或複習進度。</span><span class="tf-nondesktop-remember-copy">覺得這個字已經很熟，可按「已記得」跳過推導直接自測。不會加分、不會加星星，純粹標記「已精通」，用在複習系統。</span></p>
+        <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">「跳過」按鈕是什麼意思</div>
+        <p style="margin:0 0 10px;">不想做這題時可按「跳過」直接進入下一題；不算答對或答錯、不加減分，也不影響 Combo 或複習進度。是否已記住由複習系統依實際作答決定。</p>
 
         <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🧰 好用小工具</div>
         <p style="margin:0 0 10px;">題目上方的工具列可直接使用：讀音顯示・翻譯顯示・🔖加入單字庫（收藏這個字，之後可在別處複習）・💡／🔥提示模式切換・字體切換・🙏禮貌詞（只在高級句子出現，切換句尾要不要顯示 ครับ／ค่ะ／คะ，純顯示不影響推導或計分）。</p>
@@ -2215,7 +2205,7 @@ document.addEventListener('contextmenu', function(e){
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/tone-finder-game.min.js?v=82'], {game:'tone'}).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/tone-finder-game.min.js?v=83'], {game:'tone'}).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 
@@ -2239,9 +2229,9 @@ document.addEventListener('contextmenu', function(e){
           → หน้านี้เป็นหน้าเดียวที่ผิดแถว = ของค้างจากตอนอัปโหลดชุดแรก (git: 6a10c58)
      ถ้าวันหลังหน้านี้จะมีหน้าต่างบทความ/โพสต์จริงๆ ค่อยใส่ 2 บรรทัดนี้กลับมา -->
 <script src="data/nav-template.js?v=4"></script>
-<script src="js/core/shared.min.js?v=48"></script>
+<script src="js/core/shared.min.js?v=49"></script>
 <script src="js/games/game-flow.js?v=12"></script>
-<script src="js/games/tone-mobile-landscape.js?v=1"></script>
+<script src="js/core/mobile-landscape.js?v=32"></script>
 <script>
 // ── GA4 Extra Events: tone-finder.html ──────────────────────────────
 // (tone_finder_start / complete / answer_correct / answer_wrong ติดอยู่แล้วในโค้ดเกม)
@@ -2298,7 +2288,7 @@ document.addEventListener('contextmenu', function(e){
 .tf-card{padding-bottom:132px;}}
 </style>
 <div id="game-switcher" data-current="tone_finder" data-include-lego="1"></div>
-<script src="js/games/game-switcher.js?v=6"></script>
+<script src="js/games/game-switcher.js?v=7"></script>
 <!-- 單字庫徽章：移除了 — 單字庫已經在 #game-switcher（🎮 選單）裡有分頁，這裡放重複了 — Lin 2026-07-24 -->
 <script>
 // ── 提示泡泡（給其他頁面共用的函式，這頁不再自動觸發小泡泡，改用下面完整導覽）— Lin 2026-07-24 ──

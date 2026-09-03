@@ -157,7 +157,7 @@ test('Typing counter follows active syllables including High continuous segments
 });
 
 test('Typing loads the rebuilt crash-safe bundle with a fresh cache key', () => {
-  assert.match(html, /typing-game-app\.min\.js\?v=46/);
+  assert.match(html, /typing-game-app\.min\.js\?v=47/);
 });
 
 test('玩法 explains both locked typing rules', () => {

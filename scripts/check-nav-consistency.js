@@ -53,7 +53,7 @@ const GAME_PAGES = new Set([
   'tone-finder.html', 'reading-game.html', 'listening-game.html',
   'typing-game.html', 'word-order.html', 'lego.html'
 ]);
-const MOBILE_LANDSCAPE_GATE_PAGES = new Set([
+const MOBILE_LANDSCAPE_ACTIVE_PAGES = new Set([
   'tone-finder.html', 'reading-game.html', 'typing-game.html', 'word-order.html'
 ]);
 const NO_ANNOUNCEMENT_PAGES = new Set([
@@ -142,7 +142,7 @@ SCOPE_PAGES.forEach((file) => {
     if (annMatch || /ANN-BAND|ann-band|avail-band|annDismissed|annGoTo|annPrev|annNext/.test(text)) {
       mismatches.push({ file, kind: 'game announcement code ยังค้าง', detail: 'เกมต้องไม่มี DOM/marker/script/style hook ของ announcement' });
     }
-    const expectedSharedVersion = MOBILE_LANDSCAPE_GATE_PAGES.has(file) ? 48 : 47;
+    const expectedSharedVersion = MOBILE_LANDSCAPE_ACTIVE_PAGES.has(file) ? 49 : 47;
     if (!new RegExp('js/core/shared\\.min\\.js\\?v=' + expectedSharedVersion).test(text)) {
       mismatches.push({ file, kind: 'game shared runtime cache ไม่ตรง', detail: 'ต้องใช้ shared.min.js?v=' + expectedSharedVersion });
     }

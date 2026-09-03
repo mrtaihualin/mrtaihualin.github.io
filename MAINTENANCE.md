@@ -1,6 +1,25 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-09-03 Asia/Bangkok** — Hidden Login Free Review source reconciliation
+**Updated: 2026-09-03 Asia/Bangkok** — Combined Mobile Landscape + Email OTP release candidate
+
+## 2026-09-03 — Mobile Landscape accepted UI (`SOURCE_PASS / HUMAN_PASS / RELEASE_AUTHORIZED`)
+
+- Consolidated the accepted shared Landscape presentation and controls for Tone, Reading, Typing and Word Order onto current GitLab `main`. The temporary rotate-to-Portrait blocker is removed only for these four released surfaces; Listening and Lego keep their existing runtime cache boundary.
+- Reused the existing Desktop game actions and account behavior. The shared menu, `已登入` account popup, lower-right Position 2 action, reserved no-option zone and Reading split choices use the game-owned handlers; no parallel gameplay handler was introduced.
+- Reading now renders standalone Thai tone marks as proportioned inline SVG paths without a carrier consonant or dotted circle. Desktop, Mobile Portrait and Mobile Landscape browser checks show ten choices with zero overlap; the accepted Landscape check remains in its reserved Position 2 area.
+- Focused Mobile Landscape 19/19, Reading 18/18, neutral action 7/7, owner-race 12/12, shared-game 52/52, launch/Login and nav checks pass. The protected legacy 735-word corpus was not read or used.
+
+## 2026-09-03 — Email OTP one-minute resend (`SOURCE_PASS / PRODUCTION_AUTHORIZED`)
+
+- Lin explicitly authorized changing the same-email Email OTP resend interval from 15 minutes to 1 minute and releasing it with the accepted UI. Added one atomic forward migration that replaces only `public.begin_email_otp_challenge_internal` at that boundary.
+- The client countdown is exactly 60 seconds across every public Login surface. Existing 10-minute OTP expiry, five-attempt limit, IP 15m/60m request windows, Turnstile, generic responses, private HMAC-only storage and 15m/60m abuse escalation remain unchanged.
+- Email OTP security verification passes 14/14, including the immutable historical SQL checksum, the new migration contract and the refreshed Login cache chain. Paid, Challenge and unrelated Production work remain outside this release.
+
+## 2026-09-03 — Mobile Landscape Position 2 controls (`PASS_LOCAL / HUMAN_PASS / PRODUCTION_UNCHANGED`)
+
+- Reused the original Desktop game actions in the lower-right Position 2 across the four active games: Tone `不確定`, Reading/Typing `檢查`, and Word Order `重新`, switching to each game's existing Next action when its state allows. No duplicate action or new gameplay handler was created.
+- Enlarged Tone's three vertical controls from 76px to 88px at 844×390. The first/last controls now keep equal 23px outer gaps, both internal gaps are 8px, and horizontal centering remains symmetric. Lin accepted this visual preview.
+- Advanced only the four-game shared Landscape CSS/controller cache keys. Focused Landscape 19/19, neutral-action 7/7 and the complete 1,024-file local site gate pass. No Desktop/Portrait behavior, gameplay, Auth, account, data, Supabase, deploy or Production state changed.
 
 ## 2026-09-03 — Hidden Login Free Review (`SOURCE_REBASED / DEFAULT_OFF / UI_DECISION_PENDING / PRODUCTION_UNCHANGED`)
 
@@ -89,13 +108,20 @@
 - Focused phonics-manual 10/10, Tone Mobile Landscape 8/8, shared-game 52/52, JavaScript syntax, whitespace and the full 1,018-file site gate pass. Local source Preview checks cover Desktop and 390×844 Portrait, four-card layout, collapsed details, live/dead branching, exact ending groups/explanations, consonant audio and `หน → น` audio with no fresh console warning/error. The four live/dead choice cards use the same computed width, height, padding and alignment at each breakpoint; an opened rule detail persists through internal navigation/back and resets only after closing/reopening the overlay. The Desktop overlay is capped at the Human-corrected compact 748×612 surface (15% smaller in both dimensions than 880×720); Mobile Portrait uses a centered 80vw×80dvh surface, 20% smaller than its viewport in both dimensions, while Mobile Landscape remains unchanged. All typography scoped inside `字母練習區` is reduced 15% on Desktop and 20% on mobile without changing text elsewhere. Release remains stopped for Lin's Human visual/audio/content PASS.
 
 **Prior update: 2026-08-29 Asia/Bangkok** — Restore Game Search candidate
+## 2026-08-29 — Mobile Landscape 5.2 shared six-game geometry (`PASS_LOCAL / HUMAN_GATE_PENDING / PRODUCTION_UNCHANGED`)
 
-## 2026-08-29 — Restore Game Search (`PASS_LOCAL / PROTECTED_PREVIEW_PENDING / PRODUCTION_UNCHANGED`)
+- Rebound from exact clean Production `7c8237133910a78f186fc62b19b67c0cda44860e` and replaced the retired Tone-only Landscape fork with one shared controller, stylesheet and split-keyboard helper consumed by Tone, Reading, Listening, Typing, Word Order and Lego. Desktop and Mobile Portrait remain outside the short-screen Landscape media boundary.
+- Locked one top band across all six games: smallest Login slot, Chinese `等級／工具`, centered game-owned title and right-side Game/More/fixed Skip geometry. Both three-control groups use the same exact `5px` gap, with `12px` minimum safe outer insets. Word Order and Lego omit Level without a blank gap. Dropdowns and utility menus share below-trigger positioning, icon-and-label rows, six-row scrolling and bounded panels.
+- Locked visible framed `30% / 40% / 30%` left/center/right zones for Tone, Reading, Listening, Typing and Word Order while reusing live controls and game-owned behavior. Reading keeps split vertical choices with Check at right-bottom; Typing and Listening Typed reuse the split in-game keyboard geometry; Listening Choice uses two choices per side; Word Order moves Hint to the right-top action slot. Tone keeps its accepted three-per-side, reveal actions and scrollable center behavior.
+- Lego keeps only the shared top band plus its approved separate structure: one full-width constructed-sentence band, then visible lower category/supplement/detail frames using the existing live slots and menu. No candidate pool, custom input, sentence logic, score, SRS/Review, provider/session/account/data, Supabase/config/RLS or parked runtime changed.
+- Focused Mobile Landscape coverage passes 9/9, shared six-game regression passes 52/52, JavaScript syntax and whitespace checks pass, and the complete `node scripts/check-site.js` gate passes across the current 1,017-file tree. Browser geometry checks at 844×390, 932×430 and 1024×600 cover all six mappings with equal gaps, exact 30/40/30 widths, visible borders and no document overflow; protected live content remains reserved for the exact Human Preview gate. No push, PR, merge, deploy or Production mutation occurred.
+
+## 2026-08-29 — Restore Game Search (`PASS_PRODUCTION / COMPLETE`)
 
 - Restored the previously released Login Free Game Search gate on `games.html` from the current committed Search engine/index/corpus/UI/auth clients. Guest receives only the locked Login message; authenticated Search remains one successful Search per account/Taipei day, claims the existing server quota before local analysis, sends only `request_id`, covers six games and excludes Challenge.
 - Removed only `#gameSearchGate` from the Minimum Guest hide list and bound the hub to the new cache revision. Time Auto Plan DOM and runtime stay absent; current Login, Vault, cards and control layout remain unchanged.
 - Regressions require the Search gate/runtime chain while continuing to reject Time Auto Plan restoration. No provider, session, account, application-data, fixture, quota, Supabase, schema/config/RLS or Edge action is part of this source Delta.
-- Search static, entitlement and behavioral suites, Minimum Guest, Study Plan integration, shared-game regression, syntax and whitespace checks pass; the full site gate passes across the current 1,018-file tree. Isolated browser checks cover Guest and simulated Login Free at Desktop and Mobile Portrait with no external network, provider, session, account data or Search/quota invocation; the restored Search has one input/button, existing cards stay present, Time Auto Plan stays absent, horizontal overflow is zero and no fresh console warning/error appears.
+- Search static, entitlement and behavioral suites, Minimum Guest, Study Plan integration, shared-game regression, syntax and whitespace checks pass; PR #101, Required and protected Pages passed on exact Production `main=7c8237133910a78f186fc62b19b67c0cda44860e`.
 
 **Prior update: 2026-08-29 Asia/Bangkok** — Login Free Personal Data/Search candidate
 
@@ -2454,3 +2480,63 @@ node scripts/check-site.js
 - Added source-only Free pre-SRS tables and one service-role RPC that resolves the existing `content_ref` to exactly one `learning_items.item_id`, applies transitions atomically with compare-and-swap, stores exact replay results, rejects changed replay, and enters the existing SRS owner at stage 0 without backflow.
 - Browser roles receive no table or RPC write privilege. The bridge ignores client item IDs and client score values; it requires a game-specific server verification seam and keeps canonical learning scores before every combo/golden/level/end-round/SRS bonus.
 - Local PostgreSQL verification compiles the migration and passes deny-by-default, missing/duplicate identity, Free Review timing/attempts, idempotency/conflict/CAS, stage-0/no-backflow, five-game isolation and concurrent exactly-once checks. The source is not applied to Staging or Production; Paid and public runtime remain OFF.
+# 2026-08-30 — Mobile Landscape top-action collision correction
+
+- Strengthened the existing shared Landscape selector so the moved `🎮 / ⋯` controls participate in the right action row instead of retaining the older fixed-position rule from `shared.css`.
+- The Reading example now measures four visible controls in order: `🎮 / ⋯ / 跳過 / 檢查`, each `39px` at `844×390`, with exact `5px` adjacent gaps and a `12px` right safe edge; no rectangles overlap.
+- Advanced the shared Landscape stylesheet cache key on the five scoped games only; Lego remains untouched. Targeted Landscape/shared tests and the full `1,018`-file site gate pass.
+
+# 2026-08-31 — Mobile Landscape Core-4 first-gameplay layout
+
+- Applied the approved first-gameplay layouts for Tone, Reading, Typing, and Word Order while leaving Listening and Lego gameplay unchanged.
+- Reading and Word Order now reserve the lower-right position-two zone completely; side choices use independent available heights, preserve stable placement, and Word Order may allocate unequal left/right counts. Word Order position two uses `重新` before completion and the existing `下一題` afterward.
+- Typing now renders the 47 Kedmanee character/symbol keys plus one synchronized Shift control on each side, removes the on-screen Space and Backspace keys, promotes Shift characters while active, auto-releases after one character, and shapes standalone Thai marks without adding a dotted circle while preserving `ฺ`.
+- Advanced the shared Landscape CSS/controller cache keys and the Typing bundle cache key. Verification: Landscape `15/15`, shared `52/52`, Typing `17/17`, owner-switch `12/12`, browser geometry at `844×390`, and the full `1,018`-file site gate passed.
+
+# 2026-08-31 — Mobile Landscape Core-4 interaction correction
+
+- Replaced the earlier source-only Preview claim with a browser interaction gate that closes Cookie/tutorial blockers, measures live bounding boxes, and clicks through Tone, Reading, Typing, and Word Order states at `844×390`.
+- Enforced one state-owned Position 2 action, corrected Word Order side-grid gaps and its save-button runtime error, and kept every Word Order choice inside its owner frame without entering the centre or Position 2.
+- Kept the Typing keyboard halves inside their respective side frames, verified all 47 character keys plus both shared one-shot Shift controls, and preserved the real `ฺ` character without a dotted-circle display artifact.
+- Verification: browser interaction gate `134/134`, targeted Core-4 tests, shared game tests, owner-switch and neutral-action regressions, and the full `1,020`-file site gate passed. Human acceptance remains pending; Listening, Lego, and Production are unchanged.
+
+# 2026-09-01 — Mobile Landscape Reading tap-stability correction
+
+- Invalidated the earlier Source Preview technical claim after a real pointer tap showed Reading's desktop hover transform moving and enlarging a selected choice outside its Landscape owner frame.
+- Scoped the tap correction to Reading Mobile Landscape: hover and selected choices now keep their exact bounding box, with a browser regression that compares geometry after every answer selection. The shared Landscape Resume host also once again respects the game-owned close action instead of forcing the closed prompt visible over gameplay.
+- Human acceptance remains pending. Listening, Lego, Supabase behavior and Production are unchanged.
+
+# 2026-09-01 — Mobile Landscape Tone top-action stability correction
+
+- Screen-recording review found Tone's Skip action alternating between its original `#tf-body` owner and the shared top slot on successive observer syncs. The controller now resolves the already-mounted action first, so the same live button remains in one owner instead of being restored and remounted every animation frame.
+- Added a browser regression that observes the top slot across multiple frames and fails on any child-list churn. The interaction gate now also completes every Reading syllable before Check, so randomized multi-syllable questions cannot create a false failure. A randomized live Preview question then exposed a final right-choice overlap at the Position 2 boundary; Reading and Word Order now stop at row 65 with fresh controller keys. Typing, Listening, Lego and Production behavior remain unchanged.
+
+# 2026-09-03 — Mobile Landscape signed-in account menu
+
+- Replaced the clipped signed-in badge at the left safe edge with one compact `已登入` Landscape trigger on Tone, Reading, Typing, and Word Order.
+- Opening it presents the original Desktop account badge and its existing name, profile-edit, and logout controls; no account action or handler is cloned. The popup closes on its action, another menu, outside click, or Escape, and the untouched Desktop badge is restored on Landscape exit.
+- Verification: focused four-game browser interaction `4/4`, shared Landscape source checks `19/19`, shared game tests `52/52`, owner-switch races `12/12`, neutral actions `7/7`, and the full `1,021`-file site gate passed. Listening, Lego, Auth data, Supabase, deployment, and Production are unchanged.
+
+# 2026-09-03 — Reading standalone tone-mark vectors
+
+- Replaced the carrier-consonant/cropping workaround for `่ ้ ๊ ๋` with four inline SVG drawings used by the original Reading option and answer-slot nodes on Mobile Landscape, Mobile Portrait, and Desktop.
+- Preserved the original option identity, selection/replacement/removal behavior, `檢查`, and next-state handlers; the SVG markup contains no consonant carrier or dotted circle and exposes the original mark through `aria-label`.
+- Verification: focused Reading/neutral/shared/Landscape tests and real-browser answer flow passed on all three surfaces. Deployment and Production are unchanged.
+
+# 2026-09-03 — Reading Landscape option collision correction
+
+- Kept the original Desktop Reading choice nodes, random offsets, rotation, animation, and click handlers, but assigned adjacent Landscape choices to safely separated horizontal lanes inside their existing left/right owners.
+- Verified all three Reading review layouts at `844×390`: no live choice rectangles overlap, every one of the ten visible choices can be selected and removed by a real pointer click, and the lower-right Position 2 zone remains choice-free.
+- Advanced the shared Core-4 Landscape controller cache key. Portrait, Desktop, Listening, Lego, deployment, and Production are unchanged.
+
+# 2026-09-03 — Reading Portrait/Desktop option collision correction
+
+- Preserved the original Reading option nodes, handlers, box dimensions, scattered placement, and animation while bounding their random offsets/rotation inside a wider flex gap on Portrait and Desktop.
+- Kept each standalone tone SVG at `.82em × .72em` inside the same unmodified option box used by ordinary single-character choices; no carrier consonant or dotted circle was added.
+- Verification compares live option rectangles and real selection behavior on Portrait, Desktop, and Mobile Landscape. Deployment and Production are unchanged.
+
+# 2026-09-03 — Reading Sarabun standalone tone-mark outlines
+
+- Replaced the provisional standalone drawings for `่ ้ ๊ ๋` with the Human-selected Sarabun Bold font outlines while keeping the original Reading option nodes, handlers, and `54 × 58px` option boxes.
+- Set the visible outline height to approximately `9px`, with width following each mark's natural Sarabun proportion; no carrier consonant, dotted circle, or bundled font file was added.
+- Verification covers live size, overlap, and real option clicks on Desktop, Mobile Portrait, and Mobile Landscape. Deployment and Production are unchanged.

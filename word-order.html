@@ -92,12 +92,14 @@ gtag("config","G-DKVQE30982");window.GA_CATEGORY="game";</script>
 <meta name="twitter:image" content="https://mrtaihualin.com/assets/share-card.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><!-- Lin 2026-07-26: เปิดสายไปที่เซิร์ฟเวอร์ฟอนต์ล่วงหน้า ลดเวลารอบนมือถือ -->
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700&family=Sarabun:wght@400;600;700&family=Noto+Sans+Thai:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/shared.css?v=36">
+<link rel="stylesheet" href="css/shared.css?v=38">
+<link rel="stylesheet" href="css/mobile-landscape.css?v=45">
+<script src="js/games/thai-keyboard.js?v=2"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="js/core/supabase-config.js?v=10"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script>
 <script defer src="js/core/auth-widget.js?v=17"></script>
-<script defer src="js/games/reading-auth.js?v=30"></script>
+<script defer src="js/games/reading-auth.js?v=31"></script>
 <script defer src="js/games/round-report.js?v=5"></script>
 <script defer src="js/games/tone-server.js?v=6"></script><!-- Login Free SRS owner; Paid/Challenge remain parked -->
 <script src="js/core/network-guard.js?v=1"></script>
@@ -110,7 +112,7 @@ gtag("config","G-DKVQE30982");window.GA_CATEGORY="game";</script>
 /* P6-28 (2026-08-08): ปุ่มเรียกฟังก์ชันเกม (word-order-app.min.js โหลดแบบ async ผ่าน
    GameContentLoader.boot()) ต้องกดไม่ได้ก่อนสคริปต์โหลดเสร็จ — ดูสคริปต์ปลดล็อกท้ายไฟล์ */
 html:not(.gc-ready) [onclick*="woDownloadReport("],html:not(.gc-ready) [onclick*="woHint("],
-html:not(.gc-ready) [onclick*="woNext("],html:not(.gc-ready) [onclick*="woRemember("],
+html:not(.gc-ready) [onclick*="woNext("],html:not(.gc-ready) [onclick*="woSkip("],
 html:not(.gc-ready) [onclick*="woResetSentence("],html:not(.gc-ready) [onclick*="woRestart("],
 html:not(.gc-ready) [onclick*="woToggleEn("],html:not(.gc-ready) [onclick*="woToggleParticleMode("],
 html:not(.gc-ready) [onclick*="woTogglePron("],html:not(.gc-ready) [onclick*="woToggleZh("],
@@ -226,7 +228,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 .tf-challenge-banner.done .tf-ch-fill{background:linear-gradient(90deg,#4caf50,#7ed07e);}
 .tf-ch-sub{font-size:11px;color:#a07a3a;margin-top:5px;}
 
-.btn-remember{background:#e8f5e9;color:#2e7d32;border:1.5px solid #a5d6a7;}
+.btn-skip{background:#e8f5e9;color:#2e7d32;border:1.5px solid #a5d6a7;}
 .wo-hint-warn{width:100%;color:#c62828;font-size:12px;font-weight:700;text-align:center;margin-top:6px;background:#fdecea;border:1px solid #ef9a9a;border-radius:8px;padding:6px 10px;}
 
 .rg-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:rgba(45,42,34,0.96);color:#fff;padding:12px 20px;border-radius:24px;font-family:'Noto Sans TC',sans-serif;font-size:14px;font-weight:600;box-shadow:0 8px 28px rgba(0,0,0,0.3);z-index:10001;max-width:88%;text-align:center;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;}
@@ -286,7 +288,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   ]
 }
 </script>
-<script src="js/core/minimum-guest-launch.js?v=10"></script>
+<script src="js/core/minimum-guest-launch.js?v=11"></script>
 <script defer src="js/games/sentence-vault.js?v=4"></script>
 </head>
 <body data-gsh-game="word-order">
@@ -343,8 +345,8 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
       <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">💡 提示按鈕怎麼用</div>
       <p style="margin:0 0 10px;">「提示」不是切換模式，是隨點隨扣分的按鈕，可以按很多次，但每按一次都扣 2 分，扣到 0 分會先看答案並稍後再練。要慢慢想清楚順序，或直接用提示拿低分過關，都可以自己拿捏。</p>
 
-      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">✓「已記得」按鈕是什麼意思</div>
-      <p style="margin:0 0 10px;">覺得這句已經很熟，可按「已記得」跳過重排直接自測。不會加分、不會加星星，純粹標記「已精通」，用在複習系統。</p>
+      <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">「跳過」按鈕是什麼意思</div>
+      <p style="margin:0 0 10px;">不想做這題時可按「跳過」直接進入下一題；不算答對或答錯、不加減分，也不影響連擊或複習進度。是否已記住由複習系統依實際作答決定。</p>
 
       <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🧰 好用小工具</div>
       <p style="margin:0 0 10px;">題目上方的工具列可直接使用：讀音顯示・英文讀音・翻譯顯示・字體切換・🙏禮貌詞（切換句尾要不要顯示 ครับ／ค่ะ／คะ，純顯示不影響排序或計分）。跟其他遊戲不一樣的是，句子還在重排的時候禮貌詞不會出現，要等排對、或看答案之後才會顯示，跟句子的中文意思解說放在一起。</p>
@@ -453,8 +455,8 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   <div id="wo-reveal" style="display:none;width:100%;margin-top:8px;background:#fffbf0;border:1.5px dashed #f0b030;border-radius:12px;padding:10px 14px;box-sizing:border-box;"></div>
 
   <div class="btn-row">
-    <button class="btn btn-remember" id="wo-remember-btn" onclick="try{if(window.gtag)gtag('event','word_order_remember_click',{category:'game'});}catch(e){}woRemember()">已記得</button>
-    <button class="btn btn-secondary" onclick="try{if(window.gtag)gtag('event','word_order_reset_sentence',{category:'game'});}catch(e){}woResetSentence()">↺ 重排這句</button>
+    <button class="btn btn-skip" id="wo-skip-btn" onclick="try{if(window.gtag)gtag('event','word_order_skip_click',{category:'game'});}catch(e){}woSkip()">跳過</button>
+    <button class="btn btn-secondary" id="wo-reset-btn" onclick="try{if(window.gtag)gtag('event','word_order_reset_sentence',{category:'game'});}catch(e){}woResetSentence()">↺ 重排這句</button>
     <button class="btn btn-primary" id="wo-next-btn" onclick="try{if(window.gtag)gtag('event','word_order_next_click',{category:'game'});}catch(e){}woNext()" disabled>下一題 →</button>
   </div>
 </div>
@@ -499,8 +501,9 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 </footer>
 
 <script src="data/nav-template.js?v=4"></script>
-<script src="js/core/shared.min.js?v=48"></script>
+<script src="js/core/shared.min.js?v=49"></script>
 <script src="js/games/game-flow.js?v=12"></script>
+<script src="js/core/mobile-landscape.js?v=32"></script>
 
 <div id="gt-tour-overlay">
   <div id="gt-tour-spot"></div>
@@ -521,7 +524,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 <script>
 (function(){
   // P6-28 (2026-08-08): ปิดปุ่มเกม (ดู CSS ต้นไฟล์) จนกว่า GameContentLoader.boot() จะโหลดสคริปต์เกมสำเร็จจริง
-  var GC_SEL = '[onclick*="woDownloadReport("],[onclick*="woHint("],[onclick*="woNext("],[onclick*="woRemember("],'
+  var GC_SEL = '[onclick*="woDownloadReport("],[onclick*="woHint("],[onclick*="woNext("],[onclick*="woSkip("],'
     + '[onclick*="woResetSentence("],[onclick*="woRestart("],[onclick*="woToggleEn("],[onclick*="woToggleParticleMode("],'
     + '[onclick*="woTogglePron("],[onclick*="woToggleZh("],[onclick*="woToggleZhWord("],[onclick*="openBadge("],[onclick*="openStar("]';
   function gcGate(){
@@ -544,7 +547,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/word-order-app.min.js?v=34']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/word-order-app.min.js?v=38']).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 
@@ -558,7 +561,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 @media(max-width:768px){#game-switcher{bottom:calc(120px + env(safe-area-inset-bottom,0px));}.gs-tab{padding:8px 13px;font-size:12px;}}
 </style>
 <div id="game-switcher" data-current="word_order"></div>
-<script src="js/games/game-switcher.js?v=6"></script>
+<script src="js/games/game-switcher.js?v=7"></script>
 <script>
 // ── 提示泡泡（給其他頁面共用的函式，這頁不再自動觸發小泡泡，改用下面完整導覽）— Lin 2026-07-31 ──
 function dismissHowtoHint(id){

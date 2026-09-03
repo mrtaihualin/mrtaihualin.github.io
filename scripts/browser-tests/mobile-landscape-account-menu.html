@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>RUNNING — Mobile Landscape account menu</title>
+  <link rel="stylesheet" href="../../css/mobile-landscape.css?v=45">
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: #f5f0e8; }
+    button { font-family: "Noto Sans TC", sans-serif; }
+    #qa-source { padding: 8px; }
+    #qa-status { position: fixed; right: 4px; bottom: 4px; z-index: 200000; font: 700 11px system-ui; }
+    .btn, #wo-reset-btn, #wo-next-btn { border: 2px solid rgba(139,99,16,.5); background: #fff; color: #8b6310; font-weight: 700; }
+    .sg-tone-btn { border: 2px solid #c8973a; background: #fff; color: #8b6310; }
+  </style>
+</head>
+<body>
+  <script>
+    var qaGame = new URLSearchParams(location.search).get('game') || 'tone';
+    document.body.setAttribute('data-gsh-game', qaGame);
+  </script>
+  <div id="qa-source">
+    <div id="rg-login-slot" style="display:flex;align-items:center;">
+      <span id="sa-badge-rg-login-slot" style="display:inline-flex">
+        <div style="display:flex;align-items:center;gap:7px;background:#fff;border:1.5px solid rgba(200,151,58,.45);border-radius:20px;padding:5px 12px 5px 8px;box-shadow:0 2px 8px rgba(139,99,16,.12);font-family:'Noto Sans TC',sans-serif;">
+          <span style="font-size:15px;flex-shrink:0;">👤</span>
+          <span class="sa-nick" style="color:#5c4410;font-weight:700;font-size:12.5px;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;">Lin</span>
+          <button type="button" class="sa-edit" style="border:none;background:none;color:#a07a1e;cursor:pointer;font-size:12px;padding:0;line-height:1;">✏️</button>
+          <button type="button" class="sa-logout" style="border:none;background:rgba(139,99,16,.12);color:#8b6310;border-radius:20px;padding:3px 10px;cursor:pointer;font-size:11.5px;font-weight:700;">登出</button>
+        </div>
+      </span>
+    </div>
+    <div id="tf-level-tabs"><button type="button">初級</button></div>
+    <div class="gsh-level-selector"><button type="button">初級</button></div>
+    <button type="button" id="tf-howto-btn">玩法</button>
+    <button type="button" id="rg-howto-btn">玩法</button>
+    <button type="button" id="wo-howto-btn">玩法</button>
+    <button type="button" id="tf-guide-toggle">提示</button>
+    <button type="button" id="rg-guide-toggle">提示</button>
+    <button type="button" id="guide-toggle">提示</button>
+    <button type="button" id="wo-hint-btn">提示</button>
+    <div class="gsh-page-header"><h1 class="tf-page-title page-title">泰語練習室</h1></div>
+    <div id="tf-body">
+      <div class="sg-tone-grid">
+        <button type="button" class="sg-tone-btn">1</button><button type="button" class="sg-tone-btn">2</button><button type="button" class="sg-tone-btn">3</button>
+        <button type="button" class="sg-tone-btn">4</button><button type="button" class="sg-tone-btn">5</button>
+        <button type="button" class="sg-dontknow-btn" onclick="qaAction('tone')">不確定</button>
+      </div>
+      <button type="button" class="tf-known-btn">跳過</button>
+    </div>
+    <div class="word-area">เกมตัวอย่าง</div>
+    <div id="syl-strip"></div><div id="slot-row"></div>
+    <div id="pool"><button type="button" class="opt">ก</button><button type="button" class="opt">อา</button></div>
+    <button type="button" id="btn-skip">跳過</button>
+    <button type="button" class="btn" id="btn-check" onclick="qaAction(qaGame)">檢查</button>
+    <button type="button" class="btn" id="btn-next" style="display:none">下一題 →</button>
+    <button type="button" class="btn" id="btn-next-syl" style="display:none">下一個音節 →</button>
+    <div id="rg-type-wrap"></div>
+    <div id="wo-slots"></div><div id="wo-bank"><button type="button" class="wo-tile">คำ</button></div>
+    <button type="button" id="wo-skip-btn">跳過</button>
+    <button type="button" id="wo-reset-btn" onclick="qaAction('word-order')">↺ 重排這句</button>
+    <button type="button" id="wo-next-btn" style="display:none">下一題 →</button>
+  </div>
+  <output id="qa-status">RUNNING</output>
+  <script>
+    var qaLastAction = '';
+    function qaAction(game) { qaLastAction = game; }
+  </script>
+  <script src="../../js/core/mobile-landscape.js?v=32"></script>
+  <script>
+    (function () {
+      'use strict';
+      var status = document.getElementById('qa-status');
+      var originalLogin = document.getElementById('rg-login-slot');
+      var originalBadge = document.getElementById('sa-badge-rg-login-slot');
+      var originalEdit = originalBadge.querySelector('.sa-edit');
+      var originalLogout = originalBadge.querySelector('.sa-logout');
+      var editClicks = 0;
+      var logoutClicks = 0;
+      originalEdit.addEventListener('click', function () { editClicks += 1; });
+      originalLogout.addEventListener('click', function () { logoutClicks += 1; });
+
+      function shown(node) {
+        if (!node || node.hidden) return false;
+        var style = getComputedStyle(node);
+        var box = node.getBoundingClientRect();
+        return style.display !== 'none' && style.visibility !== 'hidden' && box.width > 0 && box.height > 0;
+      }
+      function assert(condition, message) { if (!condition) throw new Error(message); }
+      function wait(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
+
+      (async function () {
+        try {
+          await wait(120);
+          var stage = document.getElementById('gsh-ml-stage');
+          document.getElementById('qa-source').style.display = 'none';
+          var login = stage.querySelector('[data-gsh-ml-slot="dropdowns"] > #rg-login-slot');
+          var trigger = login.querySelector('#gsh-ml-account-trigger');
+          var badge = login.querySelector('#sa-badge-rg-login-slot');
+          var level = stage.querySelector('[data-gsh-dropdown="level"]');
+          var toolsTrigger = stage.querySelector('[data-gsh-dropdown="tools"] .gsh-ml-dropdown-trigger');
+          assert(login === originalLogin, 'must move the original Login slot');
+          assert(badge === originalBadge && badge.querySelector('.sa-edit') === originalEdit && badge.querySelector('.sa-logout') === originalLogout, 'must reuse the Desktop account nodes');
+          assert(trigger && trigger.textContent === '已登入', 'must show the compact signed-in trigger');
+          assert((qaGame === 'word-order' && !level) || (qaGame !== 'word-order' && level), 'must preserve the per-game Level inventory');
+          assert(toolsTrigger, 'must preserve Tools');
+          assert(!shown(badge) && badge.inert, 'account actions must start closed');
+
+          var previewMode = new URLSearchParams(location.search).get('preview');
+          if (previewMode === 'position') {
+            var expected = { tone:'不確定', reading:'檢查', typing:'檢查', 'word-order':'重新' }[qaGame];
+            var positionActions = Array.prototype.slice.call(stage.querySelectorAll('[data-gsh-ml-position="2"]')).filter(shown);
+            assert(positionActions.length === 1, 'must expose one Position 2 action');
+            assert(positionActions[0].textContent.replace(/\s+/g, '') === expected, 'must expose the game-owned Position 2 label');
+            positionActions[0].click();
+            assert(qaLastAction === qaGame, 'must execute the original game-owned action once');
+            status.textContent = 'PREVIEW ' + qaGame + ' — ' + expected;
+            document.title = 'PREVIEW — ' + qaGame + ' Position 2';
+            return;
+          }
+
+          trigger.click();
+          await wait(30);
+          var triggerBox = trigger.getBoundingClientRect();
+          var badgeBox = badge.getBoundingClientRect();
+          assert(shown(badge) && !badge.inert, 'account actions must open');
+          assert(badgeBox.top >= triggerBox.bottom && badgeBox.left >= 0 && badgeBox.right <= innerWidth, 'popup must open below the trigger inside the viewport');
+          if (previewMode === '1') {
+            status.textContent = 'PREVIEW ' + qaGame;
+            document.title = 'PREVIEW — ' + qaGame + ' account menu';
+            return;
+          }
+          originalEdit.click();
+          await wait(30);
+          assert(editClicks === 1 && !shown(badge), 'Desktop edit action must fire once and close');
+
+          trigger.click();
+          await wait(30);
+          originalLogout.click();
+          await wait(30);
+          assert(logoutClicks === 1 && !shown(badge), 'Desktop logout action must fire once and close');
+
+          trigger.click();
+          await wait(30);
+          toolsTrigger.click();
+          await wait(30);
+          assert(!shown(badge) && shown(stage.querySelector('[data-gsh-dropdown="tools"] .gsh-ml-dropdown-panel')), 'Tools must close the account popup');
+
+          trigger.click();
+          await wait(30);
+          document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+          await wait(30);
+          assert(!shown(badge) && trigger.getAttribute('aria-expanded') === 'false', 'Escape must close the account popup');
+          assert(document.documentElement.scrollWidth <= innerWidth && document.body.scrollWidth <= innerWidth, 'must not create horizontal overflow');
+
+          window.GSHMobileLandscape.deactivate();
+          assert(!document.getElementById('gsh-ml-account-trigger'), 'Landscape-only trigger must be removed on exit');
+          assert(document.getElementById('rg-login-slot') === originalLogin && document.getElementById('sa-badge-rg-login-slot') === originalBadge, 'Desktop Login and account badge must restore unchanged');
+          status.textContent = 'PASS ' + qaGame;
+          status.dataset.result = 'pass';
+          document.title = 'PASS — ' + qaGame + ' account menu';
+        } catch (error) {
+          status.textContent = 'FAIL ' + error.message;
+          status.dataset.result = 'fail';
+          document.title = 'FAIL — ' + qaGame + ' account menu';
+        }
+      })();
+    })();
+  </script>
+</body>
+</html>

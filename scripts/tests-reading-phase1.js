@@ -80,7 +80,17 @@ test('Reading counter follows active syllables without changing the round queue'
 });
 
 test('Reading loads the rebuilt crash-safe bundle with a fresh cache key', () => {
-  assert.match(html, /reading-game-app\.min\.js\?v=48/);
+  assert.match(html, /reading-game-app\.min\.js\?v=52/);
+});
+
+test('Reading keeps scattered choices collision-safe and tone boxes proportional', () => {
+  assert.match(html, /\.opts\{display:flex;flex-wrap:wrap;gap:20px;/);
+  assert.match(html, /--opt-safe-jx:clamp\(-4px,var\(--jx,0px\),4px\)/);
+  assert.match(html, /--opt-safe-jy:clamp\(-3px,var\(--jy,0px\),3px\)/);
+  assert.match(html, /--opt-safe-jr:clamp\(-4deg,var\(--jr,0deg\),4deg\)/);
+  assert.match(html, /\.tone-drawn\{[\s\S]{0,100}overflow:visible;[\s\S]{0,80}vertical-align:middle;/);
+  assert.match(source, /'่':'<svg class="tone-drawn" width="\.18em" height="\.34em" viewBox="-18\.6 -90\.3 11\.8 21\.9"/);
+  assert.doesNotMatch(html, /\.opt\[data-type="tone"\][^{]*\{[^}]*(?:min-width|padding|font-size):/);
 });
 
 test('every Reading syllable uses the locked consonant-vowel-final-tone slot order', () => {
