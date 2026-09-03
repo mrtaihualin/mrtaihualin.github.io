@@ -2,6 +2,12 @@
 
 **Updated: 2026-09-03 Asia/Bangkok** — Combined Mobile Landscape + Email OTP release candidate
 
+## 2026-09-03 — Strict global logout repair (`FIXED_PASS_LOCAL / PRODUCTION_UNCHANGED`)
+
+- Replaced the false-success browser-only global sign-out path with an authenticated server-confirmed path: the existing `account-delete` Edge boundary derives the exact owner from the verified JWT, invokes one service-role-only RPC, and succeeds only when both Auth sessions and refresh tokens are confirmed at zero.
+- The new SQL source deletes only exact-owner rows in `auth.sessions`/`auth.refresh_tokens`; it never accepts a browser-supplied user ID, never changes `auth.users` or application data, and revokes execute from `PUBLIC`/`anon`/`authenticated`. The browser clears its local SDK session and account UI caches only after the zero proof.
+- Added deterministic failure coverage for server error, nonzero proof and local cleanup error, plus source/ACL/owner-boundary contracts. Account lifecycle 10/10, Auth session 15/15, account audit 13/13, error UX 16/16, account boundary 25/25, owner-switch 12/12 and an isolated PostgreSQL 17 exact-owner/ACL/idempotency runtime all pass. All 13 existing `auth-widget.js` consumers advance v17 → v18. Production SQL, Edge and static rollout plus the authorized real-account retest remain pending.
+
 ## 2026-09-03 — Mobile Landscape accepted UI (`SOURCE_PASS / HUMAN_PASS / RELEASE_AUTHORIZED`)
 
 - Consolidated the accepted shared Landscape presentation and controls for Tone, Reading, Typing and Word Order onto current GitLab `main`. The temporary rotate-to-Portrait blocker is removed only for these four released surfaces; Listening and Lego keep their existing runtime cache boundary.

@@ -7,10 +7,11 @@
 // 🆕 2026-08-08 (รอบ 2) — เปลี่ยนสถาปัตยกรรมทั้งหมด: จาก "confirm แล้วลบทันที" เป็น "cooldown 7 วัน"
 //   ตามที่ Lin ตัดสินใจ (ผ่านแชท decision queue): ผู้ใช้ยื่นคำขอ → เข้าสถานะรอ 7 วัน → ยกเลิกได้เองระหว่างนี้
 //   → ครบกำหนดยังไม่ยกเลิก → ลบถาวรจริง (ทำโดย `account-delete-cron/index.ts` แยกไฟล์ต่างหาก ไม่ใช่ไฟล์นี้)
-//   ⚠️ ไฟล์นี้ "ไม่ลบข้อมูลอะไรเลยอีกต่อไป" — งานลบจริงย้ายไปอยู่ที่ account-delete-cron ทั้งหมด
-//   ไฟล์นี้เหลือหน้าที่แค่: (1) preview (2) request — สร้างคำขอเข้า cooldown (3) cancel — ยกเลิกคำขอ
+//   ⚠️ ไฟล์นี้ไม่ลบข้อมูลบัญชี/การเรียน — งานลบข้อมูลจริงอยู่ที่ account-delete-cron เท่านั้น
+//   เพิ่ม action logout_all สำหรับเพิกถอน Auth session/refresh token ของเจ้าของ JWT คนเดียวผ่าน RPC
+//   ฝั่ง server ที่ล็อกสิทธิ์ service_role เท่านั้น แล้วคืนเฉพาะจำนวนรวมเพื่อยืนยันผล
 //
-// หน้าที่ 3 action:
+// หน้าที่ 4 action:
 //   1) action: "preview" — บอกล่วงหน้าว่าจะลบ/ทำให้ไม่ระบุตัวตนอะไรบ้าง กี่แถว + บอกด้วยว่ามีคำขอลบค้าง
 //      (pending) อยู่หรือเปล่า กำหนดลบวันไหน (ให้ฝั่งเว็บโชว์ banner ได้)
 //   2) action: "request" (ต้องมี body.confirm === true ด้วย — ชื่อ field คงเดิม 'confirm' กันงงกับ
@@ -19,6 +20,8 @@
 //      ในขั้นนี้เลย" ส่งอีเมลแจ้งว่ารับคำขอแล้ว
 //   3) action: "cancel" — ยกเลิกคำขอที่ยังค้างอยู่ (status='pending' → 'cancelled') บัญชีกลับสถานะปกติ
 //      ทันที ส่งอีเมลยืนยันว่ายกเลิกแล้ว
+//   4) action: "logout_all" — เพิกถอน Auth session/refresh token ทุกอุปกรณ์ของเจ้าของ JWT คนเดียว
+//      ไม่รับ user_id จาก client และไม่แตะข้อมูลบัญชี/การเรียน
 //
 // ทำไมต้องมีฟังก์ชันนี้แยกจาก client เขียนตรง: (เหตุผลเดิม ไม่เปลี่ยน)
 //   - เว็บนี้ไม่มีระบบรหัสผ่านเลย (ล็อกอินผ่าน Google/Facebook OAuth, LINE custom flow, หรือ Email OTP
@@ -179,8 +182,8 @@ serve(async (req) => {
     return json({ error: 'invalid_json_body', message: 'รูปแบบข้อมูลที่ส่งมาไม่ถูกต้อง กรุณาลองใหม่' }, 400);
   }
   const action = body?.action;
-  if (action !== 'preview' && action !== 'request' && action !== 'cancel') {
-    return json({ error: 'invalid_action', message: 'ต้องเป็น "preview", "request" หรือ "cancel" เท่านั้น' }, 400);
+  if (action !== 'preview' && action !== 'request' && action !== 'cancel' && action !== 'logout_all') {
+    return json({ error: 'invalid_action', message: 'คำสั่งไม่ถูกต้อง' }, 400);
   }
 
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
@@ -200,8 +203,8 @@ serve(async (req) => {
     const userId = userData.user.id;
     const userEmail = userData.user.email || null;
 
-    // ── fresh-JWT gate — บังคับเฉพาะ preview/request เหมือนเดิม (cancel ไม่บังคับ ดูเหตุผลหัวไฟล์) ──
-    if (action !== 'cancel') {
+    // ── fresh-JWT gate — บังคับเฉพาะ preview/request; logout ต้องทำได้แม้ session เก่า ──
+    if (action === 'preview' || action === 'request') {
       const claims = decodeJwtPayloadUnsafe(jwt);
       const iat = claims?.iat;
       if (!iat || typeof iat !== 'number') {
@@ -224,7 +227,29 @@ serve(async (req) => {
     });
     if (!rlErr && rlOk === false) return json({ error: 'rate_limited', message: '請稍後再試' }, 429);
 
-    // ── ดึงคำขอ pending ปัจจุบัน (ถ้ามี) — ใช้ร่วมกันทั้ง 3 action ──
+    // ── logout_all — server-confirmed revocation; never trust a client-supplied owner ──
+    if (action === 'logout_all') {
+      const { data: revoked, error: revokeErr } = await admin.rpc('phase1_auth_revoke_all_sessions', {
+        p_user_id: userId,
+      });
+      if (revokeErr) {
+        console.error('[account-delete] logout_all RPC failed:', revokeErr.message);
+        return json({ error: 'logout_failed', message: '無法確認所有裝置都已登出，請稍後再試' }, 500);
+      }
+      if (!revoked || revoked.remaining_sessions !== 0 || revoked.remaining_refresh_tokens !== 0) {
+        return json({ error: 'logout_not_confirmed', message: '無法確認所有裝置都已登出，請稍後再試' }, 500);
+      }
+      return json({
+        ok: true,
+        revoked: true,
+        deleted_sessions: revoked.deleted_sessions,
+        deleted_refresh_tokens: revoked.deleted_refresh_tokens,
+        remaining_sessions: 0,
+        remaining_refresh_tokens: 0,
+      });
+    }
+
+    // ── ดึงคำขอ pending ปัจจุบัน (ถ้ามี) — ใช้ร่วมกันเฉพาะ 3 action ของการลบบัญชี ──
     const { data: pendingRows, error: pendingErr } = await admin
       .from('account_deletion_requests')
       .select('id, requested_at, scheduled_delete_at, status')
