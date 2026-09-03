@@ -305,10 +305,14 @@ test('four-game refinements expose original controls and one shared modal shell'
 test('local Landscape review pages load current game assets from the site root', () => {
   const toneReview = read('scripts/browser-tests/mobile-landscape-tone-position-review.html');
   const readingReview = read('scripts/browser-tests/mobile-landscape-reading-review.html');
+  const wordOrderReview = read('scripts/browser-tests/mobile-landscape-word-order-review.html');
   assert.match(toneReview, /game-content-client\.js\?v=13/);
   assert.match(readingReview, /game-content-client\.js\?v=13/);
+  assert.match(wordOrderReview, /game-content-client\.js\?v=12/);
   assert.match(toneReview, /new URL\('\.\.\/\.\.\/', location\.href\)\.href/);
   assert.match(readingReview, /new URL\('\.\.\/\.\.\/', location\.href\)\.href/);
+  assert.match(wordOrderReview, /new URL\('\.\.\/\.\.\/', location\.href\)\.href/);
+  assert.match(wordOrderReview, /!doc\.getElementById\('wo-check-btn'\)/);
 });
 
 console.log(`\n✅ Mobile Landscape 5.2 tests passed (${passed} checks)`);

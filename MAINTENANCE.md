@@ -2550,5 +2550,6 @@ node scripts/check-site.js
 # 2026-09-04 — Current-main Mobile Landscape review fixture repair
 
 - Updated the local Tone review fixture to intercept the current `game-content-client.js?v=13` binding and made the Tone/Reading `srcdoc` base absolute so current game assets load from the site root.
-- Added a focused regression for both review routes. Product gameplay, the rotate-to-Portrait gate, deployment, and Production are unchanged.
-- Verification: Mobile Landscape `20/20`, Reading `18/18`, neutral actions `7/7`, shared games `52/52`, plus real-browser Tone and Reading review pages at `844×390`.
+- Added a focused regression for the Tone, Reading, and Word Order review routes. Product gameplay, the rotate-to-Portrait gate, deployment, and Production are unchanged.
+- Added a real-page Word Order layout fixture that preserves Current main's auto-check flow and deliberately contains no Check button.
+- Verification: Mobile Landscape `20/20`, Reading `18/18`, neutral actions `7/7`, shared games `52/52`, plus real-browser Tone, Reading, and Word Order review pages at `844×390`.
