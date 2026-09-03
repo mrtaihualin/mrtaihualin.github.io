@@ -149,6 +149,7 @@
     row.ordinal = report.items.length + 1;
     report.items.push(row);
     report.total_items = report.items.length;
+    dispatchRoundEvent('gsh:item-complete', { game_type: report.game_type, round_id: report.round_id, item: row });
     return row;
   }
 

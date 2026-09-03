@@ -32,7 +32,7 @@ function ok(value, message) {
 activePages.concat(['vault.html', 'games-challenge.html']).forEach(function (file) {
   var html = read(file);
   var loginFreeSrsPages = ['tone-finder.html', 'reading-game.html', 'listening-game.html', 'typing-game.html', 'word-order.html'];
-  var binding = 'js/core/minimum-guest-launch.js?v=' + (loginFreeSrsPages.indexOf(file) !== -1 ? '9' : '8');
+  var binding = 'js/core/minimum-guest-launch.js?v=' + (loginFreeSrsPages.indexOf(file) !== -1 ? '10' : '8');
   ok(html.indexOf(binding) !== -1, file + ' loads the current Login-entry launch gate');
   ok(html.indexOf(binding) < html.indexOf('</head>'), file + ' loads the launch gate in head');
 });
@@ -100,7 +100,7 @@ sixGames.forEach(function (file) {
   ok(!/(?:reading|typing|listening|word-order|lego)-board\.html/.test(html), file + ' does not expose a leaderboard route');
 });
 ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html'].forEach(function (file) {
-  ok(read(file).indexOf('tone-server.js?v=5') !== -1, file + ' executes only the approved Login Free SRS transport');
+  ok(read(file).indexOf('tone-server.js?v=6') !== -1, file + ' executes only the approved Login Free SRS transport');
 });
 ok(read('lego.html').indexOf('tone-server.js') === -1, 'Lego keeps SRS transport parked');
 ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html'].forEach(function (file) {

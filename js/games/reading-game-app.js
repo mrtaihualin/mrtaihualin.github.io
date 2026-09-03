@@ -218,6 +218,10 @@ var roundLog=[]; // {th,zh,wrong,failed,guide,pts,srsDue,mastered} ต่อค�
 var roundReport=null;
 var readingSubmittedAttempts=[];
 function rgContentKey(w){return w&&w.contentKey?w.contentKey:((w&&w.words&&w.words.length)?w.th:((w&&w.th||'')+'@'+(w&&w.level||curLevel)));}
+function rgReviewRef(i){var w=WORDS[i];return {source:(w&&w.words&&w.words.length)?'game_sentences':'game_words',key:rgContentKey(w)};}
+function rgPrimeReview(){try{return window.LearningReview&&LearningReview.prime?LearningReview.prime({game:'reading',level:RG_LEVEL_TO_NUM[curLevel]||1,playSetSize:rgRoundSize()}):Promise.resolve([]);}catch(e){return Promise.resolve([]);}}
+function rgReviewOwns(w){try{return !!(window.LearningReview&&LearningReview.owns(roundReport,{source:(w&&w.words&&w.words.length)?'game_sentences':'game_words',key:rgContentKey(w)}));}catch(e){return false;}}
+function rgRegisterRestoredReview(){try{if(!window.LearningReview||!roundReport)return;var all=WORDS.map(function(_,i){return i;}).filter(function(i){return WORDS[i].level===curLevel;}),selected=LearningReview.matchQueue({game:'reading',level:RG_LEVEL_TO_NUM[curLevel]||1,items:roundQueue,contentRefOf:rgReviewRef}),srs=all.filter(function(i){return !!srsRecords[rgSrsKey(WORDS[i])];}),seen=Object.create(null),duplicates=[];roundQueue.forEach(function(i){var key=LearningReview.keyOfRef(rgReviewRef(i));if(seen[key])duplicates.push(i);seen[key]=true;});LearningReview.registerRound({report:roundReport,game:'reading',level:RG_LEVEL_TO_NUM[curLevel]||1,allItems:all,srsOwned:srs,selectedReview:selected,alreadyRetried:duplicates,idOf:function(i){return LearningReview.keyOfRef(rgReviewRef(i));},contentRefOf:rgReviewRef,retry:function(i){roundQueue.push(i);roundTotal=roundQueue.length;refreshUI();}});}catch(e){}}
 function rgReportRows(){
   if(!roundReport||!roundReport.items)return [];
   return roundReport.items.map(function(i){return {th:i.question,zh:i.meaning,wordGlosses:i.words,reading:i.linguistic&&i.linguistic.reading_th||'',userAnswer:i.user_answer,correctAnswer:i.correct_answer,wrong:i.wrong_count,failed:!i.is_correct,guide:!!i.hint_used,pts:i.item_score,srsDue:i.srs_state||'',mastered:!!i.mastered_state,attempts:i.attempts};});
@@ -571,6 +575,7 @@ function rgResumeContinue(){
   // Resume must never strand the UI on the HTML placeholders. Old/malformed report snapshots
   // fall back to a fresh report while the saved question queue and counters remain recoverable.
   roundReport=rgRestoreRoundReport(st.report);
+  rgPrimeReview().then(rgRegisterRestoredReview);
   document.getElementById('end').style.display='none';
   document.getElementById('game').style.display='flex';
   refreshUI();
@@ -584,6 +589,7 @@ function rgResumeRestartSame(){
   if(!rq.length){rgResumeNewRound();return;}
   var banner=document.getElementById('rg-resume-banner');if(banner)banner.style.display='none';
   curLevel=st.level||curLevel;roundQueue=rq;roundTotal=rq.length;cur=0;okC=0;badC=0;streak=0;maxStreak=0;roundScore=0;cleanC=0;roundLog=[];readingSubmittedAttempts=[];roundReport=window.RoundReport?RoundReport.create({game_type:'reading',difficulty:curLevel,mode:'phonics'}):null;isWordPractice=false;
+  rgPrimeReview().then(rgRegisterRestoredReview);
   window.__rgPendingResume=null;rgSaveResumeState();
   document.getElementById('end').style.display='none';document.getElementById('game').style.display='flex';refreshUI();loadWord();
 }
@@ -752,10 +758,10 @@ function setLevel(lv){
   // Lin 2026-07-13: เครื่องใหม่ที่เพิ่งล็อกอิน → รอ sync สั้นๆ (≤1.5วิ) ให้รอบแรกถูกต้อง เน็ตล่ม/ช้าไปต่อทันที ไม่ค้าง
   if(rgLoggedIn() && !window.__rgSrsSyncedOnce){
     var started=false, go=function(){ if(started)return; started=true; initGame(); };
-    try{ Promise.race([ rgSyncSrsFromServer(), new Promise(function(r){setTimeout(r,1500);}) ]).then(go); }catch(e){ go(); }
+    try{ Promise.race([ Promise.all([rgSyncSrsFromServer(),rgPrimeReview()]), new Promise(function(r){setTimeout(r,1500);}) ]).then(go); }catch(e){ go(); }
     setTimeout(go,1600);
   } else {
-    initGame();
+    try{Promise.race([rgPrimeReview(),new Promise(function(r){setTimeout(r,1500);})]).then(initGame);}catch(e){initGame();}
   }
 }
 
@@ -782,6 +788,7 @@ function initGame(){
     }
   }catch(e){}
   isWordPractice=!!_wq; // ?word= = ฝึกคำเดียว ไม่คิดคะแนน/ลีก (G)
+  var _reviewAllIdx=[],_reviewSelected=[],_reviewSrsOwned=[];
   if(_wq){
     roundQueue=_wq;
   } else {
@@ -806,7 +813,14 @@ function initGame(){
         return !!(rec&&!rec.mastered&&RG_SRS.isDue(rec,now));
       });
       var _regularIdx=allIdx.filter(function(i){var rec=srsRecords[rgSrsKey(WORDS[i])];return !(rec&&rec.mastered)&&_dueIdx.indexOf(i)===-1;});
-      if(window.GameFlow&&GameFlow.allocateSrs&&(_dueIdx.length||_regularIdx.length)){
+      _reviewAllIdx=allIdx.slice();
+      _reviewSrsOwned=allIdx.filter(function(i){return !!srsRecords[rgSrsKey(WORDS[i])];});
+      var _reviewDue=window.LearningReview&&LearningReview.matchQueue?LearningReview.matchQueue({game:'reading',level:RG_LEVEL_TO_NUM[curLevel]||1,items:allIdx,contentRefOf:rgReviewRef}):[];
+      if(window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()&&window.GameFlow&&GameFlow.allocateSrs&&(_reviewDue.length||_dueIdx.length||_regularIdx.length)){
+        var _reviewAllocation=LearningReview.allocateRuntime({total:Math.min(rgRoundSize(),_dueIdx.length+_regularIdx.length),reviewDue:shuffle(_reviewDue),srsDue:shuffle(_dueIdx),regular:shuffle(_regularIdx),idOf:function(i){return LearningReview.keyOfRef(rgReviewRef(i));},scope:'reading-'+curLevel,srsScope:'reading-'+curLevel,allocateSrs:GameFlow.allocateSrs});
+        pool=_reviewAllocation.items;_reviewSelected=_reviewAllocation.selectedReview;
+        _srsAllocated=true;
+      }else if(window.GameFlow&&GameFlow.allocateSrs&&(_dueIdx.length||_regularIdx.length)){
         pool=GameFlow.allocateSrs({tier:'free',total:Math.min(rgRoundSize(),_dueIdx.length+_regularIdx.length),due:shuffle(_dueIdx),regular:shuffle(_regularIdx),idOf:function(i){return rgSrsKey(WORDS[i]);},scope:'reading-'+curLevel}).items;
         _srsAllocated=true;
       }else pool=_dueIdx.concat(_regularIdx);
@@ -833,6 +847,7 @@ function initGame(){
     }
   }
   roundTotal=roundQueue.length;
+  if(!isWordPractice&&window.LearningReview&&LearningReview.registerRound)LearningReview.registerRound({report:roundReport,game:'reading',level:RG_LEVEL_TO_NUM[curLevel]||1,allItems:_reviewAllIdx,srsOwned:_reviewSrsOwned,selectedReview:_reviewSelected,idOf:function(i){return LearningReview.keyOfRef(rgReviewRef(i));},contentRefOf:rgReviewRef,retry:function(i){roundQueue.push(i);roundTotal=roundQueue.length;var qt=document.getElementById('qt');if(qt)qt.textContent=roundTotal;}});
   cur=0;okC=0;badC=0;streak=0;maxStreak=0;roundScore=0;cleanC=0;roundHadGuide=false;
   document.getElementById('end').style.display='none';
   document.getElementById('game').style.display='flex';
@@ -1118,7 +1133,7 @@ function finalizeWord(){
   // ── ผิดครบ 4 ครั้ง (fail) — งานที่1: เฉลย + เข้าคิว SRS ใหม่ ไม่ recycle ในรอบเดียวกันอีกต่อไป ──
   if(wordFailed){
     streak=0;
-    if(loggedIn){
+    if(loggedIn&&!rgReviewOwns(WORD)){
       var recF=RG_SRS.resetOnFail(rgSrsGet(srsKey));
       rgSrsSet(srsKey,recF);
     }
@@ -1139,7 +1154,7 @@ function finalizeWord(){
   // ── งานที่7: ด่านพิสูจน์ "已記得" — ต้องสะอาดจริง (ไม่มีพลาดแม้ครั้งเดียว + ไม่ใช้คำใบ้) ──
   if(curWordIsKnownCheck){
     var passedClean=!wordHadWrong && !wordUsedGuide;
-    if(loggedIn){
+    if(loggedIn&&!rgReviewOwns(WORD)){
       if(passedClean){
         var recM=rgSrsGet(srsKey)||RG_SRS.blank();
         recM.mastered=true;
@@ -1209,7 +1224,7 @@ function finalizeWord(){
   }catch(e){}
 
   // ── SRS เลื่อนขั้น/รีเซ็ต + โบนัสรอบทบทวน + แจกดาวเงินตอน mastered จริง (เฉพาะล็อกอิน) ──
-  if(loggedIn){
+  if(loggedIn&&!rgReviewOwns(WORD)){
     var rec=rgSrsGet(srsKey)||RG_SRS.blank();
     if(clean){
       var passedStage=rec.stage; // stage ก่อนเลื่อน = รอบทบทวนที่เพิ่งผ่าน (0/1/2)
@@ -2118,7 +2133,7 @@ try{
 }catch(e){}
 loadSave();
 // E3: มี "รอบที่ยังเล่นไม่จบ" ค้างอยู่จาก session ก่อน (localStorage, guest-only) → โชว์แบนเนอร์ให้เลือกก่อน ไม่งั้นเริ่มรอบใหม่ตามปกติ
-if(_autoPlanReadingLevel||!rgTryLoadResumeBanner()){ initGame(); }
+if(_autoPlanReadingLevel||!rgTryLoadResumeBanner()){ rgPrimeReview().then(initGame); }
 try { rgRenderGameBar(); } catch(e){}
 
 // ── GA: ปุ่ม/องค์ประกอบที่สร้างโดยโมดูลกลาง (word-audio.js/shared.js) — ผูก listener แยกต่างหาก ไม่แก้ไฟล์โมดูลกลาง ──

@@ -74,7 +74,7 @@ check('personal content derives Played copy from server evidence, never provenan
 check('personal content exposes bounded status recovery', /PracticeEvents\.status\(requestItems\)/.test(personalContent) && /重新載入練習紀錄/.test(personalContent));
 check('Minimum Guest Launch parks the recorder on all Core 5 pages', ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html'].every((name) => {
   const html = read(name);
-  return !/practice-events\.js/.test(html) && /game-flow\.js\?v=11/.test(html);
+  return !/practice-events\.js/.test(html) && /game-flow\.js\?v=12/.test(html);
 }));
 check('personal content loads authenticated status evidence before its UI', /practice-events\.js\?v=2[\s\S]*personal-content\.js\?v=5/.test(read('vault.html')));
 

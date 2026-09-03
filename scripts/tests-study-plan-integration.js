@@ -151,10 +151,12 @@ async function main(){
     assert.strictEqual(events[0].type,'gsh:round-start');
     context.RoundReport.addItem(report,{content_ref:{key:'x'},is_correct:true,item_score:10});
     context.RoundReport.finish(report,{});
-    assert.strictEqual(events[1].type,'gsh:round-complete');
-    assert.strictEqual(events[1].detail.report.total_items,1);
+    assert.strictEqual(events[1].type,'gsh:item-complete');
+    assert.strictEqual(events[1].detail.report.item.item_score,10);
+    assert.strictEqual(events[2].type,'gsh:round-complete');
+    assert.strictEqual(events[2].detail.report.total_items,1);
     context.RoundReport.create({game_type:'lego'});
-    assert.strictEqual(events.length,2);
+    assert.strictEqual(events.length,3);
   });
 
   await test('Lego lifecycle fires once at actual round start and only at five-sentence completion',()=>{

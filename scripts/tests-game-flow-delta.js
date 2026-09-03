@@ -214,7 +214,8 @@ assert(dueOnly.fractionCarry < 0, 'an all-Due overflow must become quota debt fo
 const pages = ['tone-finder.html', 'reading-game.html', 'typing-game.html', 'word-order.html', 'listening-game.html', 'lego.html'];
 pages.forEach((file) => {
   const html = fs.readFileSync(path.join(root, file), 'utf8');
-  assert(html.includes('js/games/game-flow.js?v=11'), `${file} must load the countdown-free shared flow`);
+  const flowVersion = file === 'lego.html' ? '11' : '12';
+  assert(html.includes(`js/games/game-flow.js?v=${flowVersion}`), `${file} must load the countdown-free shared flow`);
   assert(/▶ 繼續上次/.test(html) || file === 'tone-finder.html' || file === 'lego.html', `${file} must expose resume continue where markup is static`);
   assert(/↺ 重新開始/.test(html) || file === 'tone-finder.html' || file === 'lego.html', `${file} must expose restart-same where markup is static`);
   assert(/＋ 開始新一輪/.test(html) || file === 'tone-finder.html' || file === 'lego.html', `${file} must expose new-round where markup is static`);

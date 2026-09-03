@@ -60,7 +60,7 @@ check('輸入 3+ คำ scoring = 10,10,10,7,4,1,0', values('type', 'ฉัน �
 check('Typing Bonus เรียกสูตร 無提示 ชุดเดียว', score.typingBonus({ th: 'กิน', readingTH: 'กิน' }, 4) === sandbox.window.TYPING_SCORE.score(1, 4));
 check('Typing Bonus 0 แล้วยังอยู่ branch ให้พิมพ์ต่อ', /if \(!isCorrect\) \{[\s\S]*state\.typingWrong\+\+[\s\S]*繼續輸入到正確為止/.test(app));
 check('Listening score 0 จบ attempt และ requeue เฉพาะ item ที่ไม่ใช่ Due',
-  /finishListeningAtZero\(w\)/.test(app) && /listeningSrsDuePolicy\.shouldRequeue\(w, detail\.requeue\)/.test(app));
+  /finishListeningAtZero\(w\)/.test(app) && /listeningSrsDuePolicy\.shouldRequeue\(w,\s*detail\.requeue\)/.test(app) && /LearningReview\.shouldRetry/.test(app));
 check('active Typed→Choice keeps the question and clears only typed interaction state',
   /if \(state\.mode === 'type' && mode === 'mc'\) \{[\s\S]*switchTypedQuestionToChoice\(\)/.test(app) &&
   /state\.typingWrong = 0;[\s\S]*state\.itemAttempts = \[\];[\s\S]*el\.typeInput\.value = '';[\s\S]*renderMC\(currentWord\(\)\)/.test(appFunction('switchTypedQuestionToChoice', 'setMode')) &&
@@ -115,14 +115,14 @@ check('Listening Score และ Typing Bonus เก็บแยกใน eviden
 check('Listening DTO เก็บเฉพาะค่าที่ Submit และ listen count', /itemAttempts\.push\(\{ answer: val, is_correct: isCorrect, mode: 'type' \}\)/.test(app) && /listen_count: state\.listenCount/.test(app) && !/rawKeystrokes|raw_keystrokes/.test(app));
 check('จบรอบบันทึก account session เป็น game=listening', /READING_AUTH\.saveScore\(state\.primaryTotal \+ state\.typingBonusTotal, 1, 'listening'/.test(app));
 check('reading-auth รองรับ route/game listening', /listening-game/.test(auth) && /'listening'/.test(auth) && /score-submit/.test(auth));
-check('Listening keeps gameplay parked while loading only the approved SRS transport', !/reading-auth\.js/.test(html) && /tone-server\.js\?v=5/.test(html) && /typing-score\.js\?v=1/.test(html) && /listening-score\.js\?v=1/.test(html));
+check('Listening keeps gameplay parked while loading only approved Login Free owners', /reading-auth\.js\?v=30/.test(html) && /tone-server\.js\?v=6/.test(html) && /learning-review\.js\?v=1/.test(html) && /typing-score\.js\?v=1/.test(html) && /listening-score\.js\?v=1/.test(html));
 check('Listening มี 玩法 ที่เปิดดูซ้ำได้และอธิบายกติกา 0 แยกสอง score', /id="lg-howto-modal"/.test(html) && /📖 玩法/.test(html) && /打字加分降到 0/.test(html) && /聽力分數降到 0/.test(html));
 check('Edge แยก SRS game=listening', /"reading", "listening", "typing"/.test(edge));
 check('item ใหม่ต่ำกว่า 10 ไม่สร้าง SRS', /below_entry_score/.test(edge));
 check('tone-round rate-limit fail-closed ก่อนเขียน SRS', /if \(rlErr\) return json\(\{ error: "rate_limit_unavailable" \}, 503\)/.test(edge));
 check('Listening อ่าน SRS ของ game=listening กลับจาก server', /from\('tone_srs_state'\)[\s\S]*\.eq\('game', 'listening'\)/.test(app));
 check('Listening SRS query ผูก captured owner เป็น defense-in-depth', /\.eq\('game', 'listening'\)\s*\.eq\('user_id', owner\.uid\)/.test(app) && /options\.load\(owner\)/.test(app));
-check('Listening แยก Due/mastered และจัดรอบ Free 20%', /isSrsDue/.test(app) && /!\(rec && rec\.mastered\)/.test(app) && /tier: 'free'/.test(app) && /GameFlow\.allocateSrs/.test(app));
+check('Listening แยก Due/mastered และจัดรอบ Free 20%', /isSrsDue/.test(app) && /!\(rec && rec\.mastered\)/.test(app) && /tier:\s*'free'/.test(app) && /GameFlow\.allocateSrs/.test(app) && /LearningReview\.allocateRuntime/.test(app));
 check('Listening SRS read ใช้ NetworkGuard แบบ bounded และไม่ retry blind', /NetworkGuard\.request\([\s\S]*'listening-srs', \{\}, 10000, null\)/.test(app));
 check('Listening เก็บ runtime v19 ไว้แต่ไม่ boot ระหว่างขึ้น 即將開幕', /options\.delay\(1500\)/.test(app) && /Preserved paused runtime: js\/games\/listening-game-app\.js\?v=19/.test(html) && !/GameContentLoader\.boot\(\['js\/games\/listening-game-app\.js/.test(html));
 check('Listening มี leaderboard ของตัวเองและ auth ชี้ถูกหน้า', /READING_BOARD_GAME = 'listening'/.test(board) && /listening-board\.html/.test(auth));
@@ -171,7 +171,7 @@ function dueKey(word) { return word.th + '@1'; }
 }
 
 check('actual Listening flow keeps SRS Due attempt/submission separate from pre-SRS Review',
-  /listeningSrsDuePolicy\.begin\(allocation\.selectedDue\)/.test(app) &&
+  /listeningSrsDuePolicy\.begin\(allocation\.selectedSrs\|\|allocation\.selectedDue\|\|\[\]\)/.test(app) &&
   /if \(!listeningSrsDuePolicy\.claimAttempt\(w\)\) return/.test(app) &&
   /if \(!listeningSrsDuePolicy\.claimSubmission\(word\)\) return/.test(app) &&
   /!listeningSrsDuePolicy\.isReview\(word\) \|\| !listeningSrsDuePolicy\.hasAttempted\(word\)/.test(app) &&

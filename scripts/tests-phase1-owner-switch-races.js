@@ -333,13 +333,14 @@ test('Tone SRS resets on logout and discards the late authenticated response', a
   assert.strictEqual(h.context.__tfSrsSyncPromise, null);
 });
 
-test('Reading exposes isolated Login Core while owner-safe account runtimes remain parked', async () => {
+test('Five games expose isolated Login Core while owner-safe account runtimes remain parked', async () => {
   const corePages = ['tone-finder.html', 'listening-game.html', 'typing-game.html', 'word-order.html'];
   for (const page of corePages) {
     const html = read(page);
     assert.doesNotMatch(html, /phase1-canonical-state\.js/, page + ' canonical runtime parked');
     assert.doesNotMatch(html, /game-account\.js/, page + ' GameAccount runtime parked');
-    assert.doesNotMatch(html, /reading-auth\.js/, page + ' reading-auth runtime parked');
+    assert.match(html, /reading-auth\.js\?v=30/, page + ' isolated Login Core runtime');
+    assert.match(html, /learning-review\.js\?v=1/, page + ' Review runtime');
   }
   const reading = read('reading-game.html');
   assert.doesNotMatch(reading, /phase1-canonical-state\.js/, 'reading canonical runtime parked');
@@ -353,10 +354,10 @@ test('Reading exposes isolated Login Core while owner-safe account runtimes rema
     assert.match(read(page), /reading-auth\.js\?v=28/, page + ' reading-auth cache');
   }
   assert.doesNotMatch(read('lego.html'), /game-account\.js/);
-  assert.match(read('tone-finder.html'), /tone-finder-game\.min\.js\?v=81/);
-  assert.match(read('reading-game.html'), /reading-game-app\.min\.js\?v=47/);
-  assert.match(read('typing-game.html'), /typing-game-app\.min\.js\?v=45/);
-  assert.match(read('word-order.html'), /word-order-app\.min\.js\?v=33/);
+  assert.match(read('tone-finder.html'), /tone-finder-game\.min\.js\?v=82/);
+  assert.match(read('reading-game.html'), /reading-game-app\.min\.js\?v=48/);
+  assert.match(read('typing-game.html'), /typing-game-app\.min\.js\?v=46/);
+  assert.match(read('word-order.html'), /word-order-app\.min\.js\?v=34/);
   assert.match(read('listening-game.html'), /Preserved paused runtime: js\/games\/listening-game-app\.js\?v=19/);
   assert.doesNotMatch(read('listening-game.html'), /GameContentLoader\.boot\(\['js\/games\/listening-game-app\.js/);
 });

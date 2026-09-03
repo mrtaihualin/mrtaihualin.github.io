@@ -66,6 +66,9 @@
   function woSrsRank(r){ if(!r) return -1; if(r.mastered) return 3; return (r.stage||0); }
   function woSrsPickAdvanced(a,b){ if(!a)return b; if(!b)return a; var ra=woSrsRank(a),rb=woSrsRank(b); if(ra!==rb)return ra>rb?a:b; var da=a.dueDate||'',db=b.dueDate||''; if(da!==db)return (da>db)?a:b; return a; }
   function woSrsKey(th){ return (th||'')+'@'+LEVEL_NUM; }
+  function woReviewRef(i){return {source:'game_sentences',key:ADV_SENTENCES[i].th};}
+  function woReviewOwns(th){try{return !!(window.LearningReview&&LearningReview.owns(roundReport,{source:'game_sentences',key:th}));}catch(e){return false;}}
+  function woRegisterRestoredReview(){try{if(!window.LearningReview||!roundReport)return;var all=ADV_SENTENCES.map(function(_,i){return i;}),selected=LearningReview.matchQueue({game:'word_order',level:LEVEL_NUM,items:SET,contentRefOf:woReviewRef}),srs=all.filter(function(i){return !!srsRecords[woSrsKey(ADV_SENTENCES[i].th)];}),seen=Object.create(null),duplicates=[];SET.forEach(function(i){var key=LearningReview.keyOfRef(woReviewRef(i));if(seen[key])duplicates.push(i);seen[key]=true;});LearningReview.registerRound({report:roundReport,game:'word_order',level:LEVEL_NUM,allItems:all,srsOwned:srs,selectedReview:selected,alreadyRetried:duplicates,idOf:function(i){return LearningReview.keyOfRef(woReviewRef(i));},contentRefOf:woReviewRef,retry:function(i){SET.push(i);var qt=document.getElementById('wo-qt');if(qt)qt.textContent=SET.length;}});}catch(e){}}
   function woSentenceExists(sentThai){
     for(var i=0;i<ADV_SENTENCES.length;i++){ if(ADV_SENTENCES[i].th===sentThai) return true; }
     return false; // ไม่มีใน ADV_SENTENCES แล้ว = ประโยคผี → ข้าม
@@ -736,6 +739,7 @@
     if(!_woPendingResume){hideResumeBanner();startFreshRound();return;}
     var p=_woPendingResume;_woPendingResume=null;hideResumeBanner();woClearResume();
     SET=p.restoredSet;idx=0;score=0;correctFirstTry=0;cleanC=0;curCombo=0;maxCombo=0;roundLog=[];submittedAttempts=[];roundReport=window.RoundReport?RoundReport.create({game_type:'wordorder',difficulty:'高',mode:'sentence'}):null;practiceMode=false;
+    if(window.LearningReview)LearningReview.prime({game:'word_order',level:LEVEL_NUM,playSetSize:WO_ROUND_SIZE}).then(woRegisterRestoredReview);
     document.getElementById('end').style.display='none';document.getElementById('game').style.display='flex';refreshUI();loadSentence();woSaveResume();
   };
   window.woResumeNewRoundClick = function(){
@@ -755,6 +759,7 @@
     curCombo = state.curCombo||0; maxCombo = state.maxCombo||0;
     roundLog = Array.isArray(state.roundLog)?state.roundLog:[];
     roundReport = window.RoundReport?RoundReport.restore(state.report,{game_type:'wordorder',difficulty:'高',mode:'sentence'}):null;
+    if(window.LearningReview)LearningReview.prime({game:'word_order',level:LEVEL_NUM,playSetSize:WO_ROUND_SIZE}).then(woRegisterRestoredReview);
     practiceMode = false;
     var savedSentence = ADV_SENTENCES[SET[idx]];
     if (woResumeCompletedCurrent(state, savedSentence&&savedSentence.th)) idx++;
@@ -794,7 +799,11 @@
     startFreshRound();
   }
 
-  function startFreshRound(){
+  function startFreshRound(reviewReady){
+    if(!reviewReady&&window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()){
+      LearningReview.prime({game:'word_order',level:LEVEL_NUM,playSetSize:WO_ROUND_SIZE}).then(function(){startFreshRound(true);});
+      return;
+    }
     hideResumeBanner();
     var now = Date.now();
     var allIdx = ADV_SENTENCES.map(function(_, i){ return i; });
@@ -828,6 +837,7 @@
       }
     }
     var pool;
+    var _reviewAllIdx=[],_reviewSelected=[],_reviewSrsOwned=[];
     var _srsAllocated = false;
     // งานที่7 (SRS): กรองด้วย stage-based SRS เฉพาะตอนล็อกอินเท่านั้น — ไม่ล็อกอิน = เล่นได้ทุกประโยค ไม่จำ (ข้อ0/ข้อ7)
     if (woLoggedIn()) {
@@ -836,7 +846,14 @@
         return !!(rec && !rec.mastered && WO_SRS.isDue(rec, now));
       });
       var _regularIdx = allIdx.filter(function(i){ var rec=srsRecords[woSrsKey(ADV_SENTENCES[i].th)]; return !(rec&&rec.mastered)&&_dueIdx.indexOf(i)===-1; });
-      if (window.GameFlow && GameFlow.allocateSrs && (_dueIdx.length || _regularIdx.length)) {
+      _reviewAllIdx=allIdx.slice();
+      _reviewSrsOwned=allIdx.filter(function(i){return !!srsRecords[woSrsKey(ADV_SENTENCES[i].th)];});
+      var _reviewDue=window.LearningReview&&LearningReview.matchQueue?LearningReview.matchQueue({game:'word_order',level:LEVEL_NUM,items:allIdx,contentRefOf:woReviewRef}):[];
+      if(window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()&&window.GameFlow&&GameFlow.allocateSrs&&(_reviewDue.length||_dueIdx.length||_regularIdx.length)){
+        var _reviewAllocation=LearningReview.allocateRuntime({total:Math.min(WO_ROUND_SIZE,_dueIdx.length+_regularIdx.length),reviewDue:shuffle(_reviewDue),srsDue:shuffle(_dueIdx),regular:shuffle(_regularIdx),idOf:function(i){return LearningReview.keyOfRef(woReviewRef(i));},scope:'word-order',srsScope:'word-order',allocateSrs:GameFlow.allocateSrs});
+        pool=_reviewAllocation.items;_reviewSelected=_reviewAllocation.selectedReview;
+        _srsAllocated=true;
+      }else if (window.GameFlow && GameFlow.allocateSrs && (_dueIdx.length || _regularIdx.length)) {
         pool = GameFlow.allocateSrs({tier:'free',total:Math.min(WO_ROUND_SIZE,_dueIdx.length+_regularIdx.length),due:shuffle(_dueIdx),regular:shuffle(_regularIdx),idOf:function(i){return woSrsKey(ADV_SENTENCES[i].th);},scope:'word-order'}).items;
         _srsAllocated = true;
       } else pool = _dueIdx.concat(_regularIdx);
@@ -859,6 +876,7 @@
     cleanC = 0; curCombo = 0; maxCombo = 0;
     roundLog = [];
     roundReport = window.RoundReport?RoundReport.create({game_type:'wordorder',difficulty:'高',mode:'sentence'}):null;
+    if(window.LearningReview&&LearningReview.registerRound)LearningReview.registerRound({report:roundReport,game:'word_order',level:LEVEL_NUM,allItems:_reviewAllIdx,srsOwned:_reviewSrsOwned,selectedReview:_reviewSelected,idOf:function(i){return LearningReview.keyOfRef(woReviewRef(i));},contentRefOf:woReviewRef,retry:function(i){SET.push(i);var qt=document.getElementById('wo-qt');if(qt)qt.textContent=SET.length;}});
     if (window.GAME_ACCOUNT) { totalStars = GAME_ACCOUNT.getStars(); totalBadges = GAME_ACCOUNT.earnedBadges().length; }
     refreshUI();
     try { rgRenderGameBar(); } catch(e){}
@@ -1035,7 +1053,7 @@
     var _wob0=document.getElementById('wo-bank'); if(_wob0)_wob0.style.display='none';
     updateHintWarning();
     var srsKey = woSrsKey(s.th);
-    if (woLoggedIn() && !practiceMode) {
+    if (woLoggedIn() && !practiceMode && !woReviewOwns(s.th)) {
       srsRecords[srsKey] = WO_SRS.resetOnFail(srsRecords[srsKey]); // ผิด/ตาย = กลับวันแรกเสมอ (MASTER ข้อ7)
       woSaveSrs();
       woServerFinish(s.th, false); // Phase 4: ตาย/ล้มเหลว = รีเซ็ตฝั่งเซิร์ฟเวอร์ด้วย
@@ -1062,7 +1080,7 @@
       if (curSentenceIsKnownCheck) {
         var passedClean = !attemptedWrongThisSentence;
         curSentenceIsKnownCheck = false;
-        if (woLoggedIn() && !practiceMode) {
+        if (woLoggedIn() && !practiceMode && !woReviewOwns(s.th)) {
           if (passedClean) {
             var recK = srsRecords[srsKey] || WO_SRS.blank();
             recK.mastered = true;
@@ -1104,7 +1122,7 @@
       document.getElementById('wo-score').textContent = score;
 
       // ── SRS (เฉพาะล็อกอิน+ไม่ใช่ practiceMode) ──
-      if (woLoggedIn() && !practiceMode) {
+      if (woLoggedIn() && !practiceMode && !woReviewOwns(s.th)) {
         var existingRec = srsRecords[srsKey] || null;
         var srsPassed = life === SENTENCE_LIFE_START && !attemptedWrongThisSentence && !hintUsedThisSentence;
         // Phase 1 entry/checkpoint: คะแนนฐานต้อง 10/10 เท่านั้น; bonus/combo/golden ห้ามช่วยผ่าน

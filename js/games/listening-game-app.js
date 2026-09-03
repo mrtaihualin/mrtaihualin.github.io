@@ -344,6 +344,8 @@
   }
 
   function srsKey(word) { return (word && word.th || '') + '@' + levelNumber(word); }
+  function listeningReviewRef(word){return {source:'game_words',key:word.contentKey||srsKey(word)};}
+  var listeningReviewPlan={all:[],selected:[],srsOwned:[]};
   var listeningSrsDuePolicy = createListeningSrsDuePolicy({ keyOf: srsKey });
   function taipeiDate(value) {
     var d = value == null ? new Date() : new Date(value);
@@ -426,12 +428,24 @@
       var rec = listeningSrs[srsKey(word)];
       return !isSrsDue(word) && !(rec && rec.mastered);
     }));
-    var allocation = GameFlow.allocateSrs({
-      tier: 'free', total: Math.min(n, due.length + regular.length),
-      due: due, regular: regular, idOf: srsKey, scope: 'listening'
-    });
-    listeningSrsDuePolicy.begin(allocation.selectedDue);
+    var reviewDue=window.LearningReview&&LearningReview.matchQueue?LearningReview.matchQueue({game:'listening',level:levelNumber(pool[0]),items:pool,contentRefOf:listeningReviewRef}):[];
+    listeningReviewPlan={all:pool.slice(),selected:[],srsOwned:pool.filter(function(word){return !!listeningSrs[srsKey(word)];})};
+    var allocation=window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()?LearningReview.allocateRuntime({
+      total:Math.min(n,due.length+regular.length),reviewDue:shuffle(reviewDue),srsDue:due,regular:regular,
+      idOf:function(word){return LearningReview.keyOfRef(listeningReviewRef(word));},scope:'listening-'+levelNumber(pool[0]),srsScope:'listening',allocateSrs:GameFlow.allocateSrs
+    }):GameFlow.allocateSrs({tier:'free',total:Math.min(n,due.length+regular.length),due:due,regular:regular,idOf:srsKey,scope:'listening'});
+    listeningReviewPlan.selected=allocation.selectedReview||[];
+    listeningSrsDuePolicy.begin(allocation.selectedSrs||allocation.selectedDue||[]);
     return allocation.items;
+  }
+  function registerListeningRestoredReview(){
+    try{
+      if(!window.LearningReview||!state.report)return;
+      var selected=LearningReview.matchQueue({game:'listening',level:levelNumber(state.round[0]),items:state.round,contentRefOf:listeningReviewRef});
+      var srs=state.pool.filter(function(word){return !!listeningSrs[srsKey(word)];});
+      var seen=Object.create(null),duplicates=[];state.round.forEach(function(word){var key=LearningReview.keyOfRef(listeningReviewRef(word));if(seen[key])duplicates.push(word);seen[key]=true;});
+      LearningReview.registerRound({report:state.report,game:'listening',level:levelNumber(state.round[0]),allItems:state.pool,srsOwned:srs,selectedReview:selected,alreadyRetried:duplicates,idOf:function(word){return LearningReview.keyOfRef(listeningReviewRef(word));},contentRefOf:listeningReviewRef,retry:function(word){var future=false;for(var ri=state.idx+1;ri<state.round.length;ri++){if(state.round[ri]===word){future=true;break;}}if(!future){state.round.push(word);el.qt.textContent=String(state.round.length);}}});
+    }catch(e){}
   }
 
   function pickDistractors(correctWord, pool, n) {
@@ -530,7 +544,11 @@
     listeningSrsGuard.start(startRoundNow);
   }
 
-  function startRoundNow() {
+  function startRoundNow(reviewReady) {
+    if(!reviewReady&&window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()){
+      LearningReview.prime({game:'listening',level:({初:1,中:2,高:3})[state.level]||1,playSetSize:ROUND_SIZE}).then(function(){startRoundNow(true);});
+      return;
+    }
     state.pool = buildPool(state.level);
     if (!state.pool.length) {
       el.poolNote.textContent = '目前還沒有可以用的題目（缺少語音檔），麻煩告訴老師 Lin。';
@@ -553,6 +571,7 @@
     state.log = [];
     state.itemAttempts = [];
     state.report = window.RoundReport ? RoundReport.create({ game_type: 'listening', difficulty: state.level, mode: state.mode }) : null;
+    if(window.LearningReview&&LearningReview.registerRound)LearningReview.registerRound({report:state.report,game:'listening',level:({初:1,中:2,高:3})[state.level]||1,allItems:listeningReviewPlan.all,srsOwned:listeningReviewPlan.srsOwned,selectedReview:listeningReviewPlan.selected,idOf:function(word){return LearningReview.keyOfRef(listeningReviewRef(word));},contentRefOf:listeningReviewRef,retry:function(word){var future=false;for(var ri=state.idx+1;ri<state.round.length;ri++){if(state.round[ri]===word){future=true;break;}}if(!future){state.round.push(word);el.qt.textContent=String(state.round.length);}}});
     state._pendingResume = null;
     if (el.resumeBanner) el.resumeBanner.style.display = 'none';
     try { if (window.GameResume) window.GameResume.clear('listening-game'); } catch (e) {} // เริ่มรอบใหม่แบบสด = ล้างรอบค้างเก่าทิ้ง (ไม่ให้มีของค้าง 2 รอบชนกัน)
@@ -939,8 +958,10 @@
         mastered_state: !!existingSrs.mastered
       });
     }
-    var requeueThisRound = listeningSrsDuePolicy.shouldRequeue(w, detail.requeue);
-    if (requeueThisRound) {
+    var _reviewRow=state.report&&state.report.items&&state.report.items[state.report.items.length-1];
+    var _reviewManaged=!!(window.LearningReview&&_reviewRow&&LearningReview.owns(state.report,_reviewRow.content_ref));
+    var requeueThisRound=_reviewManaged?LearningReview.shouldRetry(state.report,_reviewRow):listeningSrsDuePolicy.shouldRequeue(w,detail.requeue);
+    if (requeueThisRound&&!_reviewManaged) {
       state.round.push(w);
       el.qt.textContent = String(state.round.length);
     }
@@ -1108,6 +1129,7 @@
     state.log = pend.log;
     state.itemAttempts = pend.itemAttempts;
     state.report = window.RoundReport ? RoundReport.restore(pend.report, { game_type: 'listening', difficulty: state.level, mode: pend.mode }) : null;
+    if(window.LearningReview)LearningReview.prime({game:'listening',level:levelNumber(state.round[0]),playSetSize:ROUND_SIZE}).then(registerListeningRestoredReview);
     state._pendingResume = null;
     setMode(pend.mode);
     state.roundActive = true;
@@ -1146,6 +1168,7 @@
     state.idx = 0; state.correct = 0; state.wrong = 0;
     state.primaryTotal = 0; state.typingBonusTotal = 0; state.listenCount = 0; state.typingWrong = 0; state.nextMode = null; state.awaitingModeForCurrent = false; state.log = []; state.itemAttempts = [];
     state.report = window.RoundReport ? RoundReport.create({ game_type: 'listening', difficulty: state.level, mode: pend.mode }) : null;
+    if(window.LearningReview)LearningReview.prime({game:'listening',level:levelNumber(state.round[0]),playSetSize:ROUND_SIZE}).then(registerListeningRestoredReview);
     setMode(pend.mode); state.roundActive = true; renderLevelTabs(); state.roundSeq++;
     el.startScreen.style.display='none';el.endScreen.style.display='none';el.gameScreen.style.display='flex';el.qt.textContent=String(state.round.length);el.okCount.textContent='0';el.badCount.textContent='0';
     showQuestion();

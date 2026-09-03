@@ -294,7 +294,8 @@
     // It prevents an all-Due queue from producing an empty round while preserving
     // the configured ratio over later rounds as regular items become available.
     var carriedFraction = Math.max(-100, Math.min(0.999999, Number(quotaState[scope]) || 0));
-    var exactQuota = total * ratio + carriedFraction;
+    var quotaTotal = Math.max(total, Math.floor(Number(options.quotaTotal) || 0));
+    var exactQuota = quotaTotal * ratio + carriedFraction;
     var dueLimit = Math.max(0, Math.floor(exactQuota + 0.0000001));
     quotaState[scope] = exactQuota - dueLimit;
     safeWrite(SRS_QUOTA_KEY, quotaState);
