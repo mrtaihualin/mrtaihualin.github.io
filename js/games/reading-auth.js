@@ -13,10 +13,12 @@
 // ============================================================
 (function () {
   var publicLoginOnly = window.MRT_MINIMUM_GUEST_LAUNCH === true && window.LOGIN_CORE_PUBLIC_ENTRY === true;
+  var publicLoginSrs = publicLoginOnly && window.LOGIN_FREE_SRS_PUBLIC_ENTRY === true;
   if (window.MRT_MINIMUM_GUEST_LAUNCH === true && !publicLoginOnly) {
     window.READING_AUTH = {
       ready: true,
       user: null,
+      srsUser: null,
       saveScore: function () { return null; },
       render: function () {
         var host = document.getElementById('rg-login-slot');
@@ -40,7 +42,7 @@
   // v18 (LIN 2026-08-10, P7-02 C.5): openLoginGate ให้หน้าอื่น (game-content-client.js แถบแจ้ง
   //   "เนื้อหาฟรีหมดแล้ว") เปิด modal ล็อกอินเดียวกันนี้ได้ตรงๆ โดยไม่ต้องหาปุ่ม #rg-login-btn เอง
   var loginUser = null;
-  var API = { ready: true, user: null, saveScore: saveScore, render: render, startLineLink: function () { startLineLogin(true); }, openLoginGate: openGate };
+  var API = { ready: true, user: null, srsUser: null, saveScore: saveScore, render: render, startLineLink: function () { startLineLogin(true); }, openLoginGate: openGate };
   window.READING_AUTH = API;
 
   function slot() { return document.getElementById('rg-login-slot'); }
@@ -559,9 +561,11 @@
   var lastAdaptiveUserId = null;
   function setUser(u) {
     loginUser = u || null;
-    // Public Login is deliberately presentation/session-only while Minimum
-    // Guest owns the game runtime. Game clients continue to observe Guest.
+    // Public Login keeps the general game/account runtime parked. The dedicated
+    // srsUser channel exposes only the authenticated owner to the approved SRS
+    // clients, so score, streak, adaptive history, Paid and Challenge stay off.
     API.user = publicLoginOnly ? null : loginUser;
+    API.srsUser = publicLoginSrs ? loginUser : API.user;
     if (loginUser) closeGate();   // เพิ่งล็อกอินสำเร็จ → ปิด modal
     render();
     // Lin 2026-07-12: auth เพิ่งเสร็จ/เปลี่ยน (getSession เป็น async) → สั่งเกม re-render แถบชวนล็อกอิน "登入解鎖"

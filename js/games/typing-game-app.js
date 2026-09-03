@@ -264,7 +264,7 @@ var srsRecords={}; // key = rgSrsKey(word) → SRS record
 function rgSrsGet(key){return srsRecords[key]||null;}
 function rgSrsSet(key,rec){srsRecords[key]=rec;}
 function rgMinimumGuestOnly(){return typeof window.isMinimumGuestOnly==='function'&&window.isMinimumGuestOnly();}
-function rgLoggedIn(){ if(rgMinimumGuestOnly())return false;try{ return !!(window.READING_AUTH && READING_AUTH.user); }catch(e){ return false; } }
+function rgLoggedIn(){ if(rgMinimumGuestOnly()&&window.LOGIN_FREE_SRS_PUBLIC_ENTRY!==true)return false;try{ return !!(window.READING_AUTH && READING_AUTH.srsUser); }catch(e){ return false; } }
 var SAVE_KEY='rgv3_save';
 var rememberStep=0,rememberTimer=null,curWordIsKnownCheck=false; // curWordIsKnownCheck: ด่านพิสูจน์ 已記得 (ไม่มีคำใบ้ ไม่ได้แต้ม/ดาว)
 var wordUsedGuide=false; // งาน 9: เปิดคำใบ้ระหว่างคำนี้ไหม (ถ้าใช่ = 0 คะแนน + ไม่นับ SRS/ดาว)
@@ -356,7 +356,7 @@ var __tgLearningOwnerEpoch=0;
 var __tgSrsRequestSequence=0;
 var __tgLatestSrsRequest=0;
 function tgSrsOwnerCurrent(ownerId,ownerEpoch,requestId){
-  var currentId=(window.READING_AUTH&&READING_AUTH.user&&String(READING_AUTH.user.id))||'';
+  var currentId=(window.READING_AUTH&&READING_AUTH.srsUser&&String(READING_AUTH.srsUser.id))||'';
   var currentEpoch=Number(window.SITE_AUTH&&SITE_AUTH.learningOwnerEpoch)||0;
   if(currentId!==ownerId||currentEpoch!==ownerEpoch)return false;
   if(requestId!=null&&requestId!==__tgLatestSrsRequest)return false;
@@ -377,7 +377,7 @@ function tgSyncSrsFromServer(force){
   if(!sb||!sb.from) return Promise.resolve(false);
   // dedupe fetch 2026-07-20: tgWireSrsSync รีเซ็ต __tgSrsSyncPromise แล้วเรียกฟังก์ชันนี้ใหม่ทุกครั้งที่ SITE_AUTH.onChange ยิง
   //   (หลายรอบต่อโหลดหน้าเดียว) → ห่อ fetch ด้วย getCachedFetch กันยิง Supabase ซ้ำทั้งที่ user เดิม
-  var _uid=String(READING_AUTH.user.id);
+  var _uid=String(READING_AUTH.srsUser.id);
   var _ownerEpoch=Number(window.SITE_AUTH&&SITE_AUTH.learningOwnerEpoch)||0;
   var _requestId=++__tgSrsRequestSequence;__tgLatestSrsRequest=_requestId;
   var _fetchSrs = window.getCachedFetch
@@ -424,7 +424,7 @@ function tgWireSrsSync(){
     _tgT++;
     try{
       if(window.__tgSrsSyncedOnce){ clearInterval(_tgIv); return; }
-      if(rgLoggedIn()){ var ownerId=String(READING_AUTH.user.id),ownerEpoch=Number(SITE_AUTH&&SITE_AUTH.learningOwnerEpoch)||0; tgSyncSrsFromServer(true).then(function(){ if(!tgSrsOwnerCurrent(ownerId,ownerEpoch))return; try{ initGame(); }catch(e){} }); }
+      if(rgLoggedIn()){ var ownerId=String(READING_AUTH.srsUser.id),ownerEpoch=Number(SITE_AUTH&&SITE_AUTH.learningOwnerEpoch)||0; tgSyncSrsFromServer(true).then(function(){ if(!tgSrsOwnerCurrent(ownerId,ownerEpoch))return; try{ initGame(); }catch(e){} }); }
     }catch(e){}
     if(_tgT>=24) clearInterval(_tgIv);
   }, 500);

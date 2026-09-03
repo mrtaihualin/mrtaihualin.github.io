@@ -55,7 +55,7 @@
   var SRS_SAVE_KEY = 'wo_srs_v1';
   function woLoadSrs(){ if(woMinimumGuestOnly()){srsRecords={};return;}try{ var raw=localStorage.getItem(SRS_SAVE_KEY); srsRecords = raw ? (JSON.parse(raw)||{}) : {}; }catch(e){ srsRecords = {}; } }
   function woSaveSrs(){ if(woMinimumGuestOnly())return;try{ localStorage.setItem(SRS_SAVE_KEY, JSON.stringify(srsRecords)); }catch(e){} }
-  function woLoggedIn(){ if(woMinimumGuestOnly())return false;try{ return !!(window.READING_AUTH && READING_AUTH.user); }catch(e){ return false; } }
+  function woLoggedIn(){ if(woMinimumGuestOnly()&&window.LOGIN_FREE_SRS_PUBLIC_ENTRY!==true)return false;try{ return !!(window.READING_AUTH && READING_AUTH.srsUser); }catch(e){ return false; } }
 
   // ════════════════════════════════════════════
   // ── Lin 2026-07-13: ซิงก์ SRS "ข้ามเครื่อง" — อ่านกลับจาก Supabase (tone_srs_state, game='wordorder') → merge เข้า srsRecords ──
@@ -76,7 +76,7 @@
   var __woSrsRequestSequence=0;
   var __woLatestSrsRequest=0;
   function woSrsOwnerCurrent(ownerId,ownerEpoch,requestId){
-    var currentId=(window.READING_AUTH&&READING_AUTH.user&&String(READING_AUTH.user.id))||'';
+    var currentId=(window.READING_AUTH&&READING_AUTH.srsUser&&String(READING_AUTH.srsUser.id))||'';
     var currentEpoch=Number(window.SITE_AUTH&&SITE_AUTH.learningOwnerEpoch)||0;
     if(currentId!==ownerId||currentEpoch!==ownerEpoch)return false;
     if(requestId!=null&&requestId!==__woLatestSrsRequest)return false;
@@ -97,7 +97,7 @@
     if(!sb||!sb.from) return Promise.resolve(false);
     // dedupe fetch 2026-07-20: woWireSrsSync รีเซ็ต __woSrsSyncPromise แล้วเรียกฟังก์ชันนี้ใหม่ทุกครั้งที่ SITE_AUTH.onChange ยิง
     //   (หลายรอบต่อโหลดหน้าเดียว) → ห่อ fetch ด้วย getCachedFetch กันยิง Supabase ซ้ำทั้งที่ user เดิม
-    var _uid=String(READING_AUTH.user.id);
+    var _uid=String(READING_AUTH.srsUser.id);
     var _ownerEpoch=Number(window.SITE_AUTH&&SITE_AUTH.learningOwnerEpoch)||0;
     var _requestId=++__woSrsRequestSequence;__woLatestSrsRequest=_requestId;
     var _fetchSrs = window.getCachedFetch
@@ -153,7 +153,7 @@
       _woT++;
       try{
         if(window.__woSrsSyncedOnce){ clearInterval(_woIv); return; }
-        if(woLoggedIn()){ var ownerId=String(READING_AUTH.user.id),ownerEpoch=Number(SITE_AUTH&&SITE_AUTH.learningOwnerEpoch)||0; woSyncSrsFromServer(true).then(function(){ if(woSrsOwnerCurrent(ownerId,ownerEpoch))woReinitSafe(); }); }
+        if(woLoggedIn()){ var ownerId=String(READING_AUTH.srsUser.id),ownerEpoch=Number(SITE_AUTH&&SITE_AUTH.learningOwnerEpoch)||0; woSyncSrsFromServer(true).then(function(){ if(woSrsOwnerCurrent(ownerId,ownerEpoch))woReinitSafe(); }); }
       }catch(e){}
       if(_woT>=24) clearInterval(_woIv);
     }, 500);

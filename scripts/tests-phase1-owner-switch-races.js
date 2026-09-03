@@ -280,14 +280,14 @@ function srsHarness(kind) {
   const client = deferredClient();
   const SITE_AUTH = { learningOwnerEpoch: 1 };
   const boundary = { ownerKey: 'phase1_learning_owner_v1' };
-  const READING_AUTH = { user: { id: 'account-a' } };
+  const READING_AUTH = { user: null, srsUser: { id: 'account-a' } };
   const context = {
     window: null, localStorage, SITE_AUTH, PHASE1_ACCOUNT_BOUNDARY: boundary, READING_AUTH,
     srsRecords: {}, totalStars: 0, totalBadges: 0, LEVEL_NUM: 3,
     ADV_SENTENCES: [{ th: 'A-old' }, { th: 'B-new' }],
     getSupabaseClient() { return client; },
     doSave() { context.saveCount++; }, woSaveSrs() { context.saveCount++; },
-    rgLoggedIn() { return !!READING_AUTH.user; }, woLoggedIn() { return !!READING_AUTH.user; },
+    rgLoggedIn() { return !!READING_AUTH.srsUser; }, woLoggedIn() { return !!READING_AUTH.srsUser; },
     tfLoadSrs() { return Object.assign({}, context._toneStore); },
     tfSaveSrs(value) { context._toneStore = Object.assign({}, value); context.saveCount++; },
     TF_SRS: { keyFor(word, level) { return word + '@' + level; } },
@@ -302,7 +302,7 @@ for (const kind of ['reading', 'typing', 'wordorder']) {
   test(kind + ' SRS discards Account A completion without clearing Account B request', async () => {
     const h = srsHarness(kind);
     const promiseA = h.context[h.spec.sync](true);
-    h.READING_AUTH.user = { id: 'account-b' }; h.SITE_AUTH.learningOwnerEpoch = 2;
+    h.READING_AUTH.srsUser = { id: 'account-b' }; h.SITE_AUTH.learningOwnerEpoch = 2;
     h.localStorage.setItem(h.boundary.ownerKey, 'account-b');
     h.context[h.spec.reset]();
     const promiseB = h.context[h.spec.sync](true);
@@ -322,7 +322,7 @@ for (const kind of ['reading', 'typing', 'wordorder']) {
 test('Tone SRS resets on logout and discards the late authenticated response', async () => {
   const h = srsHarness('tone');
   const promiseA = h.context[h.spec.sync]();
-  h.READING_AUTH.user = null; h.SITE_AUTH.learningOwnerEpoch = 2;
+  h.READING_AUTH.srsUser = null; h.SITE_AUTH.learningOwnerEpoch = 2;
   h.localStorage.removeItem(h.boundary.ownerKey);
   h.context[h.spec.reset]();
   const requestA = h.client.requests[0];
@@ -344,7 +344,7 @@ test('Reading exposes isolated Login Core while owner-safe account runtimes rema
   const reading = read('reading-game.html');
   assert.doesNotMatch(reading, /phase1-canonical-state\.js/, 'reading canonical runtime parked');
   assert.doesNotMatch(reading, /game-account\.js/, 'reading GameAccount runtime parked');
-  assert.match(reading, /reading-auth\.js\?v=29/, 'reading isolated Login Core runtime');
+  assert.match(reading, /reading-auth\.js\?v=30/, 'reading isolated Login Core runtime');
   assert.match(read('js/games/reading-auth.js'), /API\.user = publicLoginOnly \? null : loginUser/);
   for (const page of ['my-progress.html', 'vault.html']) {
     assert.match(read(page), /phase1-canonical-state\.js\?v=2/, page + ' canonical cache');
@@ -353,10 +353,10 @@ test('Reading exposes isolated Login Core while owner-safe account runtimes rema
     assert.match(read(page), /reading-auth\.js\?v=28/, page + ' reading-auth cache');
   }
   assert.doesNotMatch(read('lego.html'), /game-account\.js/);
-  assert.match(read('tone-finder.html'), /tone-finder-game\.min\.js\?v=80/);
-  assert.match(read('reading-game.html'), /reading-game-app\.min\.js\?v=46/);
-  assert.match(read('typing-game.html'), /typing-game-app\.min\.js\?v=44/);
-  assert.match(read('word-order.html'), /word-order-app\.min\.js\?v=32/);
+  assert.match(read('tone-finder.html'), /tone-finder-game\.min\.js\?v=81/);
+  assert.match(read('reading-game.html'), /reading-game-app\.min\.js\?v=47/);
+  assert.match(read('typing-game.html'), /typing-game-app\.min\.js\?v=45/);
+  assert.match(read('word-order.html'), /word-order-app\.min\.js\?v=33/);
   assert.match(read('listening-game.html'), /Preserved paused runtime: js\/games\/listening-game-app\.js\?v=19/);
   assert.doesNotMatch(read('listening-game.html'), /GameContentLoader\.boot\(\['js\/games\/listening-game-app\.js/);
 });

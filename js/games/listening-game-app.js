@@ -356,7 +356,9 @@
   }
 
   function listeningOwnerSnapshot() {
-    var user = window.READING_AUTH && READING_AUTH.user;
+    if (typeof window.isMinimumGuestOnly === 'function' && window.isMinimumGuestOnly() &&
+        window.LOGIN_FREE_SRS_PUBLIC_ENTRY !== true) return { uid: '', epoch: 0 };
+    var user = window.READING_AUTH && READING_AUTH.srsUser;
     return {
       uid: user && user.id || '',
       epoch: Number(window.SITE_AUTH && SITE_AUTH.learningOwnerEpoch) || 0
@@ -415,7 +417,7 @@
   }
 
   function allocateListeningRound(pool, n) {
-    if (!window.READING_AUTH || !READING_AUTH.user || !window.GameFlow || !GameFlow.allocateSrs) {
+    if (!window.READING_AUTH || !READING_AUTH.srsUser || !window.GameFlow || !GameFlow.allocateSrs) {
       listeningReviewPolicy.begin([], 0);
       return sampleRound(pool, n);
     }

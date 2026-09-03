@@ -551,8 +551,8 @@ function tfSetSrsRecord(entryOrWord, level, rec) {
 // Lin 2026-07-16: รวมระบบล็อกอินเข้ากับอีก 4 เกม (window.READING_AUTH) — เลิกใช้ window.TF_AUTH/supabase-auth.js
 // เดิมยอมรับ "ให้อีเมล (lead) แต่ไม่ได้ล็อกอินจริง" ด้วย (hasAccess) ตอนนี้ต้องล็อกอินจริงเท่านั้น เหมือน 4 เกมที่เหลือ (Lin ยืนยันแล้ว)
 function tfSrsLoggedIn() {
-  if(tfMinimumGuestOnly()) return false;
-  return !!(window.READING_AUTH && READING_AUTH.user);
+  if(tfMinimumGuestOnly() && window.LOGIN_FREE_SRS_PUBLIC_ENTRY !== true) return false;
+  return !!(window.READING_AUTH && READING_AUTH.srsUser);
 }
 // proxy-click ปุ่มล็อกอินกลาง (#rg-login-slot) — แพทเทิร์นเดียวกับ rgCtaLogin()/woCtaLogin()/legoCtaLogin() ในอีก 4 เกม
 function tfCtaLogin() {
@@ -581,7 +581,7 @@ var __tfLearningOwnerEpoch = 0;
 var __tfSrsRequestSequence = 0;
 var __tfLatestSrsRequest = 0;
 function tfSrsOwnerCurrent(ownerId, ownerEpoch, requestId) {
-  var currentId = (window.READING_AUTH && READING_AUTH.user && String(READING_AUTH.user.id)) || '';
+  var currentId = (window.READING_AUTH && READING_AUTH.srsUser && String(READING_AUTH.srsUser.id)) || '';
   var currentEpoch = Number(window.SITE_AUTH && SITE_AUTH.learningOwnerEpoch) || 0;
   if (currentId !== ownerId || currentEpoch !== ownerEpoch) return false;
   if (requestId != null && requestId !== __tfLatestSrsRequest) return false;
@@ -602,12 +602,12 @@ function tfSyncSrsFromServer() {
   __tfSrsSyncPromise = (function () {
     try {
       // ต้อง "ล็อกอินจริง" (มี JWT) เท่านั้น — แค่ให้อีเมล (lead) ไม่มีแถวบนเซิร์ฟเวอร์อยู่แล้ว
-      if (!(window.READING_AUTH && READING_AUTH.user)) return Promise.resolve(false);
+      if (!(window.READING_AUTH && READING_AUTH.srsUser)) return Promise.resolve(false);
       var sb = window.getSupabaseClient ? window.getSupabaseClient() : null;
       if (!sb || !sb.from) return Promise.resolve(false);
       // dedupe fetch 2026-07-20: tfWireSrsSync รีเซ็ต __tfSrsSyncPromise แล้วเรียกฟังก์ชันนี้ใหม่ทุกครั้งที่ SITE_AUTH.onChange ยิง
       //   (หลายรอบต่อโหลดหน้าเดียว) → ห่อ fetch ด้วย getCachedFetch กันยิง Supabase ซ้ำทั้งที่ user เดิม
-      var _uid = String(READING_AUTH.user.id);
+      var _uid = String(READING_AUTH.srsUser.id);
       var _ownerEpoch = Number(window.SITE_AUTH && SITE_AUTH.learningOwnerEpoch) || 0;
       var _requestId = ++__tfSrsRequestSequence;
       __tfLatestSrsRequest = _requestId;
@@ -657,7 +657,7 @@ function tfWireSrsSync() {
     _tfT++;
     try {
       if (window.__tfSrsSyncedOnce) { clearInterval(_tfIv); return; }
-      if (window.READING_AUTH && READING_AUTH.user) tfSyncSrsFromServer();
+      if (window.READING_AUTH && READING_AUTH.srsUser) tfSyncSrsFromServer();
     } catch (e) {}
     if (_tfT >= 24) clearInterval(_tfIv);
   }, 500);
