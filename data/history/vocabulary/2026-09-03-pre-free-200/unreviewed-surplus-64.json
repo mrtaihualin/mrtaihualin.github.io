@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "queueId": "paid-vocabulary-review-queue",
+  "queueId": "unreviewed-surplus-before-free-200-cutover",
   "authority": "Lin checkpoint routing",
   "canonicalApprovedCatalog": false,
-  "state": "candidate-unreviewed-inactive",
+  "state": "inactive-history-recheck-entire-batch-before-reactivation",
   "runtimeConsumption": "not-authorized",
   "productionMutation": "not-authorized",
   "checkpointRef": "04_WORKING/VOCAB_6_3_CURRENT/CHECKPOINT_CURRENT.md",
@@ -585,5 +585,6 @@
       "reviewStatus": "ยังไม่ตรวจ",
       "sourceAuthority": "data/words-data.js legacy record; content fields require Lin review before approval"
     }
-  ]
+  ],
+  "reactivationRule": "review the complete intended batch, then activate it in one separately authorized release"
 }

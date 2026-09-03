@@ -99,11 +99,12 @@ assert.match(loader, /JSON\.stringify\(game \? \{ game: game \} : \{\}\)/);
 assert.match(loader, /boot: function \(appScriptSrcs, options\)/);
 
 const edge = read('supabase/functions/game-content/index.ts');
-assert.match(edge, /const surface = requestedGame \|\| 'legacy'/);
-assert.match(edge, /\.eq\('status', 'active'\)\.contains\('surfaces', \[surface\]\)/);
-assert.match(edge, /\.order\('review_priority', \{ ascending: false \}\)/);
+assert.match(edge, /\.eq\('status', 'active'\)/);
+assert.match(edge, /\.in\('access_tier', tier === 'login' \? \['guest', 'login'\] : \['guest'\]\)/);
+assert.doesNotMatch(edge, /\.contains\('surfaces'/);
+assert.match(edge, /\.order\('rank', \{ ascending: true \}\)/);
 assert.match(edge, /contentKey: r\.content_key/);
-assert.match(edge, /spellingTH: r\.spelling_th/);
+assert.match(edge, /spellingTH: runtimeSpelling/);
 assert.match(edge, /game_word_syllable_authority_mismatch/);
 assert.doesNotMatch(edge, /objectUse|object_use/);
 

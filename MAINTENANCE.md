@@ -1,6 +1,14 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-09-03 Asia/Bangkok** — Checkpoint vocabulary Source catalog
+**Updated: 2026-09-03 Asia/Bangkok** — Canonical Free 200 cutover
+
+## 2026-09-03 — Canonical Free 200 (`AUTHORIZED / CUTOVER_IN_PROGRESS`)
+
+- Lin selected the exact reviewed 200 records as the only active vocabulary catalog: Guest Free receives 50 `初` + 50 `中`; Login Free adds 50 `初` + 50 `中`. Paid remains inactive.
+- Moved the other 189 approved records and 64 unreviewed candidates into immutable inactive history. They cannot return to runtime until the complete intended batch is reviewed and separately activated.
+- Prepared a transactional Supabase cutover that preserves all 735 prior rows and ranks in database history, activates exactly 200 rows, retains learning-item identity, blocks browser table reads, and includes a separately gated rollback. The game-content Edge gate reads only active Guest/Login entitlements from this one catalog.
+
+**Prior update: 2026-09-03 Asia/Bangkok** — Checkpoint vocabulary Source catalog
 
 ## 2026-09-03 — Checkpoint vocabulary Source catalog (`SOURCE_PASS / SOURCE_ONLY_INACTIVE / PRODUCTION_UNCHANGED`)
 
