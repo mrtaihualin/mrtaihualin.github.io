@@ -65,6 +65,16 @@
         html = html.replace(clientTag, clientTag + override);
         frame.onload = function () {
           var doc = frame.contentDocument;
+          // srcdoc inherits this fixture's pathname, so shared.js cannot recognize word-order.html
+          // and briefly creates the translation rice control that the real Word Order page omits.
+          // Remove only that fixture artifact so the review matches the shared two-control menu.
+          function removeStrayTranslationControl() {
+            var stray = doc.getElementById('zh-fab-standalone');
+            if (stray) stray.remove();
+          }
+          removeStrayTranslationControl();
+          new frame.contentWindow.MutationObserver(removeStrayTranslationControl)
+            .observe(doc.body, {childList: true, subtree: true});
           var started = Date.now();
           (function ready() {
             var tour = doc.querySelector('#gt-tour-card .gt-skip');
@@ -72,6 +82,7 @@
             var readyNow = doc.documentElement.classList.contains('gc-ready') &&
               doc.body.classList.contains('gsh-ml-active') &&
               doc.querySelectorAll('#wo-bank .wo-tile').length === expectedCount &&
+              !doc.getElementById('zh-fab-standalone') &&
               !doc.getElementById('wo-check-btn');
             if (readyNow) {
               status.textContent = 'พร้อมตรวจ Word Order — จำลอง 10 ตัวเลือกเพื่อทดสอบพื้นที่ (ระบบปัจจุบันมากที่สุด 6)';

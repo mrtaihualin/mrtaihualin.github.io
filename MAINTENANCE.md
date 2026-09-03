@@ -2554,4 +2554,6 @@ node scripts/check-site.js
 - Added a real-page Word Order layout fixture that preserves Current main's auto-check flow and deliberately contains no Check button.
 - Expanded that fixture to the verified current maximum of six choices; the Guest 20-row and Login 40-row sets share the same six-word maximum sentence.
 - Added an explicitly non-Production ten-choice simulation so Human review can stress the same real Word Order layout beyond the current six-choice content maximum.
+- Removed the `srcdoc`-only rice translation control from the Word Order review fixture; the real page already omits it, and the Preview now matches the shared Landscape menu.
+- Prepared a source-only database trigger that reports and rejects every sentence insert/update whose `words` list exceeds 16 choices, including existing-row precheck, postcheck, browser-role revoke, focused regression, and rollback. A temporary PostgreSQL 17 run accepted 16, rejected both insert/update at 17 with the exact count, and left the rejected row absent; Production apply remains separately approval-gated.
 - Verification: Mobile Landscape `20/20`, Reading `18/18`, neutral actions `7/7`, shared games `52/52`, plus real-browser Tone, Reading, and Word Order review pages at `844×390`.
