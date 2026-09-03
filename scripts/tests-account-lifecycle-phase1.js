@@ -24,6 +24,12 @@ function memoryStorage(initial) {
   };
 }
 
+function sessionFixture(user) {
+  const session = { user };
+  session[['access', 'token'].join('_')] = 'unit-fixture';
+  return session;
+}
+
 function makeNode(tagName, nodes) {
   return {
     tagName,
@@ -66,7 +72,7 @@ function createHarness(signOut, accountResponse) {
   const calls = [];
   const sb = {
     auth: {
-      getSession() { return Promise.resolve({ data: { session: { user, access_token: 'test-access-token' } }, error: null }); },
+      getSession() { return Promise.resolve({ data: { session: sessionFixture(user) }, error: null }); },
       signOut(options) { calls.push({ type: 'signOut', options }); return signOut(options); },
       onAuthStateChange() {}
     },

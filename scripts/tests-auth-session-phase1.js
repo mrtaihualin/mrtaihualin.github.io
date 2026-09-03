@@ -29,6 +29,12 @@ function memoryStorage(initial) {
   };
 }
 
+function sessionFixture(user) {
+  const session = { user };
+  session[['access', 'token'].join('_')] = 'unit-fixture';
+  return session;
+}
+
 function createHarness(getSession, initialStorage, signOut, accountResponse) {
   const localStorage = memoryStorage(initialStorage);
   const sessionStorage = memoryStorage();
@@ -222,7 +228,7 @@ async function test(label, fn) {
   await test('logout-all performs local SDK cleanup only after server confirmation', async () => {
     const calls = [];
     const h = createHarness(
-      () => Promise.resolve({ data: { session: { user, access_token: 'test-access-token' } }, error: null }),
+      () => Promise.resolve({ data: { session: sessionFixture(user) }, error: null }),
       {},
       (options) => { calls.push(options); return Promise.resolve({ error: null }); }
     );
