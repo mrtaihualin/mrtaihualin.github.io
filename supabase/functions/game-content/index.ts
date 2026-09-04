@@ -50,6 +50,8 @@ const ALLOWED_ORIGINS = [
   'https://mrtaihualin.com',
   'https://www.mrtaihualin.com',
   'https://mrtaihualin.github.io',
+  // 2026-09-04: independent AWS CloudFront backup; game-content CORS only
+  'https://d1dqva9smlfgk0.cloudfront.net',
   // 2026-08-10 (P7-02 staging): หน้าทดสอบ staging บน Netlify
   'https://gentle-moxie-bf64ad.netlify.app',
   'https://mrtaihualin-release-7c823713.mrtaihualin.workers.dev',
