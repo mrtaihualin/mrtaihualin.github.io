@@ -2575,3 +2575,9 @@ node scripts/check-site.js
 - Kept one canonical Account Bar on `學習中心`, directly below the centered title in the same header-first order as the five game pages.
 - Forced the retired `pg-userslot`/`lb-userslot` containers to stay hidden even when their legacy inline flex style is present, preventing duplicate signed-in controls on Learning Center and board pages.
 - Advanced the complete Login-surface cache chain. Focused Learning Center/Login/shared-game tests and the full `1,070`-file site gate pass; Production remains unchanged.
+
+# 2026-09-04 — Desktop Account Bar action labels
+
+- Added the short visible labels `✏️ 編輯`, `🏆 排行`, and `📊 進度` beside the existing Desktop Account Bar icons so their destinations are self-explanatory.
+- Mobile Portrait remains icon-only, and the separate Mobile Landscape account panel keeps its existing wording and layout.
+- Advanced the Login-surface stylesheet cache chain. Focused Login/shared-game tests and the full `1,070`-file site gate pass; Production remains unchanged.

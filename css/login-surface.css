@@ -100,6 +100,30 @@ html body [data-reading-login-component="row"] > #rg-profile-wrap {
   text-decoration: none !important;
 }
 
+/* Desktop Account Bar labels keep the compact icons understandable. Mobile
+   Portrait stays icon-only; the separate Mobile Landscape account panel keeps
+   its existing game-owned wording. */
+@media (min-width: 769px) {
+  [data-reading-login-component="row"] .sa-edit,
+  [data-reading-login-component="row"] a[title="排行榜"],
+  [data-reading-login-component="row"] a[title="進度"] {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 3px;
+    white-space: nowrap;
+  }
+  [data-reading-login-component="row"] .sa-edit::after { content: '編輯'; }
+  [data-reading-login-component="row"] a[title="排行榜"]::after { content: '排行'; }
+  [data-reading-login-component="row"] a[title="進度"]::after { content: '進度'; }
+}
+
+@media (orientation: landscape) and (max-width: 1024px) and (max-height: 600px) {
+  [data-reading-login-component="row"] a[title="排行榜"]::after,
+  [data-reading-login-component="row"] a[title="進度"]::after {
+    content: none;
+  }
+}
+
 /* The legacy reward CTA stays parked. Account stats remain hidden only while
    the reversible Login Free account entry is disabled. */
 [data-reading-login-component="row"] #rg-cta-login,
