@@ -56,7 +56,7 @@
       '.pg-section{margin-top:26px}.pg-section-title{font-size:17px;font-weight:900;color:#5C4410;margin:0 0 12px}',
       '.pg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}',
       '.pg-skill{border:1px solid rgba(200,151,58,.28)}.pg-skill-head{display:flex;gap:9px;align-items:center;font-weight:900;color:#5C4410}.pg-skill-icon{font-size:22px}',
-      '.pg-status{font-size:13px;color:#765f32;line-height:1.7;margin-top:12px}.pg-muted{color:#9a895e}.pg-srs{margin-top:8px;padding-top:8px;border-top:1px solid #F0E6CE;font-size:12px;color:#765f32}',
+      '.pg-status{font-size:13px;color:#765f32;line-height:1.7;margin-top:12px}.pg-muted{color:#9a895e}.pg-srs{margin-top:8px;padding-top:8px;border-top:1px solid #F0E6CE;font-size:12px;color:#765f32}.pg-srs-line+.pg-srs-line{margin-top:4px}',
       '.pg-content-card{display:flex;flex-direction:column;min-height:138px}.pg-content-card h3{margin:0 0 8px;color:#5C4410;font-size:16px}.pg-content-card p{margin:0;color:#765f32;line-height:1.7;font-size:13px;flex:1}.pg-content-card .pg-btn{align-self:flex-start;margin-top:14px}',
       '.pg-warning{background:#FFF6E5;border:1px solid #EAC36B;color:#765113;border-radius:12px;padding:11px 14px;font-size:12.5px;line-height:1.6;margin:0 0 14px}',
       '.pg-chart{margin-top:12px}.pg-chart canvas{max-height:230px}',
@@ -186,8 +186,13 @@
     });
     return result;
   }
-  function srsSummary(rows) {
-    if (!rows.length) return '<span class="pg-muted">尚無 SRS 紀錄</span>';
+  function srsReviewSummary(rows) {
+    if (!rows.length) {
+      return {
+        srs: '<span class="pg-muted">尚無 SRS 紀錄</span>',
+        review: '<span class="pg-muted">尚無待複習項目</span>'
+      };
+    }
     var today = taipeiDate();
     var counts = { newState: 0, day1: 0, day7: 0, mastered: 0, due: 0 };
     rows.forEach(function (row) {
@@ -202,17 +207,21 @@
     if (counts.day1) parts.push('Day 1 ' + counts.day1);
     if (counts.day7) parts.push('Day 7 ' + counts.day7);
     if (counts.mastered) parts.push('Mastered ' + counts.mastered);
-    if (counts.due) parts.push('待複習 ' + counts.due);
-    return esc(parts.join(' · '));
+    return {
+      srs: esc(parts.join(' · ')),
+      review: counts.due ? '待複習 ' + counts.due : '<span class="pg-muted">目前無待複習項目</span>'
+    };
   }
   function skillCard(skill, data) {
     var sessionText = data.sessions.length
       ? '帳號紀錄：' + data.sessions.length + ' 次' + (data.lastAt ? '<br>最近練習：' + esc(fmtDate(data.lastAt)) : '')
       : '<span class="pg-muted">尚無此帳號的練習紀錄</span>';
+    var learning = srsReviewSummary(data.srs);
     return '<article class="pg-panel pg-skill" data-skill="' + skill.code + '">' +
       '<div class="pg-skill-head"><span class="pg-skill-icon">' + skill.icon + '</span><span>' + skill.label + '</span></div>' +
       '<div class="pg-status">' + sessionText + '</div>' +
-      '<div class="pg-srs"><b>SRS / Review：</b>' + srsSummary(data.srs) + '</div>' +
+      '<div class="pg-srs"><div class="pg-srs-line"><b>SRS：</b>' + learning.srs + '</div>' +
+      '<div class="pg-srs-line"><b>Review：</b>' + learning.review + '</div></div>' +
       '<a class="pg-btn pg-btn-secondary" style="margin-top:12px" href="' + skill.href + '">繼續練習</a></article>';
   }
   function drawToneChart(rows) {

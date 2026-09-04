@@ -2581,3 +2581,9 @@ node scripts/check-site.js
 - Added the short visible labels `✏️ 編輯`, `🏆 排行`, and `📊 進度` beside the existing Desktop Account Bar icons so their destinations are self-explanatory.
 - Mobile Portrait remains icon-only, and the separate Mobile Landscape account panel keeps its existing wording and layout.
 - Advanced the Login-surface stylesheet cache chain. Focused Login/shared-game tests and the full `1,070`-file site gate pass; Production remains unchanged.
+
+# 2026-09-04 — Learning Center SRS and Review separation
+
+- Split the combined `SRS / Review` status into two visible lines on every Learning Center skill card: SRS shows the learning stage counts, while Review shows only the items currently due for review.
+- Empty states remain explicit and independent for both lines. This is a presentation-only change; account history, SRS data, and read-only query behavior are unchanged.
+- Focused Learning Center/shared-game tests and the full `1,070`-file site gate pass; Production remains unchanged.
