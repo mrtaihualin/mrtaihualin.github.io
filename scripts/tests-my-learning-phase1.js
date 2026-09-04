@@ -8,6 +8,7 @@ const path = require('path');
 const root = path.resolve(__dirname, '..');
 const js = fs.readFileSync(path.join(root, 'js/score/progress.js'), 'utf8');
 const summary = fs.readFileSync(path.join(root, 'js/score/learning-summary.js'), 'utf8');
+const loginSurface = fs.readFileSync(path.join(root, 'js/core/login-surface.js'), 'utf8');
 const html = fs.readFileSync(path.join(root, 'my-progress.html'), 'utf8');
 const failures = [];
 let passes = 0;
@@ -41,6 +42,9 @@ check('account switch ใช้ user id ไม่ใช่แค่ boolean auth
 check('หน้า HTML ใช้ชื่อ 學習中心 บรรทัดเดียวกึ่งกลางแบบหัวข้อเกม และ canonical summary loader',
   /<div style="width:100%;text-align:center;">[\s\S]*<h1 style="[^"]*white-space:nowrap;[^"]*font-size:clamp\(20px,4vw,28px\)[^"]*color:#8B6310;">學習中心<\/h1>/.test(html) &&
   /learning-summary\.js\?v=1/.test(html) && /progress\.js\?v=7/.test(html));
+check('學習中心มี Account Bar เดียวใต้หัวข้อเหมือนหน้าเกม',
+  /'my-progress\.html': '\.section-wrap > div:first-child'/.test(loginSurface) &&
+  /legacy\.style\.setProperty\('display', 'none', 'important'\)/.test(loginSurface));
 
 if (failures.length) {
   console.error('\n❌ 學習中心 Phase 1 ไม่ผ่าน ' + failures.length + ' ข้อ:');

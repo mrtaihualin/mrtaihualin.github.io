@@ -2569,3 +2569,9 @@ node scripts/check-site.js
 - Kept the protected legacy vocabulary path absent and retained the Current Free 200 read-deny-aware verification boundary.
 - Verification: navigation generation is idempotent, navigation consistency passes on all 76 routed pages, focused Login/Auth/SRS/Mobile Landscape checks pass, and the full site gate passes across 1,069 files.
 - This is a source/MR candidate only. Replacement Human Preview, merge, deploy, and Production remain separately gated.
+
+# 2026-09-04 — Learning Center Account Bar alignment
+
+- Kept one canonical Account Bar on `學習中心`, directly below the centered title in the same header-first order as the five game pages.
+- Forced the retired `pg-userslot`/`lb-userslot` containers to stay hidden even when their legacy inline flex style is present, preventing duplicate signed-in controls on Learning Center and board pages.
+- Advanced the complete Login-surface cache chain. Focused Learning Center/Login/shared-game tests and the full `1,070`-file site gate pass; Production remains unchanged.

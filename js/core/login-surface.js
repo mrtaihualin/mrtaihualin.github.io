@@ -26,7 +26,7 @@
     'games.html': '.gh-sub',
     'games-practice.html': '.gh-sub',
     'games-challenge.html': '.phase1-paid-gate p',
-    'my-progress.html': '.section-wrap > p',
+    'my-progress.html': '.section-wrap > div:first-child',
     'vault.html': '.page-header',
     'all-board.html': '.section-wrap > div:first-child',
     'leaderboard.html': '.section-wrap > div:first-child',
@@ -294,7 +294,11 @@
     anchor.insertAdjacentElement('afterend', component.host);
     ['lb-userslot', 'pg-userslot'].forEach(function (id) {
       var legacy = document.getElementById(id);
-      if (legacy) legacy.hidden = true;
+      if (legacy) {
+        legacy.hidden = true;
+        legacy.setAttribute('aria-hidden', 'true');
+        legacy.style.setProperty('display', 'none', 'important');
+      }
     });
     activeSurface = component.surface;
     return activeSurface;
