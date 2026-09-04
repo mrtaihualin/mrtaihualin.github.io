@@ -2607,3 +2607,4 @@ node scripts/check-site.js
 - Desktop action labels now follow fine-pointer desktop input even in a narrow panel; Mobile Portrait and Mobile Landscape remain icon-only. Account, Auth, search quota, personal data, and Production behavior are unchanged.
 - Human-review refinement: `✏️ 編輯`, `🏆 排行`, and `📊 進度` now share the Ranking action color, while the compact Search icon uses a small tinted circular surface so it remains discoverable before expansion.
 - Narrow-screen refinement: removed the nested Account/Search borders, bounded the expanded Desktop field to `320px`, and added a touch-mobile layout that fits the available width without horizontal overflow or iOS input zoom.
+- The expanded search owns a full safe row below `700px`, preventing the signed-in identity/actions from being centered off-screen while keeping the closed Account Bar compact.

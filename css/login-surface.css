@@ -196,6 +196,18 @@ html body [data-reading-login-component="row"] > #rg-profile-wrap {
   cursor: pointer;
 }
 
+@media (max-width: 700px) {
+  [data-reading-login-component="row"] #rg-login-slot:has(.sa-global-search-form:not([hidden])) {
+    flex: 1 1 100% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+  [data-reading-login-component="row"] .sa-account-bar:has(.sa-global-search-form:not([hidden])) {
+    width: 100%;
+  }
+}
+
 @media (max-width: 600px) and (hover: none),
        (max-width: 600px) and (pointer: coarse) {
   html body [data-reading-login-component="row"] > #rg-profile-wrap {
