@@ -995,10 +995,16 @@
     var parkedAccountLinksHTML = opts.showParkedAccountLinks === false ? '' :
       '<a href="' + esc(leaderboardHref) + '" title="排行榜" style="text-decoration:none;font-size:13px;">🏆</a>' +
       '<a href="' + esc(progressHref) + '" title="進度" style="text-decoration:none;font-size:13px;">📊</a>';
+    var globalSearchHTML =
+      '<button type="button" class="sa-global-search-toggle" title="全站搜尋" aria-label="開啟全站搜尋" aria-expanded="false">🔎</button>' +
+      '<form class="sa-global-search-form" action="index.html" method="get" hidden>' +
+        '<input class="sa-global-search-input" type="search" name="search" maxlength="100" autocomplete="off" aria-label="全站搜尋" placeholder="全站搜尋">' +
+        '<button class="sa-global-search-submit" type="submit">搜尋</button>' +
+      '</form>';
 
     el.style.display = anyModalOpen() ? 'none' : 'inline-flex';
     el.innerHTML =
-      '<div style="display:flex;align-items:center;gap:7px;background:#fff;' +
+      '<div class="sa-account-bar" style="display:flex;align-items:center;gap:7px;background:#fff;' +
       'border:1.5px solid rgba(200,151,58,0.45);border-radius:20px;padding:5px 12px 5px 8px;' +
       'box-shadow:0 2px 8px rgba(139,99,16,0.12);font-family:\'Noto Sans TC\',sans-serif;">' +
       (avatarHTML || '<span style="font-size:15px;flex-shrink:0;">👤</span>') +
@@ -1006,12 +1012,33 @@
       pinHTML +
       '<button class="sa-edit" title="編輯" style="border:none;background:none;color:#A07A1E;cursor:pointer;font-size:12px;padding:0;line-height:1;">✏️</button>' +
       parkedAccountLinksHTML +
+      globalSearchHTML +
       '<button class="sa-logout" style="border:none;background:rgba(139,99,16,0.12);color:#8B6310;' +
       'border-radius:20px;padding:3px 10px;cursor:pointer;font-size:11.5px;font-weight:700;">登出</button>' +
       '</div>';
     el.querySelector('.sa-logout').onclick = doLogout;
     el.querySelector('.sa-edit').onclick = openProfileEditor;
     el.querySelector('.sa-nick').onclick = openProfileEditor;
+    var searchToggle = el.querySelector('.sa-global-search-toggle');
+    var searchForm = el.querySelector('.sa-global-search-form');
+    var searchInput = el.querySelector('.sa-global-search-input');
+    function setSearchOpen(open) {
+      if (!searchToggle || !searchForm) return;
+      searchForm.hidden = !open;
+      searchToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      searchToggle.setAttribute('aria-label', open ? '關閉全站搜尋' : '開啟全站搜尋');
+      if (open && searchInput) window.setTimeout(function () { searchInput.focus(); }, 0);
+    }
+    if (searchToggle) searchToggle.onclick = function () { setSearchOpen(searchForm.hidden); };
+    if (searchForm) searchForm.onsubmit = function (event) {
+      if (!searchInput || !searchInput.value.trim()) {
+        event.preventDefault();
+        if (searchInput) searchInput.focus();
+      }
+    };
+    if (searchInput) searchInput.onkeydown = function (event) {
+      if (event.key === 'Escape') { event.preventDefault(); setSearchOpen(false); searchToggle.focus(); }
+    };
   }
 
   // ── เฝ้าการเปิด/ปิด modal → ซ่อน/โชว์ badge ทุกอันให้ถูก (ครอบทุกวิธีปิด modal) ──

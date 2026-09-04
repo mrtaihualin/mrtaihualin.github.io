@@ -2599,3 +2599,9 @@ node scripts/check-site.js
 - Added a full-width separator and the `項` unit to every SRS/Review count, so `Day 1：2 項` cannot be misread as `Day 12`.
 - Applied the same format to New, Day 7, Mastered, and due Review counts without changing stage or due-date calculations.
 - Focused Learning Center/shared-game tests and the full `1,070`-file site gate pass; Production remains unchanged.
+
+# 2026-09-05 — Game Hub Learning Progress and compact Account Search
+
+- Added `學習進度` as a fourth equal-weight destination card on `泰語遊戲中心`, linking to the existing Login Free Learning Center.
+- Added one compact `🔎` Global Search control to the shared signed-in Account Bar. It expands only after activation, accepts one query, then opens the existing Global Search result flow without adding a parallel search engine.
+- Desktop action labels now follow fine-pointer desktop input even in a narrow panel; Mobile Portrait and Mobile Landscape remain icon-only. Account, Auth, search quota, personal data, and Production behavior are unchanged.

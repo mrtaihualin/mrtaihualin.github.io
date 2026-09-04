@@ -11,6 +11,8 @@ const adapter=read('js/core/global-search-game-adapter.js');
 const index=read('index.html');
 const games=read('games.html');
 const gameUi=read('js/games/games-search-ui.js');
+const authWidget=read('js/core/auth-widget.js');
+const loginCss=read('css/login-surface.css');
 const quotaEdge=read('supabase/functions/problem-search-daily-limit/index.ts');
 expect(ui.includes('GlobalSearchGameAdapter.analyze(query)'), 'Global UI delegates game/public composition to shared adapter');
 expect(!ui.includes('SearchEngine.searchSite(query)'), 'Global UI no longer uses legacy searchSite game ranking');
@@ -27,9 +29,14 @@ expect(!games.includes('id="gameSearchSelect"')&&!games.includes('id="gameSearch
 expect(games.includes('id="gameSearchGate"')&&gameUi.includes('登入後可搜尋遊戲名稱或輸入你的學習問題。'), 'games.html has an auth-resolved gate and locked Guest message');
 expect(gameUi.includes('claimGameSearch(state.user, query).then')&&gameUi.indexOf('claimGameSearch(state.user, query).then')<gameUi.indexOf('GameProblemSearch.analyze(query)'), 'Game Search claims quota before direct/problem analysis');
 expect(!gameUi.includes('gameSearchSelect')&&gameUi.includes('body: JSON.stringify({ request_id: reqId })'), 'Game Search removes direct selector and sends request_id only');
+expect(games.includes('href="my-progress.html"')&&games.includes('<div class="gh-main-title">學習進度</div>'), 'Game Hub exposes the Learning Progress destination card');
+expect(authWidget.includes('sa-global-search-toggle')&&authWidget.includes('sa-global-search-form')&&authWidget.includes('name="search"'), 'Account Bar exposes a compact expandable Global Search control');
+expect(ui.includes("new URLSearchParams(window.location.search).get('search')")&&ui.includes('if (initialQuery) { input.value = initialQuery; run(); }'), 'Global Search destination restores and runs the Account Bar query');
+expect(/@media \(min-width: 769px\), \(hover: hover\) and \(pointer: fine\)/.test(loginCss)&&/\.sa-edit::after \{ content: '編輯'; \}/.test(loginCss), 'Desktop Account Bar labels survive a narrow desktop viewport');
+expect(/orientation: landscape[\s\S]*\.sa-edit::after,[\s\S]*content: none/.test(loginCss), 'Mobile Landscape keeps Account Bar actions icon-only');
 expect(quotaEdge.indexOf("service.auth.getUser(accessToken)")<quotaEdge.indexOf("const raw = await req.text()"), 'quota Edge authenticates before parsing the request payload');
 expect(quotaEdge.includes("keys.length !== 1 || keys[0] !== 'request_id'"), 'quota Edge rejects raw query, user id, and every extra client field');
-const scripts=['https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2','data/search-index.js?v=1','data/game-problem-corpus-v2_3.js?v=1','js/core/search-engine.js?v=3','js/games/game-problem-search.js?v=2','js/core/global-search-game-adapter.js?v=2','js/core/search-ui.js?v=5'];
+const scripts=['https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2','data/search-index.js?v=1','data/game-problem-corpus-v2_3.js?v=1','js/core/search-engine.js?v=3','js/games/game-problem-search.js?v=2','js/core/global-search-game-adapter.js?v=2','js/core/search-ui.js?v=6'];
 let last=-1, orderOk=true;
 for(const src of scripts){const i=index.indexOf(src); if(i<0||i<=last){orderOk=false;break;} last=i;}
 expect(orderOk,'index.html loads auth client, corpus, shared GameProblemSearch, adapter, then Global UI in order');

@@ -175,14 +175,14 @@ test('content loading error has retry, home and support recovery', () => {
 test('Core 5 expose Login Core and retain audio recovery', () => {
   ['tone-finder.html','listening-game.html','typing-game.html','word-order.html'].forEach((page) => {
     const html = read(page);
-    assert.match(html, /auth-widget\.js\?v=18/);
+    assert.match(html, /auth-widget\.js\?v=19/);
     assert.match(html, /reading-auth\.js\?v=33/);
     assert.match(html, /game-account\.js\?v=6/);
     assert.match(html, /practice-events\.js\?v=3/);
     assert.match(html, /protected-word-audio\.js\?v=3/);
   });
   const reading = read('reading-game.html');
-  assert.match(reading, /auth-widget\.js\?v=18/);
+  assert.match(reading, /auth-widget\.js\?v=19/);
   assert.match(reading, /reading-auth\.js\?v=33/);
   assert.match(reading, /game-account\.js\?v=6/);
   assert.match(reading, /learning-summary\.js\?v=1/);
@@ -192,10 +192,10 @@ test('Core 5 expose Login Core and retain audio recovery', () => {
 test('parked account sources and active Login callback preserve current failure handling', () => {
   ['leaderboard.html','listening-board.html','my-progress.html','reading-board.html',
     'typing-board.html','word-order-board.html','vault.html']
-    .forEach((page) => assert.match(read(page), /auth-widget\.js\?v=18/, page));
+    .forEach((page) => assert.match(read(page), /auth-widget\.js\?v=19/, page));
   assert.doesNotMatch(read('lego.html'), /auth-widget\.js/, 'lego.html');
   ['listening-game.html','tone-finder.html','typing-game.html','word-order.html','reading-game.html']
-    .forEach((page) => assert.match(read(page), /auth-widget\.js\?v=18/, page));
+    .forEach((page) => assert.match(read(page), /auth-widget\.js\?v=19/, page));
   assert.match(read('leaderboard.html'), /leaderboard\.js\?v=13/);
   ['reading-board.html','listening-board.html','typing-board.html','word-order-board.html']
     .forEach((page) => assert.match(read(page), /reading-leaderboard\.js\?v=9/, page));

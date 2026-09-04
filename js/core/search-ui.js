@@ -252,6 +252,10 @@
     input.addEventListener('keydown', function (e) {
       if (e.key === 'Enter') { e.preventDefault(); run(); }
     });
+    var initialQuery = '';
+    try { initialQuery = new URLSearchParams(window.location.search).get('search') || ''; } catch (_) {}
+    initialQuery = initialQuery.trim().slice(0, 100);
+    if (initialQuery) { input.value = initialQuery; run(); }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
