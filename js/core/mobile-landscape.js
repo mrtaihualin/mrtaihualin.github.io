@@ -584,15 +584,17 @@
       child.style.removeProperty('--gsh-ml-row-span');
       child.style.removeProperty('--gsh-ml-inline-align');
     });
+    if (game === 'word-order') {
+      // Word Order uses one full-width choice grid. The action rail is reserved
+      // by CSS, so the tiles no longer need the shared left/right split math.
+      container.dataset.gshMaxSideCount = String(children.length);
+      return;
+    }
     var leftCount;
     if (game === 'tone') {
       leftCount = children.length === 6 ? 3 : children.length === 3 ? 1 : children.length === 2 ? 1 : Math.ceil(children.length / 2);
     } else if (game === 'listening') {
       leftCount = Math.min(2, Math.ceil(children.length / 2));
-    } else if (game === 'word-order') {
-      // Position 2 owns the lower-right 30%. Give the full-height left side
-      // proportionally more word tiles instead of forcing visual symmetry.
-      leftCount = Math.ceil(children.length * 0.6);
     } else if (game === 'reading' && children.length > 4) {
       leftCount = Math.ceil(children.length * 0.6);
     } else {
@@ -1118,6 +1120,22 @@
     }
   }
 
+  function syncWordOrderRevealActions(game) {
+    if (game !== 'word-order') return;
+    var audio = q('#wo-sound-btn');
+    var translation = q('#wo-zh-toggle');
+    var revealed = q('#wo-slots .wo-slot.correct') !== null;
+    if (audio) {
+      audio.setAttribute('data-gsh-ml-role', 'result-audio');
+      mountExistingNode(audio, slot('right'));
+    }
+    if (translation) {
+      translation.setAttribute('data-gsh-ml-role', 'result-translation');
+      mountExistingNode(translation, slot('right'));
+    }
+    stage.setAttribute('data-gsh-ml-word-order-revealed', revealed ? 'true' : 'false');
+  }
+
   function applyPositionTwoLabel(node, html, label) {
     if (!node) return;
     var applied = node.getAttribute('data-gsh-ml-position-two-applied');
@@ -1297,6 +1315,7 @@
       if (game === 'lego') syncLegoMenu();
       syncDynamicMainAction();
       syncToneRevealActions(game);
+      syncWordOrderRevealActions(game);
       syncPositionTwoActions(game);
       syncToneSummaryLayout(game, exclusiveView);
       syncKeyboard(game, listeningView);
@@ -1388,6 +1407,7 @@
       node.classList.remove('gsh-ml-position-two-inactive');
       if (node.getAttribute('aria-hidden') === 'true') node.removeAttribute('aria-hidden');
     });
+    if (stage) stage.removeAttribute('data-gsh-ml-word-order-revealed');
     qa('[data-gsh-ml-tool-label]').forEach(function (node) {
       node.removeAttribute('data-gsh-ml-tool-label');
       node.removeAttribute('data-gsh-ml-tool-icon');

@@ -41,13 +41,13 @@
         {word:'บ้าน',readingTH:'บ้าน',en:'bâan',zh:'家',level:'初',category:'สถานที่',syls:[{cons:'บ',vowel:'อา',tone:'้',final:'น',tone_name:'โท',th:'บ้าน'}]}
       ];
       var override = '<script>(function(){var rows=' + JSON.stringify(fixture) + ';window.GameContentLoader.boot=function(srcs){window.WORDS_MASTER=rows;window.ADV_SENTENCES=[];var chain=new Promise(function(resolve){if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",resolve,{once:true});else resolve();}).then(function(){if(window.GameResume&&typeof window.GameResume.load==="function")window.GameResume.load=function(){return null;};});(srcs||[]).forEach(function(src){chain=chain.then(function(){return new Promise(function(resolve,reject){var script=document.createElement("script");script.src=src;script.onload=resolve;script.onerror=reject;document.head.appendChild(script);});});});return chain;};})();<\/script>';
-      var clientTag = '<script src="' + 'js/games/game-content-client.js?v=11"><\/script>';
+      var clientTag = '<script src="' + 'js/games/game-content-client.js?v=13"><\/script>';
 
       fetch('../../tone-finder.html').then(function (response) {
         if (!response.ok) throw new Error('เปิดไฟล์ Tone ไม่สำเร็จ');
         return response.text();
       }).then(function (html) {
-        html = html.replace('<head>', '<head><base href="../../">');
+        html = html.replace('<head>', '<head><base href="' + new URL('../../', location.href).href + '">');
         html = html.replace(clientTag, clientTag + override);
         frame.onload = function () {
           var doc = frame.contentDocument;
