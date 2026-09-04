@@ -20,7 +20,7 @@ check(/games-challenge/.test(gate), 'Challenge remains parked');
 var pages = ['tone-finder.html', 'reading-game.html', 'listening-game.html', 'typing-game.html', 'word-order.html'];
 pages.forEach(function (file) {
   var html = read(file);
-  check(html.indexOf('js/core/minimum-guest-launch.js?v=18') !== -1, file + ' fetches the current Login Free launch gate');
+  check(html.indexOf('js/core/minimum-guest-launch.js?v=19') !== -1, file + ' fetches the current Login Free launch gate');
   check(html.indexOf('js/games/tone-server.js?v=6') !== -1, file + ' loads the authenticated SRS transport');
   check(html.indexOf('game-account.js?v=6') !== -1, file + ' activates the server-authoritative Free account facade');
   check(html.indexOf('practice-events.js?v=3') !== -1, file + ' activates durable Login Free reporting');

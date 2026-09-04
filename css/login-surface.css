@@ -47,8 +47,7 @@ html body [data-reading-login-component="host"] {
   align-items: center;
   margin-bottom: 12px;
   flex-wrap: nowrap;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+  overflow: visible;
   width: 100%;
   max-width: 640px;
   padding-bottom: 2px;
@@ -64,11 +63,11 @@ html body [data-reading-login-component="row"] > #rg-profile-wrap {
   max-width: 640px !important;
   min-height: 0 !important;
   margin: 0 auto !important;
-  padding: 10px 12px !important;
+  padding: 8px 0 !important;
   box-sizing: border-box !important;
-  background: #FAF4E8 !important;
-  border: 1.5px solid #C8973A !important;
-  border-radius: 16px !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
   font-family: 'Noto Sans TC', sans-serif !important;
   font-size: 12.5px !important;
 }
@@ -127,6 +126,13 @@ html body [data-reading-login-component="row"] > #rg-profile-wrap {
 [data-reading-login-component="row"] .sa-account-bar {
   flex-wrap: wrap;
   justify-content: center;
+  max-width: 100%;
+  min-width: 0;
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
 }
 [data-reading-login-component="row"] .sa-edit,
 [data-reading-login-component="row"] a[title="排行榜"],
@@ -148,15 +154,17 @@ html body [data-reading-login-component="row"] > #rg-profile-wrap {
   cursor: pointer;
 }
 [data-reading-login-component="row"] .sa-global-search-toggle:focus-visible,
-[data-reading-login-component="row"] .sa-global-search-input:focus-visible,
 [data-reading-login-component="row"] .sa-global-search-submit:focus-visible {
   outline: 2px solid #C8973A;
   outline-offset: 2px;
 }
 [data-reading-login-component="row"] .sa-global-search-form {
   order: 20;
-  flex: 1 0 100%;
+  flex: 0 1 320px;
+  width: min(320px, calc(100vw - 64px));
+  max-width: 100%;
   min-width: 0;
+  margin: 4px auto 0;
   display: flex;
   align-items: stretch;
   gap: 6px;
@@ -167,12 +175,16 @@ html body [data-reading-login-component="row"] > #rg-profile-wrap {
 [data-reading-login-component="row"] .sa-global-search-input {
   flex: 1;
   min-width: 0;
-  border: 1px solid #E5D9B8;
+  border: 0;
   border-radius: 9px;
   padding: 7px 9px;
   color: #5C4410;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.88);
   font: 500 12px/1.3 'Noto Sans TC', sans-serif;
+}
+[data-reading-login-component="row"] .sa-global-search-input:focus-visible {
+  outline: 0;
+  background: #fff;
 }
 [data-reading-login-component="row"] .sa-global-search-submit {
   border: 0;
@@ -182,6 +194,44 @@ html body [data-reading-login-component="row"] > #rg-profile-wrap {
   color: #fff;
   font: 700 12px/1.3 'Noto Sans TC', sans-serif;
   cursor: pointer;
+}
+
+@media (max-width: 600px) and (hover: none),
+       (max-width: 600px) and (pointer: coarse) {
+  html body [data-reading-login-component="row"] > #rg-profile-wrap {
+    gap: 6px !important;
+    padding: 8px !important;
+  }
+  [data-reading-login-component="row"] #rg-login-slot {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+  [data-reading-login-component="row"] .sa-account-bar {
+    width: 100%;
+    gap: 5px !important;
+  }
+  [data-reading-login-component="row"] .sa-nick {
+    max-width: min(38vw, 140px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  [data-reading-login-component="row"] .sa-global-search-form {
+    flex: 1 0 100%;
+    width: 100%;
+    max-width: 100%;
+    margin-top: 2px;
+    gap: 5px;
+  }
+  [data-reading-login-component="row"] .sa-global-search-input {
+    padding: 8px;
+    font-size: 16px;
+  }
+  [data-reading-login-component="row"] .sa-global-search-submit {
+    flex: 0 0 auto;
+    padding: 8px 11px;
+  }
 }
 
 /* The legacy reward CTA stays parked. Account stats remain hidden only while
