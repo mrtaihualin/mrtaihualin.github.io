@@ -2587,3 +2587,9 @@ node scripts/check-site.js
 - Split the combined `SRS / Review` status into two visible lines on every Learning Center skill card: SRS shows the learning stage counts, while Review shows only the items currently due for review.
 - Empty states remain explicit and independent for both lines. This is a presentation-only change; account history, SRS data, and read-only query behavior are unchanged.
 - Focused Learning Center/shared-game tests and the full `1,070`-file site gate pass; Production remains unchanged.
+
+# 2026-09-04 — Learning Center SRS and Review help copy
+
+- Added one short explanation directly below `學習進度` and before the skill cards: SRS means the current learning stage, while Review means items that are currently due for review.
+- Kept the per-skill calculation note in the same compact line and removed the longer duplicated note below the cards.
+- This is a presentation-only clarification; account history, SRS state, Review due calculation, and Production remain unchanged.

@@ -31,13 +31,15 @@ check('Guest ไม่ render dashboard metric ปลอมเป็น 0', !/Pr
 check('ทุก account query ระบุ user_id ผ่าน canonical summary', (summary.match(/\.eq\('user_id', userId\)/g) || []).length === 3);
 check('Progress reuse canonical summary layer', /LearningSummary\.queryData/.test(js) && /LearningSummary\.organize/.test(js));
 check('Summary เป็น read-only', !/\.insert\s*\(|\.update\s*\(|\.upsert\s*\(|\.delete\s*\(/.test(summary));
-check('SRS เป็น read-only และแยก skill', /SRS 僅顯示帳號狀態，不會從此頁改動/.test(js) && /一項 Mastered 不代表其他技能也 Mastered/.test(js));
+check('SRS เป็น read-only และแยก skill', /本頁只顯示、不會更改/.test(js) && /各技能分開計算/.test(js));
 check('SRS lifecycle แสดง New Day1 Day7 Mastered', /New /.test(js) && /Day 1 /.test(js) && /Day 7 /.test(js) && /Mastered /.test(js));
 check('SRS และ Review แยกเป็นสองบรรทัด',
   !/SRS \/ Review：/.test(js) &&
   /class="pg-srs-line"><b>SRS：<\/b>/.test(js) &&
   /class="pg-srs-line"><b>Review：<\/b>/.test(js) &&
   /review: counts\.due \? '待複習 '/.test(js));
+check('มีคำอธิบาย SRS และ Review แบบสั้นก่อนการ์ด',
+  /<h3 class="pg-section-title">學習進度<\/h3>[\s\S]*?<p class="pg-section-help"><b>SRS<\/b>：目前的學習階段（本頁只顯示、不會更改）　｜　<b>Review<\/b>：現在到期、需要複習的項目（各技能分開計算）<\/p>[\s\S]*?<div class="pg-grid">/.test(js));
 check('ไม่มี 下一步 เป็น section/wording ผู้เรียนใน Phase 1', !/<h3[^>]*>下一步/.test(js) && !/系統暫不替你排序/.test(js));
 check('ไม่มี overall readiness percentage', !/總進度|整體進度|readinessScore|overallPercent/.test(js));
 check('五 skills มี direct practice CTA', (js.match(/href: '[^']+-?(?:game|finder)\.html'/g) || []).length >= 4 && /word-order\.html/.test(js));
@@ -46,7 +48,7 @@ check('Paid readiness เป็น benefit แต่ไม่มีสูตร/
 check('account switch ใช้ user id ไม่ใช่แค่ boolean auth', /var before = currentUser && currentUser\.id;[\s\S]*var after = user && user\.id/.test(js));
 check('หน้า HTML ใช้ชื่อ 學習中心 บรรทัดเดียวกึ่งกลางแบบหัวข้อเกม และ canonical summary loader',
   /<div style="width:100%;text-align:center;">[\s\S]*<h1 style="[^"]*white-space:nowrap;[^"]*font-size:clamp\(20px,4vw,28px\)[^"]*color:#8B6310;">學習中心<\/h1>/.test(html) &&
-  /learning-summary\.js\?v=1/.test(html) && /progress\.js\?v=8/.test(html));
+  /learning-summary\.js\?v=1/.test(html) && /progress\.js\?v=9/.test(html));
 check('學習中心มี Account Bar เดียวใต้หัวข้อเหมือนหน้าเกม',
   /'my-progress\.html': '\.section-wrap > div:first-child'/.test(loginSurface) &&
   /legacy\.style\.setProperty\('display', 'none', 'important'\)/.test(loginSurface));

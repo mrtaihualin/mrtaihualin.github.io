@@ -53,7 +53,7 @@
       '.pg-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:20px}',
       '.pg-benefits{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;text-align:left;margin:20px 0 0;padding:0;list-style:none}',
       '.pg-benefits li{background:#FBF5E7;border-radius:10px;padding:10px 12px;font-size:13px;color:#5C4410}',
-      '.pg-section{margin-top:26px}.pg-section-title{font-size:17px;font-weight:900;color:#5C4410;margin:0 0 12px}',
+      '.pg-section{margin-top:26px}.pg-section-title{font-size:17px;font-weight:900;color:#5C4410;margin:0 0 12px}.pg-section-help{font-size:12px;line-height:1.7;color:#9a895e;margin:-4px 2px 12px}',
       '.pg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}',
       '.pg-skill{border:1px solid rgba(200,151,58,.28)}.pg-skill-head{display:flex;gap:9px;align-items:center;font-weight:900;color:#5C4410}.pg-skill-icon{font-size:22px}',
       '.pg-status{font-size:13px;color:#765f32;line-height:1.7;margin-top:12px}.pg-muted{color:#9a895e}.pg-srs{margin-top:8px;padding-top:8px;border-top:1px solid #F0E6CE;font-size:12px;color:#765f32}.pg-srs-line+.pg-srs-line{margin-top:4px}',
@@ -260,8 +260,9 @@
       : '';
     var skills = SKILLS.map(function (skill) { return skillCard(skill, grouped[skill.code]); }).join('');
     root.innerHTML = warning +
-      '<section><h3 class="pg-section-title">學習進度</h3><div class="pg-grid">' + skills + '</div>' +
-        '<p class="pg-muted" style="font-size:12px;line-height:1.7;margin:10px 2px 0">SRS 僅顯示帳號狀態，不會從此頁改動。每項技能分開計算；一項 Mastered 不代表其他技能也 Mastered。</p></section>' +
+      '<section><h3 class="pg-section-title">學習進度</h3>' +
+        '<p class="pg-section-help"><b>SRS</b>：目前的學習階段（本頁只顯示、不會更改）　｜　<b>Review</b>：現在到期、需要複習的項目（各技能分開計算）</p>' +
+        '<div class="pg-grid">' + skills + '</div></section>' +
       '<section class="pg-section"><h3 class="pg-section-title">我的內容</h3><div class="pg-grid">' +
         '<article class="pg-panel pg-content-card"><h3>🔖 我的單詞</h3><p>查看此帳號儲存的單詞，並回到支援的遊戲練習。</p><a class="pg-btn pg-btn-secondary" href="vault.html#words">查看我的單詞</a></article>' +
         '<article class="pg-panel pg-content-card"><h3>📝 我的句子</h3><p>查看此帳號儲存的句子，並回到語序遊戲練習。</p><a class="pg-btn pg-btn-secondary" href="vault.html#sentences">查看我的句子</a></article>' +
