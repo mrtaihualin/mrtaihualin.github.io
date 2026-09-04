@@ -232,7 +232,7 @@
       // P1-D-05: a completed RoundReport is the only client-side source for
       // durable Played evidence. PracticeEvents performs its own Login,
       // schema, retry and owner-generation checks before writing anything.
-      if (window.MRT_MINIMUM_GUEST_LAUNCH !== true && window.PracticeEvents && typeof window.PracticeEvents.submitReport === 'function') {
+      if ((window.MRT_MINIMUM_GUEST_LAUNCH !== true || window.LOGIN_FREE_ACCOUNT_PUBLIC_ENTRY === true) && window.PracticeEvents && typeof window.PracticeEvents.submitReport === 'function') {
         window.PracticeEvents.submitReport(options.report).catch(function () {});
       }
     }

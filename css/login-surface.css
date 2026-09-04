@@ -95,10 +95,10 @@ html body [data-reading-login-component="row"] > #rg-profile-wrap {
   line-height: 1 !important;
 }
 
-/* These are part of Reading's exact Account Bar DOM, but remain parked in the
-   public Login-only surface exactly as they did in PR #98. */
-[data-reading-login-component="row"] .rg-stat-row,
-[data-reading-login-component="row"] #rg-cta-login {
+/* The legacy reward CTA stays parked. Account stats remain hidden only while
+   the reversible Login Free account entry is disabled. */
+[data-reading-login-component="row"] #rg-cta-login,
+.minimum-guest-launch:not(.login-free-account-entry) [data-reading-login-component="row"] .rg-stat-row {
   display: none !important;
 }
 

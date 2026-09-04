@@ -35,7 +35,9 @@
     'typing-board.html': '.section-wrap > div:first-child',
     'word-order-board.html': '.section-wrap > div:first-child'
   };
-  var parkedPages = /^(?:games-challenge|my-progress|all-board|leaderboard|reading-board|listening-board|typing-board|word-order-board)\.html$/;
+  var parkedPages = window.LOGIN_FREE_ACCOUNT_PUBLIC_ENTRY === true
+    ? /^(?:games-challenge)\.html$/
+    : /^(?:games-challenge|my-progress|all-board|leaderboard|reading-board|listening-board|typing-board|word-order-board)\.html$/;
   var landscapeQuery = window.matchMedia && window.matchMedia('(orientation: landscape) and (max-width: 1024px) and (max-height: 600px)');
   var activeSurface = null;
   var gameState = null;
@@ -67,7 +69,7 @@
     return loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2', function () { return !!window.supabase; })
       .then(function () { return loadScript('js/core/supabase-config.js?v=9', function () { return !!window.SUPABASE_CONFIG; }); })
       .then(function () { return loadScript('js/core/auth-widget.js?v=17', function () { return !!window.SITE_AUTH; }); })
-      .then(function () { return loadScript('js/games/reading-auth.js?v=31', function () { return !!window.READING_AUTH; }); });
+      .then(function () { return loadScript('js/games/reading-auth.js?v=32', function () { return !!window.READING_AUTH; }); });
   }
 
   function visibleSlot() {

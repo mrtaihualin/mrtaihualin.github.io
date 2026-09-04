@@ -245,13 +245,13 @@ test('all scoped pages use one fail-closed Login surface and game pages permanen
   for (const file of gamePages) {
     const html = fs.readFileSync(path.join(root, file), 'utf8');
     assert.doesNotMatch(html, /ANN-BAND|ann-band|avail-band|annDismissed|annGoTo|annPrev|annNext/, `${file}: announcement DOM/marker/script/style hook must be removed`);
-    assert.match(html, file === 'lego.html' ? /minimum-guest-launch\.js\?v=9/ : /minimum-guest-launch\.js\?v=11/, `${file}: must load the Reading-authority Login gate`);
+    assert.match(html, /minimum-guest-launch\.js\?v=12/, `${file}: must load the current Reading-authority Login gate`);
     assert.match(html, /shared\.min\.js\?v=(?:47|49)/, `${file}: must load the announcement-free game runtime`);
   }
   for (const file of nonGameScopedPages) {
     const html = fs.readFileSync(path.join(root, file), 'utf8');
     assert.match(html, /<!--ANN-BAND:START--><!-- Login UI scope: no announcement strip\. --><!--ANN-BAND:END-->/, `${file}: existing non-game announcement capability boundary must remain`);
-    assert.match(html, /minimum-guest-launch\.js\?v=9/, `${file}: must load the Reading-authority Login gate`);
+    assert.match(html, /minimum-guest-launch\.js\?v=12/, `${file}: must load the current Reading-authority Login gate`);
     assert.match(html, file === 'vault.html' ? /shared\.min\.js\?v=47/ : /shared\.min\.js\?v=45/, `${file}: non-game cache binding must stay on its current runtime`);
   }
   assert.doesNotMatch(sharedJs, /suppressScopedAnnouncement|staleScopedAnnouncement|avail-band-placeholder/);
@@ -261,7 +261,7 @@ test('all scoped pages use one fail-closed Login surface and game pages permanen
   assert.match(sharedMin, /document\.body&&!document\.body\.hasAttribute\("data-gsh-game"\)\?document\.getElementById\("ann-band"\):null/, 'deployed shared runtime must keep the non-game announcement guard');
   assert.doesNotMatch(sharedCss, /(^|[},]\s*)\.avail-band\s*\{/m, 'announcement CSS must never target an unscoped game surface');
   assert.match(minimumGuest, /window\.MRT_PARKED_ACCOUNT_SURFACE = parked\.test\(path\)/);
-  assert.match(minimumGuest, /loginController\.src = 'js\/core\/login-surface\.js\?v=8'/, 'public pages must request the one-minute OTP Login controller');
+  assert.match(minimumGuest, /loginController\.src = 'js\/core\/login-surface\.js\?v=9'/, 'public pages must request the account-aware Login controller');
   assert.doesNotMatch(minimumGuest, /location\.replace\('\/games\.html\?guest_launch=1'\)/);
   assert.match(loginJs, /'tone-finder\.html'[\s\S]*'reading-game\.html'[\s\S]*'listening-game\.html'[\s\S]*'typing-game\.html'[\s\S]*'word-order\.html'[\s\S]*'lego\.html'/);
   assert.match(loginJs, /function sourceFilename\(pathname\)[\s\S]{0,520}if \(filename\.indexOf\('\.'\) === -1\) filename \+= '\.html'[\s\S]{0,120}var filename = sourceFilename\(window\.location\.pathname\)/, 'Cloudflare extensionless routes must resolve to canonical Login page keys');
@@ -300,7 +300,7 @@ test('all scoped pages use one fail-closed Login surface and game pages permanen
   }
   for (const file of ['my-progress.html', 'leaderboard.html', 'reading-board.html', 'listening-board.html', 'typing-board.html', 'word-order-board.html']) {
     const html = fs.readFileSync(path.join(root, file), 'utf8');
-    assert.match(html, /type="text\/plain" data-mrt-parked-runtime/, `${file}: data runtime must remain parked`);
+    assert.doesNotMatch(html, /type="text\/plain" data-mrt-parked-runtime/, `${file}: Login Free data runtime must be active`);
   }
   const vaultHtml = fs.readFileSync(path.join(root, 'vault.html'), 'utf8');
   assert.match(vaultHtml, /<script src="js\/score\/personal-search\.js\?v=2"><\/script>[\s\S]*<script src="js\/score\/personal-content\.js\?v=5"><\/script>/, 'Vault Personal Search runtime must be active');
@@ -527,7 +527,7 @@ test('Lego exposes only the locked minimum-release presentation', () => {
   assert.match(legoHtml, /onclick="legoEndGame\(\)">結束遊戲<\/button>/);
   assert.match(legoHtml, /onclick="legoContinueBuilding\(\)">繼續造句<\/button>/);
   assert.match(legoHtml, /id="lego-reveal-th"[\s\S]{0,180}id="lego-reveal-zh"/, 'reveal must retain the original full sentence and zh-TW translation order');
-  assert.match(legoHtml, /js\/games\/game-flow\.js\?v=11/, 'Lego Result must use the countdown-free shared flow runtime');
+  assert.match(legoHtml, /js\/games\/game-flow\.js\?v=13/, 'Lego Result must use the current countdown-free shared flow runtime');
   for (const role of ['replay','print','detail-action','switch','cta','home']) {
     assert.match(legoHtml, new RegExp(`data-game-result-${role}="v1"`), `Lego Result missing ${role}`);
   }
@@ -666,11 +666,11 @@ test('mobile resume uses one compact shared-copy line and three horizontal actio
   }
 });
 
-test('all five games keep one in-memory current-round DTO identity without Login summary', () => {
+test('all five games keep one current-round DTO identity with the Login Free canonical summary', () => {
   for (const g of games) {
     const reportVersion = 5;
     assert.match(g.htmlText, new RegExp(`js/games/round-report\\.js\\?v=${reportVersion}`), `${g.id}: missing Round Report DTO loader`);
-    assert.doesNotMatch(g.htmlText, /js\/score\/learning-summary\.js/, `${g.id}: Login summary must stay parked in Minimum Guest Launch`);
+    assert.match(g.htmlText, /js\/score\/learning-summary\.js\?v=1/, `${g.id}: Login Free summary runtime must be active`);
     assert.match(g.appText, /RoundReport\.(?:create|restore)/, `${g.id}: round identity is not wired`);
     assert.match(g.appText, /report:/, `${g.id}: active GameResume must carry the report snapshot`);
   }
@@ -684,11 +684,11 @@ test('all six games use the shared A4 browser Print structure and daily Result a
   for (const g of games) {
     const reportVersion = 5;
     assert.match(g.htmlText, new RegExp(`js/games/round-report\\.js\\?v=${reportVersion}`), `${g.id}: must load shared print renderer`);
-    assert.match(g.htmlText, /js\/games\/game-flow\.js\?v=12/, `${g.id}: must load countdown-free Result runtime`);
+    assert.match(g.htmlText, /js\/games\/game-flow\.js\?v=13/, `${g.id}: must load current countdown-free Result runtime`);
     assert.match(g.appText, /RoundReport\.openPrint/, `${g.id}: print action must use the shared renderer`);
   }
   assert.match(legoHtml, /js\/games\/round-report\.js\?v=3/);
-  assert.match(legoHtml, /js\/games\/game-flow\.js\?v=11/);
+  assert.match(legoHtml, /js\/games\/game-flow\.js\?v=13/);
   assert.match(legoApp, /RoundReport\.openPrint/);
   assert.match(roundReport, /@page\{size:A4 portrait/);
   assert.match(roundReport, /data-print-section=\\?"summary\\?"[\s\S]+data-print-section=\\?"activity\\?"[\s\S]+data-print-section=\\?"detail\\?"/);

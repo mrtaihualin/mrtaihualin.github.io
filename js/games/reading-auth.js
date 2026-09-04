@@ -12,9 +12,10 @@
 //   มี fallback: ถ้า SITE_AUTH โหลดไม่ทัน ยังมี client+listener สำรองของตัวเอง เกมไม่พัง)
 // ============================================================
 (function () {
-  var publicLoginOnly = window.MRT_MINIMUM_GUEST_LAUNCH === true && window.LOGIN_CORE_PUBLIC_ENTRY === true;
-  var publicLoginSrs = publicLoginOnly && window.LOGIN_FREE_SRS_PUBLIC_ENTRY === true;
-  if (window.MRT_MINIMUM_GUEST_LAUNCH === true && !publicLoginOnly) {
+  var publicAccount = window.MRT_MINIMUM_GUEST_LAUNCH === true && window.LOGIN_FREE_ACCOUNT_PUBLIC_ENTRY === true;
+  var publicLoginOnly = window.MRT_MINIMUM_GUEST_LAUNCH === true && window.LOGIN_CORE_PUBLIC_ENTRY === true && !publicAccount;
+  var publicLoginSrs = window.MRT_MINIMUM_GUEST_LAUNCH === true && window.LOGIN_FREE_SRS_PUBLIC_ENTRY === true;
+  if (window.MRT_MINIMUM_GUEST_LAUNCH === true && !publicLoginOnly && !publicAccount) {
     window.READING_AUTH = {
       ready: true,
       user: null,
@@ -144,7 +145,7 @@
         window.SITE_AUTH.renderBadge('rg-login-slot', {
           leaderboardHref: boardHref(),
           progressHref: 'my-progress.html',
-          showParkedAccountLinks: false
+          showParkedAccountLinks: !publicLoginOnly
         });
       }
     } else {

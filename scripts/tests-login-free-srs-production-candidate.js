@@ -13,22 +13,23 @@ function check(value, message) {
 var gate = read('js/core/minimum-guest-launch.js');
 check(/LOGIN_CORE_PUBLIC_ENTRY = true/.test(gate), 'Public Login remains enabled');
 check(/LOGIN_FREE_SRS_PUBLIC_ENTRY = true/.test(gate), 'Login Free SRS has one explicit reversible flag');
+check(/LOGIN_FREE_ACCOUNT_PUBLIC_ENTRY = true/.test(gate), 'Login Free account runtime has one explicit reversible flag');
 check(/MRT_MINIMUM_GUEST_LAUNCH = true/.test(gate), 'Minimum Guest boundary remains active');
 check(/games-challenge/.test(gate), 'Challenge remains parked');
 
 var pages = ['tone-finder.html', 'reading-game.html', 'listening-game.html', 'typing-game.html', 'word-order.html'];
 pages.forEach(function (file) {
   var html = read(file);
-  check(html.indexOf('js/core/minimum-guest-launch.js?v=11') !== -1, file + ' fetches the SRS-enabled launch gate with a fresh cache key');
+  check(html.indexOf('js/core/minimum-guest-launch.js?v=12') !== -1, file + ' fetches the current Login Free launch gate');
   check(html.indexOf('js/games/tone-server.js?v=6') !== -1, file + ' loads the authenticated SRS transport');
-  check(html.indexOf('game-account.js') === -1, file + ' does not activate score/gamification account runtime');
-  check(html.indexOf('practice-events.js') === -1, file + ' does not activate durable score/progress reporting');
+  check(html.indexOf('game-account.js?v=6') !== -1, file + ' activates the server-authoritative Free account facade');
+  check(html.indexOf('practice-events.js?v=3') !== -1, file + ' activates durable Login Free reporting');
   check(html.indexOf('games-challenge-app.js') === -1, file + ' does not activate Challenge runtime');
 });
 check(read('lego.html').indexOf('tone-server.js') === -1, 'Lego receives no SRS runtime');
-check(read('js/core/minimum-guest-launch.js').indexOf('login-surface.js?v=8') !== -1, 'SRS pages fetch the Login surface with a fresh cache key');
-check(read('js/core/login-surface.js').indexOf('reading-auth.js?v=31') !== -1, 'Login surface fetches the one-minute OTP client');
-check(read('reading-game.html').indexOf('reading-auth.js?v=31') !== -1, 'Reading direct provider flow fetches the one-minute OTP client');
+check(read('js/core/minimum-guest-launch.js').indexOf('login-surface.js?v=9') !== -1, 'SRS pages fetch the account-aware Login surface');
+check(read('js/core/login-surface.js').indexOf('reading-auth.js?v=32') !== -1, 'Login surface fetches the account-aware auth client');
+check(read('reading-game.html').indexOf('reading-auth.js?v=32') !== -1, 'Reading direct provider flow fetches the account-aware auth client');
 check(read('tone-finder.html').indexOf('tone-finder-game.min.js?v=83') !== -1, 'Tone fetches the current game runtime');
 check(read('reading-game.html').indexOf('reading-game-app.min.js?v=52') !== -1, 'Reading fetches the current game runtime');
 check(read('typing-game.html').indexOf('typing-game-app.min.js?v=47') !== -1, 'Typing fetches the current game runtime');
@@ -50,9 +51,10 @@ check(/LOGIN_FREE_SRS_PUBLIC_ENTRY !== true/.test(listening), 'Listening SRS own
 check(/READING_AUTH\.srsUser/.test(listening), 'Listening uses only the dedicated authenticated SRS owner');
 
 var auth = read('js/games/reading-auth.js');
-check(/API\.user = publicLoginOnly \? null : loginUser/.test(auth), 'General game/account user remains parked');
-check(/API\.srsUser = publicLoginSrs \? loginUser : API\.user/.test(auth), 'Only the SRS owner channel receives Public Login identity');
-check(/if \(publicLoginOnly\) return null/.test(auth), 'Score persistence remains off');
+check(/LOGIN_FREE_ACCOUNT_PUBLIC_ENTRY === true/.test(auth), 'General game/account user is controlled by the account entry flag');
+check(/API\.user = publicLoginOnly \? null : loginUser/.test(auth), 'Login-only fallback still withholds the general game/account user');
+check(/API\.srsUser = publicLoginSrs \? loginUser : API\.user/.test(auth), 'SRS keeps its dedicated authenticated owner channel');
+check(/if \(publicLoginOnly\) return null/.test(auth), 'Score persistence stays off in Login-only fallback mode');
 
 var edge = read('supabase/functions/tone-round/index.ts');
 check(/\["tone", "reading", "listening", "typing", "wordorder"\]\.includes\(game\)/.test(edge), 'Edge accepts exactly the five SRS games');
