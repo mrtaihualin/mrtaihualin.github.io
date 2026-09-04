@@ -2590,6 +2590,12 @@ node scripts/check-site.js
 
 # 2026-09-04 — Learning Center SRS and Review help copy
 
-- Added one short explanation directly below `學習進度` and before the skill cards: SRS means the current learning stage, while Review means items that are currently due for review.
-- Kept the per-skill calculation note in the same compact line and removed the longer duplicated note below the cards.
+- Added two short explanation lines directly below `學習進度` and before the skill cards: SRS is the spaced-repetition learning system and shows the current stage from practice results; Review means items whose review date has arrived and need review now.
+- Kept the `SRS` and `Review` labels bold so the explanation matches the card headings and remains easy to scan.
 - This is a presentation-only clarification; account history, SRS state, Review due calculation, and Production remain unchanged.
+
+# 2026-09-04 — Learning Center SRS count readability
+
+- Added a full-width separator and the `項` unit to every SRS/Review count, so `Day 1：2 項` cannot be misread as `Day 12`.
+- Applied the same format to New, Day 7, Mastered, and due Review counts without changing stage or due-date calculations.
+- Focused Learning Center/shared-game tests and the full `1,070`-file site gate pass; Production remains unchanged.
