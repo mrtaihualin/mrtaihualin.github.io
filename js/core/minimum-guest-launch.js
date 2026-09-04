@@ -42,7 +42,7 @@
   }
   if (!document.querySelector('script[src*="login-surface.js"]')) {
     var loginController = document.createElement('script');
-    loginController.src = 'js/core/login-surface.js?v=9';
+    loginController.src = 'js/core/login-surface.js?v=10';
     loginController.defer = true;
     document.head.appendChild(loginController);
   }

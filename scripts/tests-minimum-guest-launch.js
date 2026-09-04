@@ -24,7 +24,7 @@ function ok(value, message) {
 
 activePages.concat(['vault.html', 'games-challenge.html']).forEach(function (file) {
   var html = read(file);
-  var binding = 'js/core/minimum-guest-launch.js?v=12';
+  var binding = 'js/core/minimum-guest-launch.js?v=13';
   ok(html.indexOf(binding) !== -1, file + ' loads the current Login-entry launch gate');
   ok(html.indexOf(binding) < html.indexOf('</head>'), file + ' loads the launch gate in head');
 });
@@ -35,7 +35,7 @@ var gate = read('js/core/minimum-guest-launch.js');
 ok(gate.indexOf('MRT_MINIMUM_GUEST_LAUNCH = true') !== -1, 'launch flag is explicit');
 ok(gate.indexOf('LOGIN_FREE_SRS_PUBLIC_ENTRY = true') !== -1, 'Login Free SRS entry flag is explicit');
 ok(gate.indexOf('LOGIN_FREE_ACCOUNT_PUBLIC_ENTRY = true') !== -1, 'Login Free account entry flag is explicit');
-ok(gate.indexOf("login-surface.js?v=9") !== -1, 'Login surface cache key activates the account-aware client');
+ok(gate.indexOf("login-surface.js?v=10") !== -1, 'Login surface cache key activates the account-aware client');
 ok(gate.indexOf('MRT_PARKED_ACCOUNT_SURFACE = parked.test(path)') !== -1, 'parked account surfaces remain fail-closed');
 ok(gate.indexOf('my-progress') !== -1 && gate.indexOf('games-challenge') !== -1, 'reversible fallback keeps account and Challenge route inventory');
 ok(gate.indexOf('vault-btn-slot') === -1 && gate.indexOf('a[href="vault.html"]') === -1,

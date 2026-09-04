@@ -140,7 +140,7 @@ PAGES.forEach(function (file) {
   );
   next = next.replace(
     /js\/core\/minimum-guest-launch\.js\?v=\d+/g,
-    'js/core/minimum-guest-launch.js?v=12'
+    'js/core/minimum-guest-launch.js?v=13'
   );
 
   // ── nav responsive auto-fit script — มีอยู่แล้วให้พิมพ์ทับ · ยังไม่มีให้แทรกทันทีหลัง </nav> ──

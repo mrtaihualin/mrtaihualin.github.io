@@ -248,13 +248,13 @@ test('all scoped pages use one fail-closed Login surface and game pages permanen
   for (const file of gamePages) {
     const html = fs.readFileSync(path.join(root, file), 'utf8');
     assert.doesNotMatch(html, /ANN-BAND|ann-band|avail-band|annDismissed|annGoTo|annPrev|annNext/, `${file}: announcement DOM/marker/script/style hook must be removed`);
-    assert.match(html, /minimum-guest-launch\.js\?v=12/, `${file}: must load the current Reading-authority Login gate`);
+    assert.match(html, /minimum-guest-launch\.js\?v=13/, `${file}: must load the current Reading-authority Login gate`);
     assert.match(html, /shared\.min\.js\?v=(?:47|50)/, `${file}: must load the announcement-free game runtime`);
   }
   for (const file of nonGameScopedPages) {
     const html = fs.readFileSync(path.join(root, file), 'utf8');
     assert.match(html, /<!--ANN-BAND:START--><!-- Login UI scope: no announcement strip\. --><!--ANN-BAND:END-->/, `${file}: existing non-game announcement capability boundary must remain`);
-    assert.match(html, /minimum-guest-launch\.js\?v=12/, `${file}: must load the current Reading-authority Login gate`);
+    assert.match(html, /minimum-guest-launch\.js\?v=13/, `${file}: must load the current Reading-authority Login gate`);
     assert.match(html, file === 'vault.html' ? /shared\.min\.js\?v=47/ : /shared\.min\.js\?v=45/, `${file}: non-game cache binding must stay on its current runtime`);
   }
   assert.doesNotMatch(sharedJs, /suppressScopedAnnouncement|staleScopedAnnouncement|avail-band-placeholder/);
@@ -264,7 +264,7 @@ test('all scoped pages use one fail-closed Login surface and game pages permanen
   assert.match(sharedMin, /document\.body&&!document\.body\.hasAttribute\("data-gsh-game"\)\?document\.getElementById\("ann-band"\):null/, 'deployed shared runtime must keep the non-game announcement guard');
   assert.doesNotMatch(sharedCss, /(^|[},]\s*)\.avail-band\s*\{/m, 'announcement CSS must never target an unscoped game surface');
   assert.match(minimumGuest, /window\.MRT_PARKED_ACCOUNT_SURFACE = parked\.test\(path\)/);
-  assert.match(minimumGuest, /loginController\.src = 'js\/core\/login-surface\.js\?v=9'/, 'public pages must request the account-aware Login controller');
+  assert.match(minimumGuest, /loginController\.src = 'js\/core\/login-surface\.js\?v=10'/, 'public pages must request the account-aware Login controller');
   assert.doesNotMatch(minimumGuest, /location\.replace\('\/games\.html\?guest_launch=1'\)/);
   assert.match(loginJs, /'tone-finder\.html'[\s\S]*'reading-game\.html'[\s\S]*'listening-game\.html'[\s\S]*'typing-game\.html'[\s\S]*'word-order\.html'[\s\S]*'lego\.html'/);
   assert.match(loginJs, /function sourceFilename\(pathname\)[\s\S]{0,520}if \(filename\.indexOf\('\.'\) === -1\) filename \+= '\.html'[\s\S]{0,120}var filename = sourceFilename\(window\.location\.pathname\)/, 'Cloudflare extensionless routes must resolve to canonical Login page keys');
@@ -295,6 +295,8 @@ test('all scoped pages use one fail-closed Login surface and game pages permanen
   assert.match(loginJs, /activateLegacyLandscapeSurface\(\)[\s\S]{0,1800}gameState\.header\.insertAdjacentElement\('afterend', gameState\.row\)/, 'Mobile Landscape must restore the existing per-game surface');
   assert.match(loginCss, /@media \(orientation: landscape\) and \(max-width: 1024px\) and \(max-height: 600px\)[\s\S]{0,180}\.mrt-login-surface,[\s\S]{0,100}display: none !important;/, 'Mobile Landscape must show no Login');
   assert.match(readingAuth, /id="rg-login-btn" class="mrt-login-button"/, 'Reading provider flow must own the standardized Login button');
+  assert.match(readingAuth, /id="rg-login-btn" class="mrt-login-button" style="display:flex;/, 'standardized Login button must remain visible while optional CTA placeholders are empty');
+  assert.doesNotMatch(readingAuth, /hideDup|document\.getElementById\('rg-cta-login'\).*display/, 'optional CTA placeholders must not hide the stable Login entry');
   assert.doesNotMatch(toneApp, /tf-result-login-card|tone_finder_summary_login_click/, 'Tone Result must not create a second Login CTA');
 
   for (const file of ['my-progress.html', 'vault.html', 'leaderboard.html', 'reading-board.html', 'listening-board.html', 'typing-board.html', 'word-order-board.html']) {

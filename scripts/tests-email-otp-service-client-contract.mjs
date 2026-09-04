@@ -173,7 +173,7 @@ test('preserved personal Auth surfaces retain the config cache binding', () => {
   }
   for (const file of expectedReadingAuthConsumers) {
     const html = read(file);
-    assert.match(html, /js\/games\/reading-auth\.js\?v=32/);
+    assert.match(html, /js\/games\/reading-auth\.js\?v=33/);
   }
 });
 
