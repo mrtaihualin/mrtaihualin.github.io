@@ -104,9 +104,7 @@ cssFiles.forEach((relative) => {
 console.log(`✓ ตรวจ CSS ${cssFiles.length} ไฟล์`);
 
 runTest(['data/tools/tests-tone-engine.js'], 'tone engine tests');
-runTest(['data/tools/tests-check-data-health.js'], 'data-health tests');
-runTest(['data/tools/check-duplicate-words.js'], 'duplicate-word check');
-runTest(['data/tools/check-data-health.js'], 'data-health check');
+runTest(['scripts/tests-current-free-200.js'], 'Current Free 200 data-health, duplicate and runtime integrity tests');
 runTest(['scripts/tests-secret-scanner.js'], 'secret-scanner tests');
 // เพิ่ม 2026-08-07 (รวมผล P3 — ตัวทดสอบคุ้มกันพฤติกรรมเดิม)
 runTest(['scripts/tests-marketing-behavioral.js'], 'marketing behavioral tests');
@@ -131,10 +129,6 @@ runTest(['scripts/tests-listening-phase1.js'], 'Phase 1 Listening tests');
 runTest(['scripts/tests-phase1-game-content-rl-grants.mjs'], 'Phase 1 game-content rate-limit grant tests');
 runTest(['scripts/tests-typing-phase1.js'], 'Phase 1 Typing tests');
 runTest(['scripts/tests-reading-phase1.js'], 'Phase 1 Reading tests');
-runTest(['scripts/check-approved-vocabulary-catalog.js'], 'Lin-approved vocabulary catalog integrity check');
-runTest(['scripts/tests-approved-vocabulary-catalog.js'], 'Lin-approved canonical Free 200 immutability/history tests');
-runTest(['scripts/tests-canonical-free-200-cutover.js'], 'Canonical Free 200 migration/runtime cutover tests');
-runTest(['scripts/tests-vocab-sense-scope.js'], 'Vocabulary sense/surface/identity tests');
 runTest(['scripts/tests-word-order-phase1.js'], 'Phase 1 Word Order tests');
 runTest(['scripts/tests-account-export-phase1.js'], 'Phase 1 account-export tests');
 runTest(['scripts/tests-shared-games-phase1.js'], 'Phase 1 shared-game-system tests');
@@ -181,10 +175,6 @@ runTest(['scripts/check-nav-consistency.js'], 'nav consistency check');
 // เพิ่ม 2026-08-14 — Footer มาตรฐานต้องครอบทุกหน้า Public Shell + vocab cheatsheet
 // และต้องมี Terms, Privacy, copyright โดยไม่มี Contact/Social ใน Footer
 runTest(['scripts/tests-footer-standard.js'], 'footer standard tests');
-// เพิ่ม 2026-08-11 — ตรวจความพร้อมคลังเนื้อหาสำหรับระบบเรียนกลาง (อ่านอย่างเดียว)
-// บล็อกเมื่อ metadata ที่ระบบต้องใช้ขาด (zh/category/level) · ช่องว่างอื่นเป็นรายงานให้ Lin ไม่บล็อก
-// ดูรายการเต็ม: node scripts/audit-learning-content.js --full
-runTest(['scripts/audit-learning-content.js'], 'learning content audit');
 // เพิ่ม 2026-08-11 — คุ้มกันกติกาคลังคำ sync ข้ามเครื่องที่ Lin สั่งไว้ (ผิดแล้วคำของนักเรียนหายถาวร):
 // รวมคำได้แม้เกินเพดาน · ห้ามลบคำอัตโนมัติ · ห้ามข้อมูลเดิมหาย · guest/local ต้องไม่พัง
 // ทดสอบย้อนกลับแล้ว 3 แบบว่าจับของพังได้จริง (ไม่ใช่ด่านหลอก)

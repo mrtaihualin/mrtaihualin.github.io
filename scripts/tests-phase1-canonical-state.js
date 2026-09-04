@@ -80,9 +80,9 @@ test('Guest and account Resume use separate stores', () => {
 test('owner changes clear canonical account cache and metadata', () => {
   assert.match(auth, /'phase1_account_resume_v1', 'phase1_canonical_meta_v1'/);
 });
-test('Minimum Guest games park canonical persistence while personal source stays preserved', () => {
+test('Login Free games activate canonical persistence while personal source stays preserved', () => {
   ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html']
-    .forEach((page) => assert.doesNotMatch(read(page), /phase1-canonical-state\.js/, page));
+    .forEach((page) => assert.match(read(page), /phase1-canonical-state\.js\?v=2/, page));
   ['my-progress.html','vault.html'].forEach((page) => assert.match(read(page), /phase1-canonical-state\.js\?v=2/, page));
 });
 test('Learning Center and Vault bootstrap NetworkGuard before canonical sync', () => {

@@ -92,14 +92,15 @@ test('Login Core exposes idempotent SRS and Review transaction clients', () => {
     const html = read(page);
     assert.match(html, /tone-server\.js\?v=6/);
     assert.match(html, /network-guard\.js\?v=1/);
-    assert.match(html, /reading-auth\.js\?v=31/);
+    assert.match(html, /reading-auth\.js\?v=32/);
     assert.match(html, /learning-review\.js\?v=1/);
-    assert.doesNotMatch(html, /game-account\.js|practice-events\.js/);
+    assert.match(html, /game-account\.js\?v=6/);
+    assert.match(html, /practice-events\.js\?v=3/);
   });
   const reading = read('reading-game.html');
   assert.match(reading, /tone-server\.js\?v=6/);
   assert.match(reading, /network-guard\.js\?v=1/);
-  assert.match(reading, /reading-auth\.js\?v=31/);
+  assert.match(reading, /reading-auth\.js\?v=32/);
   assert.match(readingAuth, /if \(publicLoginOnly\) return null;/);
   assert.match(readingAuth, /API\.srsUser = publicLoginSrs \? loginUser : API\.user/);
 });

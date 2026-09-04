@@ -6,7 +6,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const cp = require('child_process');
-const { scanProject } = require('./secret-scanner');
+const { AI_READ_DENY_EXACT_FILES, isAiReadDeniedFile, scanProject } = require('./secret-scanner');
 
 function base64Url(value) {
   return Buffer.from(JSON.stringify(value)).toString('base64url');
@@ -155,8 +155,18 @@ function testFailsClosedWhenTextFileIsTooLargeToScan() {
   assert(!`${cli.stdout}${cli.stderr}`.includes(embeddedSecret), 'output must not leak the unscanned secret value');
 }
 
+function testExactAiReadDenyBoundary() {
+  assert.strictEqual(isAiReadDeniedFile('data/words-data.js'), true);
+  assert.strictEqual(isAiReadDeniedFile('data/history/vocabulary/2026-09-03-pre-free-200/approved-surplus-189.json'), true);
+  assert.strictEqual(isAiReadDeniedFile('data/history/vocabulary/2026-09-03-pre-free-200/unreviewed-surplus-64.json'), true);
+  assert.strictEqual(isAiReadDeniedFile('supabase/migrations/20260903072554_canonical_free_200_catalog.sql'), true);
+  assert.strictEqual(isAiReadDeniedFile('data/approved-vocabulary-catalog.json'), false);
+  assert.strictEqual(AI_READ_DENY_EXACT_FILES.size, 5, 'read-deny list changed without review');
+}
+
 testDetectsFakeSecretsAndForbiddenNames();
 testAllowsApprovedBrowserValuesAndReferences();
 testDetectsSecretsInsidePreviouslySkippedDocumentFolders();
 testFailsClosedWhenTextFileIsTooLargeToScan();
+testExactAiReadDenyBoundary();
 console.log('✓ secret-scanner tests: ตรวจพบ/ปิดบังค่า/allowlist/path ช่องว่าง/โฟลเดอร์ที่เคยถูกข้าม/ไฟล์ใหญ่เกิน ผ่าน');

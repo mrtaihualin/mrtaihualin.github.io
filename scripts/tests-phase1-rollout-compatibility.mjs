@@ -198,9 +198,10 @@ await test('server-only RPC least privilege closes browser execute without touch
   assert.doesNotMatch(serverRpcAclSql, /revoke all on function public\.leads_rate_ok/);
 });
 
-await test('rollout bridge remains preserved while Login Free opens only the SRS Tone client', () => {
+await test('rollout bridge remains preserved while Login Free activates account clients', () => {
   assert.match(read('tone-finder.html'), /tone-server\.js\?v=6/);
-  assert.doesNotMatch(read('tone-finder.html'), /game-account\.js|practice-events\.js/);
+  assert.match(read('tone-finder.html'), /game-account\.js\?v=6/);
+  assert.match(read('tone-finder.html'), /practice-events\.js\?v=3/);
   assert.match(read('lego.html'), /lego-game-app\.js\?v=12/);
   assert.match(legoEdge, /compatibility: request\.legacyCompatibility \? 'legacy-no-id' : 'explicit-id'/);
 });

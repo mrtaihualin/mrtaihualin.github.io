@@ -246,11 +246,11 @@ async function test(label, fn) {
     assert.ok(/shouldCreateUser: true/.test(otpSource));
   });
 
-  await test('Login-only candidate hides parked score, leaderboard and progress controls', async () => {
+  await test('Login Free candidate exposes account links while preserving clean Login copy', async () => {
     assert.doesNotMatch(otpSource, /登入保存分數|登入排行榜|登入後分數/);
     assert.match(otpSource, />🔑 登入<\/button>/);
     assert.match(otpSource, /<h2[^>]*>登入<\/h2>/);
-    assert.match(otpSource, /showParkedAccountLinks: false/);
+    assert.match(otpSource, /showParkedAccountLinks: !publicLoginOnly/);
     assert.match(source, /opts\.showParkedAccountLinks === false \? ''/);
   });
 

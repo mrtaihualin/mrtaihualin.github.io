@@ -120,20 +120,21 @@ test('Login Core exposes the five-game SRS and Review transaction clients', () =
   for (const page of ['tone-finder.html','listening-game.html','typing-game.html','word-order.html']) {
     const html = read(page);
     assert.match(html, /tone-server\.js\?v=6/, page);
-    assert.match(html, /reading-auth\.js\?v=31/, page);
+    assert.match(html, /reading-auth\.js\?v=32/, page);
     assert.match(html, /learning-review\.js\?v=1/, page);
-    assert.doesNotMatch(html, /game-account\.js|practice-events\.js/, page);
+    assert.match(html, /game-account\.js\?v=6/, page);
+    assert.match(html, /practice-events\.js\?v=3/, page);
   }
   const reading = read('reading-game.html');
   assert.match(reading, /tone-server\.js\?v=6/);
-  assert.match(reading, /reading-auth\.js\?v=31/);
+  assert.match(reading, /reading-auth\.js\?v=32/);
   assert.match(reading, /learning-review\.js\?v=1/);
   assert.match(read('js/games/reading-auth.js'), /if \(publicLoginOnly\) return null;/);
   assert.match(read('js/games/reading-auth.js'), /API\.srsUser = publicLoginSrs \? loginUser : API\.user/);
   const lego = read('lego.html');
   assert.match(lego, /network-guard\.js\?v=1[\s\S]+lego-game-app\.js\?v=12/);
   assert.doesNotMatch(lego, /reading-auth\.js/);
-  assert.match(read('vault.html'), /reading-auth\.js\?v=31/);
+  assert.match(read('vault.html'), /reading-auth\.js\?v=32/);
 });
 
 if (!process.exitCode) console.log('\n✅ Phase 1 backend transaction contracts passed (' + passed + ' checks)');
