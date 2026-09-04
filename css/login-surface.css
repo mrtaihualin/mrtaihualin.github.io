@@ -95,6 +95,11 @@ html body [data-reading-login-component="row"] > #rg-profile-wrap {
   line-height: 1 !important;
 }
 
+/* The Vault companion is a chip-style action, not an inline text link. */
+[data-reading-login-component="row"] .mrt-login-vault {
+  text-decoration: none !important;
+}
+
 /* The legacy reward CTA stays parked. Account stats remain hidden only while
    the reversible Login Free account entry is disabled. */
 [data-reading-login-component="row"] #rg-cta-login,

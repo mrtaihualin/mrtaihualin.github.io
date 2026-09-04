@@ -24,7 +24,7 @@ function ok(value, message) {
 
 activePages.concat(['vault.html', 'games-challenge.html']).forEach(function (file) {
   var html = read(file);
-  var binding = 'js/core/minimum-guest-launch.js?v=13';
+  var binding = 'js/core/minimum-guest-launch.js?v=14';
   ok(html.indexOf(binding) !== -1, file + ' loads the current Login-entry launch gate');
   ok(html.indexOf(binding) < html.indexOf('</head>'), file + ' loads the launch gate in head');
 });
