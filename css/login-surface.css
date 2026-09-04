@@ -128,12 +128,23 @@ html body [data-reading-login-component="row"] > #rg-profile-wrap {
   flex-wrap: wrap;
   justify-content: center;
 }
+[data-reading-login-component="row"] .sa-edit,
+[data-reading-login-component="row"] a[title="排行榜"],
+[data-reading-login-component="row"] a[title="進度"] {
+  color: #666666 !important;
+}
 [data-reading-login-component="row"] .sa-global-search-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
   border: 0;
-  background: transparent;
+  border-radius: 999px;
+  background: rgba(139, 99, 16, 0.10);
   color: #8B6310;
   padding: 0;
-  font: 700 13px/1 'Noto Sans TC', sans-serif;
+  font: 700 14px/1 'Noto Sans TC', sans-serif;
   cursor: pointer;
 }
 [data-reading-login-component="row"] .sa-global-search-toggle:focus-visible,

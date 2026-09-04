@@ -31,6 +31,8 @@ expect(gameUi.includes('claimGameSearch(state.user, query).then')&&gameUi.indexO
 expect(!gameUi.includes('gameSearchSelect')&&gameUi.includes('body: JSON.stringify({ request_id: reqId })'), 'Game Search removes direct selector and sends request_id only');
 expect(games.includes('href="my-progress.html"')&&games.includes('<div class="gh-main-title">學習進度</div>'), 'Game Hub exposes the Learning Progress destination card');
 expect(authWidget.includes('sa-global-search-toggle')&&authWidget.includes('sa-global-search-form')&&authWidget.includes('name="search"'), 'Account Bar exposes a compact expandable Global Search control');
+expect(/\.sa-edit,[\s\S]*a\[title="排行榜"\],[\s\S]*a\[title="進度"\][\s\S]*color: #666666 !important/.test(loginCss), 'Account Bar actions use the Ranking color consistently');
+expect(/\.sa-global-search-toggle \{[\s\S]*width: 28px;[\s\S]*background: rgba\(139, 99, 16, 0\.10\)/.test(loginCss), 'Account Bar search icon remains compact and visibly discoverable');
 expect(ui.includes("new URLSearchParams(window.location.search).get('search')")&&ui.includes('if (initialQuery) { input.value = initialQuery; run(); }'), 'Global Search destination restores and runs the Account Bar query');
 expect(/@media \(min-width: 769px\), \(hover: hover\) and \(pointer: fine\)/.test(loginCss)&&/\.sa-edit::after \{ content: '編輯'; \}/.test(loginCss), 'Desktop Account Bar labels survive a narrow desktop viewport');
 expect(/orientation: landscape[\s\S]*\.sa-edit::after,[\s\S]*content: none/.test(loginCss), 'Mobile Landscape keeps Account Bar actions icon-only');
