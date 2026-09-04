@@ -2546,3 +2546,18 @@ node scripts/check-site.js
 - Replaced the provisional standalone drawings for `่ ้ ๊ ๋` with the Human-selected Sarabun Bold font outlines while keeping the original Reading option nodes, handlers, and `54 × 58px` option boxes.
 - Set the visible outline height to approximately `9px`, with width following each mark's natural Sarabun proportion; no carrier consonant, dotted circle, or bundled font file was added.
 - Verification covers live size, overlap, and real option clicks on Desktop, Mobile Portrait, and Mobile Landscape. Deployment and Production are unchanged.
+
+# 2026-09-04 — Current-main Mobile Landscape review fixture repair
+
+- Updated the local Tone review fixture to intercept the current `game-content-client.js?v=13` binding and made the Tone/Reading `srcdoc` base absolute so current game assets load from the site root.
+- Added a focused regression for the Tone, Reading, and Word Order review routes. Product gameplay, the rotate-to-Portrait gate, deployment, and Production are unchanged.
+- Added a real-page Word Order layout fixture that preserves Current main's auto-check flow and deliberately contains no Check button.
+- Expanded that fixture to the verified current maximum of six choices; the Guest 20-row and Login 40-row sets share the same six-word maximum sentence.
+- Added an explicitly non-Production ten-choice simulation so Human review can stress the same real Word Order layout beyond the current six-choice content maximum.
+- Removed the `srcdoc`-only rice translation control from the Word Order review fixture; the real page already omits it, and the Preview now matches the shared Landscape menu.
+- Prepared a source-only database trigger that reports and rejects every sentence insert/update whose `words` list exceeds 16 choices, including existing-row precheck, postcheck, browser-role revoke, focused regression, and rollback. A temporary PostgreSQL 17 run accepted 16, rejected both insert/update at 17 with the exact count, and left the rejected row absent; Production apply remains separately approval-gated.
+- Verification: Mobile Landscape `20/20`, Reading `18/18`, neutral actions `7/7`, shared games `52/52`, plus real-browser Tone, Reading, and Word Order review pages at `844×390`.
+- Replaced Word Order's former side-separated choices in Mobile Landscape with the approved full-width question/answer band above one four-column choice field. The existing `重新` / `下一題` action keeps the exact shared Position 2 location used by the other games.
+- Removed Word Order's redundant shared floating rice button while preserving the game-owned translation button shown below a revealed sentence. Shared More-menu detection now also recognizes the existing `data-gsh-game` marker, so embedded review pages match the real game menu.
+- Added 10-choice and 16-choice stress modes to the local review fixture. At `844×390`, all 16 answer slots fit in two rows, all 16 choices fit in four rows without overlap, the action remains inside the screen and separate from the choice grid, and the real 10-choice pointer flow auto-checks to `+10` then switches `重新` to `下一題`.
+- Advanced only the four active games to the new shared CSS/controller/runtime cache keys. Portrait, Desktop, Listening, Lego, deployment, and Production remain unchanged.

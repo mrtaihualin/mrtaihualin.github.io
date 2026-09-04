@@ -63,7 +63,7 @@
         if (!response.ok) throw new Error('เปิดไฟล์ Reading ไม่สำเร็จ');
         return response.text();
       }).then(function (html) {
-        html = html.replace('<head>', '<head><base href="../../">');
+        html = html.replace('<head>', '<head><base href="' + new URL('../../', location.href).href + '">');
         html = html.replace(clientTag, clientTag + override);
         frame.onload = function () {
           var doc = frame.contentDocument;

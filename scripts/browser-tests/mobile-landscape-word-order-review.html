@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Word Order Mobile Landscape review</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: #ece7de; color: #49350d; font-family: system-ui, sans-serif; }
+    body { display: grid; place-items: start center; width: 100%; padding: 18px; }
+    main { width: 100%; max-width: 844px; min-width: 0; }
+    h1 { margin: 0 0 10px; font-size: 17px; }
+    .screen { width: 100%; aspect-ratio: 844 / 390; border: 1px solid #c9b27e; border-radius: 14px; overflow: hidden; background: #f5f0e8; box-shadow: 0 10px 28px rgba(73,53,13,.16); }
+    iframe { display: block; width: 844px; height: 390px; border: 0; transform-origin: top left; }
+    output { display: block; margin-top: 8px; font-size: 12px; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Word Order — จำลอง 10 ตัวเลือก · 844 × 390</h1>
+    <div class="screen"><iframe id="game" title="Word Order Mobile Landscape"></iframe></div>
+    <output id="status">กำลังเปิดหน้า Word Order…</output>
+  </main>
+  <script>
+    (function () {
+      'use strict';
+      var frame = document.getElementById('game');
+      var screen = frame.parentElement;
+      var status = document.getElementById('status');
+      function fitGame() {
+        frame.style.transform = 'scale(' + Math.min(1, screen.clientWidth / 844) + ')';
+      }
+      fitGame();
+      if (window.ResizeObserver) new ResizeObserver(fitGame).observe(screen);
+      else window.addEventListener('resize', fitGame);
+
+      var fixture = [{
+        th: 'วันนี้ผมอยากไปกินข้าวกับเพื่อนที่ร้านอาหาร',
+        zh: '今天我想去餐廳和朋友吃飯',
+        readingTH: 'วัน-นี้-ผม-อยาก-ไป-กิน-ข้าว-กับ-เพื่อน-ที่-ร้าน-อา-หาร',
+        wc: 10,
+        politeF: null,
+        words: [
+          {th:'วันนี้',zh:'今天',syls:[{th:'วันนี้',en:'wan-níi'}]},
+          {th:'ผม',zh:'我',syls:[{th:'ผม',en:'phǒm'}]},
+          {th:'อยาก',zh:'想',syls:[{th:'อยาก',en:'yàak'}]},
+          {th:'ไป',zh:'去',syls:[{th:'ไป',en:'pai'}]},
+          {th:'กิน',zh:'吃',syls:[{th:'กิน',en:'gin'}]},
+          {th:'ข้าว',zh:'飯',syls:[{th:'ข้าว',en:'khâao'}]},
+          {th:'กับ',zh:'和',syls:[{th:'กับ',en:'gàp'}]},
+          {th:'เพื่อน',zh:'朋友',syls:[{th:'เพื่อน',en:'phʉ̂an'}]},
+          {th:'ที่',zh:'在',syls:[{th:'ที่',en:'thîi'}]},
+          {th:'ร้านอาหาร',zh:'餐廳',syls:[{th:'ร้านอาหาร',en:'ráan-aa-hǎan'}]}
+        ]
+      }];
+      var stress16 = new URLSearchParams(location.search).get('choices') === '16';
+      var postAnswer = new URLSearchParams(location.search).get('current') === 'post-answer';
+      if (stress16) {
+        fixture[0].words = fixture[0].words.concat(fixture[0].words.slice(0, 6).map(function (word) {
+          return JSON.parse(JSON.stringify(word));
+        }));
+        fixture[0].wc = fixture[0].words.length;
+        fixture[0].th = fixture[0].words.map(function (word) { return word.th; }).join('');
+        document.querySelector('h1').textContent = 'Word Order — จำลอง 16 ตัวเลือก · 844 × 390';
+      }
+      var expectedCount = fixture[0].words.length;
+      var override = '<script>(function(){var rows=' + JSON.stringify(fixture) + ';var seed=211;Math.random=function(){seed=(seed*9301+49297)%233280;return seed/233280;};try{localStorage.setItem("cookieConsent","denied");localStorage.setItem("howto_tour_seen_wordorder","1");localStorage.setItem("howto_hint_seen_wordorder","1");localStorage.setItem("rg_pron_mode","1");localStorage.setItem("rg_en_mode","1");localStorage.setItem("games_hide_zh","0");}catch(e){}window.GameContentLoader.boot=function(srcs){window.WORDS_MASTER=[];window.ADV_SENTENCES=rows;var chain=new Promise(function(resolve){if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",resolve,{once:true});else resolve();}).then(function(){if(window.GameResume&&typeof window.GameResume.load==="function")window.GameResume.load=function(){return null;};});(srcs||[]).forEach(function(src){chain=chain.then(function(){return new Promise(function(resolve,reject){var script=document.createElement("script");script.src=src;script.onload=resolve;script.onerror=reject;document.head.appendChild(script);});});});return chain;};})();<\/script>';
+      var clientTag = '<script src="' + 'js/games/game-content-client.js?v=12"><\/script>';
+
+      fetch('../../word-order.html?review-cache=' + Date.now(), {cache:'no-store'}).then(function (response) {
+        if (!response.ok) throw new Error('เปิดไฟล์ Word Order ไม่สำเร็จ');
+        return response.text();
+      }).then(function (html) {
+        html = html.replace('<head>', '<head><base href="' + new URL('../../', location.href).href + '">');
+        html = html.replace(clientTag, clientTag + override);
+        frame.onload = function () {
+          var doc = frame.contentDocument;
+          var started = Date.now();
+          (function ready() {
+            var tour = doc.querySelector('#gt-tour-card .gt-skip');
+            if (tour && getComputedStyle(tour).display !== 'none') tour.click();
+            var readyNow = doc.documentElement.classList.contains('gc-ready') &&
+              doc.body.classList.contains('gsh-ml-active') &&
+              doc.querySelectorAll('#wo-bank .wo-tile').length === expectedCount &&
+              !doc.getElementById('zh-fab-standalone') &&
+              doc.querySelector('button[aria-label="更多功能"]') &&
+              !doc.getElementById('wo-check-btn');
+            if (readyNow) {
+              if (postAnswer && doc.documentElement.getAttribute('data-review-post-answer') !== 'ready') {
+                doc.documentElement.setAttribute('data-review-post-answer', 'ready');
+                for (var answerIndex = 0; answerIndex < expectedCount; answerIndex++) {
+                  var answerTile = doc.querySelector('#wo-bank .wo-tile[data-gsh-original-index="' + answerIndex + '"]');
+                  if (answerTile) answerTile.click();
+                }
+                setTimeout(ready, 300);
+                return;
+              }
+              status.textContent = 'พร้อมตรวจ Word Order — เรียงในแต่ละตัวเลือก: คำศัพท์ / คำอ่านไทย / คำอ่านอังกฤษ / คำแปล · เลื่อนเฉพาะเมื่อพื้นที่ไม่พอ';
+              return;
+            }
+            if (Date.now() - started > 15000) {
+              status.textContent = 'เปิดหน้า Word Order ไม่สำเร็จ';
+              return;
+            }
+            setTimeout(ready, 80);
+          })();
+        };
+        frame.srcdoc = html;
+      }).catch(function (error) {
+        status.textContent = error.message;
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -2027,7 +2027,11 @@ window.deleteFBComment = function(postId, idx) {
 
       // Lin 2026-07-16: ถ้าหน้านั้นมี #zh-toggle-slot (แถวปุ่มใต้คำศัพท์ ในเกมเสียง/เกมอ่าน/เกมพิมพ์) → ย้ายปุ่มไปอยู่ในแถวแทนมุมขวาล่าง
       var inlineSlot = document.getElementById('zh-toggle-slot');
-      if (inlineSlot) {
+      var gameOwnsTranslationControl = !!document.getElementById('wo-zh-toggle');
+      if (gameOwnsTranslationControl) {
+        // Word Order already owns the translation button below its revealed
+        // sentence. Do not duplicate it in the shared floating control row.
+      } else if (inlineSlot) {
         fab.classList.add('zh-fab-inline');
         inlineSlot.appendChild(fab);
       } else {
@@ -2086,6 +2090,7 @@ window.deleteFBComment = function(postId, idx) {
       }
 
       var path = (location.pathname || '').toLowerCase();
+      var gameMarker = (document.body.getAttribute('data-gsh-game') || '').toLowerCase();
       var GAME_ID = null;
       if (path.indexOf('typing-game') > -1) GAME_ID = 'typing';
       else if (path.indexOf('reading-game') > -1) GAME_ID = 'reading';
@@ -2094,6 +2099,12 @@ window.deleteFBComment = function(postId, idx) {
       else if (path.indexOf('word-order') > -1) GAME_ID = 'word_order';
       else if (path.indexOf('tone-finder') > -1) GAME_ID = 'tone_finder';
       else if (path.indexOf('games-challenge.html') > -1) GAME_ID = 'challenge'; // 2026-08-01: เกมรวม (เดิม mix.html/'mix' เปลี่ยนชื่อเป็น games-challenge.html/'challenge') — ⚠️ ต้อง deploy game-reward Edge Function
+      else if (gameMarker === 'typing') GAME_ID = 'typing';
+      else if (gameMarker === 'reading') GAME_ID = 'reading';
+      else if (gameMarker === 'listening') GAME_ID = 'listening';
+      else if (gameMarker === 'lego') GAME_ID = 'lego';
+      else if (gameMarker === 'word-order') GAME_ID = 'word_order';
+      else if (gameMarker === 'tone') GAME_ID = 'tone_finder';
       //   ใหม่ (เพิ่ม "challenge" เข้า VALID_GAMES) + รัน SQL เพิ่ม 'challenge' เข้า CHECK constraint ของ game_reward_events ก่อน
       //   ไม่งั้นปุ่มขึ้นแต่กดแล้วเซิร์ฟเวอร์ตีกลับ (Lin ต้องทำ 2 อย่างนี้เอง ดูคำสั่งที่แนบให้แยกต่างหาก)
       if (!GAME_ID) return; // หน้าเกมที่ยังไม่รู้จัก ไม่ต้องขึ้นปุ่มนี้

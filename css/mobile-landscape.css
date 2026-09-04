@@ -2082,6 +2082,232 @@
     overscroll-behavior: contain;
   }
 
+  /* Word Order uses the approved full-width composition: one question/answer
+     band above one choice field, with the existing reset/next action anchored
+     in a dedicated rail at the lower right. */
+  body[data-gsh-game="word-order"].gsh-ml-active .gsh-ml-play {
+    grid-template-columns: minmax(0, 30fr) minmax(0, 40fr) minmax(0, 30fr);
+    grid-template-rows: minmax(104px, 40%) minmax(0, 1fr);
+    column-gap: var(--gsh-ml-gap);
+    row-gap: var(--gsh-ml-gap);
+  }
+  body[data-gsh-game="word-order"].gsh-ml-active [data-gsh-ml-slot="left"] {
+    display: none;
+  }
+  body[data-gsh-game="word-order"].gsh-ml-active [data-gsh-ml-slot="center"] {
+    grid-column: 1 / 4;
+    grid-row: 1;
+    justify-content: center;
+    padding: clamp(4px, 1.2dvh, 8px);
+    overflow: hidden;
+  }
+  body[data-gsh-game="word-order"].gsh-ml-active [data-gsh-ml-slot="account"] {
+    display: none;
+  }
+  body[data-gsh-game="word-order"].gsh-ml-active [data-gsh-ml-slot="question"] {
+    width: 100%;
+    min-height: 0;
+    justify-content: center;
+    gap: clamp(3px, .8dvh, 6px);
+  }
+  body[data-gsh-game="word-order"].gsh-ml-active #gsh-ml-word-order-question {
+    padding: 0 var(--gsh-ml-pad);
+    font-size: clamp(16px, 4.2dvh, 22px);
+    line-height: 1.12;
+  }
+  body[data-gsh-game="word-order"].gsh-ml-active #wo-slots {
+    width: 100% !important;
+    min-height: 0;
+    justify-content: center;
+    align-content: center;
+    overflow: hidden;
+  }
+  body[data-gsh-game="word-order"].gsh-ml-active #wo-slots .wo-slot {
+    min-width: clamp(42px, 6.3vw, 64px);
+    min-height: clamp(32px, 8.8dvh, 42px);
+    padding: 3px clamp(5px, .9vw, 8px);
+    font-size: clamp(15px, 4dvh, 20px);
+  }
+  body[data-gsh-game="word-order"].gsh-ml-active [data-gsh-ml-slot="split-content"] {
+    position: relative;
+    inset: auto;
+    grid-column: 1 / 4;
+    grid-row: 2;
+    z-index: 1;
+    padding: var(--gsh-ml-pad);
+    border: 1.5px solid rgba(184, 134, 40, .34);
+    border-radius: clamp(12px, 2vw, 18px);
+    background: rgba(255, 253, 247, .58);
+    display: grid;
+    grid-template-columns: minmax(0, 30fr) minmax(0, 40fr) minmax(0, 30fr);
+    column-gap: var(--gsh-ml-gap);
+  }
+  body[data-gsh-game="word-order"].gsh-ml-active [data-gsh-ml-split="word-order"] {
+    grid-column: 1 / 3;
+    width: 100% !important;
+    height: 100% !important;
+    padding: 0 !important;
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    grid-template-rows: none !important;
+    /* Keep the approved four-column grid, but let a row become tall enough for
+       the same information order used by the other games:
+       Thai word -> Thai reading -> English reading -> translation.
+       The bank scrolls only when those real row heights exceed its viewport. */
+    --wo-ml-choice-row: 34px;
+    grid-auto-rows: var(--wo-ml-choice-row) !important;
+    align-content: start !important;
+    column-gap: var(--gsh-ml-gap) !important;
+    row-gap: 0 !important;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+  body[data-gsh-game="word-order"].gsh-ml-active [data-gsh-ml-split="word-order"]:has(.wo-read-th, .wo-read-en, .wo-read-zh) {
+    --wo-ml-choice-row: 56px;
+  }
+  body[data-gsh-game="word-order"].gsh-ml-active [data-gsh-ml-split="word-order"]:has(.wo-read-th):has(.wo-read-en),
+  body[data-gsh-game="word-order"].gsh-ml-active [data-gsh-ml-split="word-order"]:has(.wo-read-th):has(.wo-read-zh),
+  body[data-gsh-game="word-order"].gsh-ml-active [data-gsh-ml-split="word-order"]:has(.wo-read-en):has(.wo-read-zh) {
+    --wo-ml-choice-row: 73px;
+  }
+  body[data-gsh-game="word-order"].gsh-ml-active [data-gsh-ml-split="word-order"]:has(.wo-read-th):has(.wo-read-en):has(.wo-read-zh) {
+    --wo-ml-choice-row: 90px;
+  }
+  body[data-gsh-game="word-order"].gsh-ml-active [data-gsh-ml-split="word-order"] > .wo-tile {
+    grid-column: auto !important;
+    grid-row: auto !important;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    min-width: 0;
+    max-width: none;
+    min-height: clamp(34px, 9dvh, 44px);
+    max-height: none;
+    margin: 0 !important;
+    padding: clamp(4px, 1dvh, 7px) clamp(6px, 1vw, 10px) !important;
+    border-radius: clamp(10px, 1.5vw, 14px);
+    font-size: clamp(15px, 3.8dvh, 20px);
+    flex-direction: column;
+    gap: 0;
+  }
+  body[data-gsh-game="word-order"].gsh-ml-active [data-gsh-ml-split="word-order"] > .wo-tile > .wo-word-th,
+  body[data-gsh-game="word-order"].gsh-ml-active [data-gsh-ml-split="word-order"] > .wo-tile > .wo-read-th,
+  body[data-gsh-game="word-order"].gsh-ml-active [data-gsh-ml-split="word-order"] > .wo-tile > .wo-read-en,
+  body[data-gsh-game="word-order"].gsh-ml-active [data-gsh-ml-split="word-order"] > .wo-tile > .wo-read-zh {
+    display: block;
+    width: 100%;
+  }
+  body[data-gsh-game="word-order"].gsh-ml-active [data-gsh-ml-slot="right"] {
+    grid-column: 1 / 4;
+    grid-row: 1 / 3;
+    z-index: 4;
+    padding: var(--gsh-ml-pad) 0;
+    border: 0;
+    background: transparent;
+    overflow: hidden;
+    pointer-events: none;
+    grid-template-columns: minmax(0, 30fr) minmax(0, 40fr) minmax(0, 30fr);
+    grid-template-rows: repeat(3, var(--gsh-ml-position-two-size));
+    align-content: center;
+    column-gap: 10px !important;
+    row-gap: clamp(8px, 2dvh, 12px) !important;
+  }
+  body[data-gsh-game="word-order"].gsh-ml-active [data-gsh-ml-slot="right"] > [data-gsh-ml-position="2"] {
+    pointer-events: auto;
+  }
+  body[data-gsh-game="word-order"].gsh-ml-active [data-gsh-ml-slot="right"] > #wo-reset-btn,
+  body[data-gsh-game="word-order"].gsh-ml-active [data-gsh-ml-slot="right"] > #wo-next-btn {
+    grid-column: 3;
+    align-self: center;
+    justify-self: center;
+    position: static !important;
+  }
+  body[data-gsh-game="word-order"].gsh-ml-active [data-gsh-ml-slot="right"] > #wo-sound-btn,
+  body[data-gsh-game="word-order"].gsh-ml-active [data-gsh-ml-slot="right"] > #wo-zh-toggle {
+    box-sizing: border-box;
+    grid-column: 3;
+    width: var(--gsh-ml-position-two-size) !important;
+    min-width: var(--gsh-ml-position-two-size) !important;
+    max-width: var(--gsh-ml-position-two-size) !important;
+    height: var(--gsh-ml-position-two-size) !important;
+    min-height: var(--gsh-ml-position-two-size) !important;
+    max-height: var(--gsh-ml-position-two-size) !important;
+    margin: 0 !important;
+    padding: 6px !important;
+    border: 2px solid rgba(139, 99, 16, .5) !important;
+    border-radius: 50% !important;
+    background: #fff !important;
+    align-self: center;
+    justify-self: center;
+    align-items: center !important;
+    justify-content: center !important;
+    pointer-events: auto;
+    touch-action: manipulation;
+  }
+  body[data-gsh-game="word-order"].gsh-ml-active [data-gsh-ml-slot="right"] > #wo-sound-btn {
+    grid-row: 1;
+    border-color: #ffb347 !important;
+    color: #ffb347 !important;
+    font-size: clamp(24px, 7dvh, 32px) !important;
+  }
+  body[data-gsh-game="word-order"].gsh-ml-active [data-gsh-ml-slot="right"] > #wo-zh-toggle {
+    grid-row: 2;
+    border-color: #c39bff !important;
+    color: #c39bff !important;
+    font-size: clamp(24px, 7dvh, 32px) !important;
+  }
+  body[data-gsh-game="word-order"].gsh-ml-active #gsh-ml-stage:not([data-gsh-ml-word-order-revealed="true"]) [data-gsh-ml-slot="right"] > #wo-sound-btn,
+  body[data-gsh-game="word-order"].gsh-ml-active #gsh-ml-stage:not([data-gsh-ml-word-order-revealed="true"]) [data-gsh-ml-slot="right"] > #wo-zh-toggle {
+    display: none !important;
+  }
+  body[data-gsh-game="word-order"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-word-order-revealed="true"] [data-gsh-ml-slot="right"] > #wo-sound-btn,
+  body[data-gsh-game="word-order"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-word-order-revealed="true"] [data-gsh-ml-slot="right"] > #wo-zh-toggle {
+    display: flex !important;
+  }
+  body[data-gsh-game="word-order"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-word-order-revealed="true"] [data-gsh-ml-slot="right"] {
+    grid-column: 1 / 4;
+    grid-row: 1 / 3;
+    display: grid;
+    grid-template-columns: minmax(0, 30fr) minmax(0, 40fr) minmax(0, 30fr);
+    grid-template-rows: repeat(3, var(--gsh-ml-position-two-size));
+    align-content: center;
+    justify-items: center;
+    gap: clamp(8px, 2dvh, 12px) !important;
+    padding: var(--gsh-ml-pad) 0;
+  }
+  body[data-gsh-game="word-order"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-word-order-revealed="true"] .gsh-ml-play {
+    grid-template-rows: minmax(0, 1fr) var(--gsh-ml-position-two-size);
+  }
+  body[data-gsh-game="word-order"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-word-order-revealed="true"] #wo-slots {
+    height: 100%;
+    overflow: hidden;
+    align-content: center;
+  }
+  body[data-gsh-game="word-order"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-word-order-revealed="true"] #wo-slots .wo-slot.filled {
+    height: auto;
+    max-height: none;
+    gap: 1px;
+    padding-block: 2px;
+  }
+  body[data-gsh-game="word-order"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-word-order-revealed="true"] [data-gsh-ml-slot="right"] > #wo-sound-btn {
+    grid-column: 3;
+    grid-row: 3;
+    transform: translateX(calc((0px - var(--gsh-ml-position-two-size) - var(--gsh-ml-position-two-size)) - clamp(16px, 4dvh, 24px))) !important;
+  }
+  body[data-gsh-game="word-order"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-word-order-revealed="true"] [data-gsh-ml-slot="right"] > #wo-zh-toggle {
+    grid-column: 3;
+    grid-row: 3;
+    transform: translateX(calc((0px - var(--gsh-ml-position-two-size)) - clamp(8px, 2dvh, 12px))) !important;
+  }
+  body[data-gsh-game="word-order"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-word-order-revealed="true"] [data-gsh-ml-slot="right"] > #wo-next-btn {
+    grid-column: 3;
+    grid-row: 3;
+    margin: 0 !important;
+    transform: none !important;
+  }
+
   body.gsh-ml-login-open #gsh-ml-stage { pointer-events: none; }
   body.gsh-ml-active #rg-gate { z-index: 100000; }
   body.gsh-ml-active .gsh-game-exit-overlay,
@@ -2105,5 +2331,17 @@
     --gsh-ml-control-h: 30px;
     --gsh-ml-position-two-size: clamp(46px, 22.5dvh, 58px);
     --gsh-ml-tone-choice: var(--gsh-ml-position-two-size);
+  }
+  body[data-gsh-game="word-order"].gsh-ml-active .gsh-ml-play {
+    grid-template-rows: 72px minmax(0, 1fr);
+  }
+  body[data-gsh-game="word-order"].gsh-ml-active #gsh-ml-word-order-question {
+    font-size: 14px;
+  }
+  body[data-gsh-game="word-order"].gsh-ml-active #wo-slots .wo-slot,
+  body[data-gsh-game="word-order"].gsh-ml-active [data-gsh-ml-split="word-order"] > .wo-tile {
+    min-height: 24px;
+    padding-block: 2px !important;
+    font-size: 13px;
   }
 }
