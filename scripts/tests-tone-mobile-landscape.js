@@ -233,12 +233,13 @@ test('Reading moves the original Desktop choices into two vertical sides without
   assert.match(landscapeOptBlock[1], /justify-self: var\(--gsh-ml-inline-align, center\)/);
   assert.match(landscapeOptBlock[1], /margin-inline: var\(--gsh-ml-reading-choice-safe-x\) !important/);
   assert.match(read('reading-game.html'), /\.tone-drawn\{[\s\S]{0,100}overflow:visible;[\s\S]{0,80}fill:currentColor;[\s\S]{0,80}vertical-align:middle/);
-  assert.match(readingApp, /var TONE_SVG=\{[\s\S]{0,2800}'่':[\s\S]*'้':[\s\S]*'๊':[\s\S]*'๋':/);
+  assert.match(readingApp, /var TONE_SVG=\{[\s\S]{0,4200}'่':[\s\S]*'้':[\s\S]*'๊':[\s\S]*'๋':[\s\S]*'์':/);
   assert.match(readingApp, /if\(TONE_SVG\[v\]\)return TONE_SVG\[v\]/);
   assert.match(readingApp, /'่':'<svg class="tone-drawn" width="\.18em" height="\.34em" viewBox="-18\.6 -90\.3 11\.8 21\.9"/);
   assert.match(readingApp, /'้':'<svg class="tone-drawn" width="\.48em" height="\.34em" viewBox="-37\.2 -97\.1 40\.8 28\.7"/);
   assert.match(readingApp, /'๊':'<svg class="tone-drawn" width="\.63em" height="\.34em" viewBox="-48\.3 -95\.5 50\.4 27\.1"/);
   assert.match(readingApp, /'๋':'<svg class="tone-drawn" width="\.41em" height="\.34em" viewBox="-27 -92\.3 28\.5 23\.9"/);
+  assert.match(readingApp, /'์':'<svg class="tone-drawn" width="\.42em" height="\.34em" viewBox="37 -91\.8 29 27"/);
   assert.match(readingApp, /if\(t\.type==='tone'\)el\.setAttribute\('aria-label',t\.val\)/);
   const toneSvgBlock = readingApp.match(/var TONE_SVG=\{([\s\S]*?)\n\};/);
   assert.ok(toneSvgBlock, 'missing standalone tone SVG map');

@@ -1,6 +1,14 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-09-05 Asia/Bangkok** — Learning Center account-action alignment
+**Updated: 2026-09-05 Asia/Bangkok** — Reading option and score-evidence repair
+
+## 2026-09-05 — Reading option and score-evidence repair (`SOURCE_PASS / PREVIEW_PENDING / PRODUCTION_UNCHANGED`)
+
+- Added the missing standalone vector for `์`, the only value in the existing five-item Reading mark pool that still fell through to a browser-dependent combining-character renderer. The same accessible option/slot labels and all existing choice geometry remain unchanged.
+- Preserved the existing Reading score formula and its `+1` per correctly completed syllable. The repair now carries that already-awarded multi-syllable amount into the matching per-item evidence, so the displayed round total and the server-recalculated evidence total stay identical; no new bonus or score authority was introduced.
+- Rebuilt only `reading-game-app.min.js` and advanced only its page cache key `v52→v53`. Reading `20/20`, S29 score security including the reproduced `142` case, Login Free candidate, owner-switch `12/12`, Mobile Landscape `20/20`, JavaScript syntax and the complete `1,074`-file site gate pass. The protected Legacy 735 corpus was not read. No Preview publication, Production deploy, Supabase change or account/data mutation occurred in this Source step.
+
+**Prior update: 2026-09-05 Asia/Bangkok** — Learning Center account-action alignment
 
 ## 2026-09-05 — Learning Center shared account-action alignment (`SOURCE_PASS / PREVIEW_PENDING / PRODUCTION_UNCHANGED`)
 
