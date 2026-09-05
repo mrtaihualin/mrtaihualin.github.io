@@ -1,6 +1,11 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-09-06 Asia/Bangkok** — FB-02 Step 3 Tone 字母練習區 states
+**Updated: 2026-09-06 Asia/Bangkok** — FB-02 Step 4 combined 25-state review
+
+## 2026-09-06 — FB-02 Step 4 combined 25-state review (`LOCAL_PREVIEW_PASS / PRODUCTION_UNCHANGED`)
+
+- Added one 844×390 review harness that loads the real Tone, Typing, Reading and Word Order pages, then reaches the approved states through their existing handlers. It exposes Tone deduction `5`, shared `玩法` `8`, and Tone `字母練習區` `12` states with previous/next navigation and a state-level no-horizontal-overflow check.
+- The focused combined review contract passes exactly `25` unique states. Merge, deployment, Production, Supabase/Auth and account/data remain unchanged.
 
 ## 2026-09-06 — FB-02 Step 3 Tone 字母練習區 states (`SOURCE_PASS / PRODUCTION_UNCHANGED`)
 
