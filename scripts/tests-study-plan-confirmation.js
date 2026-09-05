@@ -14,7 +14,7 @@ check('Games hub exposes the locked Time Plan UI and runtime',()=>{
   const html=read('games.html');
   assert.match(html,/id="timePlanTitle"|id="timePlanProposal"|id="timePlanConfirm"|id="timePlanCancel"/);
   assert.match(html,/study-plan-core\.js\?v=2/);
-  assert.match(html,/study-plan\.js\?v=3/);
+  assert.match(html,/study-plan\.js\?v=4/);
   assert.doesNotMatch(html,/id="gameSearchInput"/);
 });
 

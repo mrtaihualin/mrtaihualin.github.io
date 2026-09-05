@@ -91,13 +91,13 @@ var accountBundles = ['game-account.js','phase1-canonical-state.js','learning-su
 coreFive.forEach(function (file) {
   var html = read(file);
   accountBundles.forEach(function (bundle) { ok(html.indexOf(bundle) !== -1, file + ' executes Login Free ' + bundle); });
-  ok(html.indexOf('study-plan-core.js?v=2') !== -1 && html.indexOf('study-plan.js?v=3') !== -1,
+  ok(html.indexOf('study-plan-core.js?v=2') !== -1 && html.indexOf('study-plan.js?v=4') !== -1,
     file + ' executes the separately authorized Free Time Auto Plan');
   ok(!/(?:reading|typing|listening|word-order|lego)-board\.html/.test(html), file + ' does not expose a leaderboard route');
 });
 var legoHtml = read('lego.html');
 accountBundles.forEach(function (bundle) { ok(legoHtml.indexOf(bundle) === -1, 'Lego does not execute Core 5 ' + bundle); });
-ok(legoHtml.indexOf('study-plan-core.js?v=2') !== -1 && legoHtml.indexOf('study-plan.js?v=3') !== -1,
+ok(legoHtml.indexOf('study-plan-core.js?v=2') !== -1 && legoHtml.indexOf('study-plan.js?v=4') !== -1,
   'Lego executes the separately authorized Free Time Auto Plan');
 ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html'].forEach(function (file) {
   ok(read(file).indexOf('tone-server.js?v=6') !== -1, file + ' executes only the approved Login Free SRS transport');
