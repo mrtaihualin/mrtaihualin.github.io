@@ -16,6 +16,8 @@ const proof = read('scripts/prove-email-otp-native-bypass.mjs');
 const sqlTest = read('supabase/tests/2026-08-16_email_otp_auth_security_TEST.sql');
 const retention = read('supabase/migrations/20260824025500_phase1_email_otp_retention_cron.sql');
 const resendMigration = read('supabase/migrations/20260903125640_email_otp_resend_one_minute.sql');
+const idempotentMigration = read('supabase/migrations/20260905043843_email_otp_idempotent_resend.sql');
+const requestFlow = read('supabase/functions/email-otp-auth/request-flow.mjs');
 
 let passed = 0;
 function test(label, fn) {
@@ -91,10 +93,8 @@ test('expiry boundary and reuse fail closed', () => {
   assert.strictEqual(expired.state, 'expired');
 });
 
-test('request controls allow one-minute resend while preserving abuse escalation', () => {
+test('request controls enforce one send per minute without punishing duplicates', () => {
   assert.match(sql, /last_request_at > v_now - interval '15 minutes'/);
-  assert.match(sql, /v_reason := 'email_15m_limit'/);
-  assert.match(sql, /v_ip_15m >= 10 or v_ip_60m >= 30/);
   assert.match(sql, /v_ip_attempts >= 25/);
   assert.ok(sql.indexOf('v_ip_attempts >= 25') < sql.indexOf('if not v_challenge_found then'));
   assert.match(sql, /when v_previous is not null and v_previous >= p_now - interval '60 minutes' then 3600/);
@@ -105,8 +105,30 @@ test('request controls allow one-minute resend while preserving abuse escalation
   assert.match(resendMigration, /create or replace function public\.begin_email_otp_challenge_internal/);
   assert.match(resendMigration, /last_request_at > v_now - interval '1 minute'/);
   assert.match(resendMigration, /v_reason := 'email_1m_limit'/);
-  assert.match(resendMigration, /v_ip_15m >= 10 or v_ip_60m >= 30/);
   assert.match(resendMigration, /private\.register_email_otp_violation/);
+
+  const duplicateBranch = idempotentMigration.slice(
+    idempotentMigration.indexOf("if v_email_state.last_request_at > v_now - interval '1 minute' then"),
+    idempotentMigration.indexOf('-- An existing cooldown is fixed'),
+  );
+  assert.match(duplicateBranch, /duplicate_delivered/);
+  assert.match(duplicateBranch, /duplicate_in_progress/);
+  assert.match(duplicateBranch, /duplicate_failed/);
+  assert.match(duplicateBranch, /outcome = 'duplicate_60s'/);
+  assert.doesNotMatch(duplicateBranch, /register_email_otp_violation/);
+  assert.ok(
+    idempotentMigration.indexOf("last_request_at > v_now - interval '1 minute'") <
+    idempotentMigration.indexOf('cooldown_until > v_now'),
+  );
+  assert.match(idempotentMigration, /event_type = 'request_accepted'/);
+  assert.doesNotMatch(idempotentMigration, /event_type in \('request_accepted', 'request_suppressed'\)/);
+  assert.match(idempotentMigration, /v_email_60m >= 10/);
+  assert.match(idempotentMigration, /v_ip_15m >= 30 or v_ip_60m >= 100/);
+  assert.match(idempotentMigration, /confirm_email_otp_delivery_internal/);
+  assert.match(idempotentMigration, /get_email_otp_delivery_status_internal/);
+  assert.match(requestFlow, /status === 'duplicate_delivered'/);
+  assert.match(requestFlow, /status === 'duplicate_in_progress'/);
+  assert.match(requestFlow, /await sendEmail\(\)/);
 });
 
 test('Turnstile managed flow is required on both public broker actions', () => {
@@ -122,12 +144,20 @@ test('Turnstile managed flow is required on both public broker actions', () => {
 });
 
 test('public request shape is generic and cannot enumerate account existence', () => {
-  const acceptedResponses = edge.match(/\{ ok: true, challenge_id: publicChallengeId \}, 202/g) || [];
-  assert.ok(acceptedResponses.length >= 2);
+  assert.match(edge, /runOtpRequestFlow/);
   assert.match(edge, /MIN_PUBLIC_RESPONSE_MS = 450/);
   assert.doesNotMatch(edge, /getUserByEmail|listUsers/);
   assert.doesNotMatch(edge, /user_not_found|already_registered/);
   assert.match(client, /暫時無法寄送驗證碼，請稍後再試/);
+});
+
+test('provider failure and delivery uncertainty never return send success', () => {
+  assert.match(edge, /return result\.ok && data\?\.ok === true/);
+  assert.match(edge, /confirmChallengeDelivery/);
+  assert.match(edge, /waitForChallengeDelivery/);
+  assert.match(requestFlow, /if \(!delivered\)[\s\S]*invalidateDelivery[\s\S]*return failed\(\)/);
+  assert.match(requestFlow, /if \(!confirmed\) return failed\(\)/);
+  assert.match(requestFlow, /status: 202, body: \{ ok: true, challenge_id: challengeId \}/);
 });
 
 test('broker-issued session is bound before the client accepts login', () => {
@@ -217,8 +247,10 @@ test('private tables use RLS and no browser role can execute privileged RPCs', (
   assert.match(sqlTest, /fifth wrong OTP did not invalidate/);
   assert.match(sqlTest, /used OTP was reusable/);
   assert.match(sqlTest, /expired OTP accepted/);
-  assert.match(sqlTest, /repeated request abuse did not escalate to 60 minutes/);
-  assert.match(sqlTest, /single-email resend blocked the shared IP/);
+  assert.match(sqlTest, /duplicate requests created or increased account cooldown/);
+  assert.match(sqlTest, /older OTP survived a new request/);
+  assert.match(sqlTest, /hard email send limit did not block/);
+  assert.match(sqlTest, /requests during hard cooldown extended the cooldown/);
   assert.match(sqlTest, /unknown-challenge verification flood did not trigger IP cooldown/);
   assert.match(sqlTest, /cooldown security logging can be amplified/);
   assert.match(sqlTest, /rollback;/);

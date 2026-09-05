@@ -6,6 +6,7 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2.112.3';
 import { readEmailMailerSecret } from '../_shared/email-mailer-auth.mjs';
+import { runOtpRequestFlow } from './request-flow.mjs';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') || '';
@@ -158,6 +159,29 @@ async function invalidateChallenge(challengeId: string, emailHmac: string, ipHma
   } catch (_) {}
 }
 
+async function confirmChallengeDelivery(challengeId: string, emailHmac: string, ipHmac: string) {
+  const result = await admin.rpc('confirm_email_otp_delivery_internal', {
+    p_challenge_id: challengeId,
+    p_email_hmac: emailHmac,
+    p_ip_hmac: ipHmac,
+  });
+  return !result.error && result.data === true;
+}
+
+async function waitForChallengeDelivery(challengeId: string, emailHmac: string) {
+  for (let attempt = 0; attempt < 52; attempt++) {
+    const result = await admin.rpc('get_email_otp_delivery_status_internal', {
+      p_challenge_id: challengeId,
+      p_email_hmac: emailHmac,
+    });
+    if (result.error) return false;
+    if (result.data === 'delivered') return true;
+    if (result.data !== 'in_progress') return false;
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  return false;
+}
+
 async function sendOtpEmail(email: string, code: string) {
   if (!EMAIL_MAILER_API_KEY) return false;
   const result = await fetch(`${SUPABASE_URL}/functions/v1/send-transactional-email`, {
@@ -173,7 +197,8 @@ async function sendOtpEmail(email: string, code: string) {
     }),
     signal: AbortSignal.timeout(12000),
   });
-  return result.ok;
+  const data = await result.json().catch(() => null);
+  return result.ok && data?.ok === true;
 }
 
 async function issueSession(email: string) {
@@ -218,9 +243,13 @@ async function requestOtp(req: Request, origin: string, body: any, startedAt: nu
   }
 
   const email = normalizeEmail(body?.email);
-  if (!email || !hmacSecretReady || !SUPABASE_SERVICE_ROLE_KEY || !EMAIL_MAILER_API_KEY) {
+  if (!email) {
     await waitForPublicFloor(startedAt);
-    return response(origin, { ok: true, challenge_id: publicChallengeId }, 202);
+    return response(origin, { ok: false, error: 'request_rejected' }, 400);
+  }
+  if (!hmacSecretReady || !SUPABASE_SERVICE_ROLE_KEY || !EMAIL_MAILER_API_KEY) {
+    await waitForPublicFloor(startedAt);
+    return response(origin, { ok: false, error: 'request_failed' }, 503);
   }
 
   try {
@@ -230,23 +259,30 @@ async function requestOtp(req: Request, origin: string, body: any, startedAt: nu
       hmac(`ip:v1:${ip}`),
       hmac(`code:v1:${publicChallengeId}:${email}:${code}`),
     ]);
-    const begun = await admin.rpc('begin_email_otp_challenge_internal', {
-      p_challenge_id: publicChallengeId,
-      p_email_hmac: emailHmac,
-      p_code_hmac: codeHmac,
-      p_ip_hmac: ipHmac,
+    const result = await runOtpRequestFlow({
+      challengeId: publicChallengeId,
+      beginChallenge: async () => {
+        const begun = await admin.rpc('begin_email_otp_challenge_internal', {
+          p_challenge_id: publicChallengeId,
+          p_email_hmac: emailHmac,
+          p_code_hmac: codeHmac,
+          p_ip_hmac: ipHmac,
+        });
+        if (begun.error) throw new Error('challenge_begin_failed');
+        return begun.data;
+      },
+      sendEmail: () => sendOtpEmail(email, code),
+      confirmDelivery: () => confirmChallengeDelivery(publicChallengeId, emailHmac, ipHmac),
+      waitForDelivery: (challengeId: string) => waitForChallengeDelivery(challengeId, emailHmac),
+      invalidateDelivery: () => invalidateChallenge(publicChallengeId, emailHmac, ipHmac, 'delivery_failed'),
     });
-    if (!begun.error && begun.data?.accepted === true) {
-      let delivered = false;
-      try { delivered = await sendOtpEmail(email, code); } catch (_) { delivered = false; }
-      if (!delivered) await invalidateChallenge(publicChallengeId, emailHmac, ipHmac, 'delivery_failed');
-    }
+    await waitForPublicFloor(startedAt);
+    return response(origin, result.body, result.status);
   } catch (_) {
     console.error('[email-otp-auth] request internal failure');
+    await waitForPublicFloor(startedAt);
+    return response(origin, { ok: false, error: 'request_failed' }, 503);
   }
-
-  await waitForPublicFloor(startedAt);
-  return response(origin, { ok: true, challenge_id: publicChallengeId }, 202);
 }
 
 async function verifyOtp(req: Request, origin: string, body: any, startedAt: number) {
