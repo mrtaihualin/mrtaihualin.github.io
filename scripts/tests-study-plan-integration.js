@@ -120,11 +120,14 @@ function harness(options={}){
 }
 
 async function main(){
-  await test('Minimum Guest hub restores Game Search while Time Plan stays parked',()=>{
+  await test('hub keeps Search separate and exposes the locked Time Plan UI',()=>{
     const html=read('games.html');
     assert.match(html,/id="gameSearchGate"/);
     assert.match(html,/js\/games\/games-search-ui\.js\?v=5/);
-    assert.doesNotMatch(html,/id="gameSearchInput"|id="timePlanTitle"|id="timePlanMinutes"|id="timePlanBtn"|js\/games\/study-plan(?:-core)?\.js/);
+    assert.match(html,/id="gameSearchGate"[\s\S]+id="timePlanTitle">今天有多少時間？/);
+    assert.match(html,/id="timePlanMinutes"[\s\S]+分鐘[\s\S]+id="timePlanBtn"[\s\S]+幫我安排/);
+    assert.match(html,/js\/games\/study-plan-core\.js\?v=2[\s\S]+js\/games\/study-plan\.js\?v=3/);
+    assert.doesNotMatch(html,/id="gameSearchInput"/);
   });
 
   await test('all six Guest games park personal lifecycle listeners',()=>{

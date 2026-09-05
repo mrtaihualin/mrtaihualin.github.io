@@ -239,6 +239,8 @@
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script>
 <script defer src="js/games/game-account.js?v=7"></script>
 <script defer src="js/core/auth-widget.js?v=20"></script>
+<script defer src="js/games/study-plan-core.js?v=2"></script>
+<script defer src="js/games/study-plan.js?v=3"></script>
 <script src="js/core/minimum-guest-launch.js?v=23"></script>
 </head>
 <body>
@@ -258,6 +260,26 @@
   <div id="gameSearchGate" class="gh-search-wrap" aria-live="polite">
     <div class="gh-search-auth-message">正在確認登入狀態…</div>
   </div>
+
+  <section class="gh-search-wrap" aria-labelledby="timePlanTitle">
+    <div class="gh-search-prompt" id="timePlanTitle">今天有多少時間？</div>
+    <div class="gh-search-row gh-time-plan-row">
+      <input id="timePlanMinutes" class="gh-search-input" type="number" min="5" max="10" step="1" value="5" inputmode="numeric" aria-label="今天可練習的分鐘數">
+      <span aria-hidden="true">分鐘</span>
+      <button id="timePlanBtn" class="gh-search-btn" type="button" disabled>幫我安排</button>
+    </div>
+    <div id="timePlanHint" class="gh-search-match-note" style="margin-top:8px">正在確認登入狀態…</div>
+    <div id="timePlanProposal" class="time-plan-proposal" hidden aria-labelledby="timePlanProposalTitle">
+      <div id="timePlanProposalTitle" class="time-plan-proposal-title">建議這樣練</div>
+      <div class="time-plan-proposal-help">勾選想玩的遊戲，選好等級後再開始。</div>
+      <div id="timePlanProposalList" class="time-plan-proposal-list"></div>
+      <div class="time-plan-actions">
+        <button id="timePlanConfirm" class="gh-search-btn" type="button" disabled>開始這個安排</button>
+        <button id="timePlanCancel" class="time-plan-cancel" type="button">取消</button>
+      </div>
+    </div>
+    <div id="timePlanMessage" class="gh-search-empty" role="status" aria-live="polite"></div>
+  </section>
 
   <!-- Main destination cards use equal dimensions and weight; individual games live in games-practice.html. -->
   <div class="gh-main-grid">
