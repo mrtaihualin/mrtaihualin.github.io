@@ -1,6 +1,11 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-09-06 Asia/Bangkok** — FB-02 Step 2 shared 玩法 states
+**Updated: 2026-09-06 Asia/Bangkok** — FB-02 Step 3 Tone 字母練習區 states
+
+## 2026-09-06 — FB-02 Step 3 Tone 字母練習區 states (`SOURCE_PASS / PRODUCTION_UNCHANGED`)
+
+- Tone `字母練習區` now reuses the current Desktop ALPHA data, handlers, audio, navigation, flashcards and explanations inside the shared Landscape stage. The reviewed home, consonant/vowel category, seven flashcard-group, ending-card and expanded-ending states use one bounded two-column or vertically scrollable real-source surface.
+- Four active games advance only the shared Landscape cache chain to CSS `v63` and controller `v37`. Merge, deployment, Production, Supabase/Auth and account/data remain unchanged.
 
 ## 2026-09-06 — FB-02 Step 2 shared 玩法 states (`SOURCE_PASS / PRODUCTION_UNCHANGED`)
 

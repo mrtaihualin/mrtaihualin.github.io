@@ -1302,6 +1302,11 @@
     if (toneSummaryScrollPad.parentNode !== leftTarget) leftTarget.appendChild(toneSummaryScrollPad);
   }
 
+  function syncToneAlphabetSurface(game) {
+    var alpha = game === 'tone' ? q('#tf-body .tf-alpha-surface') : null;
+    stage.setAttribute('data-gsh-ml-tone-alpha', alpha ? 'true' : 'false');
+  }
+
   function sync() {
     if (!active || !stage || syncing) return;
     syncing = true;
@@ -1316,6 +1321,7 @@
       var listeningView = game === 'listening' ? syncListeningGameplay() : null;
       syncSplitContent(game);
       stage.setAttribute('data-gsh-ml-position-two-zone', reservesPositionTwoZone(game) ? 'reserved' : 'open');
+      syncToneAlphabetSurface(game);
       syncTopActions(game);
       if (game === 'lego') syncLegoMenu();
       syncDynamicMainAction();
