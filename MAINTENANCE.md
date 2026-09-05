@@ -2,12 +2,12 @@
 
 **Updated: 2026-09-05 Asia/Bangkok** — FB-01 shared account-menu visual system
 
-## 2026-09-05 — FB-01 shared account-menu visual system (`SOURCE_PASS / LOCAL_VISUAL_PASS / PREVIEW_PENDING / PRODUCTION_UNCHANGED`)
+## 2026-09-05 — FB-01 shared account-menu visual system (`SOURCE_PASS / LOCAL_VISUAL_PASS / PREVIEW_PASS / PRODUCTION_UNCHANGED`)
 
 - Applied one shared cream-and-gold long-rounded account frame to the existing six games and eleven account surfaces. The existing profile, edit, per-page leaderboard, progress, global search, logout, Vault, Streak and Help actions retain their current destinations and handlers; no action or provider was added.
 - The account name is now a native keyboard-accessible profile-edit button, every account action has a visible gold focus state, and long names truncate safely. Desktop keeps the centered single-row visual where space allows, Portrait wraps inside the same frame, and the existing Mobile Landscape `已登入` trigger opens a readable ordered pill menu.
 - Confirmed the exact 17-page inventory through the central `login-surface.js` owner. Classroom/teacher authorization is intentionally excluded because it is a separate access-control system rather than this player account menu. No Guest, account, Auth, Supabase or data behavior changed.
-- Local deterministic visual review passed at Desktop `720×620`, Portrait `390×640` with a long name, and Landscape `844×390`. Account/Auth, error recovery, Login Free, shared-game and Mobile Landscape regressions pass, plus JavaScript syntax, whitespace and the complete `1,075`-file site gate. Source/MR/Netlify Draft Preview are authorized; merge and Production remain blocked pending Lin's Human visual decision.
+- Local and network-isolated Netlify Draft visual review passed at Desktop `720×620`, Portrait `390×640` with a long name, and Landscape `844×390`; Draft deploy `6a9c44353d83b52a3eb33987` returns HTTP `200`, is `noindex`, and its shared visual CSS bytes match Source commit `163c279`. Account/Auth, error recovery, Login Free, shared-game and Mobile Landscape regressions pass, plus JavaScript syntax, whitespace and the complete `1,075`-file site gate. Merge and Production remain blocked pending Lin's Human visual decision.
 
 **Prior update: 2026-09-05 Asia/Bangkok** — Reading option and score-evidence repair
 
