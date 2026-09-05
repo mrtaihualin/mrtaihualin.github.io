@@ -36,6 +36,7 @@ ok(gate.indexOf('MRT_MINIMUM_GUEST_LAUNCH = true') !== -1, 'launch flag is expli
 ok(gate.indexOf('LOGIN_FREE_SRS_PUBLIC_ENTRY = true') !== -1, 'Login Free SRS entry flag is explicit');
 ok(gate.indexOf('LOGIN_FREE_ACCOUNT_PUBLIC_ENTRY = true') !== -1, 'Login Free account entry flag is explicit');
 ok(gate.indexOf("login-surface.js?v=13") !== -1, 'Login surface cache key activates the account-aware client');
+ok(gate.indexOf("login-surface.css?v=13") !== -1, 'Login surface stylesheet cache key activates the aligned account actions');
 ok(gate.indexOf("repeat(4,minmax(0,1fr))") !== -1 && gate.indexOf('@media(max-width:959px)') !== -1,
   'Game Hub keeps four equal desktop destinations and a two-column compact layout');
 ok(gate.indexOf('MRT_PARKED_ACCOUNT_SURFACE = parked.test(path)') !== -1, 'parked account surfaces remain fail-closed');
@@ -157,7 +158,7 @@ ok(gameFlow.indexOf('LOGIN_FREE_ACCOUNT_PUBLIC_ENTRY === true') !== -1,
   'durable report submission is enabled only for the Login Free account entry');
 
 var progressHtml = read('my-progress.html');
-ok(progressHtml.indexOf('data-mrt-parked-runtime') === -1 && progressHtml.indexOf('js/score/progress.js?v=10') !== -1,
+ok(progressHtml.indexOf('data-mrt-parked-runtime') === -1 && progressHtml.indexOf('js/score/progress.js?v=11') !== -1,
   'Learning Center runtime is active');
 ['leaderboard.html','reading-board.html','listening-board.html','typing-board.html','word-order-board.html'].forEach(function (file) {
   var html = read(file);

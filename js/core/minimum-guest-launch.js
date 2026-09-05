@@ -37,7 +37,7 @@
   if (!document.querySelector('link[href*="login-surface.css"]')) {
     var loginStylesheet = document.createElement('link');
     loginStylesheet.rel = 'stylesheet';
-    loginStylesheet.href = 'css/login-surface.css?v=12';
+    loginStylesheet.href = 'css/login-surface.css?v=13';
     document.head.appendChild(loginStylesheet);
   }
   if (!document.querySelector('script[src*="login-surface.js"]')) {

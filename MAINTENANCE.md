@@ -1,6 +1,15 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-09-05 Asia/Bangkok** — Email OTP visible retry countdown
+**Updated: 2026-09-05 Asia/Bangkok** — Learning Center personal-search refinement
+
+## 2026-09-05 — Learning Center search and shared account-action alignment (`SOURCE_PASS / PREVIEW_PENDING / PRODUCTION_UNCHANGED`)
+
+- Aligned `編輯`, `排行` and `進度` to the same 13px/700 shared account-action typography while preserving the existing compact mobile labels and one neutral gray color.
+- Kept the two Learning Center personal-content buttons gold after navigation by explicitly covering their visited-link state, preventing `查看我的句子` from inheriting the global dark visited color.
+- Added one authenticated-only personal search field to 學習中心. It passes only a bounded search term to the existing owner-scoped Personal Search on the Vault page, which searches that signed-in account's words and sentences across Thai, reading, romanization, Chinese and source labels; no backend, schema or personal-data write path was added.
+- Advanced only the affected static cache chain: shared Login launcher `v22`, Login surface CSS `v13`, Learning Center runtime `v11` and Personal Content runtime `v6`. Focused static and account/auth regression checks pass; Staging, Production and real-account Human verification remain pending.
+
+**Prior update: 2026-09-05 Asia/Bangkok** — Email OTP visible retry countdown
 
 ## 2026-09-05 — Email OTP visible retry countdown (`SOURCE_PASS / STATIC_RELEASE_PENDING`)
 

@@ -76,7 +76,7 @@ check('Login Free activates the recorder on all Core 5 pages', ['tone-finder.htm
   const html = read(name);
   return /practice-events\.js\?v=3/.test(html) && /game-flow\.js\?v=13/.test(html);
 }));
-check('personal content loads authenticated status evidence before its UI', /practice-events\.js\?v=2[\s\S]*personal-content\.js\?v=5/.test(read('vault.html')));
+check('personal content loads authenticated status evidence before its UI', /practice-events\.js\?v=2[\s\S]*personal-content\.js\?v=6/.test(read('vault.html')));
 
 function deferred() {
   let resolve;

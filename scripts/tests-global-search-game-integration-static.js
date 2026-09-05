@@ -31,7 +31,7 @@ expect(gameUi.includes('claimGameSearch(state.user, query).then')&&gameUi.indexO
 expect(!gameUi.includes('gameSearchSelect')&&gameUi.includes('body: JSON.stringify({ request_id: reqId })'), 'Game Search removes direct selector and sends request_id only');
 expect(games.includes('href="my-progress.html"')&&games.includes('<div class="gh-main-title">學習進度</div>'), 'Game Hub exposes the Learning Progress destination card');
 expect(authWidget.includes('sa-global-search-toggle')&&authWidget.includes('sa-global-search-form')&&authWidget.includes('name="search"'), 'Account Bar exposes a compact expandable Global Search control');
-expect(/\.sa-edit,[\s\S]*a\[title="排行榜"\],[\s\S]*a\[title="進度"\][\s\S]*color: #666666 !important/.test(loginCss), 'Account Bar actions use the Ranking color consistently');
+expect(/\.sa-edit,[\s\S]*a\[title="排行榜"\],[\s\S]*a\[title="進度"\][\s\S]*color: #666666 !important;[\s\S]*font-size: 13px !important;[\s\S]*font-weight: 700 !important/.test(loginCss), 'Account Bar actions use one color, size and weight');
 expect(/\.sa-global-search-toggle \{[\s\S]*width: 28px;[\s\S]*background: rgba\(139, 99, 16, 0\.10\)/.test(loginCss), 'Account Bar search icon remains compact and visibly discoverable');
 expect(/#rg-profile-wrap \{[\s\S]*background: #FAF4E8 !important;[\s\S]*border: 1\.5px solid #C8973A !important;[\s\S]*border-radius: 16px !important/.test(loginCss), 'outer Login Bar keeps its gold frame');
 expect(/\.sa-account-bar \{[\s\S]*background: transparent !important;[\s\S]*border: 0 !important/.test(loginCss)&&/\.sa-global-search-input \{[\s\S]*border: 0;/.test(loginCss), 'nested Account and Search surfaces remain borderless');

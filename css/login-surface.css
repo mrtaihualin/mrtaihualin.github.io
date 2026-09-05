@@ -138,6 +138,10 @@ html body [data-reading-login-component="row"] > #rg-profile-wrap {
 [data-reading-login-component="row"] a[title="排行榜"],
 [data-reading-login-component="row"] a[title="進度"] {
   color: #666666 !important;
+  font-family: 'Noto Sans TC', sans-serif !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
 }
 [data-reading-login-component="row"] .sa-global-search-toggle {
   display: inline-flex;
