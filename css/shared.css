@@ -65,7 +65,8 @@
   .nav-cta-secondary:hover { background:rgba(200,151,58,0.12) !important; color:var(--gold-bright) !important; }
   .hamburger { display:none; flex-direction:column; gap:5px; cursor:pointer; padding:4px; }
   .hamburger span { display:block; width:22px; height:2px; background:rgba(255,255,255,0.8); }
-  .nav-mobile-cta { display:none; }
+  .nav-mobile-actions { display:none; }
+  .nav-mobile-cta, .nav-mobile-game { display:none; }
 
   /* 2026-08-10: RESPONSIVE NAV — แก้บั๊ก "เมนู desktop หายเร็วเกินไปตอนย่อหน้าต่าง"
      เดิม breakpoint ตายตัวที่ 900px กว้างเกินความจำเป็นจริงมาก (คำนวณจากความกว้างจริงของ
@@ -78,12 +79,25 @@
      ⚠️ ต้องตั้งให้ "ต่ำกว่า" ความกว้างที่เนื้อหาจริงต้องการ (~500-520px) เสมอ ไม่งั้น
      @media จะไปกันไม่ให้ JS ขยายโหมด desktop ลงไปถึงจุดที่พื้นที่ยังพอจริงๆ (480px มีระยะกันชน
      ประมาณ 20-40px ต่ำกว่าจุดที่เนื้อหาต้องการจริง + สูงกว่าจุดทดสอบมือถือจริง 390px) ห้ามลบทิ้ง */
-  @media(max-width:480px){ .nav-links{display:none;} .hamburger{display:flex;} nav{padding:0 20px;} .nav-mobile-cta{display:inline-block;background:var(--gold-bright);color:var(--ink);font-family:'Noto Sans TC',sans-serif;font-weight:900;font-size:11px;padding:7px 14px;letter-spacing:1px;text-decoration:none;cursor:pointer;border:none;white-space:nowrap;margin-right:10px;} }
+  @media(max-width:480px){ .nav-links{display:none;} .nav-links>li:first-child,.nav-links>li:last-child{display:none;} .hamburger{display:flex;} nav{padding:0 12px;gap:6px;} .nav-mobile-actions{display:flex;margin-left:auto;gap:5px;align-items:center;} .nav-mobile-cta,.nav-mobile-game{display:inline-flex;align-items:center;justify-content:center;background:var(--gold-bright);color:var(--ink);font-family:'Noto Sans TC',sans-serif;font-weight:900;font-size:11px;width:72px;height:36px;padding:0 6px;letter-spacing:0;text-decoration:none;cursor:pointer;border:1px solid var(--gold-bright);white-space:nowrap;} .nav-mobile-game{background:transparent;color:var(--gold-bright);} }
   /* class เดียวกับที่ __navFit() เติม/ถอดจริง ตามผลวัดความกว้างจริง (ใช้ declaration ชุดเดียวกับ media query ข้างบน) */
   nav.nav-compact .nav-links { display:none; }
   nav.nav-compact .hamburger { display:flex; }
-  nav.nav-compact { padding:0 20px; }
-  nav.nav-compact .nav-mobile-cta { display:inline-block; background:var(--gold-bright); color:var(--ink); font-family:'Noto Sans TC',sans-serif; font-weight:900; font-size:11px; padding:7px 14px; letter-spacing:1px; text-decoration:none; cursor:pointer; border:none; white-space:nowrap; margin-right:10px; }
+  nav.nav-compact { padding:0 12px; gap:6px; }
+  nav.nav-compact .nav-logo { font-size:13px; letter-spacing:0.4px; }
+  nav.nav-compact .nav-mobile-actions { display:flex; margin-left:auto; gap:5px; align-items:center; }
+  nav.nav-compact .nav-mobile-cta,
+  nav.nav-compact .nav-mobile-game { display:inline-flex; align-items:center; justify-content:center; background:var(--gold-bright); color:var(--ink); font-family:'Noto Sans TC',sans-serif; font-weight:900; font-size:11px; width:72px; height:36px; padding:0 6px; letter-spacing:0; text-decoration:none; cursor:pointer; border:1px solid var(--gold-bright); white-space:nowrap; }
+  nav.nav-compact .nav-mobile-game { background:transparent; color:var(--gold-bright); }
+  nav.nav-compact .nav-links > li:first-child,
+  nav.nav-compact .nav-links > li:last-child { display:none; }
+  nav .nav-links[style*="display: flex"] {
+    height:calc(100dvh - 60px) !important;
+    max-height:calc(100dvh - 60px) !important;
+    padding-bottom:calc(104px + env(safe-area-inset-bottom)) !important;
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+  }
 
   /* SHARED */
   .section-wrap { max-width:1080px; margin:0 auto; padding:96px 32px; }

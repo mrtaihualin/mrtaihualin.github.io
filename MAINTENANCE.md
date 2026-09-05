@@ -2561,3 +2561,51 @@ node scripts/check-site.js
 - Removed Word Order's redundant shared floating rice button while preserving the game-owned translation button shown below a revealed sentence. Shared More-menu detection now also recognizes the existing `data-gsh-game` marker, so embedded review pages match the real game menu.
 - Added 10-choice and 16-choice stress modes to the local review fixture. At `844×390`, all 16 answer slots fit in two rows, all 16 choices fit in four rows without overlap, the action remains inside the screen and separate from the choice grid, and the real 10-choice pointer flow auto-checks to `+10` then switches `重新` to `下一題`.
 - Advanced only the four active games to the new shared CSS/controller/runtime cache keys. Portrait, Desktop, Listening, Lego, deployment, and Production remain unchanged.
+
+# 2026-09-04 — Combined Login Free activation and Human-approved navigation candidate
+
+- Merged current GitLab `main` into the existing Login Free activation branch without rewriting its history, preserving the released Mobile Landscape and AWS fallback changes.
+- Replayed the exact Human-approved navigation source Delta, then regenerated all 76 routed pages once; Login Free account/Learning Center surfaces stay active while Paid/Challenge and Lego account scoring remain parked.
+- Kept the protected legacy vocabulary path absent and retained the Current Free 200 read-deny-aware verification boundary.
+- Verification: navigation generation is idempotent, navigation consistency passes on all 76 routed pages, focused Login/Auth/SRS/Mobile Landscape checks pass, and the full site gate passes across 1,069 files.
+- This is a source/MR candidate only. Replacement Human Preview, merge, deploy, and Production remain separately gated.
+
+# 2026-09-04 — Learning Center Account Bar alignment
+
+- Kept one canonical Account Bar on `學習中心`, directly below the centered title in the same header-first order as the five game pages.
+- Forced the retired `pg-userslot`/`lb-userslot` containers to stay hidden even when their legacy inline flex style is present, preventing duplicate signed-in controls on Learning Center and board pages.
+- Advanced the complete Login-surface cache chain. Focused Learning Center/Login/shared-game tests and the full `1,070`-file site gate pass; Production remains unchanged.
+
+# 2026-09-04 — Desktop Account Bar action labels
+
+- Added the short visible labels `✏️ 編輯`, `🏆 排行`, and `📊 進度` beside the existing Desktop Account Bar icons so their destinations are self-explanatory.
+- Mobile Portrait remains icon-only, and the separate Mobile Landscape account panel keeps its existing wording and layout.
+- Advanced the Login-surface stylesheet cache chain. Focused Login/shared-game tests and the full `1,070`-file site gate pass; Production remains unchanged.
+
+# 2026-09-04 — Learning Center SRS and Review separation
+
+- Split the combined `SRS / Review` status into two visible lines on every Learning Center skill card: SRS shows the learning stage counts, while Review shows only the items currently due for review.
+- Empty states remain explicit and independent for both lines. This is a presentation-only change; account history, SRS data, and read-only query behavior are unchanged.
+- Focused Learning Center/shared-game tests and the full `1,070`-file site gate pass; Production remains unchanged.
+
+# 2026-09-04 — Learning Center SRS and Review help copy
+
+- Added two short explanation lines directly below `學習進度` and before the skill cards: SRS is the spaced-repetition learning system and shows the current stage from practice results; Review means items whose review date has arrived and need review now.
+- Kept the `SRS` and `Review` labels bold so the explanation matches the card headings and remains easy to scan.
+- This is a presentation-only clarification; account history, SRS state, Review due calculation, and Production remain unchanged.
+
+# 2026-09-04 — Learning Center SRS count readability
+
+- Added a full-width separator and the `項` unit to every SRS/Review count, so `Day 1：2 項` cannot be misread as `Day 12`.
+- Applied the same format to New, Day 7, Mastered, and due Review counts without changing stage or due-date calculations.
+- Focused Learning Center/shared-game tests and the full `1,070`-file site gate pass; Production remains unchanged.
+
+# 2026-09-05 — Game Hub Learning Progress and compact Account Search
+
+- Added `學習進度` as a fourth equal-weight destination card on `泰語遊戲中心`, linking to the existing Login Free Learning Center.
+- Added one compact `🔎` Global Search control to the shared signed-in Account Bar. It expands only after activation, accepts one query, then opens the existing Global Search result flow without adding a parallel search engine.
+- Desktop action labels now follow fine-pointer desktop input even in a narrow panel; Mobile Portrait and Mobile Landscape remain icon-only. Account, Auth, search quota, personal data, and Production behavior are unchanged.
+- Human-review refinement: `✏️ 編輯`, `🏆 排行`, and `📊 進度` now share the Ranking action color, while the compact Search icon uses a small tinted circular surface so it remains discoverable before expansion.
+- Narrow-screen refinement: removed the nested Account/Search borders, bounded the expanded Desktop field to `320px`, and added a touch-mobile layout that fits the available width without horizontal overflow or iOS input zoom.
+- The expanded search owns a full safe row below `700px`, preventing the signed-in identity/actions from being centered off-screen while keeping the closed Account Bar compact.
+- Human-review frame correction restores the outer gold Login Bar background, border, and rounded corners while keeping the nested Account/Search surfaces borderless and preserving the narrow-screen safe row.

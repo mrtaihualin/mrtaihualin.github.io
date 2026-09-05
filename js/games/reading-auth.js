@@ -12,9 +12,10 @@
 //   มี fallback: ถ้า SITE_AUTH โหลดไม่ทัน ยังมี client+listener สำรองของตัวเอง เกมไม่พัง)
 // ============================================================
 (function () {
-  var publicLoginOnly = window.MRT_MINIMUM_GUEST_LAUNCH === true && window.LOGIN_CORE_PUBLIC_ENTRY === true;
-  var publicLoginSrs = publicLoginOnly && window.LOGIN_FREE_SRS_PUBLIC_ENTRY === true;
-  if (window.MRT_MINIMUM_GUEST_LAUNCH === true && !publicLoginOnly) {
+  var publicAccount = window.MRT_MINIMUM_GUEST_LAUNCH === true && window.LOGIN_FREE_ACCOUNT_PUBLIC_ENTRY === true;
+  var publicLoginOnly = window.MRT_MINIMUM_GUEST_LAUNCH === true && window.LOGIN_CORE_PUBLIC_ENTRY === true && !publicAccount;
+  var publicLoginSrs = window.MRT_MINIMUM_GUEST_LAUNCH === true && window.LOGIN_FREE_SRS_PUBLIC_ENTRY === true;
+  if (window.MRT_MINIMUM_GUEST_LAUNCH === true && !publicLoginOnly && !publicAccount) {
     window.READING_AUTH = {
       ready: true,
       user: null,
@@ -144,16 +145,15 @@
         window.SITE_AUTH.renderBadge('rg-login-slot', {
           leaderboardHref: boardHref(),
           progressHref: 'my-progress.html',
-          showParkedAccountLinks: false
+          showParkedAccountLinks: !publicLoginOnly
         });
       }
     } else {
-      // v2 (Lin 2026-07-10): หน้าเกม (reading/typing/word-order/lego/tone-finder) มีแบนเนอร์เหลือง "先玩玩看...登入解鎖"
-      // อยู่เหนือแถบนี้แล้ว ซึ่งกดแล้ว proxy-click ปุ่มนี้อยู่ดี (ดู rgCtaLogin/woCtaLogin/legoCtaLogin/tfCtaLogin)
-      // → โชว์ปุ่มนี้ซ้ำสองอันดูรก จึงซ่อนด้วย display:none แต่ยังคงอยู่ใน DOM ให้ปุ่มแบนเนอร์กดผ่านได้เหมือนเดิม
-      var hideDup = !publicLoginOnly && !!document.getElementById('rg-cta-login');
+      // The shared Account Bar is the stable Login entry on every scoped surface.
+      // Optional game CTAs may appear later, so their placeholder must never hide
+      // this button during async boot, error recovery, or an empty CTA state.
       el.innerHTML =
-        '<button id="rg-login-btn" class="mrt-login-button" style="display:' + (hideDup ? 'none' : 'flex') + ';align-items:center;gap:6px;' +
+        '<button id="rg-login-btn" class="mrt-login-button" style="display:flex;align-items:center;gap:6px;' +
         'background:linear-gradient(135deg,#8B6310,#C8973A);color:#fff;border:none;border-radius:20px;' +
         'padding:6px 16px;cursor:pointer;font-size:12.5px;font-weight:700;font-family:\'Noto Sans TC\',sans-serif;' +
         'box-shadow:0 2px 8px rgba(139,99,16,0.28);letter-spacing:0.3px;transition:filter .15s;"' +
@@ -572,9 +572,8 @@
     // แก้บั๊ก: ตอนโหลดหน้า auth ยังไม่เสร็จ การ์ดเลยโชว์ค้าง ทั้งที่จริงล็อกอินอยู่ (ผู้เล่นนึกว่าต้องล็อกอินใหม่ทุกครั้ง)
     // 🆕 2026-08-10: เพิ่ม 'tfRenderTopBanners' (เกมเสียง/tone-finder.html) — ตอนรวมระบบล็อกอิน
     // เข้ามาใช้ไฟล์นี้ (v6, 2026-07-16) ลืมเติมชื่อฟังก์ชันรีเฟรชแบนเนอร์ของเกมเสียงเข้าลิสต์นี้
-    // ผลที่เจอจริง: กด 登出 แล้ว #rg-login-slot ถูกซ่อนด้วย hideDup (เพราะมี #rg-cta-login ค้างอยู่ในหน้า)
-    // แต่ #rg-cta-login เองก็ไม่ถูกรีเฟรชให้โชว์ปุ่ม 登入解鎖 กลับมา (เพราะ tfRenderTopBanners ไม่ถูกเรียก)
-    // → ทั้งสองจุดที่ควรมีปุ่มล็อกอินกลายเป็นว่างเปล่าพร้อมกัน = "แถบล็อคอินหายไปทั้งแถบ" หลังกด 登出
+    // ผลที่เจอจริงใน runtime เดิม: กด 登出 แล้ว Account Bar และ CTA ของเกมไม่ได้รีเฟรชพร้อมกัน
+    // ตอนนี้ Account Bar เป็น stable Login entry เสมอ แต่ยังเรียก tfRenderTopBanners เพื่อให้ CTA เสริมสะท้อนสถานะใหม่ด้วย
     ['rgRenderGameBar','legoRenderGameBar','woRerenderBar','mxRenderGameBar','tfRenderTopBanners'].forEach(function(fn){ if(typeof window[fn]==='function'){ try{ window[fn](); }catch(e){} } });
     var uid = (loginUser && loginUser.id) || null;
     if (uid === lastAdaptiveUserId) return; // user เดิม (หรือยังไม่ล็อกอินเหมือนเดิม) — ไม่ต้องยิงซ้ำ

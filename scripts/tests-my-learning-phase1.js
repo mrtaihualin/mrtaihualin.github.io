@@ -8,6 +8,7 @@ const path = require('path');
 const root = path.resolve(__dirname, '..');
 const js = fs.readFileSync(path.join(root, 'js/score/progress.js'), 'utf8');
 const summary = fs.readFileSync(path.join(root, 'js/score/learning-summary.js'), 'utf8');
+const loginSurface = fs.readFileSync(path.join(root, 'js/core/login-surface.js'), 'utf8');
 const html = fs.readFileSync(path.join(root, 'my-progress.html'), 'utf8');
 const failures = [];
 let passes = 0;
@@ -30,15 +31,30 @@ check('Guest ไม่ render dashboard metric ปลอมเป็น 0', !/Pr
 check('ทุก account query ระบุ user_id ผ่าน canonical summary', (summary.match(/\.eq\('user_id', userId\)/g) || []).length === 3);
 check('Progress reuse canonical summary layer', /LearningSummary\.queryData/.test(js) && /LearningSummary\.organize/.test(js));
 check('Summary เป็น read-only', !/\.insert\s*\(|\.update\s*\(|\.upsert\s*\(|\.delete\s*\(/.test(summary));
-check('SRS เป็น read-only และแยก skill', /SRS 僅顯示帳號狀態，不會從此頁改動/.test(js) && /一項 Mastered 不代表其他技能也 Mastered/.test(js));
-check('SRS lifecycle แสดง New Day1 Day7 Mastered', /New /.test(js) && /Day 1 /.test(js) && /Day 7 /.test(js) && /Mastered /.test(js));
+check('SRS เป็น read-only และแยก skill',
+  !/\.insert\s*\(|\.update\s*\(|\.upsert\s*\(|\.delete\s*\(/.test(summary) &&
+  /srsRows\.forEach[\s\S]*result\[code\]\.srs\.push\(row\)/.test(js));
+check('SRS lifecycle แสดง New Day1 Day7 Mastered พร้อมจำนวนรายการที่อ่านไม่ติดกับวัน',
+  /New：.* 項/.test(js) && /Day 1：.* 項/.test(js) && /Day 7：.* 項/.test(js) && /Mastered：.* 項/.test(js));
+check('SRS และ Review แยกเป็นสองบรรทัด',
+  !/SRS \/ Review：/.test(js) &&
+  /class="pg-srs-line"><b>SRS：<\/b>/.test(js) &&
+  /class="pg-srs-line"><b>Review：<\/b>/.test(js) &&
+  /review: counts\.due \? '待複習：' \+ counts\.due \+ ' 項'/.test(js));
+check('มีคำอธิบาย SRS และ Review แบบสั้นก่อนการ์ด',
+  /<h3 class="pg-section-title">學習進度<\/h3>[\s\S]*?<div class="pg-section-help"><div class="pg-section-help-line"><b>SRS<\/b>：間隔重複學習系統，依照你的練習結果顯示目前階段<\/div>[\s\S]*?<div class="pg-section-help-line"><b>Review<\/b>：已到複習日期、現在需要複習的項目。<\/div><\/div>[\s\S]*?<div class="pg-grid">/.test(js));
 check('ไม่มี 下一步 เป็น section/wording ผู้เรียนใน Phase 1', !/<h3[^>]*>下一步/.test(js) && !/系統暫不替你排序/.test(js));
 check('ไม่มี overall readiness percentage', !/總進度|整體進度|readinessScore|overallPercent/.test(js));
 check('五 skills มี direct practice CTA', (js.match(/href: '[^']+-?(?:game|finder)\.html'/g) || []).length >= 4 && /word-order\.html/.test(js));
 check('我的單詞/句子ลิงก์ไปหน้าเดียว 2 tabs', /vault\.html#words/.test(js) && /vault\.html#sentences/.test(js));
 check('Paid readiness เป็น benefit แต่ไม่มีสูตร/ปลายทางเปิด', /想知道自己的泰語實戰準備度？升級方案即可查看。/.test(js) && /查看升級方案/.test(js) && /disabled/.test(js));
 check('account switch ใช้ user id ไม่ใช่แค่ boolean auth', /var before = currentUser && currentUser\.id;[\s\S]*var after = user && user\.id/.test(js));
-check('หน้า HTML ใช้ชื่อ 學習中心 และ canonical summary loader', /學習<br>中心/.test(html) && /learning-summary\.js\?v=1/.test(html) && /progress\.js\?v=7/.test(html));
+check('หน้า HTML ใช้ชื่อ 學習中心 บรรทัดเดียวกึ่งกลางแบบหัวข้อเกม และ canonical summary loader',
+  /<div style="width:100%;text-align:center;">[\s\S]*<h1 style="[^"]*white-space:nowrap;[^"]*font-size:clamp\(20px,4vw,28px\)[^"]*color:#8B6310;">學習中心<\/h1>/.test(html) &&
+  /learning-summary\.js\?v=1/.test(html) && /progress\.js\?v=10/.test(html));
+check('學習中心มี Account Bar เดียวใต้หัวข้อเหมือนหน้าเกม',
+  /'my-progress\.html': '\.section-wrap > div:first-child'/.test(loginSurface) &&
+  /legacy\.style\.setProperty\('display', 'none', 'important'\)/.test(loginSurface));
 
 if (failures.length) {
   console.error('\n❌ 學習中心 Phase 1 ไม่ผ่าน ' + failures.length + ' ข้อ:');

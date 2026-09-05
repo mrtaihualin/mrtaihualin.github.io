@@ -72,9 +72,9 @@ check('completed RoundReport submits through the Played-evidence client', /Pract
 check('account switch clears pending Played evidence', /'phase1_practice_event_pending_v1'/.test(authWidget));
 check('personal content derives Played copy from server evidence, never provenance', /playedFor\(item, kind\)/.test(personalContent) && /evidence && evidence\.played/.test(personalContent) && !/provenance\(item\)[\s\S]{0,200}再練習/.test(personalContent));
 check('personal content exposes bounded status recovery', /PracticeEvents\.status\(requestItems\)/.test(personalContent) && /重新載入練習紀錄/.test(personalContent));
-check('Minimum Guest Launch parks the recorder on all Core 5 pages', ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html'].every((name) => {
+check('Login Free activates the recorder on all Core 5 pages', ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html'].every((name) => {
   const html = read(name);
-  return !/practice-events\.js/.test(html) && /game-flow\.js\?v=12/.test(html);
+  return /practice-events\.js\?v=3/.test(html) && /game-flow\.js\?v=13/.test(html);
 }));
 check('personal content loads authenticated status evidence before its UI', /practice-events\.js\?v=2[\s\S]*personal-content\.js\?v=5/.test(read('vault.html')));
 

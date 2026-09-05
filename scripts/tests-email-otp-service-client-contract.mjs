@@ -161,7 +161,7 @@ test('shared config owns the frozen broker/on Email OTP activation artifact', ()
   assert.match(client, /return otpSecurityConfig\(\)\.mode === 'broker'/);
 });
 
-test('only preserved personal Auth surfaces retain the parked config cache binding', () => {
+test('preserved personal Auth surfaces retain the config cache binding', () => {
   const actual = fs.readdirSync(root)
     .filter((file) => file.endsWith('.html'))
     .filter((file) => /js\/core\/supabase-config\.js\?v=9/.test(read(file)))
@@ -173,7 +173,7 @@ test('only preserved personal Auth surfaces retain the parked config cache bindi
   }
   for (const file of expectedReadingAuthConsumers) {
     const html = read(file);
-    assert.match(html, /js\/games\/reading-auth\.js\?v=31/);
+    assert.match(html, /js\/games\/reading-auth\.js\?v=33/);
   }
 });
 

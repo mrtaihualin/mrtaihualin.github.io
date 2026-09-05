@@ -140,9 +140,7 @@ PAGES.forEach(function (file) {
   );
   next = next.replace(
     /js\/core\/minimum-guest-launch\.js\?v=\d+/g,
-    ['tone-finder.html', 'reading-game.html', 'listening-game.html', 'typing-game.html', 'word-order.html'].indexOf(file) !== -1
-      ? 'js/core/minimum-guest-launch.js?v=11'
-      : 'js/core/minimum-guest-launch.js?v=9'
+    'js/core/minimum-guest-launch.js?v=21'
   );
 
   // ── nav responsive auto-fit script — มีอยู่แล้วให้พิมพ์ทับ · ยังไม่มีให้แทรกทันทีหลัง </nav> ──

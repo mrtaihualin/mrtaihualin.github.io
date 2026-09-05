@@ -4,7 +4,7 @@
 (function () {
   'use strict';
 
-  if (window.MRT_MINIMUM_GUEST_LAUNCH === true) {
+  if (window.MRT_MINIMUM_GUEST_LAUNCH === true && window.LOGIN_FREE_ACCOUNT_PUBLIC_ENTRY !== true) {
     window.GAME_ACCOUNT = {
       getStars: function () { return 0; }, addStars: function () { return 0; },
       starsForRound: function () { return 0; },

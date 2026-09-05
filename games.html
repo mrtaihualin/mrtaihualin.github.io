@@ -44,7 +44,7 @@
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
-<!-- 🆕 2026-08-10 (polish): metadata แก้ให้ตรงกับ visible IA ใหม่ (hub 3 การ์ด ไม่ใช่หน้าที่รวม 5 เกมโดยตรงอีกต่อไป — 5 เกมย้ายไป games-practice.html) -->
+<!-- Metadata follows the visible destination-card IA; individual games remain in games-practice.html. -->
 <title>泰語遊戲中心 — 邊玩邊學泰文 | 泰華眼裡的泰語教學</title>
 <meta name="description" content="泰語遊戲中心：搜尋想練的主題，或前往泰語遊戲練習室、造句練習，邊玩邊學泰文，免費試玩。">
 <link rel="canonical" href="https://mrtaihualin.com/games.html">
@@ -95,10 +95,10 @@
   .gh-badge{position:absolute;top:-9px;right:12px;background:#8B6310;color:#F3E4C2;font-size:10px;font-weight:900;padding:3px 9px;border-radius:999px;}
   .gh-section-label{font-family:'Noto Serif TC',serif;font-size:18px;font-weight:900;color:#5a3e10;margin:36px 0 14px;text-align:left;}
 
-  /* 🆕 2026-08-10 — 3 การ์ดหลักของ games.html (泰語遊戲練習室/綜合挑戰/造句練習)
-     เท่ากันทุกมิติ: ความสูง/icon size/padding/radius/border/shadow — ห้ามให้ใบไหนเด่นกว่าใบอื่น */
+  /* Main destination cards share one visual weight and geometry. */
   .gh-main-grid{display:grid;grid-template-columns:1fr;gap:16px;margin-top:4px;}
-  @media(min-width:640px){.gh-main-grid{grid-template-columns:repeat(3,1fr);}}
+  @media(min-width:640px){.gh-main-grid{grid-template-columns:repeat(2,1fr);}}
+  @media(min-width:960px){.gh-main-grid{grid-template-columns:repeat(4,1fr);}}
   .gh-main-card{position:relative;background:#fff;border:1.5px solid #e0d2a8;border-radius:18px;padding:24px 20px;text-decoration:none;color:inherit;display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:8px;box-shadow:0 4px 20px rgba(90,62,10,.08);transition:transform .15s,box-shadow .15s;height:100%;}
   .gh-main-card:hover{transform:translateY(-4px);box-shadow:0 10px 28px rgba(90,62,10,.16);}
   .gh-main-card:focus-visible{outline:3px solid #C8973A;outline-offset:2px;}
@@ -111,7 +111,7 @@
   .gh-main-card.gh-disabled:hover{transform:none;box-shadow:0 4px 20px rgba(90,62,10,.08);}
   .gh-main-status{margin-top:4px;background:#d8d0c0;color:#6b6b6b;font-weight:700;font-size:13px;padding:7px 18px;border-radius:999px;display:inline-block;}
 
-  /* secondary content (預約體驗課 / 排行榜 / 單字庫) — priority ต่ำกว่าการ์ดหลักเสมอ ห้ามแข่งกับ 3 การ์ดบน
+  /* secondary content — priority ต่ำกว่าการ์ดหลักเสมอ ห้ามแข่งกับ destination cards ด้านบน
      สีในบล็อกนี้ reuse token ที่มีอยู่แล้วในหน้า (#e0d2a8 border เดิม / --cream / --gold-light) แทนการเดาสีใหม่ */
   .gh-secondary{margin-top:40px;padding-top:24px;border-top:1px solid #e0d2a8;}
   .gh-cta-bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;background:var(--cream,#FAF4E8);border:1px solid #e0d2a8;border-radius:12px;padding:14px 18px;margin-bottom:18px;text-decoration:none;color:inherit;}
@@ -166,7 +166,7 @@
     .time-plan-actions>*{width:100%;}
   }
 </style>
-<!-- 🆕 2026-08-10 (polish): ItemList เดิมลิสต์ 5 เกมตรงๆ ทั้งที่ visible IA เปลี่ยนเป็น hub 3 การ์ดแล้ว
+<!-- ItemList lists public playable destinations rather than every visible account destination card.
      (5 เกมย้ายไป games-practice.html ที่ถือ ItemList ของตัวเองแล้ว) — ตอนนี้เหลือเฉพาะ 2 destination
      ที่กดได้จริงจากหน้านี้ (泰語遊戲練習室 + 造句練習室) ไม่ใส่ 綜合挑戰 เพราะสถานะ visible ตอนนี้คือ
      開發中/ไม่ใช่ลิงก์ — ใส่ไปจะหลอกว่าเป็น playable destination สาธารณะ -->
@@ -237,13 +237,13 @@
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="js/core/supabase-config.js?v=10"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script>
-<script defer src="js/core/auth-widget.js?v=18"></script>
-<script src="js/core/minimum-guest-launch.js?v=9"></script>
+<script defer src="js/core/auth-widget.js?v=19"></script>
+<script src="js/core/minimum-guest-launch.js?v=21"></script>
 </head>
 <body>
 <!--ANN-BAND:START--><!-- Login UI scope: no announcement strip. --><!--ANN-BAND:END-->
 
-<nav class="site-nav"><div class="nav-logo" onclick="goHome()"><span class="logo-accent">泰華</span><span class="logo-dim">眼裡的</span><span class="logo-main">泰語教學</span></div><ul class="nav-links"><li><a href="/games.html" class="nav-cta-secondary">🎮 遊戲</a></li><li><a href="javascript:void(0)" class="has-drop">學習資源</a><div class="nav-drop"><span class="nav-drop-label">泰語學習資源</span><a href="/content.html">📚 泰語學習資源</a><a href="/blog.html#articles">📝 泰語學習文章</a><a href="/resources.html#video-learning">🎬 影音學習</a><a href="/blog.html#selfstudy">📖 自學資源</a><span class="nav-drop-label">其他學習入口</span><a href="javascript:void(0)" onclick="openModal('modal-quiz')">程度測驗</a><a href="/index.html#problems">學習困境</a><a href="/community.html">🇹🇭 泰語學習心聲與提問</a></div></li><li><a href="javascript:void(0)" class="has-drop">更多</a><div class="nav-drop"><span class="nav-drop-label">課程與老師</span><a href="/index.html#teacher">關於老師</a><a href="/pricing.html#testimonials">學生回饋</a><a href="/pricing.html#pricing">費用方案</a><a href="/pricing.html#how">上課方式</a><span class="nav-drop-label">常見資訊</span><a href="/faq.html#faq">FAQ</a><a href="/faq.html#rules">上課須知</a><a href="/faq.html#feedback-section">分享經驗</a><span class="nav-drop-label">其他服務</span><a href="/page-services.html#tour-guide">🗺️ 導遊</a><a href="/page-services.html#drama">🎬 字幕翻譯</a><a href="/page-services.html#interpret">🎙️ 口譯</a><a href="/page-services.html#quote-form">📋 報價</a><div class="nav-drop-divider"></div><a href="javascript:void(0)" onclick="openModal('modal-contact')">聯絡我們</a></div></li><li><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="nav-cta">免費試聽</a></li></ul><button class="nav-mobile-cta" onclick="openModal('modal-line-qr')">免費試聽</button><div class="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></div></nav><!--NAV-FIT:START--><script>(function(){try{function f(){var n=document.querySelector("nav.site-nav");if(!n)return;var l=n.querySelector(".nav-logo"),k=n.querySelector(".nav-links");if(!l||!k)return;n.classList.remove("nav-compact");k.style.cssText="";var cs=window.getComputedStyle(n);var pl=parseFloat(cs.paddingLeft)||0,pr=parseFloat(cs.paddingRight)||0;var avail=n.clientWidth-pl-pr;var need=l.scrollWidth+k.scrollWidth+12;if(need>avail){n.classList.add("nav-compact");}}window.__navFit=f;f();}catch(e){}})();</script><!--NAV-FIT:END-->
+<nav class="site-nav"><div class="nav-logo" onclick="goHome()"><span class="logo-accent">泰華</span><span class="logo-dim">眼裡的</span><span class="logo-main">泰語教學</span></div><ul class="nav-links"><li><a href="/games.html" class="nav-cta-secondary">🎮 遊戲</a></li><li><a href="javascript:void(0)" class="has-drop">課程與老師</a><div class="nav-drop"><a href="/index.html#teacher">關於老師</a><a href="/pricing.html#testimonials">學生回饋</a><a href="/pricing.html#pricing">費用方案</a><a href="/pricing.html#how">上課方式</a></div></li><li><a href="javascript:void(0)" class="has-drop">常見資訊</a><div class="nav-drop"><a href="/faq.html#faq">FAQ</a><a href="/faq.html#rules">上課須知</a><a href="/faq.html#feedback-section">分享經驗</a></div></li><li><a href="javascript:void(0)" class="has-drop">泰語學習資源</a><div class="nav-drop"><a href="/content.html">📚 泰語學習資源</a><a href="/blog.html#articles">📝 泰語學習文章</a><a href="/resources.html#video-learning">🎬 影音學習</a><a href="/blog.html#selfstudy">📖 自學資源</a><a href="javascript:void(0)" onclick="openModal('modal-quiz')">程度測驗</a><a href="/index.html#problems">學習困境</a><a href="/community.html">🇹🇭 泰語學習心聲與提問</a></div></li><li><a href="javascript:void(0)" class="has-drop">其他服務</a><div class="nav-drop"><a href="/page-services.html#tour-guide">🗺️ 導遊</a><a href="/page-services.html#drama">🎬 字幕翻譯</a><a href="/page-services.html#interpret">🎙️ 口譯</a><a href="/page-services.html#quote-form">📋 報價</a></div></li><li><a href="javascript:void(0)" onclick="openModal('modal-contact')">聯絡我們</a></li><li><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="nav-cta">免費試聽</a></li></ul><div class="nav-mobile-actions"><a class="nav-mobile-game" href="/games.html">🎮 遊戲</a><button class="nav-mobile-cta" onclick="openModal('modal-line-qr')">免費試聽</button></div><div class="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></div></nav><!--NAV-FIT:START--><script>(function(){try{function f(){var n=document.querySelector("nav.site-nav");if(!n)return;var l=n.querySelector(".nav-logo"),k=n.querySelector(".nav-links");if(!l||!k)return;n.classList.remove("nav-compact");k.style.cssText="";var cs=window.getComputedStyle(n);var pl=parseFloat(cs.paddingLeft)||0,pr=parseFloat(cs.paddingRight)||0;var avail=n.clientWidth-pl-pr;var need=l.scrollWidth+k.scrollWidth+12;if(need>avail){n.classList.add("nav-compact");}}window.__navFit=f;f();}catch(e){}})();</script><!--NAV-FIT:END-->
 
 <!-- 🗑️ 2026-08-10 (polish): เอา page-strip ออกตาม UX Decision — ตรวจแล้วไม่ได้ถูกควบคุมจาก generator/source-of-truth ใดๆ
      (ไม่มีใน data/nav-template.js, scripts/generate-nav.js, scripts/check-nav-consistency.js เลย)
@@ -258,8 +258,7 @@
     <div class="gh-search-auth-message">正在確認登入狀態…</div>
   </div>
 
-  <!-- 🆕 2026-08-10 — IA 重整：3 การ์ดหลักแทน 5 เกมเล็กแยกกัน (5 เกมย้ายไปอยู่ใน games-practice.html)
-       ตามที่ Lin สั่ง: 泰語遊戲練習室 / 綜合挑戰 / 造句練習 — เท่ากันทุกมิติ ห้ามให้ใบไหนเด่นกว่าใบอื่น -->
+  <!-- Main destination cards use equal dimensions and weight; individual games live in games-practice.html. -->
   <div class="gh-main-grid">
     <a class="gh-main-card" href="games-practice.html" onclick="if(window.gtag)gtag('event','game_link_click',{category:'game',target:'games_practice',from:'games_hub'})">
       <div class="gh-main-icon">🎮</div>
@@ -281,9 +280,16 @@
       <div class="gh-main-desc">搜尋此帳號儲存的泰語單字與句子，並返回來源遊戲練習。</div>
       <span class="gh-main-action">開啟單字庫 →</span>
     </a>
+
+    <a class="gh-main-card" href="my-progress.html" onclick="if(window.gtag)gtag('event','game_link_click',{category:'game',target:'learning_progress',from:'games_hub'})">
+      <div class="gh-main-icon">📊</div>
+      <div class="gh-main-title">學習進度</div>
+      <div class="gh-main-desc">登入後查看五項技能的練習紀錄、SRS 階段與待複習項目。</div>
+      <span class="gh-main-action">查看進度 →</span>
+    </a>
   </div>
 
-  <!-- secondary content — ลด visual priority ตามที่ Lin สั่ง (ห้ามแข่งกับ 3 การ์ดหลักด้านบน) -->
+  <!-- secondary content — ลด visual priority ตามที่ Lin สั่ง (ห้ามแข่งกับ destination cards ด้านบน) -->
   <div class="gh-secondary">
     <!-- ▼ 預約體驗課（遊戲 → 預約 橋樑）— เดิมเป็นการ์ดใหญ่ ตอนนี้ย่อเป็นแถบเดียว ▼ -->
     <a class="gh-cta-bar" href="pricing.html?from=games_hub#pricing" onclick="if(window.bookFromGame){bookFromGame('games_hub','hub_card');return false;}">
