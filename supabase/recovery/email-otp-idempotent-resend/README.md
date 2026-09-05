@@ -14,3 +14,10 @@ Use rollback only after an exact Production approval. The safe order is:
 
 This rollback intentionally restores the prior duplicate-request behavior, so it
 is an emergency compatibility route rather than the desired steady state.
+
+## Immutable artifact checksums
+
+- Forward migration: `c548544e198510f75cbb3eddd490ad430af0c298bc13ae614852474caf6b8c4f`
+- Edge entrypoint: `f1e3f0597d3f235a7703be4ffff4cb33eff57c709dd8944778065018b0a635b1`
+- Edge request-flow helper: `1685eec6cfa14018d7888f2b966a45da33de2f8e978280cd097f3dc169e7fa89`
+- SQL rollback: `1da3dc3cb36e8f7d5f5d16aeb5c0a5635759b2b8a6b500cefcb6d03a9c41a3fd`
