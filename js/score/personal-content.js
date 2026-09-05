@@ -12,8 +12,6 @@
   var playedRequestKey = '';
   var playedRequestFailed = false;
   try { activeTab = sessionStorage.getItem('personal_content_tab') || 'words'; } catch (e) {}
-  try { searchQuery = new URLSearchParams(location.search).get('search') || ''; } catch (e) {}
-  searchQuery = searchQuery.slice(0, 100);
   if (location.hash === '#sentences') activeTab = 'sentences';
   if (location.hash === '#words') activeTab = 'words';
 
@@ -187,7 +185,6 @@
     var label = el('label', 'pc-search-label', '搜尋泰語單字庫');
     var input = el('input', 'pc-search-input');
     input.type = 'search'; input.value = searchQuery;
-    input.maxLength = 100;
     input.placeholder = '輸入泰文、泰語讀音、羅馬拼音、中文或來源';
     input.setAttribute('autocomplete', 'off');
     label.appendChild(input); wrapper.appendChild(label);

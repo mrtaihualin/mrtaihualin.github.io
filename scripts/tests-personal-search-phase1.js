@@ -22,12 +22,7 @@ const items = [
 ];
 
 test('Personal Search is loaded before the personal-content UI', () => {
-  assert.match(html, /personal-search\.js\?v=2[\s\S]*personal-content\.js\?v=6/);
-});
-test('Learning Center query is restored safely with a bounded length', () => {
-  assert.match(ui, /new URLSearchParams\(location\.search\)\.get\('search'\)/);
-  assert.match(ui, /searchQuery = searchQuery\.slice\(0, 100\)/);
-  assert.match(ui, /input\.maxLength = 100/);
+  assert.match(html, /personal-search\.js\?v=2[\s\S]*personal-content\.js\?v=5/);
 });
 test('search control only belongs to the authenticated render path', () => {
   const guestEnd = ui.indexOf('function renderLimit');

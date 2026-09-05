@@ -311,7 +311,7 @@ test('all scoped pages use one fail-closed Login surface and game pages permanen
     assert.doesNotMatch(html, /type="text\/plain" data-mrt-parked-runtime/, `${file}: Login Free data runtime must be active`);
   }
   const vaultHtml = fs.readFileSync(path.join(root, 'vault.html'), 'utf8');
-  assert.match(vaultHtml, /<script src="js\/score\/personal-search\.js\?v=2"><\/script>[\s\S]*<script src="js\/score\/personal-content\.js\?v=6"><\/script>/, 'Vault Personal Search runtime must be active');
+  assert.match(vaultHtml, /<script src="js\/score\/personal-search\.js\?v=2"><\/script>[\s\S]*<script src="js\/score\/personal-content\.js\?v=5"><\/script>/, 'Vault Personal Search runtime must be active');
   assert.doesNotMatch(vaultHtml, /data-mrt-parked-runtime src="js\/score\/(?:personal-search|personal-content)/, 'Vault Personal Search runtime must not stay parked');
   assert.doesNotMatch(vaultHtml, /id="game-switcher"[^>]+data-current="vault"[^>]+data-wm-done=/, 'Vault must not need a page-local fallback-menu suppression marker');
 });

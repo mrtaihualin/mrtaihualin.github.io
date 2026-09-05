@@ -58,10 +58,9 @@
       '.pg-skill{border:1px solid rgba(200,151,58,.28)}.pg-skill-head{display:flex;gap:9px;align-items:center;font-weight:900;color:#5C4410}.pg-skill-icon{font-size:22px}',
       '.pg-status{font-size:13px;color:#765f32;line-height:1.7;margin-top:12px}.pg-muted{color:#9a895e}.pg-srs{margin-top:8px;padding-top:8px;border-top:1px solid #F0E6CE;font-size:12px;color:#765f32}.pg-srs-line+.pg-srs-line{margin-top:4px}',
       '.pg-content-card{display:flex;flex-direction:column;min-height:138px}.pg-content-card h3{margin:0 0 8px;color:#5C4410;font-size:16px}.pg-content-card p{margin:0;color:#765f32;line-height:1.7;font-size:13px;flex:1}.pg-content-card .pg-btn{align-self:flex-start;margin-top:14px}',
-      '.pg-vault-search{background:#FBF5E7;border:1px solid rgba(200,151,58,.32);border-radius:16px;padding:15px;margin:0 0 12px}.pg-vault-search label{display:block;color:#5C4410;font-size:13px;font-weight:900;margin-bottom:7px}.pg-vault-search-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}.pg-vault-search input{width:100%;min-width:0;min-height:44px;border:1.5px solid rgba(139,99,16,.35);border-radius:12px;background:#fff;padding:9px 12px;color:#3a2a0a;font:16px Noto Sans TC,sans-serif}.pg-vault-search input:focus{outline:3px solid rgba(200,151,58,.22);border-color:#8B6310}.pg-vault-search .pg-btn{min-height:44px;padding:8px 18px}.pg-vault-search-note{margin:7px 0 0;color:#83775f;font-size:12px;line-height:1.5}',
       '.pg-warning{background:#FFF6E5;border:1px solid #EAC36B;color:#765113;border-radius:12px;padding:11px 14px;font-size:12.5px;line-height:1.6;margin:0 0 14px}',
       '.pg-chart{margin-top:12px}.pg-chart canvas{max-height:230px}',
-      '@media(max-width:560px){.pg-benefits{grid-template-columns:1fr}.pg-panel{padding:18px}.pg-grid{grid-template-columns:1fr}.pg-actions .pg-btn{width:100%;box-sizing:border-box}.pg-vault-search-row{grid-template-columns:1fr}.pg-vault-search .pg-btn{width:100%;box-sizing:border-box}}'
+      '@media(max-width:560px){.pg-benefits{grid-template-columns:1fr}.pg-panel{padding:18px}.pg-grid{grid-template-columns:1fr}.pg-actions .pg-btn{width:100%;box-sizing:border-box}}'
     ].join('');
     document.head.appendChild(style);
   }
@@ -261,19 +260,11 @@
       : '';
     var skills = SKILLS.map(function (skill) { return skillCard(skill, grouped[skill.code]); }).join('');
     root.innerHTML = warning +
-      '<section class="pg-search-section" aria-label="搜尋我的內容">' +
-        '<form class="pg-vault-search" action="vault.html" method="get">' +
-          '<label for="pg-vault-search-input">搜尋我的單詞與句子</label>' +
-          '<div class="pg-vault-search-row"><input id="pg-vault-search-input" type="search" name="search" maxlength="100" autocomplete="off" required placeholder="輸入泰文、泰語讀音、羅馬拼音或中文">' +
-          '<button class="pg-btn pg-btn-secondary" type="submit">搜尋</button></div>' +
-          '<p class="pg-vault-search-note">搜尋結果會在此帳號的泰語單字庫顯示，不會搜尋其他人的內容。</p>' +
-        '</form></section>' +
       '<section><h3 class="pg-section-title">學習進度</h3>' +
         '<div class="pg-section-help"><div class="pg-section-help-line"><b>SRS</b>：間隔重複學習系統，依照你的練習結果顯示目前階段</div>' +
         '<div class="pg-section-help-line"><b>Review</b>：已到複習日期、現在需要複習的項目。</div></div>' +
         '<div class="pg-grid">' + skills + '</div></section>' +
-      '<section class="pg-section"><h3 class="pg-section-title">我的內容</h3>' +
-        '<div class="pg-grid">' +
+      '<section class="pg-section"><h3 class="pg-section-title">我的內容</h3><div class="pg-grid">' +
         '<article class="pg-panel pg-content-card"><h3>🔖 我的單詞</h3><p>查看此帳號儲存的單詞，並回到支援的遊戲練習。</p><a class="pg-btn pg-btn-secondary" href="vault.html#words">查看我的單詞</a></article>' +
         '<article class="pg-panel pg-content-card"><h3>📝 我的句子</h3><p>查看此帳號儲存的句子，並回到語序遊戲練習。</p><a class="pg-btn pg-btn-secondary" href="vault.html#sentences">查看我的句子</a></article>' +
       '</div></section>' +
