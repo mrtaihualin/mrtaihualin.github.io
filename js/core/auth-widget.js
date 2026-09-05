@@ -981,20 +981,20 @@
     var selAvatar = myAvatar || getAvatarCache();
     var avatarHTML = '';
     if (selAvatar && selAvatar !== 'none' && selAvatar !== 'google') {
-      avatarHTML = '<span style="width:24px;height:24px;border-radius:50%;background:#FBF6EA;display:inline-flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">' + esc(selAvatar) + '</span>';
+      avatarHTML = '<span class="sa-avatar" aria-hidden="true">' + esc(selAvatar) + '</span>';
     }
     var pinHTML = '';
     var pin = myBadge || getPinBadgeCache();
     if (pin && window.TF_BADGES_DEF) {
       var bdef = null;
       window.TF_BADGES_DEF.forEach(function (b) { if (b.id === pin) bdef = b; });
-      if (bdef) pinHTML = '<span title="' + esc(bdef.zh) + '" style="display:inline-flex;align-items:center;flex-shrink:0;">' + window.tfBadgeIcon(bdef, 20) + '</span>';
+      if (bdef) pinHTML = '<span class="sa-badge-pin" title="' + esc(bdef.zh) + '">' + window.tfBadgeIcon(bdef, 20) + '</span>';
     }
     var leaderboardHref = opts.leaderboardHref || 'leaderboard.html';
     var progressHref = opts.progressHref || 'my-progress.html';
     var parkedAccountLinksHTML = opts.showParkedAccountLinks === false ? '' :
-      '<a href="' + esc(leaderboardHref) + '" title="排行榜" style="text-decoration:none;font-size:13px;">🏆</a>' +
-      '<a href="' + esc(progressHref) + '" title="進度" style="text-decoration:none;font-size:13px;">📊</a>';
+      '<a class="sa-account-action sa-leaderboard-link" href="' + esc(leaderboardHref) + '" title="排行榜" aria-label="排行榜">🏆</a>' +
+      '<a class="sa-account-action sa-progress-link" href="' + esc(progressHref) + '" title="進度" aria-label="學習進度">📊</a>';
     var globalSearchHTML =
       '<button type="button" class="sa-global-search-toggle" title="全站搜尋" aria-label="開啟全站搜尋" aria-expanded="false">🔎</button>' +
       '<form class="sa-global-search-form" action="index.html" method="get" hidden>' +
@@ -1004,16 +1004,16 @@
 
     el.style.display = anyModalOpen() ? 'none' : 'inline-flex';
     el.innerHTML =
-      '<div class="sa-account-bar" style="display:flex;align-items:center;gap:7px;background:#fff;' +
+      '<div class="sa-account-bar" role="group" aria-label="帳號選單" style="display:flex;align-items:center;gap:7px;background:#fff;' +
       'border:1.5px solid rgba(200,151,58,0.45);border-radius:20px;padding:5px 12px 5px 8px;' +
       'box-shadow:0 2px 8px rgba(139,99,16,0.12);font-family:\'Noto Sans TC\',sans-serif;">' +
-      (avatarHTML || '<span style="font-size:15px;flex-shrink:0;">👤</span>') +
-      '<span class="sa-nick" title="點此編輯個人檔案" style="color:#5C4410;font-weight:700;font-size:12.5px;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;">' + esc(displayName) + '</span>' +
+      (avatarHTML || '<span class="sa-avatar" aria-hidden="true">👤</span>') +
+      '<button type="button" class="sa-nick" title="點此編輯個人檔案" aria-label="編輯個人檔案：' + esc(displayName) + '">' + esc(displayName) + '</button>' +
       pinHTML +
-      '<button class="sa-edit" title="編輯" style="border:none;background:none;color:#A07A1E;cursor:pointer;font-size:12px;padding:0;line-height:1;">✏️</button>' +
+      '<button type="button" class="sa-account-action sa-edit" title="編輯" aria-label="編輯個人檔案">✏️</button>' +
       parkedAccountLinksHTML +
       globalSearchHTML +
-      '<button class="sa-logout" style="border:none;background:rgba(139,99,16,0.12);color:#8B6310;' +
+      '<button type="button" class="sa-account-action sa-logout" style="border:none;background:rgba(139,99,16,0.12);color:#8B6310;' +
       'border-radius:20px;padding:3px 10px;cursor:pointer;font-size:11.5px;font-weight:700;">登出</button>' +
       '</div>';
     el.querySelector('.sa-logout').onclick = doLogout;

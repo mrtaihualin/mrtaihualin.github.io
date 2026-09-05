@@ -12,6 +12,7 @@ const mobileLandscapeCss = fs.readFileSync(path.join(root, 'css/mobile-landscape
 const sharedJs = fs.readFileSync(path.join(root, 'js/core/shared.js'), 'utf8');
 const sharedMin = fs.readFileSync(path.join(root, 'js/core/shared.min.js'), 'utf8');
 const switcherJs = fs.readFileSync(path.join(root, 'js/games/game-switcher.js'), 'utf8');
+const navTemplateJs = fs.readFileSync(path.join(root, 'data/nav-template.js'), 'utf8');
 const wordMenuJs = fs.readFileSync(path.join(root, 'js/games/word-menu.js'), 'utf8');
 const games = [
   { id: 'tone', html: 'tone-finder.html', app: 'js/games/tone-finder-game.js', howto: 'tf-howto-modal', resume: 'tf-resume-banner' },
@@ -199,10 +200,18 @@ test('shared switcher renders the fixed six games plus 我的單字庫 in canoni
   assert.match(switcherJs, /var CORE6_TABS = CORE5_TABS\.concat\([\s\S]{0,180}id: 'lego'/, 'fixed game switcher must include Lego sixth');
   assert.match(switcherJs, /var tabs = CORE6_TABS\.concat\(\[VAULT_TAB\]\)/, 'every game must use the same six-game menu plus library route');
   assert.match(switcherJs, /var VAULT_TAB = \{ id: 'vault', href: 'vault\.html', label: '🔖 我的單字庫'/, 'all game switchers must append the approved library route');
-  assert.match(switcherJs, /data-vault-portrait-entry/, 'Portrait bottom navigation must expose the additional Vault route');
-  assert.match(switcherJs, /DOMContentLoaded[\s\S]{0,180}addPortraitVaultEntry/, 'Portrait Vault route must wait for late bottom-navigation markup');
+  assert.doesNotMatch(switcherJs, /data-vault-portrait-entry|addPortraitVaultEntry/, 'Game switcher must not add a fifth item to the canonical mobile bottom navigation');
   assert.match(switcherJs, /if \(current === 'vault'\) tabs = tabs\.filter/, 'Vault must not render a self entry');
   assert.match(switcherJs, /role="menuitem" aria-current="page"/);
+});
+
+test('mobile bottom navigation keeps the canonical four actions and safe clearance', () => {
+  const bottomNavBlock = navTemplateJs.slice(navTemplateJs.indexOf('var BOTTOM_NAV_ITEMS'), navTemplateJs.indexOf('// ── ของพิเศษเฉพาะบางหน้า'));
+  const labels = Array.from(bottomNavBlock.matchAll(/label: '([^']+)'/g), (match) => match[1]);
+  assert.deepStrictEqual(labels, ['首頁', '試聽', '遊戲', '學習']);
+  assert.match(bottomNavBlock, /label: '學習', href: '\/my-progress\.html'/);
+  assert.match(sharedCss, /@media\(max-width:768px\)\{#bottom-nav\{display:flex;\}body\{padding-bottom:60px;\}\}/, 'Mobile bottom navigation must remain visible with content clearance');
+  assert.match(sharedCss, /#bottom-nav\{[^}]*bottom:0;[^}]*padding-bottom:env\(safe-area-inset-bottom\)/, 'Mobile bottom navigation must stay anchored above the safe area');
 });
 
 test('floating controls use the locked switcher, focus and More Menu copy', () => {
@@ -233,6 +242,7 @@ test('all scoped pages use one fail-closed Login surface and game pages permanen
   const loginCss = fs.readFileSync(path.join(root, 'css/login-surface.css'), 'utf8');
   const loginJs = fs.readFileSync(path.join(root, 'js/core/login-surface.js'), 'utf8');
   const minimumGuest = fs.readFileSync(path.join(root, 'js/core/minimum-guest-launch.js'), 'utf8');
+  const authWidget = fs.readFileSync(path.join(root, 'js/core/auth-widget.js'), 'utf8');
   const readingAuth = fs.readFileSync(path.join(root, 'js/games/reading-auth.js'), 'utf8');
   const toneApp = fs.readFileSync(path.join(root, 'js/games/tone-finder-game.js'), 'utf8');
   const gamePages = [
@@ -243,20 +253,26 @@ test('all scoped pages use one fail-closed Login surface and game pages permanen
     'my-progress.html', 'vault.html', 'all-board.html', 'leaderboard.html', 'reading-board.html',
     'listening-board.html', 'typing-board.html', 'word-order-board.html'
   ];
+  const scopedInventory = gamePages.concat(nonGameScopedPages);
   assert.equal(fs.existsSync(path.join(root, 'lego-board.html')), false, 'Lego leaderboard placeholder page must not exist');
   assert.equal(fs.existsSync(path.join(root, 'mix-board.html')), false, 'Challenge leaderboard placeholder page must not exist');
   for (const file of gamePages) {
     const html = fs.readFileSync(path.join(root, file), 'utf8');
     assert.doesNotMatch(html, /ANN-BAND|ann-band|avail-band|annDismissed|annGoTo|annPrev|annNext/, `${file}: announcement DOM/marker/script/style hook must be removed`);
-    assert.match(html, /minimum-guest-launch\.js\?v=22/, `${file}: must load the current Reading-authority Login gate`);
+    assert.match(html, /minimum-guest-launch\.js\?v=23/, `${file}: must load the current Reading-authority Login gate`);
     assert.match(html, /shared\.min\.js\?v=(?:47|50)/, `${file}: must load the announcement-free game runtime`);
   }
   for (const file of nonGameScopedPages) {
     const html = fs.readFileSync(path.join(root, file), 'utf8');
     assert.match(html, /<!--ANN-BAND:START--><!-- Login UI scope: no announcement strip\. --><!--ANN-BAND:END-->/, `${file}: existing non-game announcement capability boundary must remain`);
-    assert.match(html, /minimum-guest-launch\.js\?v=22/, `${file}: must load the current Reading-authority Login gate`);
+    assert.match(html, /minimum-guest-launch\.js\?v=23/, `${file}: must load the current Reading-authority Login gate`);
     assert.match(html, file === 'vault.html' ? /shared\.min\.js\?v=47/ : /shared\.min\.js\?v=45/, `${file}: non-game cache binding must stay on its current runtime`);
   }
+  assert.equal(scopedInventory.length, 17, 'FB-01 inventory must stay on the six games and eleven existing account surfaces');
+  for (const file of scopedInventory) {
+    assert.match(loginJs, new RegExp("'" + file.replace('.', '\\.') + "'"), `${file}: shared controller inventory must include the existing account surface`);
+  }
+  assert.doesNotMatch(loginJs, /classroom|teacher|student-admin/i, 'FB-01 must not turn the separate Classroom authorization UI into a player account menu');
   assert.doesNotMatch(sharedJs, /suppressScopedAnnouncement|staleScopedAnnouncement|avail-band-placeholder/);
   assert.doesNotMatch(sharedMin, /suppressScopedAnnouncement|staleScopedAnnouncement|avail-band-placeholder/);
   assert.doesNotMatch(sharedJs, /band\s*=\s*document\.createElement\('div'\)[\s\S]{0,180}band\.id\s*=\s*'ann-band'/, 'shared runtime must not dynamically create an announcement band');
@@ -264,7 +280,7 @@ test('all scoped pages use one fail-closed Login surface and game pages permanen
   assert.match(sharedMin, /document\.body&&!document\.body\.hasAttribute\("data-gsh-game"\)\?document\.getElementById\("ann-band"\):null/, 'deployed shared runtime must keep the non-game announcement guard');
   assert.doesNotMatch(sharedCss, /(^|[},]\s*)\.avail-band\s*\{/m, 'announcement CSS must never target an unscoped game surface');
   assert.match(minimumGuest, /window\.MRT_PARKED_ACCOUNT_SURFACE = parked\.test\(path\)/);
-  assert.match(minimumGuest, /loginController\.src = 'js\/core\/login-surface\.js\?v=13'/, 'public pages must request the account-aware Login controller');
+  assert.match(minimumGuest, /loginController\.src = 'js\/core\/login-surface\.js\?v=14'/, 'public pages must request the current account-menu controller');
   assert.doesNotMatch(minimumGuest, /location\.replace\('\/games\.html\?guest_launch=1'\)/);
   assert.match(loginJs, /'tone-finder\.html'[\s\S]*'reading-game\.html'[\s\S]*'listening-game\.html'[\s\S]*'typing-game\.html'[\s\S]*'word-order\.html'[\s\S]*'lego\.html'/);
   assert.match(loginJs, /function sourceFilename\(pathname\)[\s\S]{0,520}if \(filename\.indexOf\('\.'\) === -1\) filename \+= '\.html'[\s\S]{0,120}var filename = sourceFilename\(window\.location\.pathname\)/, 'Cloudflare extensionless routes must resolve to canonical Login page keys');
@@ -294,6 +310,14 @@ test('all scoped pages use one fail-closed Login surface and game pages permanen
   assert.match(loginCss, /\.mrt-login-vault[\s\S]{0,100}text-decoration: none !important;/, 'Vault companion chip must not render as an underlined text link');
   assert.match(loginCss, /@media \(min-width: 769px\)[\s\S]*\.sa-edit::after \{ content: '編輯'; \}[\s\S]*a\[title="排行榜"\]::after \{ content: '排行'; \}[\s\S]*a\[title="進度"\]::after \{ content: '進度'; \}/, 'Desktop Account Bar must show short Edit, Board and Progress labels');
   assert.match(loginCss, /@media \(orientation: landscape\) and \(max-width: 1024px\) and \(max-height: 600px\)[\s\S]*a\[title="排行榜"\]::after,[\s\S]*a\[title="進度"\]::after[\s\S]*content: none;/, 'Mobile Landscape must not inherit Desktop Board and Progress labels');
+  assert.match(authWidget, /class="sa-account-bar" role="group" aria-label="帳號選單"/, 'authenticated controls must expose one named account group');
+  assert.match(authWidget, /<button type="button" class="sa-nick"[\s\S]{0,220}aria-label="編輯個人檔案：/, 'the displayed account name must remain an accessible profile-edit action');
+  assert.match(authWidget, /class="sa-account-action sa-leaderboard-link"[\s\S]{0,220}class="sa-account-action sa-progress-link"/, 'existing account destinations must share one action hook without changing destinations');
+  assert.match(loginCss, /#rg-profile-wrap \{[\s\S]{0,520}background: #FAF4E8 !important;[\s\S]{0,120}border: 2px solid #C8973A !important;[\s\S]{0,80}border-radius: 26px !important;/, 'Desktop and Portrait must use the approved cream, gold and long-rounded account frame');
+  assert.match(loginCss, /\.sa-edit,[\s\S]{0,260}\.sa-logout \{[\s\S]{0,360}border-radius: 999px !important;[\s\S]{0,120}background: rgba\(255, 255, 255, 0\.72\) !important;/, 'all existing account actions must use the approved pill language');
+  assert.match(loginCss, /\.sa-nick:focus-visible,[\s\S]{0,420}\.sa-logout:focus-visible,[\s\S]{0,100}\.tf-streak-chip:focus-visible[\s\S]{0,100}outline: 2px solid #C8973A;/, 'keyboard focus must stay visible on every account action');
+  assert.match(loginCss, /@media \(max-width: 600px\)[\s\S]{0,620}border-radius: 22px !important;[\s\S]{0,420}max-width: min\(38vw, 150px\) !important;/, 'Portrait must wrap safely and truncate long account names inside the frame');
+  assert.match(mobileLandscapeCss, /#sa-badge-rg-login-slot\[data-gsh-ml-account-panel="true"\][\s\S]*a\[title="排行榜"\]::after[\s\S]*content: '排行榜';[\s\S]*a\[title="進度"\]::after[\s\S]*content: '學習進度';[\s\S]*\.sa-global-search-toggle::after[\s\S]*content: '全站搜尋';/, 'Mobile Landscape popup must retain every existing account action in readable order');
   assert.doesNotMatch(loginCss, /data-gsh-game=|tone|listening|typing|word-order|lego/i, 'Login CSS must not contain a page-specific substitute geometry');
   assert.match(loginJs, /activateLegacyLandscapeSurface\(\)[\s\S]{0,1800}gameState\.header\.insertAdjacentElement\('afterend', gameState\.row\)/, 'Mobile Landscape must restore the existing per-game surface');
   assert.match(loginCss, /@media \(orientation: landscape\) and \(max-width: 1024px\) and \(max-height: 600px\)[\s\S]{0,180}\.mrt-login-surface,[\s\S]{0,100}display: none !important;/, 'Mobile Landscape must show no Login');
@@ -869,7 +893,7 @@ test('Tone mobile touch surfaces keep Desktop gameplay free of keyboard-only cop
   assert.match(tone.htmlText, /\.tf-page \{[\s\S]{0,100}padding-top:10px;/, 'Portrait must not count the fixed navigation height twice above the Tone title');
   assert.match(tone.htmlText, /\.tf-result-login-card \{[\s\S]{0,180}padding-top:12px !important; padding-bottom:12px !important;[\s\S]{0,100}line-height:1\.5 !important;/, 'Portrait Result login card must keep equal top and bottom spacing');
   assert.match(tone.htmlText, /\.tf-result-login-card button \{[\s\S]{0,100}display:block; margin:9px auto 0 !important;/, 'Portrait Result login button must stay visibly separated from its copy');
-  assert.match(tone.htmlText, /game-switcher\.js\?v=7/, 'Tone must request the fixed six-game switcher');
+  assert.match(tone.htmlText, /game-switcher\.js\?v=8/, 'Tone must request the fixed six-game switcher');
   assert.match(tone.htmlText, /點選 1–5 就可以。/, 'Portrait Tour must not advertise computer keyboard controls');
 });
 

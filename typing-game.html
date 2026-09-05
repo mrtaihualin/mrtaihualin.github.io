@@ -100,13 +100,13 @@ if (document.fonts && document.fonts.load) {
 }
 </script>
 <link rel="stylesheet" href="css/shared.css?v=38">
-<link rel="stylesheet" href="css/mobile-landscape.css?v=60">
+<link rel="stylesheet" href="css/mobile-landscape.css?v=61">
 <script src="js/games/thai-keyboard.js?v=2"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="js/core/supabase-config.js?v=10"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script>
 <script defer src="js/games/game-account.js?v=6"></script>
-<script defer src="js/core/auth-widget.js?v=19"></script>
+<script defer src="js/core/auth-widget.js?v=20"></script>
 <script defer src="js/score/phase1-canonical-state.js?v=2"></script>
 <script defer src="js/games/reading-auth.js?v=34"></script>
 <script defer src="js/score/learning-summary.js?v=1"></script>
@@ -451,7 +451,7 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
   ]
 }
 </script>
-<script src="js/core/minimum-guest-launch.js?v=22"></script>
+<script src="js/core/minimum-guest-launch.js?v=23"></script>
 <script defer src="js/games/word-vault.js?v=8"></script>
 <script defer src="js/games/sentence-vault.js?v=4"></script>
 </head>
@@ -795,7 +795,7 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
 <script src="js/core/shared.min.js?v=50"></script>
 <script src="js/games/practice-events.js?v=3"></script>
 <script src="js/games/game-flow.js?v=13"></script>
-<script src="js/core/mobile-landscape.js?v=34"></script>
+<script src="js/core/mobile-landscape.js?v=35"></script>
 
 <!-- ── Game Switcher (fixed pill) ── -->
 <style>
@@ -807,7 +807,7 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
 @media(max-width:768px){#game-switcher{bottom:calc(120px + env(safe-area-inset-bottom,0px));}.gs-tab{padding:8px 13px;font-size:12px;}}
 </style>
 <div id="game-switcher" data-current="typing_game"></div>
-<script src="js/games/game-switcher.js?v=7"></script>
+<script src="js/games/game-switcher.js?v=8"></script>
 <!-- 單字庫徽章：移除了 — 單字庫已經在 #game-switcher（🎮 選單）裡有分頁，這裡放重複了 — Lin 2026-07-24 -->
 <script>
 // ── 提示泡泡（給其他頁面共用的函式，這頁不再自動觸發小泡泡，改用下面完整導覽）— Lin 2026-07-24 ──
@@ -1005,6 +1005,6 @@ function gtTourStart(){
   }
 </script>
 
-<nav id="bottom-nav"><a href="/index.html" class="bn-item"><span class="bn-icon">🏠</span><span class="bn-label">首頁</span></a><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="bn-item bn-cta"><span class="bn-icon">📞</span><span class="bn-label">試聽</span></a><a href="/games.html" class="bn-item"><span class="bn-icon">🎮</span><span class="bn-label">遊戲</span></a></nav>
+<nav id="bottom-nav"><a href="/index.html" class="bn-item"><span class="bn-icon">🏠</span><span class="bn-label">首頁</span></a><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="bn-item bn-cta"><span class="bn-icon">📞</span><span class="bn-label">試聽</span></a><a href="/games.html" class="bn-item"><span class="bn-icon">🎮</span><span class="bn-label">遊戲</span></a><a href="/my-progress.html" class="bn-item"><span class="bn-icon">📚</span><span class="bn-label">學習</span></a></nav>
 </body>
 </html>

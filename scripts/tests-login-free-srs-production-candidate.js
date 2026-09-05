@@ -20,14 +20,14 @@ check(/games-challenge/.test(gate), 'Challenge remains parked');
 var pages = ['tone-finder.html', 'reading-game.html', 'listening-game.html', 'typing-game.html', 'word-order.html'];
 pages.forEach(function (file) {
   var html = read(file);
-  check(html.indexOf('js/core/minimum-guest-launch.js?v=22') !== -1, file + ' fetches the current Login Free launch gate');
+  check(html.indexOf('js/core/minimum-guest-launch.js?v=23') !== -1, file + ' fetches the current Login Free launch gate');
   check(html.indexOf('js/games/tone-server.js?v=6') !== -1, file + ' loads the authenticated SRS transport');
   check(html.indexOf('game-account.js?v=6') !== -1, file + ' activates the server-authoritative Free account facade');
   check(html.indexOf('practice-events.js?v=3') !== -1, file + ' activates durable Login Free reporting');
   check(html.indexOf('games-challenge-app.js') === -1, file + ' does not activate Challenge runtime');
 });
 check(read('lego.html').indexOf('tone-server.js') === -1, 'Lego receives no SRS runtime');
-check(read('js/core/minimum-guest-launch.js').indexOf('login-surface.js?v=13') !== -1, 'SRS pages fetch the account-aware Login surface');
+check(read('js/core/minimum-guest-launch.js').indexOf('login-surface.js?v=14') !== -1, 'SRS pages fetch the account-aware Login surface');
 check(read('js/core/login-surface.js').indexOf('reading-auth.js?v=34') !== -1, 'Login surface fetches the account-aware auth client');
 check(read('reading-game.html').indexOf('reading-auth.js?v=34') !== -1, 'Reading direct provider flow fetches the account-aware auth client');
 check(read('tone-finder.html').indexOf('tone-finder-game.min.js?v=83') !== -1, 'Tone fetches the current game runtime');

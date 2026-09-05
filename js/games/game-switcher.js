@@ -17,18 +17,6 @@
   ]);
   var VAULT_TAB = { id: 'vault', href: 'vault.html', label: '🔖 我的單字庫', activeLabel: '🔖 我的單字庫' };
 
-  function addPortraitVaultEntry(container) {
-    if (container.getAttribute('data-current') === 'vault') return;
-    var nav = document.getElementById('bottom-nav');
-    if (!nav || nav.querySelector('[data-vault-portrait-entry]')) return;
-    var link = document.createElement('a');
-    link.href = 'vault.html';
-    link.className = 'bn-item';
-    link.setAttribute('data-vault-portrait-entry', '1');
-    link.innerHTML = '<span class="bn-icon">🔖</span><span class="bn-label">泰語單字庫</span>';
-    nav.appendChild(link);
-  }
-
   function render(container) {
     container.setAttribute('role', 'menu');
     container.setAttribute('aria-label', '切換遊戲');
@@ -52,17 +40,11 @@
       }
     });
     container.innerHTML = html;
-    addPortraitVaultEntry(container);
   }
 
   function init() {
     var els = document.querySelectorAll('#game-switcher[data-current]');
     Array.prototype.forEach.call(els, render);
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', function () {
-        Array.prototype.forEach.call(els, addPortraitVaultEntry);
-      }, { once: true });
-    }
   }
   init();
 })();

@@ -125,7 +125,8 @@
   var BOTTOM_NAV_ITEMS = [
     { icon: '🏠', label: '首頁', href: '/index.html' },
     { icon: '📞', label: '試聽', modal: CTA_MODAL, cta: true },
-    { icon: '🎮', label: '遊戲', href: '/games.html' }
+    { icon: '🎮', label: '遊戲', href: '/games.html' },
+    { icon: '📚', label: '學習', href: '/my-progress.html' }
   ];
 
   // ── ของพิเศษเฉพาะบางหน้า (ไม่เปลี่ยนพฤติกรรมเดิม แค่ทำให้ generate ได้จากจุดเดียว) ──

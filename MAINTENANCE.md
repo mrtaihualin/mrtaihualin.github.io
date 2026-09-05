@@ -1,6 +1,16 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-09-05 Asia/Bangkok** — Reading option and score-evidence repair
+**Updated: 2026-09-05 Asia/Bangkok** — FB-01 shared account-menu visual system
+
+## 2026-09-05 — FB-01 shared account-menu visual system (`SOURCE_PASS / LOCAL_VISUAL_PASS / PREVIEW_PASS / PRODUCTION_UNCHANGED`)
+
+- Applied one shared cream-and-gold long-rounded account frame to the existing six games and eleven account surfaces. The existing profile, edit, per-page leaderboard, progress, global search, logout, Vault, Streak and Help actions retain their current destinations and handlers; no action or provider was added.
+- The account name is now a native keyboard-accessible profile-edit button, every account action has a visible gold focus state, and long names truncate safely. Desktop keeps the centered single-row visual where space allows, Portrait wraps inside the same frame, and the existing Mobile Landscape `已登入` trigger opens a readable ordered pill menu.
+- Confirmed the exact 17-page inventory through the central `login-surface.js` owner. Classroom/teacher authorization is intentionally excluded because it is a separate access-control system rather than this player account menu. No Guest, account, Auth, Supabase or data behavior changed.
+- Restored the locked four-item Mobile bottom navigation `首頁 / 試聽 / 遊戲 / 學習` from its canonical `data/nav-template.js` owner across all 76 generated Chinese pages; `學習` retains `/my-progress.html`. Removed only the later game-switcher mutation that appended a fifth Vault item; Vault remains in the existing six-game switcher. Local WebKit review at `320×568`, `390×844`, the `768px` boundary and `844×390` Landscape confirms the four-item bar is visible and clear in Portrait/threshold layouts while the locked short-Landscape game layout remains unobstructed.
+- The earlier Draft deploy `6a9c44353d83b52a3eb33987` is superseded because it predates the restored `學習` item. The refreshed public-files-only Draft deploy `6a9c4e2356bb087479d9b3ca` is `noindex`, connects to no provider/account/data system and carries byte-identical shared visual CSS from Source commit `3800a1e`; its Desktop, `320×568`, `390×640`, `768×600` and `844×390` visual gates pass. Account/Auth, error recovery, Login Free, shared-game, nav consistency and Mobile Landscape regressions pass, plus JavaScript syntax, whitespace and the complete `1,075`-file site gate. Lin's Human visual decision is required before merge; Production remains unchanged.
+
+**Prior update: 2026-09-05 Asia/Bangkok** — Reading option and score-evidence repair
 
 ## 2026-09-05 — Reading option and score-evidence repair (`SOURCE_PASS / PREVIEW_PASS / PRODUCTION_UNCHANGED`)
 
