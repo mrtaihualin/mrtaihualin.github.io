@@ -2641,3 +2641,10 @@ node scripts/check-site.js
 - Narrow-screen refinement: removed the nested Account/Search borders, bounded the expanded Desktop field to `320px`, and added a touch-mobile layout that fits the available width without horizontal overflow or iOS input zoom.
 - The expanded search owns a full safe row below `700px`, preventing the signed-in identity/actions from being centered off-screen while keeping the closed Account Bar compact.
 - Human-review frame correction restores the outer gold Login Bar background, border, and rounded corners while keeping the nested Account/Search surfaces borderless and preserving the narrow-screen safe row.
+
+# 2026-09-05 — Game Center canonical Streak display
+
+- Loaded the existing authenticated `GAME_ACCOUNT` facade on `games.html` so its visible Streak is replaced by the canonical server status instead of remaining at the initial `0`.
+- Reused the read-only `practice-events` gamification-status action without loading or flushing the gameplay report queue on the non-game page.
+- Bound the response to the current account and auth-owner epoch so a late response cannot cross an account switch. No score, SRS, personal-content, provider, database, or Production mutation is part of this Source/Preview Delta.
+- Verification: Free gamification `23/23`, owner-switch races `12/12`, Auth session `15/15`, Minimum Guest launch PASS, and the full `1,075`-file site gate PASS.
