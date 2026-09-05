@@ -12,6 +12,7 @@ const mobileLandscapeCss = fs.readFileSync(path.join(root, 'css/mobile-landscape
 const sharedJs = fs.readFileSync(path.join(root, 'js/core/shared.js'), 'utf8');
 const sharedMin = fs.readFileSync(path.join(root, 'js/core/shared.min.js'), 'utf8');
 const switcherJs = fs.readFileSync(path.join(root, 'js/games/game-switcher.js'), 'utf8');
+const navTemplateJs = fs.readFileSync(path.join(root, 'data/nav-template.js'), 'utf8');
 const wordMenuJs = fs.readFileSync(path.join(root, 'js/games/word-menu.js'), 'utf8');
 const games = [
   { id: 'tone', html: 'tone-finder.html', app: 'js/games/tone-finder-game.js', howto: 'tf-howto-modal', resume: 'tf-resume-banner' },
@@ -199,10 +200,18 @@ test('shared switcher renders the fixed six games plus 我的單字庫 in canoni
   assert.match(switcherJs, /var CORE6_TABS = CORE5_TABS\.concat\([\s\S]{0,180}id: 'lego'/, 'fixed game switcher must include Lego sixth');
   assert.match(switcherJs, /var tabs = CORE6_TABS\.concat\(\[VAULT_TAB\]\)/, 'every game must use the same six-game menu plus library route');
   assert.match(switcherJs, /var VAULT_TAB = \{ id: 'vault', href: 'vault\.html', label: '🔖 我的單字庫'/, 'all game switchers must append the approved library route');
-  assert.match(switcherJs, /data-vault-portrait-entry/, 'Portrait bottom navigation must expose the additional Vault route');
-  assert.match(switcherJs, /DOMContentLoaded[\s\S]{0,180}addPortraitVaultEntry/, 'Portrait Vault route must wait for late bottom-navigation markup');
+  assert.doesNotMatch(switcherJs, /data-vault-portrait-entry|addPortraitVaultEntry/, 'Game switcher must not add a fifth item to the canonical mobile bottom navigation');
   assert.match(switcherJs, /if \(current === 'vault'\) tabs = tabs\.filter/, 'Vault must not render a self entry');
   assert.match(switcherJs, /role="menuitem" aria-current="page"/);
+});
+
+test('mobile bottom navigation keeps the canonical four actions and safe clearance', () => {
+  const bottomNavBlock = navTemplateJs.slice(navTemplateJs.indexOf('var BOTTOM_NAV_ITEMS'), navTemplateJs.indexOf('// ── ของพิเศษเฉพาะบางหน้า'));
+  const labels = Array.from(bottomNavBlock.matchAll(/label: '([^']+)'/g), (match) => match[1]);
+  assert.deepStrictEqual(labels, ['首頁', '試聽', '遊戲', '學習']);
+  assert.match(bottomNavBlock, /label: '學習', href: '\/my-progress\.html'/);
+  assert.match(sharedCss, /@media\(max-width:768px\)\{#bottom-nav\{display:flex;\}body\{padding-bottom:60px;\}\}/, 'Mobile bottom navigation must remain visible with content clearance');
+  assert.match(sharedCss, /#bottom-nav\{[^}]*bottom:0;[^}]*padding-bottom:env\(safe-area-inset-bottom\)/, 'Mobile bottom navigation must stay anchored above the safe area');
 });
 
 test('floating controls use the locked switcher, focus and More Menu copy', () => {
@@ -884,7 +893,7 @@ test('Tone mobile touch surfaces keep Desktop gameplay free of keyboard-only cop
   assert.match(tone.htmlText, /\.tf-page \{[\s\S]{0,100}padding-top:10px;/, 'Portrait must not count the fixed navigation height twice above the Tone title');
   assert.match(tone.htmlText, /\.tf-result-login-card \{[\s\S]{0,180}padding-top:12px !important; padding-bottom:12px !important;[\s\S]{0,100}line-height:1\.5 !important;/, 'Portrait Result login card must keep equal top and bottom spacing');
   assert.match(tone.htmlText, /\.tf-result-login-card button \{[\s\S]{0,100}display:block; margin:9px auto 0 !important;/, 'Portrait Result login button must stay visibly separated from its copy');
-  assert.match(tone.htmlText, /game-switcher\.js\?v=7/, 'Tone must request the fixed six-game switcher');
+  assert.match(tone.htmlText, /game-switcher\.js\?v=8/, 'Tone must request the fixed six-game switcher');
   assert.match(tone.htmlText, /點選 1–5 就可以。/, 'Portrait Tour must not advertise computer keyboard controls');
 });
 

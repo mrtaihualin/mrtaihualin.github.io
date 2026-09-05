@@ -2,12 +2,13 @@
 
 **Updated: 2026-09-05 Asia/Bangkok** — FB-01 shared account-menu visual system
 
-## 2026-09-05 — FB-01 shared account-menu visual system (`SOURCE_PASS / LOCAL_VISUAL_PASS / PREVIEW_PASS / PRODUCTION_UNCHANGED`)
+## 2026-09-05 — FB-01 shared account-menu visual system (`SOURCE_PASS / LOCAL_VISUAL_PASS / PREVIEW_REFRESH_PENDING / PRODUCTION_UNCHANGED`)
 
 - Applied one shared cream-and-gold long-rounded account frame to the existing six games and eleven account surfaces. The existing profile, edit, per-page leaderboard, progress, global search, logout, Vault, Streak and Help actions retain their current destinations and handlers; no action or provider was added.
 - The account name is now a native keyboard-accessible profile-edit button, every account action has a visible gold focus state, and long names truncate safely. Desktop keeps the centered single-row visual where space allows, Portrait wraps inside the same frame, and the existing Mobile Landscape `已登入` trigger opens a readable ordered pill menu.
 - Confirmed the exact 17-page inventory through the central `login-surface.js` owner. Classroom/teacher authorization is intentionally excluded because it is a separate access-control system rather than this player account menu. No Guest, account, Auth, Supabase or data behavior changed.
-- Local and network-isolated Netlify Draft visual review passed at Desktop `720×620`, Portrait `390×640` with a long name, and Landscape `844×390`; Draft deploy `6a9c44353d83b52a3eb33987` returns HTTP `200`, is `noindex`, and its shared visual CSS bytes match Source commit `163c279`. Account/Auth, error recovery, Login Free, shared-game and Mobile Landscape regressions pass, plus JavaScript syntax, whitespace and the complete `1,075`-file site gate. Merge and Production remain blocked pending Lin's Human visual decision.
+- Restored the locked four-item Mobile bottom navigation `首頁 / 試聽 / 遊戲 / 學習` from its canonical `data/nav-template.js` owner across all 76 generated Chinese pages; `學習` retains `/my-progress.html`. Removed only the later game-switcher mutation that appended a fifth Vault item; Vault remains in the existing six-game switcher. Local WebKit review at `320×568`, `390×844`, the `768px` boundary and `844×390` Landscape confirms the four-item bar is visible and clear in Portrait/threshold layouts while the locked short-Landscape game layout remains unobstructed.
+- The earlier Draft deploy `6a9c44353d83b52a3eb33987` is superseded because it predates the restored `學習` item. Account/Auth, error recovery, Login Free, shared-game, nav consistency and Mobile Landscape regressions pass, plus JavaScript syntax, whitespace and the complete `1,075`-file site gate. A refreshed Draft Preview and Lin's Human visual decision are required before merge; Production remains unchanged.
 
 **Prior update: 2026-09-05 Asia/Bangkok** — Reading option and score-evidence repair
 

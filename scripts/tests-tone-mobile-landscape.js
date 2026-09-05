@@ -42,7 +42,7 @@ test('all pages bind the shared landscape system and the four in-scope games sha
     assert.match(html, new RegExp(`css/mobile-landscape\\.css\\?v=${fourGame ? 61 : 35}`), `${file}: wrong shared Landscape CSS version`);
     const controllerVersion = fourGame ? 35 : paused ? 25 : 26;
     assert.match(html, new RegExp(`js/core/mobile-landscape\\.js\\?v=${controllerVersion}`), `${file}: wrong scoped controller version`);
-    assert.match(html, /js\/games\/game-switcher\.js\?v=7/, `${file}: missing fixed six-game navigation`);
+    assert.match(html, /js\/games\/game-switcher\.js\?v=8/, `${file}: missing fixed six-game navigation`);
   }
   assert.doesNotMatch(read('tone-finder.html'), /tone-mobile-landscape\.(?:css|js)/);
 });
