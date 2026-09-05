@@ -1,6 +1,11 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-09-06 Asia/Bangkok** — FB-02 Step 1 Tone derivation states
+**Updated: 2026-09-06 Asia/Bangkok** — FB-02 Step 2 shared 玩法 states
+
+## 2026-09-06 — FB-02 Step 2 shared 玩法 states (`SOURCE_PASS / PRODUCTION_UNCHANGED`)
+
+- Verified the real Tone, Typing, Reading and Word Order `玩法` dialogs in both collapsed and expanded states. All eight reviewed states keep their original content, close/action nodes and detail toggles inside the existing bounded, vertically scrollable shared Landscape shell.
+- The focused shared-`玩法` check passes `9/9`. This checkpoint adds regression evidence only; gameplay source, cache versions, deployment, Production, Supabase/Auth and account/data remain unchanged.
 
 ## 2026-09-06 — FB-02 Step 1 Tone derivation states (`SOURCE_PASS / PRODUCTION_UNCHANGED`)
 
