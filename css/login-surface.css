@@ -63,11 +63,11 @@ html body [data-reading-login-component="row"] > #rg-profile-wrap {
   max-width: 640px !important;
   min-height: 0 !important;
   margin: 0 auto !important;
-  padding: 8px 0 !important;
+  padding: 10px 12px !important;
   box-sizing: border-box !important;
-  background: transparent !important;
-  border: 0 !important;
-  border-radius: 0 !important;
+  background: #FAF4E8 !important;
+  border: 1.5px solid #C8973A !important;
+  border-radius: 16px !important;
   font-family: 'Noto Sans TC', sans-serif !important;
   font-size: 12.5px !important;
 }

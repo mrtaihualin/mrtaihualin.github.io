@@ -2608,3 +2608,4 @@ node scripts/check-site.js
 - Human-review refinement: `✏️ 編輯`, `🏆 排行`, and `📊 進度` now share the Ranking action color, while the compact Search icon uses a small tinted circular surface so it remains discoverable before expansion.
 - Narrow-screen refinement: removed the nested Account/Search borders, bounded the expanded Desktop field to `320px`, and added a touch-mobile layout that fits the available width without horizontal overflow or iOS input zoom.
 - The expanded search owns a full safe row below `700px`, preventing the signed-in identity/actions from being centered off-screen while keeping the closed Account Bar compact.
+- Human-review frame correction restores the outer gold Login Bar background, border, and rounded corners while keeping the nested Account/Search surfaces borderless and preserving the narrow-screen safe row.
