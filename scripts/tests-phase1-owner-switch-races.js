@@ -339,20 +339,20 @@ test('Five games expose Login Free with owner-safe account runtimes while Paid a
     const html = read(page);
     assert.match(html, /phase1-canonical-state\.js\?v=2/, page + ' canonical runtime active');
     assert.match(html, /game-account\.js\?v=6/, page + ' GameAccount runtime active');
-    assert.match(html, /reading-auth\.js\?v=33/, page + ' Login Free account runtime');
+    assert.match(html, /reading-auth\.js\?v=34/, page + ' Login Free account runtime');
     assert.match(html, /practice-events\.js\?v=3/, page + ' durable report runtime');
     assert.match(html, /learning-review\.js\?v=1/, page + ' Review runtime');
   }
   const reading = read('reading-game.html');
   assert.match(reading, /phase1-canonical-state\.js\?v=2/, 'reading canonical runtime active');
   assert.match(reading, /game-account\.js\?v=6/, 'reading GameAccount runtime active');
-  assert.match(reading, /reading-auth\.js\?v=33/, 'reading Login Free account runtime');
+  assert.match(reading, /reading-auth\.js\?v=34/, 'reading Login Free account runtime');
   assert.match(read('js/games/reading-auth.js'), /API\.user = publicLoginOnly \? null : loginUser/);
   for (const page of ['my-progress.html', 'vault.html']) {
     assert.match(read(page), /phase1-canonical-state\.js\?v=2/, page + ' canonical cache');
   }
   for (const page of ['vault.html']) {
-    assert.match(read(page), /reading-auth\.js\?v=33/, page + ' reading-auth cache');
+    assert.match(read(page), /reading-auth\.js\?v=34/, page + ' reading-auth cache');
   }
   assert.doesNotMatch(read('lego.html'), /game-account\.js/);
   assert.match(read('tone-finder.html'), /tone-finder-game\.min\.js\?v=83/);

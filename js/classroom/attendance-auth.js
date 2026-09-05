@@ -667,6 +667,7 @@ function setTeacherLoginMsg(msg, isErr) {
 }
 
 function renderTeacherLogin() {
+  if (teacherOtpRetryTimer) { clearInterval(teacherOtpRetryTimer); teacherOtpRetryTimer = null; }
   document.getElementById('studentNameDisplay').textContent = '';
   document.getElementById('mainContainer').innerHTML =
     '<div class="card" style="max-width:380px;margin:30px auto;padding:28px 24px;">' +
@@ -674,7 +675,7 @@ function renderTeacherLogin() {
       '<p style="font-size:0.85rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;">此頁面僅限老師本人。請以註冊信箱收取驗證碼登入（每台裝置登入一次即可，之後自動保持登入）。</p>' +
       '<div id="tLoginStep1">' +
         '<input id="tLoginEmail" type="email" autocomplete="email" placeholder="老師信箱" value="' + TEACHER_EMAIL + '" style="width:100%;padding:11px;border:1px solid #e9dcb8;border-radius:9px;margin:10px 0;font-size:0.95rem;box-sizing:border-box;" />' +
-        '<button class="btn-add-student" style="width:100%;" onclick="teacherSendOtp()">寄送驗證碼</button>' +
+        '<button id="tLoginSendOtp" class="btn-add-student" style="width:100%;" onclick="teacherSendOtp()">寄送驗證碼</button>' +
       '</div>' +
       '<div id="tLoginStep2" style="display:none;">' +
         '<input id="tLoginCode" type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="輸入信中的驗證碼" style="width:100%;padding:11px;border:1px solid #e9dcb8;border-radius:9px;margin:10px 0;font-size:1.05rem;letter-spacing:3px;text-align:center;box-sizing:border-box;" />' +
@@ -686,11 +687,37 @@ function renderTeacherLogin() {
 }
 
 var teacherOtpChallengeId = '';
+var teacherOtpRetryTimer = null;
+
+function startTeacherOtpRetryCountdown(requestStartedAt) {
+  if (teacherOtpRetryTimer) clearInterval(teacherOtpRetryTimer);
+  var elapsedMs = Math.max(0, Date.now() - Number(requestStartedAt || Date.now()));
+  var remaining = Math.max(1, Math.ceil((60000 - elapsedMs) / 1000));
+  function tick() {
+    var btn = document.getElementById('tLoginSendOtp');
+    if (!btn) { clearInterval(teacherOtpRetryTimer); teacherOtpRetryTimer = null; return; }
+    if (remaining > 0) {
+      btn.disabled = true;
+      btn.textContent = '請稍候再試 (' + remaining + ' 秒)';
+      setTeacherLoginMsg('暫時無法寄送驗證碼，請稍後再試（剩餘 ' + remaining + ' 秒）', true);
+      remaining--;
+      return;
+    }
+    clearInterval(teacherOtpRetryTimer);
+    teacherOtpRetryTimer = null;
+    btn.disabled = false;
+    btn.textContent = '寄送驗證碼';
+    setTeacherLoginMsg('現在可以重新寄送驗證碼', false);
+  }
+  tick();
+  teacherOtpRetryTimer = setInterval(tick, 1000);
+}
 
 async function teacherSendOtp() {
   var email = (document.getElementById('tLoginEmail').value || '').trim();
   if (email.toLowerCase() !== TEACHER_EMAIL) { setTeacherLoginMsg('此信箱無權限登入', true); return; }
   if (!window.EmailOtpClient) { setTeacherLoginMsg('登入服務尚未就緒，請稍後再試', true); return; }
+  var requestStartedAt = Date.now();
   setTeacherLoginMsg('寄送中…⏳', false);
   var res;
   try {
@@ -699,10 +726,10 @@ async function teacherSendOtp() {
       turnstileContainer: document.getElementById('tLoginTurnstile')
     });
   } catch (error) {
-    setTeacherLoginMsg('暫時無法寄送驗證碼，請稍後再試', true);
+    startTeacherOtpRetryCountdown(requestStartedAt);
     return;
   }
-  if (res && res.error) { setTeacherLoginMsg('暫時無法寄送驗證碼，請稍後再試', true); return; }
+  if (res && res.error) { startTeacherOtpRetryCountdown(requestStartedAt); return; }
   teacherOtpChallengeId = res && res.data && res.data.challenge_id || '';
   document.getElementById('tLoginStep1').style.display = 'none';
   document.getElementById('tLoginStep2').style.display = 'block';

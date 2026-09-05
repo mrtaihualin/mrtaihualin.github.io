@@ -420,9 +420,10 @@
     el.textContent = msg;
   }
   function startOtp(email, isResend) {
-    if (otpRequestPending) return;
+    if (otpRequestPending || otpCooldown > 0) return;
     email = (email || '').trim();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { setMsg('Email 格式不正確', true); return; }
+    var requestStartedAt = Date.now();
     otpEmail = email;
     var flowEpoch = ++otpFlowEpoch;
     otpRequestPending = true;
@@ -438,7 +439,8 @@
       if (flowEpoch !== otpFlowEpoch) return;
       finishRequest();
       // Keep the public response generic. Account existence and provider details must not leak here.
-      setMsg('暫時無法寄送驗證碼，請稍後再試', true);
+      var remaining = Math.max(1, Math.ceil((60000 - (Date.now() - requestStartedAt)) / 1000));
+      startCooldown(remaining, requestBtn, true);
       trackLogin('login_fail', 'email', { step: isResend ? 'resend' : 'send', reason: String(error && error.message || error || '').slice(0, 90) });
     }
     var challengePromise = otpBrokerEnabled()
@@ -469,7 +471,7 @@
         var sBtn = rgGate.querySelector('#rg-send'); if (sBtn) sBtn.style.display = 'none';
         setMsg('驗證碼已寄到 ' + esc(email) + '，請查看信箱（含垃圾信匣）', false);
         var ci = rgGate.querySelector('#rg-code'); if (ci) ci.focus();
-        startCooldown();
+        startCooldown(60, null, false);
       }, failRequest).catch(failRequest);
   }
   function verifyCode(code) {
@@ -535,19 +537,26 @@
         // สำเร็จ → onAuthStateChange → setUser → closeGate ปิดให้เอง
       }, failVerify).catch(failVerify);
   }
-  function startCooldown() {
-    otpCooldown = 60;
+  function startCooldown(seconds, targetButton, showFailureMessage) {
+    otpCooldown = Math.max(1, Math.floor(Number(seconds) || 60));
     if (otpTimer) clearInterval(otpTimer);
+    var defaultLabel = targetButton && targetButton.id === 'rg-send' ? '寄送驗證碼 →' : '重新寄送驗證碼';
     function tick() {
-      var b = rgGate && rgGate.querySelector('#rg-resend');
+      var b = targetButton || (rgGate && rgGate.querySelector('#rg-resend'));
       if (!b) { clearInterval(otpTimer); return; }
       if (otpCooldown > 0) {
         var mins = Math.floor(otpCooldown / 60);
         var secs = String(otpCooldown % 60); if (secs.length < 2) secs = '0' + secs;
         b.disabled = true; b.style.opacity = '0.5'; b.style.cursor = 'default';
-        b.textContent = '重新寄送 (' + mins + ':' + secs + ')'; otpCooldown--;
+        b.textContent = '請稍候再試 (' + mins + ':' + secs + ')';
+        if (showFailureMessage) setMsg('暫時無法寄送驗證碼，請稍後再試（剩餘 ' + mins + ':' + secs + '）', true);
+        otpCooldown--;
       }
-      else { clearInterval(otpTimer); otpTimer = null; b.disabled = false; b.style.opacity = '1'; b.style.cursor = 'pointer'; b.textContent = '重新寄送驗證碼'; }
+      else {
+        clearInterval(otpTimer); otpTimer = null;
+        b.disabled = false; b.style.opacity = '1'; b.style.cursor = 'pointer'; b.textContent = defaultLabel;
+        if (showFailureMessage) setMsg('現在可以重新寄送驗證碼', false);
+      }
     }
     tick();
     otpTimer = setInterval(tick, 1000);

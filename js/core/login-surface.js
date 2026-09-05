@@ -69,7 +69,7 @@
     return loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2', function () { return !!window.supabase; })
       .then(function () { return loadScript('js/core/supabase-config.js?v=9', function () { return !!window.SUPABASE_CONFIG; }); })
       .then(function () { return loadScript('js/core/auth-widget.js?v=19', function () { return !!window.SITE_AUTH; }); })
-      .then(function () { return loadScript('js/games/reading-auth.js?v=33', function () { return !!window.READING_AUTH; }); });
+      .then(function () { return loadScript('js/games/reading-auth.js?v=34', function () { return !!window.READING_AUTH; }); });
   }
 
   function visibleSlot() {

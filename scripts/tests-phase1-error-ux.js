@@ -176,14 +176,14 @@ test('Core 5 expose Login Core and retain audio recovery', () => {
   ['tone-finder.html','listening-game.html','typing-game.html','word-order.html'].forEach((page) => {
     const html = read(page);
     assert.match(html, /auth-widget\.js\?v=19/);
-    assert.match(html, /reading-auth\.js\?v=33/);
+    assert.match(html, /reading-auth\.js\?v=34/);
     assert.match(html, /game-account\.js\?v=6/);
     assert.match(html, /practice-events\.js\?v=3/);
     assert.match(html, /protected-word-audio\.js\?v=3/);
   });
   const reading = read('reading-game.html');
   assert.match(reading, /auth-widget\.js\?v=19/);
-  assert.match(reading, /reading-auth\.js\?v=33/);
+  assert.match(reading, /reading-auth\.js\?v=34/);
   assert.match(reading, /game-account\.js\?v=6/);
   assert.match(reading, /learning-summary\.js\?v=1/);
   assert.match(reading, /practice-events\.js\?v=3/);
