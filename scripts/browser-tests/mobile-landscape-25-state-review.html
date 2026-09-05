@@ -189,7 +189,8 @@
           return response.text();
         }).then(function (html) {
           html = html.replace('<head>', '<head><base href="' + new URL('../../', location.href).href + '">');
-          html = html.replace(/(<script src="js\/games\/game-content-client\.js\?v=\d+"><\/script>)/, function (tag) { return tag + makeOverride(state); });
+          var clientPattern = /game-content-client\.js\?v=\d+"><\/script>/;
+          html = html.replace(clientPattern, function (tag) { return tag + makeOverride(state); });
           frame.onload = async function () {
             try {
               var doc = frame.contentDocument;

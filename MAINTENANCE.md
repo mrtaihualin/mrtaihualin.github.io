@@ -1,6 +1,11 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-09-06 Asia/Bangkok** — FB-02 Step 4 combined 25-state review
+**Updated: 2026-09-06 Asia/Bangkok** — FB-02 Step 5 responsive regression
+
+## 2026-09-06 — FB-02 Step 5 responsive regression (`SOURCE_PASS / LOCAL_BROWSER_PASS / PRODUCTION_UNCHANGED`)
+
+- Added a self-contained real-source regression for Tone, Typing, Reading and Word Order across 844×390 Landscape, 390×844 Portrait and 1280×800 Desktop. All `12/12` states preserve the account strip, restore its original owner outside Landscape, keep the canonical four-item mobile bottom navigation only on Portrait, and remain free of horizontal overflow.
+- Focused Mobile Landscape checks, Login Free integration, account-audit integrity and all `53` shared-game-system regressions pass. The complete `1,081`-file site gate passes. Merge, deployment, Production, Supabase/Auth and account/data remain unchanged.
 
 ## 2026-09-06 — FB-02 Step 4 combined 25-state review (`LOCAL_PREVIEW_PASS / PRODUCTION_UNCHANGED`)
 
