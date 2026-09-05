@@ -24,7 +24,7 @@ function ok(value, message) {
 
 activePages.concat(['vault.html', 'games-challenge.html']).forEach(function (file) {
   var html = read(file);
-  var binding = 'js/core/minimum-guest-launch.js?v=22';
+  var binding = 'js/core/minimum-guest-launch.js?v=23';
   ok(html.indexOf(binding) !== -1, file + ' loads the current Login-entry launch gate');
   ok(html.indexOf(binding) < html.indexOf('</head>'), file + ' loads the launch gate in head');
 });
@@ -35,8 +35,8 @@ var gate = read('js/core/minimum-guest-launch.js');
 ok(gate.indexOf('MRT_MINIMUM_GUEST_LAUNCH = true') !== -1, 'launch flag is explicit');
 ok(gate.indexOf('LOGIN_FREE_SRS_PUBLIC_ENTRY = true') !== -1, 'Login Free SRS entry flag is explicit');
 ok(gate.indexOf('LOGIN_FREE_ACCOUNT_PUBLIC_ENTRY = true') !== -1, 'Login Free account entry flag is explicit');
-ok(gate.indexOf("login-surface.js?v=13") !== -1, 'Login surface cache key activates the account-aware client');
-ok(gate.indexOf("login-surface.css?v=13") !== -1, 'Login surface stylesheet cache key activates the aligned account actions');
+ok(gate.indexOf("login-surface.js?v=14") !== -1, 'Login surface cache key activates the account-aware client');
+ok(gate.indexOf("login-surface.css?v=14") !== -1, 'Login surface stylesheet cache key activates the account-menu visual system');
 ok(gate.indexOf("repeat(4,minmax(0,1fr))") !== -1 && gate.indexOf('@media(max-width:959px)') !== -1,
   'Game Hub keeps four equal desktop destinations and a two-column compact layout');
 ok(gate.indexOf('MRT_PARKED_ACCOUNT_SURFACE = parked.test(path)') !== -1, 'parked account surfaces remain fail-closed');

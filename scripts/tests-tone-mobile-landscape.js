@@ -39,8 +39,8 @@ test('all pages bind the shared landscape system and the four in-scope games sha
     assert.match(html, /js\/games\/thai-keyboard\.js\?v=2/, `${file}: missing shared split keyboard`);
     const paused = game === 'listening' || game === 'lego';
     const fourGame = game === 'tone' || game === 'reading' || game === 'typing' || game === 'word-order';
-    assert.match(html, new RegExp(`css/mobile-landscape\\.css\\?v=${fourGame ? 60 : 34}`), `${file}: wrong shared Landscape CSS version`);
-    const controllerVersion = fourGame ? 34 : paused ? 24 : 25;
+    assert.match(html, new RegExp(`css/mobile-landscape\\.css\\?v=${fourGame ? 61 : 35}`), `${file}: wrong shared Landscape CSS version`);
+    const controllerVersion = fourGame ? 35 : paused ? 25 : 26;
     assert.match(html, new RegExp(`js/core/mobile-landscape\\.js\\?v=${controllerVersion}`), `${file}: wrong scoped controller version`);
     assert.match(html, /js\/games\/game-switcher\.js\?v=7/, `${file}: missing fixed six-game navigation`);
   }
@@ -64,9 +64,9 @@ test('four-game signed-in control reuses the Desktop account badge behind one co
   assert.match(stage, /trigger\.id = 'gsh-ml-account-trigger'/);
   assert.match(stage, /trigger\.textContent = '已登入'/);
   assert.match(stage, /badge\.setAttribute\('data-gsh-ml-account-panel', 'true'\)/);
-  assert.match(stage, /positionPanelBelow\(trigger, badge, 190\)/);
+  assert.match(stage, /positionPanelBelow\(trigger, badge, 224\)/);
   assert.doesNotMatch(stage, /className = 'sa-(?:nick|edit|logout)'/);
-  assert.match(read('js/core/auth-widget.js'), /class="sa-nick"[\s\S]{0,600}class="sa-edit"[\s\S]{0,600}class="sa-logout"/);
+  assert.match(read('js/core/auth-widget.js'), /class="sa-nick"[\s\S]{0,600}class="sa-account-action sa-edit"[\s\S]{0,800}class="sa-account-action sa-logout"/);
   assert.match(css, /#gsh-ml-account-trigger[\s\S]{0,1400}#sa-badge-rg-login-slot/);
   assert.match(css, /\.sa-edit::after[\s\S]{0,100}編輯個人檔案/);
 });
@@ -91,7 +91,7 @@ test('Reading reuses Tone menu presentation without replacing Reading menu conte
   assert.ok(css.includes('body.gsh-ml-active #game-switcher[data-gsh-ml-utility-panel] .gs-tab'));
   assert.ok(css.includes('body.gsh-ml-active .grw-menu[data-gsh-ml-utility-panel] .grw-item'));
   assert.match(stage, /game === 'reading'[\s\S]{0,900}labeledNode\('#rg-howto-btn', '玩法', '📖'\)[\s\S]{0,900}labeledNode\('#rg-en-toggle', '英文讀音', '🔤'\)[\s\S]{0,900}labeledNode\('#rg-particle-toggle', '禮貌詞', '🙏'\)/);
-  assert.match(read('reading-game.html'), /css\/mobile-landscape\.css\?v=60/);
+  assert.match(read('reading-game.html'), /css\/mobile-landscape\.css\?v=61/);
 });
 
 test('all six Resume screens reuse Tone 640px geometry and exact three-action copy', () => {
@@ -101,7 +101,7 @@ test('all six Resume screens reuse Tone 640px geometry and exact three-action co
   for (const [game, file] of pages) {
     const html = read(file);
     const fourGame = game === 'tone' || game === 'reading' || game === 'typing' || game === 'word-order';
-    assert.match(html, new RegExp(`css/mobile-landscape\\.css\\?v=${fourGame ? 60 : 34}`), `${file}: must load its current shared Resume CSS`);
+    assert.match(html, new RegExp(`css/mobile-landscape\\.css\\?v=${fourGame ? 61 : 35}`), `${file}: must load its current shared Resume CSS`);
     assert.match(html, new RegExp(`js/core/shared\\.min\\.js\\?v=${fourGame ? 50 : 47}`), `${file}: must load exact Resume copy`);
   }
   const shared = read('js/core/shared.js');

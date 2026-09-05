@@ -58,16 +58,17 @@ html body [data-reading-login-component="row"] > #rg-profile-wrap {
   flex-wrap: wrap !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 8px !important;
+  gap: 9px !important;
   width: 100% !important;
   max-width: 640px !important;
   min-height: 0 !important;
   margin: 0 auto !important;
-  padding: 10px 12px !important;
+  padding: 11px 14px !important;
   box-sizing: border-box !important;
   background: #FAF4E8 !important;
-  border: 1.5px solid #C8973A !important;
-  border-radius: 16px !important;
+  border: 2px solid #C8973A !important;
+  border-radius: 26px !important;
+  box-shadow: 0 4px 14px rgba(139, 99, 16, 0.10) !important;
   font-family: 'Noto Sans TC', sans-serif !important;
   font-size: 12.5px !important;
 }
@@ -76,22 +77,25 @@ html body [data-reading-login-component="row"] > #rg-profile-wrap {
   align-items: center !important;
   justify-content: center !important;
   margin: 0 !important;
-  flex: 0 0 auto !important;
+  flex: 0 1 auto !important;
+  min-width: 0 !important;
 }
 [data-reading-login-component="row"] .tf-streak-chip {
   display: inline-flex !important;
   align-items: center !important;
   gap: 4px !important;
+  min-height: 31px !important;
   padding: 5px 12px !important;
-  border: 0 !important;
+  border: 1px solid rgba(200, 151, 58, 0.48) !important;
   border-radius: 999px !important;
-  background: rgba(139, 99, 16, 0.10) !important;
+  background: rgba(255, 255, 255, 0.72) !important;
   color: #7a5510 !important;
   box-shadow: none !important;
   font-family: 'Noto Sans TC', sans-serif !important;
   font-size: 12px !important;
   font-weight: 700 !important;
-  line-height: 1 !important;
+  line-height: 1.15 !important;
+  box-sizing: border-box !important;
 }
 
 /* The Vault companion is a chip-style action, not an inline text link. */
@@ -124,6 +128,9 @@ html body [data-reading-login-component="row"] > #rg-profile-wrap {
 }
 
 [data-reading-login-component="row"] .sa-account-bar {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
   flex-wrap: wrap;
   justify-content: center;
   max-width: 100%;
@@ -134,31 +141,98 @@ html body [data-reading-login-component="row"] > #rg-profile-wrap {
   border-radius: 0 !important;
   box-shadow: none !important;
 }
+[data-reading-login-component="row"] .sa-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  box-sizing: border-box;
+  border: 1px solid rgba(200, 151, 58, 0.48);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  color: #5C4410;
+  font-size: 17px;
+  line-height: 1;
+}
+[data-reading-login-component="row"] .sa-badge-pin {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+[data-reading-login-component="row"] .sa-nick {
+  display: inline-block;
+  max-width: 180px !important;
+  min-width: 0;
+  margin: 0;
+  padding: 4px 3px;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  color: #5C4410 !important;
+  font: 800 13.5px/1.25 'Noto Sans TC', sans-serif !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
 [data-reading-login-component="row"] .sa-edit,
 [data-reading-login-component="row"] a[title="排行榜"],
-[data-reading-login-component="row"] a[title="進度"] {
-  color: #666666 !important;
+[data-reading-login-component="row"] a[title="進度"],
+[data-reading-login-component="row"] .sa-logout {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 31px;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 5px 10px !important;
+  border: 1px solid rgba(200, 151, 58, 0.48) !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, 0.72) !important;
+  color: #6A531E !important;
   font-family: 'Noto Sans TC', sans-serif !important;
-  font-size: 13px !important;
+  font-size: 12.5px !important;
   font-weight: 700 !important;
-  line-height: 1 !important;
+  line-height: 1.15 !important;
+  text-decoration: none !important;
+  white-space: nowrap;
+  cursor: pointer;
 }
 [data-reading-login-component="row"] .sa-global-search-toggle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: 0;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(200, 151, 58, 0.58);
   border-radius: 999px;
-  background: rgba(139, 99, 16, 0.10);
+  background: rgba(255, 255, 255, 0.82);
   color: #8B6310;
   padding: 0;
   font: 700 14px/1 'Noto Sans TC', sans-serif;
   cursor: pointer;
 }
+[data-reading-login-component="row"] .sa-nick:hover,
+[data-reading-login-component="row"] .sa-edit:hover,
+[data-reading-login-component="row"] a[title="排行榜"]:hover,
+[data-reading-login-component="row"] a[title="進度"]:hover,
+[data-reading-login-component="row"] .sa-global-search-toggle:hover,
+[data-reading-login-component="row"] .sa-logout:hover,
+[data-reading-login-component="row"] .tf-streak-chip:hover {
+  background: #F7E8C6 !important;
+  color: #5C4410 !important;
+}
+[data-reading-login-component="row"] .sa-nick:focus-visible,
+[data-reading-login-component="row"] .sa-edit:focus-visible,
+[data-reading-login-component="row"] a[title="排行榜"]:focus-visible,
+[data-reading-login-component="row"] a[title="進度"]:focus-visible,
 [data-reading-login-component="row"] .sa-global-search-toggle:focus-visible,
-[data-reading-login-component="row"] .sa-global-search-submit:focus-visible {
+[data-reading-login-component="row"] .sa-global-search-submit:focus-visible,
+[data-reading-login-component="row"] .sa-logout:focus-visible,
+[data-reading-login-component="row"] .tf-streak-chip:focus-visible {
   outline: 2px solid #C8973A;
   outline-offset: 2px;
 }
@@ -179,7 +253,7 @@ html body [data-reading-login-component="row"] > #rg-profile-wrap {
 [data-reading-login-component="row"] .sa-global-search-input {
   flex: 1;
   min-width: 0;
-  border: 0;
+  border: 1px solid rgba(200, 151, 58, 0.48);
   border-radius: 9px;
   padding: 7px 9px;
   color: #5C4410;
@@ -191,7 +265,7 @@ html body [data-reading-login-component="row"] > #rg-profile-wrap {
   background: #fff;
 }
 [data-reading-login-component="row"] .sa-global-search-submit {
-  border: 0;
+  border: 1px solid #C8973A;
   border-radius: 9px;
   padding: 7px 12px;
   background: #C8973A;
@@ -216,7 +290,8 @@ html body [data-reading-login-component="row"] > #rg-profile-wrap {
        (max-width: 600px) and (pointer: coarse) {
   html body [data-reading-login-component="row"] > #rg-profile-wrap {
     gap: 6px !important;
-    padding: 8px !important;
+    padding: 9px !important;
+    border-radius: 22px !important;
   }
   [data-reading-login-component="row"] #rg-login-slot {
     width: 100% !important;
@@ -225,13 +300,20 @@ html body [data-reading-login-component="row"] > #rg-profile-wrap {
   }
   [data-reading-login-component="row"] .sa-account-bar {
     width: 100%;
-    gap: 5px !important;
+    gap: 6px !important;
   }
   [data-reading-login-component="row"] .sa-nick {
-    max-width: min(38vw, 140px);
+    max-width: min(38vw, 150px) !important;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  [data-reading-login-component="row"] .sa-edit,
+  [data-reading-login-component="row"] a[title="排行榜"],
+  [data-reading-login-component="row"] a[title="進度"],
+  [data-reading-login-component="row"] .sa-logout {
+    min-height: 32px;
+    padding: 5px 9px !important;
   }
   [data-reading-login-component="row"] .sa-global-search-form {
     flex: 1 0 100%;

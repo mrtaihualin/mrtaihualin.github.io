@@ -289,7 +289,7 @@
         trigger.setAttribute('aria-expanded', 'true');
         badge.inert = false;
         badge.removeAttribute('aria-hidden');
-        positionPanelBelow(trigger, badge, 190);
+        positionPanelBelow(trigger, badge, 224);
       });
       login.prepend(trigger);
     }
@@ -303,7 +303,7 @@
     badge.inert = !open;
     if (open) {
       badge.removeAttribute('aria-hidden');
-      positionPanelBelow(trigger, badge, 190);
+      positionPanelBelow(trigger, badge, 224);
     } else {
       badge.setAttribute('aria-hidden', 'true');
     }
