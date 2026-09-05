@@ -261,17 +261,19 @@
       : '';
     var skills = SKILLS.map(function (skill) { return skillCard(skill, grouped[skill.code]); }).join('');
     root.innerHTML = warning +
-      '<section><h3 class="pg-section-title">學習進度</h3>' +
-        '<div class="pg-section-help"><div class="pg-section-help-line"><b>SRS</b>：間隔重複學習系統，依照你的練習結果顯示目前階段</div>' +
-        '<div class="pg-section-help-line"><b>Review</b>：已到複習日期、現在需要複習的項目。</div></div>' +
-        '<div class="pg-grid">' + skills + '</div></section>' +
-      '<section class="pg-section"><h3 class="pg-section-title">我的內容</h3>' +
+      '<section class="pg-search-section" aria-label="搜尋我的內容">' +
         '<form class="pg-vault-search" action="vault.html" method="get">' +
           '<label for="pg-vault-search-input">搜尋我的單詞與句子</label>' +
           '<div class="pg-vault-search-row"><input id="pg-vault-search-input" type="search" name="search" maxlength="100" autocomplete="off" required placeholder="輸入泰文、泰語讀音、羅馬拼音或中文">' +
           '<button class="pg-btn pg-btn-secondary" type="submit">搜尋</button></div>' +
           '<p class="pg-vault-search-note">搜尋結果會在此帳號的泰語單字庫顯示，不會搜尋其他人的內容。</p>' +
-        '</form><div class="pg-grid">' +
+        '</form></section>' +
+      '<section><h3 class="pg-section-title">學習進度</h3>' +
+        '<div class="pg-section-help"><div class="pg-section-help-line"><b>SRS</b>：間隔重複學習系統，依照你的練習結果顯示目前階段</div>' +
+        '<div class="pg-section-help-line"><b>Review</b>：已到複習日期、現在需要複習的項目。</div></div>' +
+        '<div class="pg-grid">' + skills + '</div></section>' +
+      '<section class="pg-section"><h3 class="pg-section-title">我的內容</h3>' +
+        '<div class="pg-grid">' +
         '<article class="pg-panel pg-content-card"><h3>🔖 我的單詞</h3><p>查看此帳號儲存的單詞，並回到支援的遊戲練習。</p><a class="pg-btn pg-btn-secondary" href="vault.html#words">查看我的單詞</a></article>' +
         '<article class="pg-panel pg-content-card"><h3>📝 我的句子</h3><p>查看此帳號儲存的句子，並回到語序遊戲練習。</p><a class="pg-btn pg-btn-secondary" href="vault.html#sentences">查看我的句子</a></article>' +
       '</div></section>' +

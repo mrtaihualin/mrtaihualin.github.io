@@ -51,13 +51,16 @@ check('學習中心มีช่องค้นหาคลังส่วนต�
   /<form class="pg-vault-search" action="vault\.html" method="get">/.test(js) &&
   /name="search" maxlength="100"/.test(js) &&
   /不會搜尋其他人的內容/.test(js));
+check('ช่องค้นหาคลังส่วนตัวอยู่ก่อน學習進度เพื่อให้เห็นทันที',
+  js.indexOf('<section class="pg-search-section"') !== -1 &&
+  js.indexOf('<section class="pg-search-section"') < js.indexOf('<section><h3 class="pg-section-title">學習進度</h3>'));
 check('ปุ่มรองคงสีทองทั้งก่อนและหลังเปิดลิงก์',
   /\.pg-btn-secondary,\.pg-btn-secondary:visited\{background:#fff;color:#8B6310\}/.test(js));
 check('Paid readiness เป็น benefit แต่ไม่มีสูตร/ปลายทางเปิด', /想知道自己的泰語實戰準備度？升級方案即可查看。/.test(js) && /查看升級方案/.test(js) && /disabled/.test(js));
 check('account switch ใช้ user id ไม่ใช่แค่ boolean auth', /var before = currentUser && currentUser\.id;[\s\S]*var after = user && user\.id/.test(js));
 check('หน้า HTML ใช้ชื่อ 學習中心 บรรทัดเดียวกึ่งกลางแบบหัวข้อเกม และ canonical summary loader',
   /<div style="width:100%;text-align:center;">[\s\S]*<h1 style="[^"]*white-space:nowrap;[^"]*font-size:clamp\(20px,4vw,28px\)[^"]*color:#8B6310;">學習中心<\/h1>/.test(html) &&
-  /learning-summary\.js\?v=1/.test(html) && /progress\.js\?v=11/.test(html));
+  /learning-summary\.js\?v=1/.test(html) && /progress\.js\?v=12/.test(html));
 check('學習中心มี Account Bar เดียวใต้หัวข้อเหมือนหน้าเกม',
   /'my-progress\.html': '\.section-wrap > div:first-child'/.test(loginSurface) &&
   /legacy\.style\.setProperty\('display', 'none', 'important'\)/.test(loginSurface));

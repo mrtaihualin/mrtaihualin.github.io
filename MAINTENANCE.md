@@ -2,6 +2,8 @@
 
 **Updated: 2026-09-05 Asia/Bangkok** — Learning Center personal-search refinement
 
+- Moved the authenticated personal-library search above `學習進度` so it is visible immediately on entering `學習中心`; the owner-scoped query, limits and destination remain unchanged.
+
 ## 2026-09-05 — Learning Center search and shared account-action alignment (`SOURCE_PASS / PREVIEW_PENDING / PRODUCTION_UNCHANGED`)
 
 - Aligned `編輯`, `排行` and `進度` to the same 13px/700 shared account-action typography while preserving the existing compact mobile labels and one neutral gray color.
