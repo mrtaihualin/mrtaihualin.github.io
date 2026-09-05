@@ -1,6 +1,11 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-09-06 Asia/Bangkok** — FB-02 Step 5 responsive regression
+**Updated: 2026-09-06 Asia/Bangkok** — FB-02 technical Preview candidate
+
+## 2026-09-06 — FB-02 technical Preview candidate (`TECHNICAL_READY / HUMAN_PENDING / PRODUCTION_UNCHANGED`)
+
+- The reviewed FB-02 source is frozen as five independently reversible Delta commits: Tone deduction states, shared `玩法`, Tone `字母練習區`, the combined 25-state real-source review, and four-game responsive regression.
+- Local Source, browser and complete site gates pass. This checkpoint authorizes only branch/MR/Preview review; merge, deployment, Production, Supabase/Auth and account/data remain unchanged pending Lin's separate approval.
 
 ## 2026-09-06 — FB-02 Step 5 responsive regression (`SOURCE_PASS / LOCAL_BROWSER_PASS / PRODUCTION_UNCHANGED`)
 
