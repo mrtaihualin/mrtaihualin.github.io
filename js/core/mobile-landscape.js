@@ -69,7 +69,12 @@
   }
 
   function slot(name) { return slots[name] || null; }
-  function reservesPositionTwoZone(game) { return POSITION_TWO_GAMES.indexOf(game) >= 0; }
+  function reservesPositionTwoZone(game) {
+    if (POSITION_TWO_GAMES.indexOf(game) < 0) return false;
+    if (game !== 'tone') return true;
+    var toneChoices = q('[data-gsh-ml-split="tone"]', stage) || q('#tf-body .tf-options, #tf-body .tf-mark-opts, #tf-body .sg-tone-grid');
+    return !toneChoices || toneChoices.classList.contains('sg-tone-grid');
+  }
 
   function makeSlot(name, tag) {
     var node = document.createElement(tag || 'div');
@@ -1304,13 +1309,13 @@
     try {
       cleanupStaleMovedNodes();
       var game = document.body.getAttribute('data-gsh-game') || '';
-      stage.setAttribute('data-gsh-ml-position-two-zone', reservesPositionTwoZone(game) ? 'reserved' : 'open');
       var exclusiveView = resolveExclusiveView(game);
       prepareExclusiveView(exclusiveView);
       mountStaticGameNodes(game);
       syncWordOrderQuestion(game);
       var listeningView = game === 'listening' ? syncListeningGameplay() : null;
       syncSplitContent(game);
+      stage.setAttribute('data-gsh-ml-position-two-zone', reservesPositionTwoZone(game) ? 'reserved' : 'open');
       syncTopActions(game);
       if (game === 'lego') syncLegoMenu();
       syncDynamicMainAction();

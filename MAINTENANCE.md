@@ -1,6 +1,13 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-09-05 Asia/Bangkok** — FB-01 shared account-menu visual system
+**Updated: 2026-09-06 Asia/Bangkok** — FB-02 Step 1 Tone derivation states
+
+## 2026-09-06 — FB-02 Step 1 Tone derivation states (`SOURCE_PASS / PRODUCTION_UNCHANGED`)
+
+- Rebound only the first Human-approved FB-02 Delta to protected GitLab `main=e7e9e007…`, without applying the preserved historical stash. Tone's five deduction layouts now open the lower-right area only when Position 2 is not part of the real state, preserving the existing choice nodes and handlers.
+- The focused Mobile Landscape source check passes. Four active games advance only the shared Landscape cache chain to CSS `v62` and controller `v36`. Shared `玩法`, Tone `字母練習區`, combined 25-state review, merge, deployment, Production, Supabase/Auth and account/data mutation remain outside this checkpoint.
+
+**Prior update: 2026-09-05 Asia/Bangkok** — FB-01 shared account-menu visual system
 
 ## 2026-09-05 — FB-01 shared account-menu visual system (`SOURCE_PASS / LOCAL_VISUAL_PASS / PREVIEW_PASS / PRODUCTION_UNCHANGED`)
 
