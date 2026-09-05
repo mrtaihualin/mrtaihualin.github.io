@@ -1,14 +1,20 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-09-05 Asia/Bangkok** — Email OTP duplicate-request defect repair
+**Updated: 2026-09-05 Asia/Bangkok** — Email OTP visible retry countdown
 
-## 2026-09-05 — Email OTP idempotent 60-second resend (`FIXED_PASS_LOCAL / PRODUCTION_UNCHANGED`)
+## 2026-09-05 — Email OTP visible retry countdown (`SOURCE_PASS / STATIC_RELEASE_PENDING`)
+
+- When an Email OTP request cannot complete, the teacher login and shared game/login modal now show a live 60-second remaining time in both the message and disabled send button, then automatically restore the retry action. Time spent waiting for the failed request is deducted from the countdown.
+- Cache bindings advance the Reading Auth owner to v34, the dynamic Login surface to v13, and the Minimum Guest launch gate to v22 so the new retry state cannot be hidden by an older browser asset. Regression coverage also proves Enter-key submission cannot bypass an active countdown.
+- Read-only aggregate Production evidence after the report showed no active cooldown, plus one accepted request, one duplicate suppression, one successful verification, and one issued session in the preceding 30 minutes; no email, OTP, HMAC, IP, or other identifying value was read. Focused OTP security `15/15`, Auth/session `15/15`, service/client `9/9`, JavaScript syntax, and the complete 1,075-file site gate pass. The static website release remains pending explicit release authorization.
+
+## 2026-09-05 — Email OTP idempotent 60-second resend (`PRODUCTION_PASS`)
 
 - Replaced the defect where an ordinary duplicate request inside 60 seconds was registered as abuse and could grow the account cooldown from 15 minutes to one hour. The database now serializes each email claim, reuses the current challenge during the 60-second window, counts only claimed provider-send attempts toward hard abuse limits, and never creates or extends cooldown from suppressed duplicates.
 - A new request after 60 seconds invalidates every older pending code before claiming the replacement. Six digits, ten-minute expiry, single use, and the fifth-wrong-attempt lock remain enforced. Hard abuse protection is now limited to ten claimed sends per email/hour, 30 claimed sends per IP/15 minutes, 100 claimed sends per IP/hour, plus the existing verification guard and Turnstile.
 - The Edge request flow sends at most once for the winning claim and returns success only after both the mailer and delivery-confirmation RPC succeed. Concurrent tabs/devices wait on the same claimed delivery; provider failure and uncertain delivery return a non-success response.
 - PostgreSQL 17 disposable validation applied the baseline, prior one-minute migration, and exact new migration, passed the SQL behavior suite, and verified the recovery script removes exactly its two RPCs and one column after restoring the prior entrypoint. Focused OTP flow `9/9`, security `15/15`, service/client `9/9`, Auth/session `15/15`, network `17/17`, error UX `16/16`, `git diff --check`, and the complete 1,074-file site gate pass. Production SQL/Auth/Edge/provider/data remain unchanged pending Lin's exact HIGH-risk approval.
-- Read-only Production metadata precheck confirmed the current request RPC exists while both new delivery RPCs and the new column are absent. The current `email-otp-auth` deployment is version 3 with JWT verification disabled; its repository source was last changed by `0a4d4a9bb82f9314002fa935a973eb2e4c5ceea8` and is preserved as the first rollback step.
+- Production now has the idempotent request/delivery RPC contract and `delivery_confirmed_at` column with browser-role execution revoked and service-role execution retained. `email-otp-auth` version 4 is ACTIVE with JWT verification disabled and its live index/helper bytes match the approved source. Transaction-rollback Production proof passed duplicate reuse, the exact 60-second boundary, old-code invalidation, latest-code verification, and fifth-wrong invalidation without persisting test data; the prior Edge version 3 and scoped SQL rollback remain preserved.
 
 ## 2026-09-03 — Strict global logout repair (`FIXED_PASS_LOCAL / PRODUCTION_UNCHANGED`)
 

@@ -100,7 +100,8 @@ test('request controls enforce one send per minute without punishing duplicates'
   assert.match(sql, /when v_previous is not null and v_previous >= p_now - interval '60 minutes' then 3600/);
   assert.match(sql, /else 900/);
   assert.match(sql, /perform private\.register_email_otp_violation\('email',[\s\S]*verify_lockout/);
-  assert.match(client, /otpCooldown = 60/);
+  assert.match(client, /startCooldown\(60, null, false\)/);
+  assert.match(client, /otpRequestPending \|\| otpCooldown > 0/);
   assert.doesNotMatch(client, /otpCooldown = otpBrokerEnabled\(\) \? 15 \* 60 : 60/);
   assert.match(resendMigration, /create or replace function public\.begin_email_otp_challenge_internal/);
   assert.match(resendMigration, /last_request_at > v_now - interval '1 minute'/);
@@ -149,6 +150,8 @@ test('public request shape is generic and cannot enumerate account existence', (
   assert.doesNotMatch(edge, /getUserByEmail|listUsers/);
   assert.doesNotMatch(edge, /user_not_found|already_registered/);
   assert.match(client, /暫時無法寄送驗證碼，請稍後再試/);
+  assert.match(client, /startCooldown\(remaining, requestBtn, true\)/);
+  assert.match(client, /剩餘 ' \+ mins \+ ':' \+ secs/);
 });
 
 test('provider failure and delivery uncertainty never return send success', () => {

@@ -68,6 +68,8 @@ test('shared Email OTP client routes non-game surfaces without a native bypass',
   assert.match(classroomAuth, /id="tLoginTurnstile"/);
   assert.match(classroomAuth, /email\.toLowerCase\(\) !== TEACHER_EMAIL/);
   assert.match(classroomAuth, /teacherOtpChallengeId/);
+  assert.match(classroomAuth, /startTeacherOtpRetryCountdown\(requestStartedAt\)/);
+  assert.match(classroomAuth, /剩餘 ' \+ remaining \+ ' 秒/);
 });
 
 test('shared client is loaded after config and before each non-game consumer', () => {
@@ -173,7 +175,7 @@ test('preserved personal Auth surfaces retain the config cache binding', () => {
   }
   for (const file of expectedReadingAuthConsumers) {
     const html = read(file);
-    assert.match(html, /js\/games\/reading-auth\.js\?v=33/);
+    assert.match(html, /js\/games\/reading-auth\.js\?v=34/);
   }
 });
 
