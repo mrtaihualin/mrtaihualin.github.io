@@ -130,7 +130,7 @@ async function main(){
     assert.doesNotMatch(html,/id="gameSearchInput"/);
   });
 
-  await test('all six Guest games park personal lifecycle listeners',()=>{
+  await test('all six games load lifecycle listeners before gameplay',()=>{
     const pages={
       'tone-finder.html':'tone-finder-game',
       'reading-game.html':'reading-game-app',
@@ -140,8 +140,8 @@ async function main(){
       'lego.html':'lego-game-app'
     };
     for(const [page,app] of Object.entries(pages)){
-      const html=read(page),game=html.lastIndexOf(app);
-      assert(game>=0 && !/study-plan(?:-core)?\.js/.test(html),page+' parks Study Plan');
+      const html=read(page),core=html.indexOf('study-plan-core.js?v=2'),plan=html.indexOf('study-plan.js?v=3'),game=html.lastIndexOf(app);
+      assert(core>=0&&plan>core&&game>plan,page+' script order');
     }
   });
 
