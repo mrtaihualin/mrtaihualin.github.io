@@ -15,6 +15,7 @@ const sql = read('supabase/migrations/' + migrationName);
 const edge = read('supabase/functions/practice-events/index.ts');
 const practice = read('js/games/practice-events.js');
 const account = read('js/games/game-account.js');
+const hubHtml = read('games.html');
 const toneEdge = read('supabase/functions/tone-round/index.ts');
 const coreApps = [
   'js/games/tone-finder-game.js',
@@ -73,6 +74,8 @@ check('Core apps contain no local Daily Streak writes or three-round daily goal'
   !/STREAK_FREEZE_EARN_EVERY\s*:/.test(coreApps));
 check('Login Free activates authoritative account and Played clients on all five games',
   coreHtml.every((html) => /game-account\.js\?v=6/.test(html) && /practice-events\.js\?v=3/.test(html)));
+check('Game Center loads the authoritative Streak facade without the report queue',
+  /game-account\.js\?v=7/.test(hubHtml) && !/practice-events\.js/.test(hubHtml));
 check('Free game markup no longer exposes Star, badge, or freeze controls',
   coreHtml.every((html) => !/(?:tf|rg)-freeze-num|(?:tf-)?star-count|(?:tf-)?badge-count|id="star-modal"|id="badge-modal"/.test(html)));
 
@@ -100,6 +103,74 @@ function accountHarness(userId) {
   return { window, store };
 }
 
+async function hubAccountHarness() {
+  const store = new Map();
+  const calls = [];
+  const client = { functions: { invoke(name, options) {
+    calls.push({ name, options });
+    return Promise.resolve({ data: { ok: true, gamification: {
+      ok: true, current_streak: 1, status_as_of: '2026-09-05', last_eligible_day: '2026-09-05'
+    } } });
+  } } };
+  const window = {
+    SITE_AUTH: { user: { id: 'user-a' }, learningOwnerEpoch: 1 },
+    READING_AUTH: { user: null },
+    getSupabaseClient() { return client; },
+    addEventListener() {}, dispatchEvent() {},
+  };
+  const context = {
+    window,
+    SITE_AUTH: window.SITE_AUTH,
+    READING_AUTH: window.READING_AUTH,
+    Promise,
+    CustomEvent: function CustomEvent() {},
+    localStorage: {
+      getItem(key) { return store.has(key) ? store.get(key) : null; },
+      setItem(key, value) { store.set(key, String(value)); },
+      removeItem(key) { store.delete(key); },
+    },
+  };
+  vm.runInNewContext(account, context, { filename: 'game-account.js' });
+  window.GAME_ACCOUNT.sync(client, 'user-a');
+  await Promise.resolve();
+  await Promise.resolve();
+  return { window, calls };
+}
+
+async function staleHubAccountHarness() {
+  const store = new Map();
+  let resolveStatus;
+  const client = { functions: { invoke() {
+    return new Promise((resolve) => { resolveStatus = resolve; });
+  } } };
+  const window = {
+    SITE_AUTH: { user: { id: 'user-a' }, learningOwnerEpoch: 1 },
+    READING_AUTH: { user: null },
+    addEventListener() {}, dispatchEvent() {},
+  };
+  const context = {
+    window,
+    SITE_AUTH: window.SITE_AUTH,
+    READING_AUTH: window.READING_AUTH,
+    Promise,
+    CustomEvent: function CustomEvent() {},
+    localStorage: {
+      getItem(key) { return store.has(key) ? store.get(key) : null; },
+      setItem(key, value) { store.set(key, String(value)); },
+      removeItem(key) { store.delete(key); },
+    },
+  };
+  vm.runInNewContext(account, context, { filename: 'game-account.js' });
+  window.GAME_ACCOUNT.sync(client, 'user-a');
+  window.SITE_AUTH.learningOwnerEpoch = 2;
+  resolveStatus({ data: { ok: true, gamification: {
+    ok: true, current_streak: 99, status_as_of: '2026-09-05'
+  } } });
+  await Promise.resolve();
+  await Promise.resolve();
+  return window.GAME_ACCOUNT.getStreak();
+}
+
 {
   const guest = accountHarness('');
   check('Guest cannot receive a streak or any retired reward',
@@ -122,6 +193,18 @@ function accountHarness(userId) {
   check('client bump compatibility cannot increment server streak',
     h.window.GAME_ACCOUNT.bumpStreakToday() === 4 && h.window.GAME_ACCOUNT.getStreak() === 4);
 }
+
+{
+  const h = await hubAccountHarness();
+  check('Game Center reads canonical Streak through the existing read-only practice-events status action',
+    h.calls.length === 1 &&
+    h.calls[0].name === 'practice-events' &&
+    h.calls[0].options.body.action === 'gamification_status' &&
+    h.window.GAME_ACCOUNT.getStreak() === 1);
+}
+
+check('Game Center ignores a late same-account Streak response after the auth owner epoch changes',
+  await staleHubAccountHarness() === 0);
 
 check('Free facade exposes no XP API or client database mutation',
   !/\b(?:addXP|getXP)\b/.test(account) && !/\.from\(['"]game_accounts['"]\)/.test(account));

@@ -76,13 +76,28 @@
     return true;
   }
 
-  function requestStatus() {
+  function requestStatus(client, expectedOwnerId) {
+    expectedOwnerId = String(expectedOwnerId || currentUserId());
+    var expectedOwnerEpoch = Number(window.SITE_AUTH && SITE_AUTH.learningOwnerEpoch) || 0;
+    if (!expectedOwnerId || expectedOwnerId !== currentUserId()) return Promise.resolve(null);
     try {
       if (window.PracticeEvents && typeof PracticeEvents.gamificationStatus === 'function') {
         return PracticeEvents.gamificationStatus();
       }
     } catch (e) {}
-    return Promise.resolve(null);
+    // Non-game account surfaces do not load the report queue. Read only the
+    // existing practice-events gamification status so the visible Streak never
+    // remains at its markup placeholder.
+    var sb = client;
+    try { if (!sb && window.getSupabaseClient) sb = window.getSupabaseClient(); } catch (e2) {}
+    if (!sb || !sb.functions || typeof sb.functions.invoke !== 'function') return Promise.resolve(null);
+    return sb.functions.invoke('practice-events', { body: { action: 'gamification_status' } }).then(function (result) {
+      if (expectedOwnerId !== currentUserId()) return null;
+      if ((Number(window.SITE_AUTH && SITE_AUTH.learningOwnerEpoch) || 0) !== expectedOwnerEpoch) return null;
+      var status = result && !result.error && result.data && result.data.ok && result.data.gamification;
+      if (!status || !consumeStatus(status, expectedOwnerId)) return null;
+      return status;
+    });
   }
 
   cleanLegacyRewards();
@@ -126,7 +141,7 @@
     // service-role Edge/RPC contract own every Daily Streak status transition.
     sync: function (_client, userId) {
       if (!userId || String(userId) !== currentUserId()) return;
-      requestStatus().catch(function () {});
+      requestStatus(_client, userId).catch(function () {});
     }
   };
 })();
