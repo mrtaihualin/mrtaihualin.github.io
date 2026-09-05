@@ -47,6 +47,22 @@ const validCases = [
 validCases.forEach((body) => assert.equal(validateScoreSubmission(body).score, body.client_score));
 console.log('VALID_SCORE=PASS (CORE5)');
 
+const reading142 = payload('reading', '初', 10, 70);
+reading142.evidence.items[2].points = 15;
+reading142.evidence.items[3].points = 15;
+reading142.evidence.items[4].points = 22;
+reading142.client_score = 142;
+const reading142Accepted = validateScoreSubmission(reading142);
+validateCanonicalScoreEvidence(reading142Accepted, reading142Accepted.evidence.items.map((entry) => ({ content_key: entry.key, level: '初', syls: [{}, {}] })));
+assert.equal(reading142Accepted.score, 142);
+const reading142MissingEvidence = structuredClone(reading142);
+reading142MissingEvidence.evidence.items[4].points = 20;
+assert.throws(
+  () => validateScoreSubmission(reading142MissingEvidence),
+  (error) => error && error.code === 'score_evidence_mismatch',
+);
+console.log('READING_ITEM_BONUS_EVIDENCE=PASS');
+
 const forged = payload('reading', '初', 10);
 forged.client_score = 5000;
 rejects(forged, 'score_evidence_mismatch');

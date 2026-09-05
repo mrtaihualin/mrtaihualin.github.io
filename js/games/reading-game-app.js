@@ -1,14 +1,15 @@
 // ════════════════════════════════════════════
 // FILE MAP: display helpers → config/state/scoring/SRS → sync + round selection → tile/answer UI → results/account → controls/analytics/init
 // TONE MARK DISPLAY HELPER
-// Draw the four Thai tone marks as standalone vectors. This avoids relying on
+// Draw every standalone mark offered by TONE_POOL as a vector. This avoids relying on
 // a hidden carrier consonant or the browser's dotted-circle fallback.
 // ════════════════════════════════════════════
 var TONE_SVG={
   '่':'<svg class="tone-drawn" width=".18em" height=".34em" viewBox="-18.6 -90.3 11.8 21.9" aria-hidden="true" focusable="false"><path d="M-18.6-68.4V-90.3H-6.8V-68.4Z"/></svg>',
   '้':'<svg class="tone-drawn" width=".48em" height=".34em" viewBox="-37.2 -97.1 40.8 28.7" aria-hidden="true" focusable="false"><path fill-rule="evenodd" d="M-6.8-95.9H3.6Q3-87.7-1.75-81.45Q-6.5-75.2-14.35-71.8Q-22.2-68.4-31.8-68.4H-36.8V-73.7Q-31.6-75.8-27.9-79.2H-28.2Q-32.3-79.2-34.75-81.6Q-37.2-84-37.2-88.2Q-37.2-92.1-34.45-94.6Q-31.7-97.1-27.5-97.1Q-23.2-97.1-20.5-94.45Q-17.8-91.8-17.8-87.4Q-17.8-84.9-18.75-82Q-19.7-79.1-21.8-76.8Q-17.6-77.9-14.25-81Q-10.9-84.1-9-88.1Q-7.1-92.1-6.8-95.9ZM-31.1-88Q-31.1-84.5-27.5-84.5Q-24-84.5-24-88Q-24-91.6-27.5-91.6Q-31.1-91.6-31.1-88Z"/></svg>',
   '๊':'<svg class="tone-drawn" width=".63em" height=".34em" viewBox="-48.3 -95.5 50.4 27.1" aria-hidden="true" focusable="false"><path fill-rule="evenodd" d="M-7.9-95.4H2.1Q2.1-82.8-4.85-75.6Q-11.8-68.4-24.9-68.4V-74.2Q-20.1-76.8-20.1-82.7Q-20.1-87.3-23.1-88.7L-29.1-84.4L-35.1-88.5Q-37.3-87.2-38.8-84.7Q-30.3-84.7-30.3-76.5Q-30.3-68.4-38.9-68.4Q-48.3-68.4-48.3-78.8Q-48.3-90.8-35.2-95.5L-29.1-91.1L-23-95.4Q-11.9-93.6-11.9-83.7Q-11.9-79.6-15-76.1Q-7.9-81.4-7.9-95.4ZM-35.8-76.5Q-35.8-79.6-39-79.6Q-42.2-79.6-42.2-76.5Q-42.2-73.3-39-73.3Q-35.8-73.3-35.8-76.5Z"/></svg>',
-  '๋':'<svg class="tone-drawn" width=".41em" height=".34em" viewBox="-27 -92.3 28.5 23.9" aria-hidden="true" focusable="false"><path d="M1.5-84.6V-76.2H-7.2V-68.4H-18.2V-76.2H-27V-84.6H-18.2V-92.3H-7.2V-84.6Z"/></svg>'
+  '๋':'<svg class="tone-drawn" width=".41em" height=".34em" viewBox="-27 -92.3 28.5 23.9" aria-hidden="true" focusable="false"><path d="M1.5-84.6V-76.2H-7.2V-68.4H-18.2V-76.2H-27V-84.6H-18.2V-92.3H-7.2V-84.6Z"/></svg>',
+  '์':'<svg class="tone-drawn" width=".42em" height=".34em" viewBox="37 -91.8 29 27" aria-hidden="true" focusable="false"><path fill-rule="evenodd" d="M50.12-78.05Q53.32-76.05 53.32-72.58Q53.32-69.3 51.09-67.17Q48.87-65.04 45.55-65.04Q42.07-65.04 39.69-66.99Q37.03-69.14 37.03-72.54V-73.24Q37.03-76.64 40.35-78.91Q42.73-80.55 46.02-81.33Q48.63-81.95 51.29-82.58Q54.26-83.44 55.94-85.12Q58.28-87.46 58.55-91.72L65.86-90Q65.86-87.7 65.16-85.78Q63.67-83.05 60.82-81.25Q58.2-79.61 52.62-78.48Q50.59-78.05 50.12-78.05ZM45.12-75.98Q41.68-75.98 41.68-72.62V-72.23Q41.68-68.79 45.12-68.79Q48.63-68.79 48.63-72.42Q48.63-75.98 45.12-75.98Z"/></svg>'
 };
 function isCombining(s){
   if(!s||s.length===0)return false;
@@ -207,6 +208,7 @@ function rgCurSyllableScore(){ try{ if(readingAttemptScore!=null)return readingA
 var HIGH_RAW_START_IDX=7;      // 0-based → พยางค์ที่ 8 เป็นต้นไป (เฉพาะ高／ประโยคยาว) ไม่เอาเข้าเฉลี่ย ไม่คูณ weight
 var HIGH_RAW_BONUS_PER_SYL=2;  // +2 ดิบ/พยางค์ (ถ้าพยางค์นั้นถูกในที่สุด — ไม่สเกลตามจำนวนผิด)
 var readingAttemptScore=null;  // Phase 1: snapshot จาก 檢查 ครั้งแรกเท่านั้น; correction ห้ามเขียนทับ
+var readingSyllableBonusAwarded=0; // included in the authoritative per-item score evidence
 var readingFirstCheckWrongCounts=null; // primitive evidence for server verifier; never a client-computed score
 var readingCorrectionAttempts=0;
 var readingFirstCheckDone=false;
@@ -934,7 +936,7 @@ function loadWord(){
   if(_rgParticle&&RG_PARTICLE_SYLS[_rgParticle])sylList=sylList.concat([RG_PARTICLE_SYLS[_rgParticle]]);
   sylIdx=0;wordHadWrong=false;wordFailed=false;wrongCount=0;sylCache=[];readingSubmittedAttempts=[]; // sylCache: เก็บ state แต่ละพยางค์ ให้เลือกพยางค์ไหนก่อนก็ได้ (คำใหม่ = ล้าง)
   sylWrongCount=new Array(sylList.length).fill(0); // งานที่1: ตัวนับผิดแยกรายพยางค์ (คำใหม่ = ล้าง)
-  readingAttemptScore=null;readingFirstCheckWrongCounts=null;readingCorrectionAttempts=0;readingFirstCheckDone=false;
+  readingAttemptScore=null;readingFirstCheckWrongCounts=null;readingCorrectionAttempts=0;readingFirstCheckDone=false;readingSyllableBonusAwarded=0;
   wordUsedGuide=false;curWordIsKnownCheck=false;    // งานที่3+7: ล้างสถานะต่อคำใหม่
   wordGolden=Math.random()<GOLDEN_WORD_CHANCE; // สุ่มคำทองใหม่ทุกคำ (Lin 2026-07-03)
   rgApplyParticleToTitle(); // Lin 2026-08-01: ตั้งชื่อประโยคเต็ม (#wth) + ต่อครับ/ค่ะ/คะ ถ้าเปิดปุ่มไว้ (เฉพาะ高級句子)
@@ -1171,7 +1173,7 @@ function finalizeWord(){
     // Phase 1: การเลือก reveal หลัง correction ไม่เปลี่ยนคะแนนที่ first check ล็อกไว้
     var failedLockedScore=readingAttemptScore==null?0:readingAttemptScore;
     if(failedLockedScore>0)roundScore+=failedLockedScore;
-    rgLogWord({failed:true,pts:failedLockedScore,srsDue:(loggedIn?(rgSrsGet(srsKey)&&rgSrsGet(srsKey).dueDate||''):'')});
+    rgLogWord({failed:true,pts:rgItemEvidencePoints(failedLockedScore,0),srsDue:(loggedIn?(rgSrsGet(srsKey)&&rgSrsGet(srsKey).dueDate||''):'')});
     doSave();
     return;
   }
@@ -1287,7 +1289,7 @@ function finalizeWord(){
   else if(streak===3||streak===5||streak===8) minaToast('combo');
   else if(wordHadWrong) minaToast('wrong',{throttle:true,chance:0.5});
   else minaToast('correct',{throttle:true});
-  rgLogWord({pts:dispPtsAwarded,srsDue:(loggedIn&&typeof rec!=='undefined'&&rec)?(rec.dueDate||''):''});
+  rgLogWord({pts:rgItemEvidencePoints(basePtsAwarded,srsBonusAwarded),srsDue:(loggedIn&&typeof rec!=='undefined'&&rec)?(rec.dueDate||''):''});
   doSave();
 }
 function check(){
@@ -2043,6 +2045,7 @@ function rgGotoSyl(idx){
 // คำ 2 พยางค์ขึ้นไป: ไม่ต้องกดทายวรรณยุกต์แล้ว — ตอบพยางค์ไหนถูก ได้ +1 คะแนน/พยางค์อัตโนมัติ (แทน popup +3 เดิม) — Lin 2026-07-04
 function rgFinalizeAllBonuses(){
   sylCache[sylIdx]=rgCaptureSylState();
+  readingSyllableBonusAwarded=0;
   var n=0;
   for(var i=0;i<sylList.length;i++){
     var st=sylCache[i];
@@ -2054,8 +2057,11 @@ function rgFinalizeAllBonuses(){
     });
     if(syOk)n++;
   }
-  if(n>0 && !wordUsedGuide && !curWordIsKnownCheck){ roundScore+=n; pop('+'+n+' ✨'); } // Lin 2026-07-04: โหมดฝึกฝน(有提示)/พิสูจน์(已記得) = ไม่ได้แต้มโบนัสพยางค์
+  if(n>0 && !wordUsedGuide && !curWordIsKnownCheck){ readingSyllableBonusAwarded=n;roundScore+=n;pop('+'+n+' ✨'); } // Lin 2026-07-04: โหมดฝึกฝน(有提示)/พิสูจน์(已記得) = ไม่ได้แต้มโบนัสพยางค์
   refreshUI();
+}
+function rgItemEvidencePoints(basePoints,srsBonus){
+  return (Number(basePoints)||0)+(Number(srsBonus)||0)+(Number(readingSyllableBonusAwarded)||0);
 }
 // สลับไปพยางค์ idx อย่างปลอดภัย ใช้ตอนกด 檢查 (เจอ syllable ที่ยังไม่เคยแวะ/ไม่มี cache ก็ไม่พัง)
 function rgJumpForCheck(idx){

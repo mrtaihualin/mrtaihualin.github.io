@@ -80,7 +80,7 @@ test('Reading counter follows active syllables without changing the round queue'
 });
 
 test('Reading loads the rebuilt crash-safe bundle with a fresh cache key', () => {
-  assert.match(html, /reading-game-app\.min\.js\?v=52/);
+  assert.match(html, /reading-game-app\.min\.js\?v=53/);
 });
 
 test('Reading keeps scattered choices collision-safe and tone boxes proportional', () => {
@@ -91,6 +91,21 @@ test('Reading keeps scattered choices collision-safe and tone boxes proportional
   assert.match(html, /\.tone-drawn\{[\s\S]{0,100}overflow:visible;[\s\S]{0,80}vertical-align:middle;/);
   assert.match(source, /'่':'<svg class="tone-drawn" width="\.18em" height="\.34em" viewBox="-18\.6 -90\.3 11\.8 21\.9"/);
   assert.doesNotMatch(html, /\.opt\[data-type="tone"\][^{]*\{[^}]*(?:min-width|padding|font-size):/);
+});
+
+test('every standalone Reading mark has a browser-independent vector', () => {
+  const toneSvgStart = source.indexOf('var TONE_SVG=');
+  const toneSvgEnd = source.indexOf('function isCombining(', toneSvgStart);
+  const tonePoolMatch = source.match(/var TONE_POOL=(\[[^;]+\]);/);
+  assert.ok(toneSvgStart >= 0 && toneSvgEnd > toneSvgStart && tonePoolMatch);
+  const context = {};
+  vm.createContext(context);
+  vm.runInContext(source.slice(toneSvgStart, toneSvgEnd), context);
+  vm.runInContext(`var TONE_POOL=${tonePoolMatch[1]};`, context);
+  for (const mark of context.TONE_POOL) {
+    assert.match(context.TONE_SVG[mark] || '', /^<svg[\s\S]*<path[\s\S]*<\/svg>$/, `${mark} must have a visible SVG`);
+  }
+  assert.strictEqual(Object.keys(context.TONE_SVG).length, context.TONE_POOL.length);
 });
 
 test('every Reading syllable uses the locked consonant-vowel-final-tone slot order', () => {
@@ -188,6 +203,38 @@ test('final scoring and reveal retain the locked first-check score', () => {
   const finalize = block('function finalizeWord()', 'function check()');
   assert.match(finalize, /failedLockedScore=readingAttemptScore==null\?0:readingAttemptScore/);
   assert.match(finalize, /var pts=readingAttemptScore==null\?.*:readingAttemptScore/);
+});
+
+test('multi-syllable bonus is included in authoritative score evidence', () => {
+  const helper = block('function rgFinalizeAllBonuses()', 'function rgJumpForCheck(');
+  const correctState = {
+    comps: ['cons'],
+    slotFills: { cons: 1 },
+    optTiles: [{ id: 1, val: 'ก' }],
+    correctVal: { cons: 'ก' },
+  };
+  const context = {
+    sylCache: [correctState, correctState],
+    sylIdx: 1,
+    sylList: [{}, {}],
+    rgCaptureSylState: () => correctState,
+    wordUsedGuide: false,
+    curWordIsKnownCheck: false,
+    readingSyllableBonusAwarded: 0,
+    roundScore: 10,
+    pop() {},
+    refreshUI() {},
+    Number,
+  };
+  vm.createContext(context);
+  vm.runInContext(helper, context);
+  vm.runInContext('rgFinalizeAllBonuses()', context);
+  assert.strictEqual(context.readingSyllableBonusAwarded, 2);
+  assert.strictEqual(context.roundScore, 12);
+  assert.strictEqual(context.rgItemEvidencePoints(10, 3), 15);
+  const finalize = block('function finalizeWord()', 'function check()');
+  assert.match(finalize, /pts:rgItemEvidencePoints\(failedLockedScore,0\)/);
+  assert.match(finalize, /pts:rgItemEvidencePoints\(basePtsAwarded,srsBonusAwarded\)/);
 });
 
 test('account evidence carries attempt score and separate correction count', () => {
