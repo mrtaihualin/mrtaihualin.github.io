@@ -47,11 +47,14 @@ check('ไม่มี 下一步 เป็น section/wording ผู้เรี
 check('ไม่มี overall readiness percentage', !/總進度|整體進度|readinessScore|overallPercent/.test(js));
 check('五 skills มี direct practice CTA', (js.match(/href: '[^']+-?(?:game|finder)\.html'/g) || []).length >= 4 && /word-order\.html/.test(js));
 check('我的單詞/句子ลิงก์ไปหน้าเดียว 2 tabs', /vault\.html#words/.test(js) && /vault\.html#sentences/.test(js));
+check('學習中心ไม่ทำช่องค้นหาซ้ำกับ泰語單字庫', !/pg-vault-search|pg-vault-search-input/.test(js));
+check('ปุ่มรองคงสีทองทั้งก่อนและหลังเปิดลิงก์',
+  /\.pg-btn-secondary,\.pg-btn-secondary:visited\{background:#fff;color:#8B6310\}/.test(js));
 check('Paid readiness เป็น benefit แต่ไม่มีสูตร/ปลายทางเปิด', /想知道自己的泰語實戰準備度？升級方案即可查看。/.test(js) && /查看升級方案/.test(js) && /disabled/.test(js));
 check('account switch ใช้ user id ไม่ใช่แค่ boolean auth', /var before = currentUser && currentUser\.id;[\s\S]*var after = user && user\.id/.test(js));
 check('หน้า HTML ใช้ชื่อ 學習中心 บรรทัดเดียวกึ่งกลางแบบหัวข้อเกม และ canonical summary loader',
   /<div style="width:100%;text-align:center;">[\s\S]*<h1 style="[^"]*white-space:nowrap;[^"]*font-size:clamp\(20px,4vw,28px\)[^"]*color:#8B6310;">學習中心<\/h1>/.test(html) &&
-  /learning-summary\.js\?v=1/.test(html) && /progress\.js\?v=10/.test(html));
+  /learning-summary\.js\?v=1/.test(html) && /progress\.js\?v=11/.test(html));
 check('學習中心มี Account Bar เดียวใต้หัวข้อเหมือนหน้าเกม',
   /'my-progress\.html': '\.section-wrap > div:first-child'/.test(loginSurface) &&
   /legacy\.style\.setProperty\('display', 'none', 'important'\)/.test(loginSurface));
