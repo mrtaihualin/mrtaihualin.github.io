@@ -457,6 +457,10 @@
       assert(inside(box, owner), 'Typing keyboard ' + half.dataset.gshSide + ' half stays inside its own frame');
       assert(!intersects(box, center), 'Typing keyboard ' + half.dataset.gshSide + ' half does not cover the question frame');
     });
+    var keyboardRows = Array.prototype.slice.call(page.doc.querySelectorAll('#rg-kbd > .gsh-split-kbd-row')).map(rect);
+    var keyboardTop = Math.min.apply(Math, keyboardRows.map(function (box) { return box.top; }));
+    var keyboardBottom = Math.max.apply(Math, keyboardRows.map(function (box) { return box.bottom; }));
+    assert(Math.abs((keyboardTop + keyboardBottom) / 2 - (left.top + left.bottom) / 2) <= 2, 'Typing keyboard groups are vertically centred in the side frames');
     var characterKeys = Array.prototype.slice.call(page.doc.querySelectorAll('#rg-kbd .tk-key[data-code]'));
     assert(characterKeys.length === 47, 'Typing exposes exactly 47 character/symbol buttons');
     assert(!page.doc.querySelector('#rg-kbd .tk-space'), 'Typing exposes no Space button');
@@ -466,8 +470,43 @@
     page.win.RG_TYPE.target = '\uffff'.repeat(100);
     page.win.RG_TYPE.pos = 0;
     var badBefore = page.win.badC;
+
+    var magnifierKey = characterKeys[20];
+    var magnifierKeyRect = rect(magnifierKey);
+    var pointerX = (magnifierKeyRect.left + magnifierKeyRect.right) / 2;
+    var pointerY = (magnifierKeyRect.top + magnifierKeyRect.bottom) / 2;
+    magnifierKey.dispatchEvent(new page.win.PointerEvent('pointerdown', {
+      bubbles: true, cancelable: true, pointerId: 41, pointerType: 'touch', clientX: pointerX, clientY: pointerY
+    }));
+    await wait(380);
+    var magnifier = page.doc.querySelector('.gsh-ml-typing-magnifier:not([hidden])');
+    assert(!!magnifier, 'Typing long press opens the magnifier after about 350ms');
+    assert(magnifier.querySelectorAll('.gsh-ml-typing-magnifier-key').length === 5, 'Typing magnifier shows five real keyboard keys');
+    assert(magnifier.querySelectorAll('[data-selected="true"]').length === 1, 'Typing magnifier makes the selected centre key largest');
+    page.win.dispatchEvent(new page.win.PointerEvent('pointerup', {
+      bubbles: true, cancelable: true, pointerId: 41, pointerType: 'touch', clientX: pointerX, clientY: pointerY
+    }));
+    await wait(30);
+    assert(page.win.badC === badBefore + 1, 'Typing magnifier types exactly once when released on a key');
+
+    var cancelBefore = page.win.badC;
+    magnifierKey.dispatchEvent(new page.win.PointerEvent('pointerdown', {
+      bubbles: true, cancelable: true, pointerId: 42, pointerType: 'touch', clientX: pointerX, clientY: pointerY
+    }));
+    await wait(380);
+    var outsideX = (center.left + center.right) / 2;
+    var outsideY = (center.top + center.bottom) / 2;
+    page.win.dispatchEvent(new page.win.PointerEvent('pointermove', {
+      bubbles: true, cancelable: true, pointerId: 42, pointerType: 'touch', clientX: outsideX, clientY: outsideY
+    }));
+    page.win.dispatchEvent(new page.win.PointerEvent('pointerup', {
+      bubbles: true, cancelable: true, pointerId: 42, pointerType: 'touch', clientX: outsideX, clientY: outsideY
+    }));
+    await wait(30);
+    assert(page.win.badC === cancelBefore, 'Typing magnifier cancels when released outside the keyboard');
+
     characterKeys.forEach(function (key) { key.click(); });
-    assert(page.win.badC === badBefore + 47, 'All 47 Typing character/symbol buttons execute their real click handler');
+    assert(page.win.badC === badBefore + 48, 'All 47 Typing character/symbol buttons execute their real click handler');
 
     var shifts = Array.prototype.slice.call(page.doc.querySelectorAll('#rg-kbd .rg-shift-key'));
     shifts[0].click();

@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>FB-02 Mobile Landscape — 25 real-source states</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: #ece7de; color: #49350d; font-family: system-ui, sans-serif; }
+    body { display: grid; place-items: start center; padding: 16px; }
+    main { width: min(100%, 920px); }
+    h1 { margin: 0 0 10px; font-size: 18px; }
+    .controls { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; margin-bottom: 10px; }
+    button, select { min-height: 38px; border: 1px solid #b98b2f; border-radius: 9px; background: #fffdf7; color: #5a3e0a; font: 700 13px/1.2 system-ui, sans-serif; }
+    button { padding: 0 14px; cursor: pointer; }
+    select { width: 100%; padding: 0 10px; }
+    .screen { width: 100%; max-width: 844px; aspect-ratio: 844 / 390; border: 1px solid #c9b27e; border-radius: 14px; overflow: hidden; background: #f5f0e8; box-shadow: 0 10px 28px rgba(73,53,13,.16); }
+    iframe { display: block; width: 844px; height: 390px; border: 0; transform-origin: top left; }
+    output { display: block; margin-top: 8px; font-size: 12px; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>FB-02 Mobile Landscape — 25 states จาก Source จริง · 844 × 390</h1>
+    <div class="controls">
+      <button type="button" id="prev">← ก่อนหน้า</button>
+      <select id="state" aria-label="เลือก state"></select>
+      <button type="button" id="next">ถัดไป →</button>
+    </div>
+    <div class="screen"><iframe id="game" title="FB-02 real-source review"></iframe></div>
+    <output id="status">กำลังเตรียม Source…</output>
+  </main>
+  <script>
+    (function () {
+      'use strict';
+      var states = [
+        {id:'tone-derive-2', group:'Tone 推導', label:'2 choices', page:'tone-finder.html', kind:'derive-2'},
+        {id:'tone-derive-3', group:'Tone 推導', label:'3 choices', page:'tone-finder.html', kind:'derive-3'},
+        {id:'tone-derive-4', group:'Tone 推導', label:'4 tone marks', page:'tone-finder.html', kind:'derive-4'},
+        {id:'tone-helper', group:'Tone 推導', label:'live/dead helper', page:'tone-finder.html', kind:'helper'},
+        {id:'tone-error', group:'Tone 推導', label:'error overlay', page:'tone-finder.html', kind:'error'},
+        {id:'tone-howto-collapsed', group:'Shared 玩法', label:'Tone collapsed', page:'tone-finder.html', kind:'howto', modal:'tf-howto-modal', detail:'tf-howto-detail', trigger:'tf-howto-btn'},
+        {id:'tone-howto-expanded', group:'Shared 玩法', label:'Tone expanded', page:'tone-finder.html', kind:'howto-expanded', modal:'tf-howto-modal', detail:'tf-howto-detail', trigger:'tf-howto-btn'},
+        {id:'typing-howto-collapsed', group:'Shared 玩法', label:'Typing collapsed', page:'typing-game.html', kind:'howto', modal:'rg-howto-modal', detail:'rg-howto-detail', trigger:'rg-howto-btn'},
+        {id:'typing-howto-expanded', group:'Shared 玩法', label:'Typing expanded', page:'typing-game.html', kind:'howto-expanded', modal:'rg-howto-modal', detail:'rg-howto-detail', trigger:'rg-howto-btn'},
+        {id:'reading-howto-collapsed', group:'Shared 玩法', label:'Reading collapsed', page:'reading-game.html', kind:'howto', modal:'rg-howto-modal', detail:'rg-howto-detail', trigger:'rg-howto-btn'},
+        {id:'reading-howto-expanded', group:'Shared 玩法', label:'Reading expanded', page:'reading-game.html', kind:'howto-expanded', modal:'rg-howto-modal', detail:'rg-howto-detail', trigger:'rg-howto-btn'},
+        {id:'word-order-howto-collapsed', group:'Shared 玩法', label:'Word Order collapsed', page:'word-order.html', kind:'howto', modal:'wo-howto-modal', detail:'wo-howto-detail', trigger:'wo-howto-btn'},
+        {id:'word-order-howto-expanded', group:'Shared 玩法', label:'Word Order expanded', page:'word-order.html', kind:'howto-expanded', modal:'wo-howto-modal', detail:'wo-howto-detail', trigger:'wo-howto-btn'},
+        {id:'alpha-home', group:'Tone 字母練習區', label:'home', page:'tone-finder.html', kind:'alpha-home'},
+        {id:'alpha-consonant', group:'Tone 字母練習區', label:'consonant select', page:'tone-finder.html', kind:'alpha-consonant'},
+        {id:'alpha-vowel', group:'Tone 字母練習區', label:'vowel select', page:'tone-finder.html', kind:'alpha-vowel'},
+        {id:'alpha-mid', group:'Tone 字母練習區', label:'mid flashcard', page:'tone-finder.html', kind:'alpha-flash', key:'mid'},
+        {id:'alpha-high', group:'Tone 字母練習區', label:'high flashcard', page:'tone-finder.html', kind:'alpha-flash', key:'high'},
+        {id:'alpha-low', group:'Tone 字母練習區', label:'low flashcard', page:'tone-finder.html', kind:'alpha-flash', key:'low'},
+        {id:'alpha-forgot', group:'Tone 字母練習區', label:'forgotten flashcard', page:'tone-finder.html', kind:'alpha-flash', key:'forgot'},
+        {id:'alpha-vowel-short', group:'Tone 字母練習區', label:'short-vowel flashcard', page:'tone-finder.html', kind:'alpha-flash', key:'v_short'},
+        {id:'alpha-vowel-long', group:'Tone 字母練習區', label:'long-vowel flashcard', page:'tone-finder.html', kind:'alpha-flash', key:'v_long'},
+        {id:'alpha-vowel-all', group:'Tone 字母練習區', label:'all-vowel flashcard', page:'tone-finder.html', kind:'alpha-flash', key:'v_all'},
+        {id:'alpha-ending', group:'Tone 字母練習區', label:'ending front', page:'tone-finder.html', kind:'alpha-flash', key:'ending'},
+        {id:'alpha-ending-expanded', group:'Tone 字母練習區', label:'ending explanation', page:'tone-finder.html', kind:'alpha-ending-expanded', key:'ending'}
+      ];
+
+      var wordPlain = {word:'มา',readingTH:'มา',en:'maa',zh:'來',level:'初',category:'กริยา',syls:[{cons:'ม',vowel:'อา',tone_name:'สามัญ',th:'มา'}]};
+      var wordMarked = {word:'บ้าน',readingTH:'บ้าน',en:'bâan',zh:'家',level:'初',category:'สถานที่',syls:[{cons:'บ',vowel:'อา',tone:'้',final:'น',tone_name:'โท',th:'บ้าน'}]};
+      var sentence = {th:'วันนี้ผมไปเรียน',zh:'今天我去上課',readingTH:'วัน-นี้-ผม-ไป-เรียน',wc:4,politeF:null,words:[
+        {th:'วันนี้',zh:'今天',syls:[{th:'วันนี้',en:'wan-níi'}]},
+        {th:'ผม',zh:'我',syls:[{th:'ผม',en:'phǒm'}]},
+        {th:'ไป',zh:'去',syls:[{th:'ไป',en:'pai'}]},
+        {th:'เรียน',zh:'上課',syls:[{th:'เรียน',en:'rian'}]}
+      ]};
+      var frame = document.getElementById('game');
+      var screen = frame.parentElement;
+      var select = document.getElementById('state');
+      var status = document.getElementById('status');
+      var index = 0;
+
+      states.forEach(function (state) {
+        var option = document.createElement('option');
+        option.value = state.id;
+        option.textContent = state.group + ' — ' + state.label;
+        select.appendChild(option);
+      });
+
+      function fitGame() {
+        frame.style.transform = 'scale(' + Math.min(1, screen.clientWidth / 844) + ')';
+      }
+      fitGame();
+      if (window.ResizeObserver) new ResizeObserver(fitGame).observe(screen);
+      else window.addEventListener('resize', fitGame);
+
+      function delay(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
+      function clickText(doc, selector, text) {
+        var nodes = Array.prototype.slice.call(doc.querySelectorAll(selector));
+        var node = nodes.find(function (item) { return item.textContent.replace(/\s+/g, ' ').trim() === text; });
+        if (!node) throw new Error('ไม่พบปุ่ม “' + text + '”');
+        node.click();
+      }
+      function waitFor(check, timeout) {
+        var started = Date.now();
+        return new Promise(function (resolve, reject) {
+          (function poll() {
+            try { if (check()) return resolve(); } catch (ignore) {}
+            if (Date.now() - started > (timeout || 15000)) return reject(new Error('รอ state นานเกินไป'));
+            setTimeout(poll, 80);
+          })();
+        });
+      }
+
+      async function applyState(state, doc, win) {
+        await waitFor(function () {
+          var ready = doc.body && doc.body.classList.contains('gsh-ml-active');
+          return ready && (state.page !== 'tone-finder.html' || win.TF);
+        });
+        var skipTour = doc.querySelector('#gt-tour-card .gt-skip');
+        if (skipTour && getComputedStyle(skipTour).display !== 'none') skipTour.click();
+
+        if (state.kind.indexOf('derive') === 0 || state.kind === 'helper' || state.kind === 'error') {
+          await waitFor(function () { return doc.querySelector('.sg-dontknow-btn'); });
+          doc.querySelector('.sg-dontknow-btn').click();
+          await delay(100);
+          if (state.kind === 'derive-3' || state.kind === 'derive-4') {
+            clickText(doc, '.tf-opt', '有聲調符號');
+            await delay(100);
+            clickText(doc, '.tf-opt', '其他子音（中子音 ／ 高子音 ／ 前引字）');
+            await delay(100);
+            if (state.kind === 'derive-4') clickText(doc, '.tf-opt', '中子音');
+          } else if (state.kind === 'helper') {
+            clickText(doc, '.tf-opt', '無聲調符號');
+            await delay(100);
+            doc.querySelector('.tf-helper-trigger').click();
+          } else if (state.kind === 'error') {
+            clickText(doc, '.tf-opt', '無聲調符號');
+          }
+        } else if (state.kind === 'howto' || state.kind === 'howto-expanded') {
+          doc.getElementById(state.trigger).click();
+          if (state.kind === 'howto-expanded') {
+            var detail = doc.getElementById(state.detail);
+            detail.previousElementSibling.click();
+          }
+        } else if (state.kind === 'alpha-home') {
+          win.TF.openAlpha();
+        } else if (state.kind === 'alpha-consonant') {
+          win.TF.alphaConsonants();
+        } else if (state.kind === 'alpha-vowel') {
+          win.TF.alphaVowels();
+        } else if (state.kind === 'alpha-flash') {
+          win.TF.startFlashcards(state.key);
+        } else if (state.kind === 'alpha-ending-expanded') {
+          win.TF.startFlashcards('ending');
+          win.TF.flashToggleExp();
+        }
+        await delay(220);
+      }
+
+      function verifyState(state, doc) {
+        var ok = false;
+        function centerY(node) {
+          var rect = node.getBoundingClientRect();
+          return rect.top + (rect.height / 2);
+        }
+        function samePlane(a, b) { return Math.abs(centerY(a) - centerY(b)) <= 2; }
+        function groupCenterY(nodes) {
+          var rects = nodes.map(function (node) { return node.getBoundingClientRect(); });
+          var top = Math.min.apply(null, rects.map(function (rect) { return rect.top; }));
+          var bottom = Math.max.apply(null, rects.map(function (rect) { return rect.bottom; }));
+          return (top + bottom) / 2;
+        }
+        if (state.kind === 'derive-2') {
+          var twoChoiceRows = Array.prototype.slice.call(doc.querySelectorAll('.tf-options > .tf-opt-wrap'));
+          var questionRect = doc.querySelector('.tf-qbox').getBoundingClientRect();
+          var questionCenter = questionRect.top + (questionRect.height / 2);
+          var matchesQuestionPlane = twoChoiceRows.every(function (row) {
+            var rowRect = row.getBoundingClientRect();
+            return Math.abs((rowRect.top + (rowRect.height / 2)) - questionCenter) <= 2;
+          });
+          ok = twoChoiceRows.length === 2 && matchesQuestionPlane;
+        }
+        else if (state.kind === 'derive-3') {
+          var threeChoices = Array.prototype.slice.call(doc.querySelectorAll('.tf-options > .tf-opt-wrap'));
+          var leftChoice = threeChoices.find(function (choice) { return choice.dataset.gshSide === 'left'; });
+          var rightChoices = threeChoices.filter(function (choice) { return choice.dataset.gshSide === 'right'; });
+          ok = threeChoices.length === 3 && rightChoices.length === 2 &&
+            samePlane(leftChoice, doc.querySelector('.tf-qbox')) &&
+            Math.abs(groupCenterY(rightChoices) - centerY(doc.querySelector('.tf-qbox'))) <= 2 &&
+            centerY(rightChoices[0]) < centerY(rightChoices[1]);
+        }
+        else if (state.kind === 'derive-4') {
+          var fourMarks = Array.prototype.slice.call(doc.querySelectorAll('.tf-mark-opts > .tf-mark-btn'));
+          var leftMarks = fourMarks.filter(function (mark) { return mark.dataset.gshSide === 'left'; });
+          var rightMarks = fourMarks.filter(function (mark) { return mark.dataset.gshSide === 'right'; });
+          ok = fourMarks.length === 4 && leftMarks.length === 2 && rightMarks.length === 2 &&
+            samePlane(leftMarks[0], rightMarks[0]) && samePlane(leftMarks[1], rightMarks[1]) &&
+            Math.abs(groupCenterY(leftMarks) - centerY(doc.querySelector('.tf-qbox'))) <= 2 &&
+            Math.abs(groupCenterY(rightMarks) - centerY(doc.querySelector('.tf-qbox'))) <= 2 &&
+            centerY(leftMarks[0]) < centerY(leftMarks[1]);
+        }
+        else if (state.kind === 'helper') ok = !!doc.querySelector('.tf-helper-banner');
+        else if (state.kind === 'error') ok = !!doc.getElementById('tf-err');
+        else if (state.kind === 'howto' || state.kind === 'howto-expanded') {
+          var modal = doc.getElementById(state.modal);
+          var detail = doc.getElementById(state.detail);
+          ok = modal.style.display === 'flex' && (state.kind === 'howto' ? detail.style.display !== 'block' : detail.style.display === 'block');
+        } else if (state.kind.indexOf('alpha') === 0) {
+          var stage = doc.getElementById('gsh-ml-stage');
+          ok = stage && stage.getAttribute('data-gsh-ml-tone-alpha') === 'true' && !!doc.querySelector('.tf-alpha-surface');
+          if (state.kind === 'alpha-ending-expanded') ok = ok && !!doc.querySelector('.afc-exp');
+        }
+        var noHorizontalOverflow = doc.documentElement.scrollWidth <= doc.documentElement.clientWidth + 1;
+        if (!ok || !noHorizontalOverflow) throw new Error('state ไม่ตรงหรือมีแนวนอนล้น');
+      }
+
+      function makeOverride(state) {
+        var words = state.kind === 'derive-3' || state.kind === 'derive-4' || state.kind === 'error' ? [wordMarked] : [wordPlain];
+        return '<script>(function(){var words=' + JSON.stringify(words) + ';var sentences=' + JSON.stringify([sentence]) + ';try{localStorage.setItem("cookieConsent","denied");["tone","typing","reading","wordorder"].forEach(function(g){localStorage.setItem("howto_tour_seen_"+g,"1");localStorage.setItem("howto_hint_seen_"+g,"1");});}catch(e){}window.GameContentLoader.boot=function(srcs){window.WORDS_MASTER=words;window.ADV_SENTENCES=sentences;var chain=new Promise(function(resolve){if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",resolve,{once:true});else resolve();}).then(function(){if(window.GameResume&&typeof window.GameResume.load==="function")window.GameResume.load=function(){return null;};});(srcs||[]).forEach(function(src){chain=chain.then(function(){return new Promise(function(resolve,reject){var script=document.createElement("script");script.src=src;script.onload=resolve;script.onerror=reject;document.head.appendChild(script);});});});return chain;};})();<\/script>';
+      }
+
+      function loadState(nextIndex) {
+        index = (nextIndex + states.length) % states.length;
+        var state = states[index];
+        select.value = state.id;
+        history.replaceState(null, '', '?state=' + encodeURIComponent(state.id));
+        status.textContent = 'กำลังเปิด ' + state.group + ' — ' + state.label + '…';
+        fetch('../../' + state.page + '?fb02-review=' + Date.now(), {cache:'no-store'}).then(function (response) {
+          if (!response.ok) throw new Error('เปิด Source ไม่สำเร็จ');
+          return response.text();
+        }).then(function (html) {
+          html = html.replace('<head>', '<head><base href="' + new URL('../../', location.href).href + '">');
+          var clientPattern = /game-content-client\.js\?v=\d+"><\/script>/;
+          html = html.replace(clientPattern, function (tag) { return tag + makeOverride(state); });
+          frame.onload = async function () {
+            try {
+              var doc = frame.contentDocument;
+              await applyState(state, doc, frame.contentWindow);
+              await waitFor(function () {
+                try {
+                  verifyState(state, doc);
+                  return true;
+                } catch (ignore) {
+                  return false;
+                }
+              }, 3000);
+              verifyState(state, doc);
+              status.textContent = 'PASS ' + (index + 1) + '/25 — ' + state.group + ' — ' + state.label;
+            } catch (error) {
+              status.textContent = 'FAIL ' + (index + 1) + '/25 — ' + error.message;
+            }
+          };
+          frame.srcdoc = html;
+        }).catch(function (error) {
+          status.textContent = 'FAIL ' + (index + 1) + '/25 — ' + error.message;
+        });
+      }
+
+      select.addEventListener('change', function () {
+        loadState(states.findIndex(function (state) { return state.id === select.value; }));
+      });
+      document.getElementById('prev').addEventListener('click', function () { loadState(index - 1); });
+      document.getElementById('next').addEventListener('click', function () { loadState(index + 1); });
+      var requested = new URLSearchParams(location.search).get('state');
+      var requestedIndex = states.findIndex(function (state) { return state.id === requested; });
+      loadState(requestedIndex >= 0 ? requestedIndex : 0);
+    })();
+  </script>
+</body>
+</html>

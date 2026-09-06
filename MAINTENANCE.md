@@ -9,6 +9,38 @@
 - Added a session-only, owner/day-bound exit summary listing each practiced game, active time and completed rounds. It clears when a new proposal starts, suppresses stale-day or other-owner evidence, and does not add a remembered daily-minutes plan or combine goal/Game Search planning.
 - Time Plan core PASS, confirmation `16/16`, integration `28/28`, Minimum Guest/Login Free static regression, JavaScript syntax, whitespace and the complete `1,075`-file site gate PASS. No Preview, merge, deploy, Production, Supabase, Auth, account or application-data mutation occurred.
 
+**Prior update: 2026-09-06 Asia/Bangkok** — FB-02 technical Preview candidate
+
+## 2026-09-06 — FB-02 technical Preview candidate (`TECHNICAL_READY / HUMAN_PENDING / PRODUCTION_UNCHANGED`)
+
+- The reviewed FB-02 source is frozen as five independently reversible Delta commits: Tone deduction states, shared `玩法`, Tone `字母練習區`, the combined 25-state real-source review, and four-game responsive regression.
+- Local Source, browser and complete site gates pass. This checkpoint authorizes only branch/MR/Preview review; merge, deployment, Production, Supabase/Auth and account/data remain unchanged pending Lin's separate approval.
+
+## 2026-09-06 — FB-02 Step 5 responsive regression (`SOURCE_PASS / LOCAL_BROWSER_PASS / PRODUCTION_UNCHANGED`)
+
+- Added a self-contained real-source regression for Tone, Typing, Reading and Word Order across 844×390 Landscape, 390×844 Portrait and 1280×800 Desktop. All `12/12` states preserve the account strip, restore its original owner outside Landscape, keep the canonical four-item mobile bottom navigation only on Portrait, and remain free of horizontal overflow.
+- Focused Mobile Landscape checks, Login Free integration, account-audit integrity and all `53` shared-game-system regressions pass. The complete `1,081`-file site gate passes. Merge, deployment, Production, Supabase/Auth and account/data remain unchanged.
+
+## 2026-09-06 — FB-02 Step 4 combined 25-state review (`LOCAL_PREVIEW_PASS / PRODUCTION_UNCHANGED`)
+
+- Added one 844×390 review harness that loads the real Tone, Typing, Reading and Word Order pages, then reaches the approved states through their existing handlers. It exposes Tone deduction `5`, shared `玩法` `8`, and Tone `字母練習區` `12` states with previous/next navigation and a state-level no-horizontal-overflow check.
+- The focused combined review contract passes exactly `25` unique states. Merge, deployment, Production, Supabase/Auth and account/data remain unchanged.
+
+## 2026-09-06 — FB-02 Step 3 Tone 字母練習區 states (`SOURCE_PASS / PRODUCTION_UNCHANGED`)
+
+- Tone `字母練習區` now reuses the current Desktop ALPHA data, handlers, audio, navigation, flashcards and explanations inside the shared Landscape stage. The reviewed home, consonant/vowel category, seven flashcard-group, ending-card and expanded-ending states use one bounded two-column or vertically scrollable real-source surface.
+- Four active games advance only the shared Landscape cache chain to CSS `v63` and controller `v37`. Merge, deployment, Production, Supabase/Auth and account/data remain unchanged.
+
+## 2026-09-06 — FB-02 Step 2 shared 玩法 states (`SOURCE_PASS / PRODUCTION_UNCHANGED`)
+
+- Verified the real Tone, Typing, Reading and Word Order `玩法` dialogs in both collapsed and expanded states. All eight reviewed states keep their original content, close/action nodes and detail toggles inside the existing bounded, vertically scrollable shared Landscape shell.
+- The focused shared-`玩法` check passes `9/9`. This checkpoint adds regression evidence only; gameplay source, cache versions, deployment, Production, Supabase/Auth and account/data remain unchanged.
+
+## 2026-09-06 — FB-02 Step 1 Tone derivation states (`SOURCE_PASS / PRODUCTION_UNCHANGED`)
+
+- Rebound only the first Human-approved FB-02 Delta to protected GitLab `main=e7e9e007…`, without applying the preserved historical stash. Tone's five deduction layouts now open the lower-right area only when Position 2 is not part of the real state, preserving the existing choice nodes and handlers.
+- The focused Mobile Landscape source check passes. Four active games advance only the shared Landscape cache chain to CSS `v62` and controller `v36`. Shared `玩法`, Tone `字母練習區`, combined 25-state review, merge, deployment, Production, Supabase/Auth and account/data mutation remain outside this checkpoint.
+
 **Prior update: 2026-09-05 Asia/Bangkok** — FB-01 shared account-menu visual system
 
 ## 2026-09-05 — FB-01 shared account-menu visual system (`SOURCE_PASS / LOCAL_VISUAL_PASS / PREVIEW_PASS / PRODUCTION_UNCHANGED`)
@@ -2667,3 +2699,19 @@ node scripts/check-site.js
 - Reused the read-only `practice-events` gamification-status action without loading or flushing the gameplay report queue on the non-game page.
 - Bound the response to the current account and auth-owner epoch so a late response cannot cross an account switch. No score, SRS, personal-content, provider, database, or Production mutation is part of this Source/Preview Delta.
 - Verification: Free gamification `23/23`, owner-switch races `12/12`, Auth session `15/15`, Minimum Guest launch PASS, and the full `1,075`-file site gate PASS.
+
+# 2026-09-06 — Tone derivation horizontal-plane alignment
+
+- Aligned every one-choice Tone side directly to the live centre question card, while allowing the two controls on a side to keep independent sizes and centre as one group around that same card.
+- Applied the same rendered-geometry rule to the reviewed two-, three-, and four-choice states: two single sides share the card plane; the three-choice state's single side and opposite two-choice group share one centre; both four-choice groups share that centre and matching rows.
+- Derived the offset from the rendered question and denser-side group rectangles so optional reading visibility does not break the alignment; other choice counts and games retain their existing layout.
+- Verification: local `844×390` geometry shows `0px` center delta for each reviewed plane with unequal card sizes, the 25-state browser review passes `25/25`, focused Mobile Landscape checks pass, and the full `1,081`-file site gate passes. This remains an MR/Draft Preview Human-review change only.
+
+# 2026-09-06 — Word Order choice centering and Typing keyboard loupe
+
+- Centered the Word Order choice group inside its full-width choice field whenever the rendered choices fit, while retaining safe top-start overflow and local scrolling for denser 10- and 16-choice review cases so no choice border is clipped.
+- Vertically centered the real Typing keyboard rows in the left and right 30% frames without moving the 40% question frame or adding any keyboard controls; the keyboard remains 47 character/symbol keys plus the two one-shot Shift controls.
+- Added the locked 350ms Typing long-press loupe using five real keys in a circular cross. It follows continuous movement across rows and both keyboard sides, dispatches the selected real key exactly once on release, and cancels when released outside the keyboard.
+- Follow-up Human correction removed the visible carrier workaround and now preserves the exact Desktop key-face markup, transparent shaping carrier, labels and handlers; Mobile Landscape changes only the real keys' size, split position and loupe presentation.
+- Added a small inline inset inside both Typing side frames so the enlarged Desktop keys no longer sit directly against the frame edges; the 30/40/30 columns, vertical centering, real controls and handlers remain unchanged.
+- Verification: focused source checks pass; the real-source `844×390` Word Order review passes centered 4-choice and safe 10-/16-choice layouts; the real-source Typing review passes vertical centering, side insets, five-key loupe, cross-side drag, single dispatch, and outside-release cancellation. Human acceptance, merge, deployment, and Production remain unchanged.

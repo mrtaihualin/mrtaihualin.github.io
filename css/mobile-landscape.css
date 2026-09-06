@@ -417,10 +417,18 @@
   }
   body[data-gsh-game="typing"].gsh-ml-active #gsh-ml-stage #rg-kbd {
     max-width: none !important;
+    align-content: center;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
   }
   body[data-gsh-game="typing"].gsh-ml-active #gsh-ml-stage #rg-kbd .gsh-split-kbd-row {
     grid-template-columns: minmax(0, 30fr) minmax(0, 40fr) minmax(0, 30fr) !important;
     column-gap: var(--gsh-ml-gap);
+  }
+  body[data-gsh-game="typing"].gsh-ml-active #gsh-ml-stage #rg-kbd .gsh-split-kbd-half {
+    padding-inline: clamp(3px, .8dvh, 5px);
+    box-sizing: border-box;
   }
   .gsh-split-kbd-row {
     min-width: 0;
@@ -442,33 +450,78 @@
   body.gsh-ml-active #gsh-ml-stage .gsh-split-thai-keyboard .gsh-kbd-key {
     min-width: 0 !important;
     width: auto !important;
+    max-width: none !important;
     height: var(--gsh-ml-key-h) !important;
     min-height: var(--gsh-ml-key-h) !important;
     max-height: var(--gsh-ml-key-h);
-    padding: 1px !important;
-    border-radius: 5px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    line-height: 1;
-    overflow: hidden;
   }
-  body.gsh-ml-active #gsh-ml-stage .gsh-split-thai-keyboard .tk-base { font-size: clamp(10px, 2.8dvh, 15px); }
-  body.gsh-ml-active #gsh-ml-stage .gsh-split-thai-keyboard .tk-shift { font-size: clamp(6px, 1.5dvh, 9px); }
+  body.gsh-ml-active #gsh-ml-stage .gsh-split-thai-keyboard .tk-base { font-size: 15px; }
+  body.gsh-ml-active #gsh-ml-stage .gsh-split-thai-keyboard .tk-shift { font-size: 9px; }
+  body[data-gsh-game="typing"].gsh-ml-active #gsh-ml-stage #rg-kbd .comb-base,
+  body[data-gsh-game="typing"].gsh-ml-active .gsh-ml-typing-magnifier .comb-base {
+    display: none;
+  }
+  body[data-gsh-game="typing"].gsh-ml-active #gsh-ml-stage #rg-kbd .comb-disp::before,
+  body[data-gsh-game="typing"].gsh-ml-active .gsh-ml-typing-magnifier .comb-disp::before {
+    content: '\200B';
+  }
   body[data-gsh-game="typing"].gsh-ml-active #gsh-ml-stage #rg-kbd.shift-on .tk-key .tk-shift {
-    font-size: clamp(10px, 2.8dvh, 15px);
+    font-size: 15px;
     color: #3a2a0a;
     font-weight: 700;
     line-height: 1.15;
   }
   body[data-gsh-game="typing"].gsh-ml-active #gsh-ml-stage #rg-kbd.shift-on .tk-key .tk-base {
-    font-size: clamp(6px, 1.5dvh, 9px);
+    font-size: 9px;
     color: #b89860;
     font-weight: 400;
     line-height: 1;
   }
   body.gsh-ml-active #gsh-ml-stage .gsh-split-thai-keyboard .gsh-kbd-function { font-size: var(--gsh-ml-font-sm); }
+
+  body[data-gsh-game="typing"].gsh-ml-active .gsh-ml-typing-magnifier {
+    position: fixed;
+    z-index: 10040;
+    width: clamp(138px, 40dvh, 164px);
+    height: clamp(138px, 40dvh, 164px);
+    box-sizing: border-box;
+    border: 3px solid var(--gold, #c8952c);
+    border-radius: 50%;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+    padding: 8px;
+    background: rgba(255, 252, 244, .97);
+    box-shadow: 0 8px 24px rgba(67, 45, 6, .24);
+    pointer-events: none;
+    overflow: hidden;
+  }
+  body[data-gsh-game="typing"].gsh-ml-active .gsh-ml-typing-magnifier[hidden] { display: none; }
+  .gsh-ml-typing-magnifier-key {
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6b4708;
+    font-family: 'Noto Sans Thai', 'Noto Sans TC', sans-serif;
+    font-size: clamp(15px, 4.2dvh, 21px);
+    font-weight: 700;
+    line-height: 1;
+  }
+  .gsh-ml-typing-magnifier-key--above { grid-column: 2; grid-row: 1; }
+  .gsh-ml-typing-magnifier-key--left { grid-column: 1; grid-row: 2; }
+  .gsh-ml-typing-magnifier-key--center { grid-column: 2; grid-row: 2; }
+  .gsh-ml-typing-magnifier-key--right { grid-column: 3; grid-row: 2; }
+  .gsh-ml-typing-magnifier-key--below { grid-column: 2; grid-row: 3; }
+  .gsh-ml-typing-magnifier-key[data-selected="true"] {
+    border: 2px solid var(--gold, #c8952c);
+    border-radius: 50%;
+    background: #f8e8bd;
+    color: #3a2a0a;
+    font-size: clamp(27px, 7.5dvh, 38px);
+    font-weight: 900;
+  }
 
   body[data-gsh-game="typing"].gsh-ml-active [data-gsh-ml-slot="center"],
   body[data-gsh-game="typing"].gsh-ml-active [data-gsh-ml-slot="question"],
@@ -1095,16 +1148,61 @@
   body[data-gsh-game="tone"].gsh-ml-active .tf-options[data-gsh-ml-split="tone"] {
     align-content: center !important;
   }
-  body[data-gsh-game="tone"].gsh-ml-active .tf-options:has(> .tf-opt-wrap:nth-child(2):last-child) > .tf-opt-wrap {
+  body[data-gsh-game="tone"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-position-two-zone="open"]
+  [data-gsh-ml-split="tone"] {
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: minmax(0, 1fr);
+    align-content: stretch !important;
+    overflow: hidden;
+  }
+  /* Lin Human review 2026-09-06: Tone derivation choices share exact
+     horizontal planes across the two side frames. Their widths/heights may
+     remain different. */
+  body[data-gsh-game="tone"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-position-two-zone="open"]
+  .tf-options:has(> .tf-opt-wrap:nth-child(2):last-child),
+  body[data-gsh-game="tone"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-position-two-zone="open"]
+  .tf-mark-opts:has(> .tf-mark-btn:nth-child(2):last-child) {
+    grid-template-rows: min-content;
+    grid-auto-rows: min-content;
+    align-content: center !important;
+  }
+  body[data-gsh-game="tone"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-position-two-zone="open"]
+  .tf-options:has(> .tf-opt-wrap:nth-child(3):last-child),
+  body[data-gsh-game="tone"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-position-two-zone="open"]
+  .tf-options:has(> .tf-opt-wrap:nth-child(4):last-child),
+  body[data-gsh-game="tone"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-position-two-zone="open"]
+  .tf-mark-opts:has(> .tf-mark-btn:nth-child(4):last-child) {
+    grid-template-rows: repeat(2, min-content);
+    grid-auto-rows: min-content;
+    align-content: center !important;
+    row-gap: clamp(14px, 4dvh, 20px);
+  }
+  body[data-gsh-game="tone"].gsh-ml-active .tf-options:has(> .tf-opt-wrap:nth-child(2):last-child) > .tf-opt-wrap,
+  body[data-gsh-game="tone"].gsh-ml-active .tf-mark-opts:has(> .tf-mark-btn:nth-child(2):last-child) > .tf-mark-btn,
+  body[data-gsh-game="tone"].gsh-ml-active .tf-options:has(> .tf-opt-wrap:nth-child(3):last-child) > .tf-opt-wrap,
+  body[data-gsh-game="tone"].gsh-ml-active .tf-options:has(> .tf-opt-wrap:nth-child(4):last-child) > .tf-opt-wrap,
+  body[data-gsh-game="tone"].gsh-ml-active .tf-mark-opts:has(> .tf-mark-btn:nth-child(4):last-child) > .tf-mark-btn {
+    transform: translateY(var(--gsh-ml-tone-plane-shift, 0px));
+  }
+  body[data-gsh-game="tone"].gsh-ml-active .tf-options:has(> .tf-opt-wrap:nth-child(2):last-child) > .tf-opt-wrap,
+  body[data-gsh-game="tone"].gsh-ml-active .tf-mark-opts:has(> .tf-mark-btn:nth-child(2):last-child) > .tf-mark-btn {
     grid-row: 1;
   }
   body[data-gsh-game="tone"].gsh-ml-active .tf-options:has(> .tf-opt-wrap:nth-child(3):last-child) > .tf-opt-wrap[data-gsh-side="left"] {
-    grid-row: 1 / span 2;
+    grid-row: 1 / 3;
   }
   body[data-gsh-game="tone"].gsh-ml-active .tf-options:has(> .tf-opt-wrap:nth-child(3):last-child) > .tf-opt-wrap[data-gsh-side="right"][data-gsh-side-index="0"] {
     grid-row: 1;
   }
   body[data-gsh-game="tone"].gsh-ml-active .tf-options:has(> .tf-opt-wrap:nth-child(3):last-child) > .tf-opt-wrap[data-gsh-side="right"][data-gsh-side-index="1"] {
+    grid-row: 2;
+  }
+  body[data-gsh-game="tone"].gsh-ml-active .tf-options:has(> .tf-opt-wrap:nth-child(4):last-child) > .tf-opt-wrap[data-gsh-side-index="0"],
+  body[data-gsh-game="tone"].gsh-ml-active .tf-mark-opts:has(> .tf-mark-btn:nth-child(4):last-child) > .tf-mark-btn[data-gsh-side-index="0"] {
+    grid-row: 1;
+  }
+  body[data-gsh-game="tone"].gsh-ml-active .tf-options:has(> .tf-opt-wrap:nth-child(4):last-child) > .tf-opt-wrap[data-gsh-side-index="1"],
+  body[data-gsh-game="tone"].gsh-ml-active .tf-mark-opts:has(> .tf-mark-btn:nth-child(4):last-child) > .tf-mark-btn[data-gsh-side-index="1"] {
     grid-row: 2;
   }
   body[data-gsh-game="tone"].gsh-ml-active .tf-qbox {
@@ -1479,6 +1577,139 @@
   }
   [data-gsh-ml-slot="left"] #baseplate .slot { min-width: 0; }
   [data-gsh-ml-slot="left"] #baseplate .slot-btn { min-width: 0; min-height: var(--gsh-ml-control-h); padding: 4px; }
+
+  /* Tone 字母練習區 reuses the live Desktop ALPHA nodes and handlers inside
+     the Human-reviewed two-column Landscape surface. */
+  body[data-gsh-game="tone"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-tone-alpha="true"] .gsh-ml-play {
+    display: block;
+    padding: var(--gsh-ml-pad);
+    background: rgba(36, 35, 34, .48);
+  }
+  body[data-gsh-game="tone"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-tone-alpha="true"]
+  [data-gsh-ml-slot="left"],
+  body[data-gsh-game="tone"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-tone-alpha="true"]
+  [data-gsh-ml-slot="right"],
+  body[data-gsh-game="tone"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-tone-alpha="true"]
+  [data-gsh-ml-slot="split-content"] {
+    display: none;
+  }
+  body[data-gsh-game="tone"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-tone-alpha="true"]
+  [data-gsh-ml-slot="center"] {
+    width: min(660px, calc(100% - (2 * var(--gsh-ml-pad))));
+    height: 100%;
+    max-height: 100%;
+    margin: 0 auto;
+    padding: 0;
+    border-radius: 16px;
+    background: #fffdf7;
+    overflow: hidden;
+  }
+  body[data-gsh-game="tone"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-tone-alpha="true"]
+  [data-gsh-ml-slot="account"],
+  body[data-gsh-game="tone"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-tone-alpha="true"]
+  [data-gsh-ml-slot="current-input"],
+  body[data-gsh-game="tone"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-tone-alpha="true"] #tf-banner {
+    display: none !important;
+  }
+  body[data-gsh-game="tone"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-tone-alpha="true"]
+  [data-gsh-ml-slot="question"] {
+    width: 100%;
+    height: 100%;
+    display: block;
+    overflow: hidden;
+  }
+  body[data-gsh-game="tone"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-tone-alpha="true"] #tf-body {
+    width: 100% !important;
+    height: 100% !important;
+    padding: 0 !important;
+    overflow-y: auto !important;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  body[data-gsh-game="tone"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-tone-alpha="true"] .tf-alpha-surface {
+    width: 100%;
+    min-height: 100%;
+    margin: 0 !important;
+    padding: 14px 16px 18px !important;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-content: start;
+    column-gap: 10px;
+    row-gap: 14px;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: #fffdf7 !important;
+    box-shadow: none !important;
+  }
+  body[data-gsh-game="tone"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-tone-alpha="true"]
+  .tf-alpha-surface > .tf-level-title {
+    grid-column: 1 / -1;
+    margin: 0 !important;
+    padding: 2px 48px 10px;
+    border-bottom: 1px solid rgba(139, 99, 16, .24);
+    color: var(--gold-deep, #8b6310);
+    font-size: clamp(16px, 4.2dvh, 21px);
+    font-weight: 700;
+    text-align: center;
+  }
+  body[data-gsh-game="tone"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-tone-alpha="true"]
+  .tf-alpha-surface > .tf-level-btn {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: clamp(54px, 15dvh, 70px) !important;
+    margin: 0 !important;
+    padding: 9px 10px !important;
+    box-sizing: border-box;
+    border-radius: 10px !important;
+    overflow-wrap: anywhere;
+  }
+  body[data-gsh-game="tone"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-tone-alpha="true"]
+  .tf-alpha-surface > .tf-back-level-btn {
+    grid-column: 1 / -1;
+    justify-self: center;
+    width: max-content !important;
+    max-width: 100% !important;
+    min-height: 40px;
+    margin: 0 !important;
+    padding: 7px 14px !important;
+  }
+  body[data-gsh-game="tone"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-tone-alpha="true"]
+  .tf-alpha-surface:has(> .afc-scene) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  body[data-gsh-game="tone"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-tone-alpha="true"] .afc-scene {
+    width: min(280px, 90%);
+    margin: 0 auto !important;
+  }
+  body[data-gsh-game="tone"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-tone-alpha="true"] .afc-card {
+    width: 100%;
+  }
+  body[data-gsh-game="tone"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-tone-alpha="true"] .afc-face {
+    min-height: clamp(150px, 46dvh, 210px);
+    padding: clamp(14px, 3dvh, 22px) 14px;
+    gap: 14px;
+  }
+  body[data-gsh-game="tone"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-tone-alpha="true"] .afc-letter {
+    font-size: clamp(58px, 22dvh, 92px);
+  }
+  body[data-gsh-game="tone"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-tone-alpha="true"] .afc-exp {
+    width: min(100%, 420px);
+    max-width: 100%;
+    margin: 0 auto !important;
+    box-sizing: border-box;
+  }
+  body[data-gsh-game="tone"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-tone-alpha="true"]
+  .afc-controls,
+  body[data-gsh-game="tone"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-tone-alpha="true"]
+  .afc-audio-btn,
+  body[data-gsh-game="tone"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-tone-alpha="true"]
+  .afc-shuffle {
+    flex: 0 0 auto;
+    margin: 0 !important;
+  }
 
   .gsh-ml-exclusive { opacity: 0; pointer-events: none; }
   [data-gsh-ml-slot="exclusive-left"],
@@ -2200,7 +2431,7 @@
     grid-column: 1 / 3;
     width: 100% !important;
     height: 100% !important;
-    padding: 0 !important;
+    padding: var(--gsh-ml-gap) 0 !important;
     display: grid !important;
     grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
     grid-template-rows: none !important;
@@ -2210,9 +2441,9 @@
        The bank scrolls only when those real row heights exceed its viewport. */
     --wo-ml-choice-row: 34px;
     grid-auto-rows: var(--wo-ml-choice-row) !important;
-    align-content: start !important;
+    align-content: safe center !important;
     column-gap: var(--gsh-ml-gap) !important;
-    row-gap: 0 !important;
+    row-gap: var(--gsh-ml-gap) !important;
     overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;

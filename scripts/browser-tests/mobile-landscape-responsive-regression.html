@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>FB-02 responsive regression</title>
+  <style>
+    body { margin: 0; padding: 16px; font: 14px/1.5 system-ui, sans-serif; background: #f5f0e8; color: #49350d; }
+    h1 { margin: 0 0 8px; font-size: 20px; }
+    #status { font-weight: 800; }
+    #results { white-space: pre-wrap; background: #fff; border: 1px solid #d4b87a; border-radius: 10px; padding: 12px; }
+    iframe { position: absolute; left: -10000px; top: 0; border: 0; }
+  </style>
+</head>
+<body>
+  <h1>FB-02 responsive regression</h1>
+  <p id="status">RUNNING</p>
+  <pre id="results"></pre>
+  <iframe id="game" title="responsive game under test"></iframe>
+  <script>
+    (function () {
+      'use strict';
+      var pages = ['tone-finder.html', 'typing-game.html', 'reading-game.html', 'word-order.html'];
+      var modes = [
+        {name:'Landscape', width:844, height:390},
+        {name:'Portrait', width:390, height:844},
+        {name:'Desktop', width:1280, height:800}
+      ];
+      var words = [{word:'มา',readingTH:'มา',en:'maa',zh:'來',level:'初',category:'กริยา',syls:[{cons:'ม',vowel:'อา',tone_name:'สามัญ',th:'มา'}]}];
+      var sentences = [{th:'วันนี้ผมไปเรียน',zh:'今天我去上課',readingTH:'วัน-นี้-ผม-ไป-เรียน',wc:4,politeF:null,words:[
+        {th:'วันนี้',zh:'今天',syls:[{th:'วันนี้',en:'wan-níi'}]},
+        {th:'ผม',zh:'我',syls:[{th:'ผม',en:'phǒm'}]},
+        {th:'ไป',zh:'去',syls:[{th:'ไป',en:'pai'}]},
+        {th:'เรียน',zh:'上課',syls:[{th:'เรียน',en:'rian'}]}
+      ]}];
+      var frame = document.getElementById('game');
+      var status = document.getElementById('status');
+      var results = document.getElementById('results');
+      var lines = [];
+
+      function wait(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
+      function waitFor(check, timeout) {
+        var started = Date.now();
+        return new Promise(function (resolve, reject) {
+          (function poll() {
+            try { if (check()) return resolve(); } catch (ignore) {}
+            if (Date.now() - started > (timeout || 15000)) return reject(new Error('ready timeout'));
+            setTimeout(poll, 80);
+          })();
+        });
+      }
+      function shown(win, node) {
+        if (!node) return false;
+        var style = win.getComputedStyle(node);
+        return style.display !== 'none' && style.visibility !== 'hidden';
+      }
+      function override() {
+        return '<script>(function(){var words=' + JSON.stringify(words) + ';var sentences=' + JSON.stringify(sentences) + ';try{localStorage.setItem("cookieConsent","denied");["tone","typing","reading","wordorder"].forEach(function(g){localStorage.setItem("howto_tour_seen_"+g,"1");localStorage.setItem("howto_hint_seen_"+g,"1");});}catch(e){}window.GameContentLoader.boot=function(srcs){window.WORDS_MASTER=words;window.ADV_SENTENCES=sentences;var chain=new Promise(function(resolve){if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",resolve,{once:true});else resolve();}).then(function(){if(window.GameResume&&typeof window.GameResume.load==="function")window.GameResume.load=function(){return null;};});(srcs||[]).forEach(function(src){chain=chain.then(function(){return new Promise(function(resolve,reject){var script=document.createElement("script");script.src=src;script.onload=resolve;script.onerror=reject;document.head.appendChild(script);});});});return chain;};})();<\/script>';
+      }
+      async function load(page, mode) {
+        frame.style.width = mode.width + 'px';
+        frame.style.height = mode.height + 'px';
+        var response = await fetch('../../' + page + '?fb02-responsive=' + Date.now(), {cache:'no-store'});
+        if (!response.ok) throw new Error(page + ' source load failed');
+        var html = await response.text();
+        html = html.replace('<head>', '<head><base href="' + new URL('../../', location.href).href + '">');
+        var clientPattern = /game-content-client\.js\?v=\d+"><\/script>/;
+        html = html.replace(clientPattern, function (tag) { return tag + override(); });
+        await new Promise(function (resolve, reject) {
+          var timer = setTimeout(function () { reject(new Error(page + ' iframe load timeout')); }, 15000);
+          frame.onload = function () { clearTimeout(timer); resolve(); };
+          frame.srcdoc = html;
+        });
+        var doc = frame.contentDocument;
+        var win = frame.contentWindow;
+        await waitFor(function () { return doc.documentElement.classList.contains('gc-ready'); });
+        await wait(180);
+        return {doc:doc, win:win};
+      }
+      function verify(page, mode, view) {
+        var doc = view.doc;
+        var win = view.win;
+        var profile = doc.getElementById('rg-profile-wrap');
+        var login = doc.getElementById('rg-login-slot');
+        var bottom = doc.getElementById('bottom-nav');
+        var landscape = mode.name === 'Landscape';
+        if (!profile || !login || !bottom) throw new Error(page + ' shared strip/nav node missing');
+        if (bottom.querySelectorAll('.bn-item').length !== 4) throw new Error(page + ' bottom nav is not four items');
+        if (doc.documentElement.scrollWidth > mode.width + 1) throw new Error(page + ' horizontal overflow at ' + mode.name);
+        if (landscape) {
+          if (!doc.body.classList.contains('gsh-ml-active')) throw new Error(page + ' Landscape runtime inactive');
+          if (!login.parentElement || login.parentElement.getAttribute('data-gsh-ml-slot') !== 'dropdowns') throw new Error(page + ' Login not moved to Landscape safe edge');
+          if (shown(win, bottom)) throw new Error(page + ' bottom nav visible in Landscape');
+        } else {
+          if (doc.body.classList.contains('gsh-ml-active')) throw new Error(page + ' Landscape runtime leaked into ' + mode.name);
+          if (!profile.contains(login)) throw new Error(page + ' account strip not restored in ' + mode.name);
+          if (!shown(win, profile)) throw new Error(page + ' account strip hidden in ' + mode.name);
+          if (mode.name === 'Portrait' && !shown(win, bottom)) throw new Error(page + ' bottom nav hidden in Portrait');
+          if (mode.name === 'Desktop' && shown(win, bottom)) throw new Error(page + ' bottom nav visible on Desktop');
+        }
+      }
+
+      (async function run() {
+        try {
+          for (var p = 0; p < pages.length; p += 1) {
+            for (var m = 0; m < modes.length; m += 1) {
+              var view = await load(pages[p], modes[m]);
+              verify(pages[p], modes[m], view);
+              lines.push('PASS ' + pages[p] + ' — ' + modes[m].name);
+              results.textContent = lines.join('\n');
+            }
+          }
+          status.textContent = 'PASS 12/12 states';
+          status.dataset.result = 'pass';
+          document.title = 'PASS — FB-02 responsive regression';
+        } catch (error) {
+          lines.push('FAIL ' + (error && error.stack ? error.stack : error));
+          results.textContent = lines.join('\n');
+          status.textContent = 'FAIL after ' + lines.filter(function (line) { return line.indexOf('PASS ') === 0; }).length + ' states';
+          status.dataset.result = 'fail';
+          document.title = 'FAIL — FB-02 responsive regression';
+        }
+      })();
+    })();
+  </script>
+</body>
+</html>
