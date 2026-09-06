@@ -21,7 +21,9 @@ assert.match(html, /fetch\('\.\.\/\.\.\/' \+ state\.page/);
 assert.match(html, /frame\.srcdoc = html/);
 assert.match(html, /verifyState\(state, doc\)/);
 assert.match(html, /noHorizontalOverflow/);
-assert.match(html, /twoChoiceRows[\s\S]{0,420}samePlane/);
+assert.match(html, /twoChoiceRows[\s\S]{0,520}matchesQuestionPlane/);
 assert.match(html, /Math\.abs\([\s\S]{0,180}questionCenter\) <= 2/);
+assert.match(html, /threeChoices[\s\S]{0,520}samePlane\(leftChoice, rightChoices\[1\]\)/);
+assert.match(html, /fourMarks[\s\S]{0,680}samePlane\(leftMarks\[0\], rightMarks\[0\]\)[\s\S]{0,120}samePlane\(leftMarks\[1\], rightMarks\[1\]\)/);
 
 console.log('✅ FB-02 combined real-source review passed (25 states: 5 + 8 + 12)');

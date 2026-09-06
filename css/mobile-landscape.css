@@ -1102,9 +1102,9 @@
     align-content: stretch !important;
     overflow: hidden;
   }
-  /* Lin Human review 2026-09-06: when the derivation has exactly two
-     choices, the question card and both side choices share one horizontal
-     plane. Their widths/heights may remain different. */
+  /* Lin Human review 2026-09-06: Tone derivation choices share exact
+     horizontal planes across the two side frames. Their widths/heights may
+     remain different. */
   body[data-gsh-game="tone"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-position-two-zone="open"]
   .tf-options:has(> .tf-opt-wrap:nth-child(2):last-child),
   body[data-gsh-game="tone"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-position-two-zone="open"]
@@ -1113,6 +1113,17 @@
     grid-auto-rows: min-content;
     align-content: center !important;
   }
+  body[data-gsh-game="tone"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-position-two-zone="open"]
+  .tf-options:has(> .tf-opt-wrap:nth-child(3):last-child),
+  body[data-gsh-game="tone"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-position-two-zone="open"]
+  .tf-options:has(> .tf-opt-wrap:nth-child(4):last-child),
+  body[data-gsh-game="tone"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-position-two-zone="open"]
+  .tf-mark-opts:has(> .tf-mark-btn:nth-child(4):last-child) {
+    grid-template-rows: repeat(2, min-content);
+    grid-auto-rows: min-content;
+    align-content: center !important;
+    row-gap: clamp(14px, 4dvh, 20px);
+  }
   body[data-gsh-game="tone"].gsh-ml-active .tf-options:has(> .tf-opt-wrap:nth-child(2):last-child) > .tf-opt-wrap,
   body[data-gsh-game="tone"].gsh-ml-active .tf-mark-opts:has(> .tf-mark-btn:nth-child(2):last-child) > .tf-mark-btn {
     grid-row: 1;
@@ -1120,6 +1131,7 @@
   }
   body[data-gsh-game="tone"].gsh-ml-active .tf-options:has(> .tf-opt-wrap:nth-child(3):last-child) > .tf-opt-wrap[data-gsh-side="left"] {
     grid-row: 2;
+    transform: translateY(34%);
   }
   body[data-gsh-game="tone"].gsh-ml-active .tf-options:has(> .tf-opt-wrap:nth-child(3):last-child) > .tf-opt-wrap[data-gsh-side="right"][data-gsh-side-index="0"] {
     grid-row: 1;
@@ -1134,6 +1146,14 @@
   body[data-gsh-game="tone"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-position-two-zone="open"]
   .tf-mark-opts:has(> .tf-mark-btn:nth-child(4):last-child) > .tf-mark-btn {
     transform: translateY(34%);
+  }
+  body[data-gsh-game="tone"].gsh-ml-active .tf-options:has(> .tf-opt-wrap:nth-child(4):last-child) > .tf-opt-wrap[data-gsh-side-index="0"],
+  body[data-gsh-game="tone"].gsh-ml-active .tf-mark-opts:has(> .tf-mark-btn:nth-child(4):last-child) > .tf-mark-btn[data-gsh-side-index="0"] {
+    grid-row: 1;
+  }
+  body[data-gsh-game="tone"].gsh-ml-active .tf-options:has(> .tf-opt-wrap:nth-child(4):last-child) > .tf-opt-wrap[data-gsh-side-index="1"],
+  body[data-gsh-game="tone"].gsh-ml-active .tf-mark-opts:has(> .tf-mark-btn:nth-child(4):last-child) > .tf-mark-btn[data-gsh-side-index="1"] {
+    grid-row: 2;
   }
   body[data-gsh-game="tone"].gsh-ml-active .tf-qbox {
     padding: clamp(6px, 1.8dvh, 10px) clamp(8px, 1.5vw, 14px) !important;
