@@ -10,10 +10,11 @@ const Core=require(path.join(root,'js/games/study-plan-core.js'));
 let passed=0;
 function check(label,fn){fn();passed++;console.log('✓ '+label);}
 
-check('Minimum Guest parks the Time Plan UI without deleting its core module',()=>{
+check('Games hub exposes the locked Time Plan UI and runtime',()=>{
   const html=read('games.html');
-  assert.doesNotMatch(html,/id="timePlanTitle"|id="timePlanProposal"|id="timePlanConfirm"|id="timePlanCancel"/);
-  assert.doesNotMatch(html,/study-plan(?:-core)?\.js/);
+  assert.match(html,/id="timePlanTitle"|id="timePlanProposal"|id="timePlanConfirm"|id="timePlanCancel"/);
+  assert.match(html,/study-plan-core\.js\?v=2/);
+  assert.match(html,/study-plan\.js\?v=4/);
   assert.doesNotMatch(html,/id="gameSearchInput"/);
 });
 

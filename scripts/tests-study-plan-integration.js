@@ -120,14 +120,17 @@ function harness(options={}){
 }
 
 async function main(){
-  await test('Minimum Guest hub restores Game Search while Time Plan stays parked',()=>{
+  await test('hub keeps Search separate and exposes the locked Time Plan UI',()=>{
     const html=read('games.html');
     assert.match(html,/id="gameSearchGate"/);
     assert.match(html,/js\/games\/games-search-ui\.js\?v=5/);
-    assert.doesNotMatch(html,/id="gameSearchInput"|id="timePlanTitle"|id="timePlanMinutes"|id="timePlanBtn"|js\/games\/study-plan(?:-core)?\.js/);
+    assert.match(html,/id="gameSearchGate"[\s\S]+id="timePlanTitle">今天有多少時間？/);
+    assert.match(html,/id="timePlanMinutes"[\s\S]+分鐘[\s\S]+id="timePlanBtn"[\s\S]+幫我安排/);
+    assert.match(html,/js\/games\/study-plan-core\.js\?v=2[\s\S]+js\/games\/study-plan\.js\?v=4/);
+    assert.doesNotMatch(html,/id="gameSearchInput"/);
   });
 
-  await test('all six Guest games park personal lifecycle listeners',()=>{
+  await test('all six games load lifecycle listeners before gameplay',()=>{
     const pages={
       'tone-finder.html':'tone-finder-game',
       'reading-game.html':'reading-game-app',
@@ -137,8 +140,8 @@ async function main(){
       'lego.html':'lego-game-app'
     };
     for(const [page,app] of Object.entries(pages)){
-      const html=read(page),game=html.lastIndexOf(app);
-      assert(game>=0 && !/study-plan(?:-core)?\.js/.test(html),page+' parks Study Plan');
+      const html=read(page),core=html.indexOf('study-plan-core.js?v=2'),plan=html.indexOf('study-plan.js?v=4'),game=html.lastIndexOf(app);
+      assert(core>=0&&plan>core&&game>plan,page+' script order');
     }
   });
 
@@ -482,6 +485,25 @@ async function main(){
     await settleAll();
     h.doc.emit('click',{target:{closest:selector=>selector==='a[href]'?{href:'https://mrtaihualin.com/reading-game.html'}:null}});
     assert.strictEqual(h.context.StudyPlan.plan(),null);
+  });
+
+  await test('exit summary shows today’s practiced games, active time, and completed rounds only',async()=>{
+    const local=storage(),session=storage();
+    const game=harness({pathname:'/tone-finder.html',localStorage:local,sessionStorage:session,plan:activePlan({quotaCommitted:true})});
+    await settleAll();
+    game.emitWindow('gsh:round-start',{report:{game_type:'tone',items:[]}});
+    game.advanceNow(1000);game.intervals[0]();
+    game.advanceNow(1000);game.intervals[0]();
+    game.emitWindow('gsh:round-complete',{report:{game_type:'tone',items:[]}});
+    game.doc.emit('click',{target:{closest:selector=>selector==='a[href]'?{href:'https://mrtaihualin.com/reading-game.html'}:null}});
+    assert.strictEqual(game.context.StudyPlan.plan(),null);
+    const hub=harness({localStorage:local,sessionStorage:session});
+    assert.match(hub.doc.getElementById('timePlanMessage').textContent,/今天的自動安排：聲調 00:02（1 輪）/);
+
+    const stale=storage();
+    stale.setItem('gsh_time_plan_exit_summary_v1',JSON.stringify({version:1,day:'2000-01-01',owner:'guest',items:[{game:'reading',seconds:99,rounds:1}]}));
+    const freshHub=harness({sessionStorage:stale});
+    assert.doesNotMatch(freshHub.doc.getElementById('timePlanMessage').textContent,/拼讀|01:39/);
   });
 
   await test('Login performance uses normalized weakness data while Guest contributes nothing',()=>{
