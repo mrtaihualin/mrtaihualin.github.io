@@ -59,15 +59,17 @@
         var bottom = Math.max.apply(null, rows.map(function (rect) { return rect.bottom; }));
         return Math.abs((top + bottom) / 2 - (side.top + side.bottom) / 2);
       }
-      function combiningLabelsVisible(doc, win) {
+      function desktopKeyFacesReused(doc, win) {
         var labels = Array.prototype.slice.call(doc.querySelectorAll('#rg-kbd .comb-disp'));
+        var sample = doc.querySelector('#rg-kbd .tk-key[data-code="KeyG"]');
+        var baseFace = sample && sample.querySelector('.tk-base');
+        var shiftFace = sample && sample.querySelector('.tk-shift');
         return labels.length > 0 && labels.every(function (label) {
           var base = label.querySelector('.comb-base');
           var style = base && win.getComputedStyle(base);
-          var rect = label.getBoundingClientRect();
-          return label.textContent.trim().length > 1 && style && parseFloat(style.opacity) >= .5 &&
-            style.color !== 'rgba(0, 0, 0, 0)' && rect.width > 0 && rect.height > 0;
-        });
+          return label.textContent.trim().length > 1 && style && style.display === 'none';
+        }) && parseFloat(win.getComputedStyle(baseFace).fontSize) === 15 &&
+          parseFloat(win.getComputedStyle(shiftFace).fontSize) === 9;
       }
       async function verifyMagnifier(doc, win) {
         var start = doc.querySelector('#rg-kbd .tk-key[data-code="KeyG"]');
@@ -120,10 +122,10 @@
               doc.querySelectorAll('#rg-kbd .rg-shift-key').length === 2;
             if (readyNow) {
               var centered = verticalCenterDelta(doc) <= 2;
-              var labelsVisible = combiningLabelsVisible(doc, win);
+              var desktopFaces = desktopKeyFacesReused(doc, win);
               var magnifierWorks = await verifyMagnifier(doc, win);
-              status.textContent = centered && labelsVisible && magnifierWorks
-                ? 'พร้อมตรวจ Typing — ปุ่มเครื่องหมายไม่ว่าง · คีย์บอร์ดกึ่งกลาง · กดค้าง 350ms · ลากข้ามฝั่ง · ปล่อยพิมพ์ครั้งเดียว · ปล่อยนอกยกเลิก'
+              status.textContent = centered && desktopFaces && magnifierWorks
+                ? 'พร้อมตรวจ Typing — ใช้ปุ่มและตัวอักษร Desktop เดิม · ไม่มี ก เพิ่ม · ขยายและจัดตำแหน่งใหม่เท่านั้น'
                 : 'ตรวจ Typing ไม่ผ่าน';
               return;
             }

@@ -925,8 +925,7 @@
 
   function typingKeyFace(keyboard, key) {
     var shifted = keyboard.classList.contains('shift-on');
-    var face = q(shifted ? '.tk-shift' : '.tk-base', key);
-    return face ? face.textContent : '';
+    return q(shifted ? '.tk-shift' : '.tk-base', key);
   }
 
   function typingMagnifierNeighbors(keyboard, selected) {
@@ -989,7 +988,8 @@
       var face = document.createElement('span');
       face.className = 'gsh-ml-typing-magnifier-key gsh-ml-typing-magnifier-key--' + position;
       face.dataset.code = sourceKey.dataset.code || '';
-      face.textContent = typingKeyFace(keyboard, sourceKey);
+      var sourceFace = typingKeyFace(keyboard, sourceKey);
+      face.innerHTML = sourceFace ? sourceFace.innerHTML : '';
       if (position === 'center') face.setAttribute('data-selected', 'true');
       magnifier.appendChild(face);
     });
