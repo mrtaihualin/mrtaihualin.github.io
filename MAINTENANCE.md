@@ -2699,3 +2699,9 @@ node scripts/check-site.js
 - Reused the read-only `practice-events` gamification-status action without loading or flushing the gameplay report queue on the non-game page.
 - Bound the response to the current account and auth-owner epoch so a late response cannot cross an account switch. No score, SRS, personal-content, provider, database, or Production mutation is part of this Source/Preview Delta.
 - Verification: Free gamification `23/23`, owner-switch races `12/12`, Auth session `15/15`, Minimum Guest launch PASS, and the full `1,075`-file site gate PASS.
+
+# 2026-09-06 — Tone two-choice horizontal-plane alignment
+
+- Aligned the live question card and both side choices to one horizontal center line in the two-choice Tone state while allowing their widths and heights to remain independent.
+- Derived the offset from the rendered question and choice rectangles so optional reading visibility does not break the shared plane; other choice counts and games retain their existing layout.
+- Verification: local `844×390` geometry shows `0px` center delta with unequal card sizes, the 25-state browser review passes `25/25`, focused Mobile Landscape checks pass, and the full `1,080`-file site gate passes. This remains an MR/Draft Preview Human-review change only.

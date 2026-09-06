@@ -21,5 +21,7 @@ assert.match(html, /fetch\('\.\.\/\.\.\/' \+ state\.page/);
 assert.match(html, /frame\.srcdoc = html/);
 assert.match(html, /verifyState\(state, doc\)/);
 assert.match(html, /noHorizontalOverflow/);
+assert.match(html, /twoChoiceRows[\s\S]{0,420}samePlane/);
+assert.match(html, /Math\.abs\([\s\S]{0,180}questionCenter\) <= 2/);
 
 console.log('✅ FB-02 combined real-source review passed (25 states: 5 + 8 + 12)');

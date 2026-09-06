@@ -155,7 +155,16 @@
 
       function verifyState(state, doc) {
         var ok = false;
-        if (state.kind === 'derive-2') ok = doc.querySelectorAll('.tf-options .tf-opt').length === 2;
+        if (state.kind === 'derive-2') {
+          var twoChoiceRows = Array.prototype.slice.call(doc.querySelectorAll('.tf-options > .tf-opt-wrap'));
+          var questionRect = doc.querySelector('.tf-qbox').getBoundingClientRect();
+          var questionCenter = questionRect.top + (questionRect.height / 2);
+          var samePlane = twoChoiceRows.every(function (row) {
+            var rowRect = row.getBoundingClientRect();
+            return Math.abs((rowRect.top + (rowRect.height / 2)) - questionCenter) <= 2;
+          });
+          ok = twoChoiceRows.length === 2 && samePlane;
+        }
         else if (state.kind === 'derive-3') ok = doc.querySelectorAll('.tf-options .tf-opt').length === 3;
         else if (state.kind === 'derive-4') ok = doc.querySelectorAll('.tf-mark-opts .tf-mark-btn').length === 4;
         else if (state.kind === 'helper') ok = !!doc.querySelector('.tf-helper-banner');

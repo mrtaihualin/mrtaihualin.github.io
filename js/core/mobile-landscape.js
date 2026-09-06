@@ -657,6 +657,19 @@
         child.style.setProperty('--gsh-ml-row-span', String(Math.max(1, rowEnd - rowStart)));
       }
     });
+    container.style.removeProperty('--gsh-ml-tone-plane-shift');
+    if (game === 'tone' && children.length === 2) {
+      var toneQuestion = q('#tf-body .tf-qbox');
+      if (toneQuestion) {
+        var questionRect = toneQuestion.getBoundingClientRect();
+        var choiceRect = children[0].getBoundingClientRect();
+        var planeShift = (questionRect.top + (questionRect.height / 2)) -
+          (choiceRect.top + (choiceRect.height / 2));
+        if (Number.isFinite(planeShift)) {
+          container.style.setProperty('--gsh-ml-tone-plane-shift', planeShift.toFixed(2) + 'px');
+        }
+      }
+    }
   }
 
   function syncSplitContent(game) {

@@ -39,8 +39,8 @@ test('all pages bind the shared landscape system and the four in-scope games sha
     assert.match(html, /js\/games\/thai-keyboard\.js\?v=2/, `${file}: missing shared split keyboard`);
     const paused = game === 'listening' || game === 'lego';
     const fourGame = game === 'tone' || game === 'reading' || game === 'typing' || game === 'word-order';
-    assert.match(html, new RegExp(`css/mobile-landscape\\.css\\?v=${fourGame ? 63 : 35}`), `${file}: wrong shared Landscape CSS version`);
-    const controllerVersion = fourGame ? 37 : paused ? 25 : 26;
+    assert.match(html, new RegExp(`css/mobile-landscape\\.css\\?v=${fourGame ? 64 : 35}`), `${file}: wrong shared Landscape CSS version`);
+    const controllerVersion = fourGame ? 38 : paused ? 25 : 26;
     assert.match(html, new RegExp(`js/core/mobile-landscape\\.js\\?v=${controllerVersion}`), `${file}: wrong scoped controller version`);
     assert.match(html, /js\/games\/game-switcher\.js\?v=8/, `${file}: missing fixed six-game navigation`);
   }
@@ -91,7 +91,7 @@ test('Reading reuses Tone menu presentation without replacing Reading menu conte
   assert.ok(css.includes('body.gsh-ml-active #game-switcher[data-gsh-ml-utility-panel] .gs-tab'));
   assert.ok(css.includes('body.gsh-ml-active .grw-menu[data-gsh-ml-utility-panel] .grw-item'));
   assert.match(stage, /game === 'reading'[\s\S]{0,900}labeledNode\('#rg-howto-btn', '玩法', '📖'\)[\s\S]{0,900}labeledNode\('#rg-en-toggle', '英文讀音', '🔤'\)[\s\S]{0,900}labeledNode\('#rg-particle-toggle', '禮貌詞', '🙏'\)/);
-  assert.match(read('reading-game.html'), /css\/mobile-landscape\.css\?v=63/);
+  assert.match(read('reading-game.html'), /css\/mobile-landscape\.css\?v=64/);
 });
 
 test('all six Resume screens reuse Tone 640px geometry and exact three-action copy', () => {
@@ -101,7 +101,7 @@ test('all six Resume screens reuse Tone 640px geometry and exact three-action co
   for (const [game, file] of pages) {
     const html = read(file);
     const fourGame = game === 'tone' || game === 'reading' || game === 'typing' || game === 'word-order';
-    assert.match(html, new RegExp(`css/mobile-landscape\\.css\\?v=${fourGame ? 63 : 35}`), `${file}: must load its current shared Resume CSS`);
+    assert.match(html, new RegExp(`css/mobile-landscape\\.css\\?v=${fourGame ? 64 : 35}`), `${file}: must load its current shared Resume CSS`);
     assert.match(html, new RegExp(`js/core/shared\\.min\\.js\\?v=${fourGame ? 50 : 47}`), `${file}: must load exact Resume copy`);
   }
   const shared = read('js/core/shared.js');
@@ -272,11 +272,14 @@ test('Typing exposes 47 character keys and two synchronized one-shot Shift contr
   assert.strictEqual((typingApp.match(/(?:Backquote|Digit\d|Minus|Equal|Key[A-Z]|BracketLeft|BracketRight|Semicolon|Quote|Backslash|Comma|Period|Slash):/g) || []).length / 2, 47);
 });
 
-test('Tone reviewed derivation states use the approved open lower-right layout', () => {
+test('Tone two-choice derivation keeps the question and choices on one horizontal plane', () => {
   assert.match(stage, /game !== 'tone'[\s\S]{0,260}tf-options, #tf-body \.tf-mark-opts, #tf-body \.sg-tone-grid/);
   assert.match(stage, /return !toneChoices \|\| toneChoices\.classList\.contains\('sg-tone-grid'\)/);
   assert.match(css, /data-gsh-ml-position-two-zone="open"[\s\S]{0,240}grid-template-rows: repeat\(2, minmax\(0, 1fr\)\)/);
-  assert.match(css, /tf-options:has\(> \.tf-opt-wrap:nth-child\(2\):last-child\)[\s\S]{0,180}grid-row: 2/);
+  assert.match(css, /tf-options:has\(> \.tf-opt-wrap:nth-child\(2\):last-child\)[\s\S]{0,420}grid-template-rows: min-content/);
+  assert.match(css, /tf-options:has\(> \.tf-opt-wrap:nth-child\(2\):last-child\)[\s\S]{0,680}grid-row: 1/);
+  assert.match(stage, /children\.length === 2[\s\S]{0,520}--gsh-ml-tone-plane-shift/);
+  assert.match(css, /grid-row: 1;[\s\S]{0,120}translateY\(var\(--gsh-ml-tone-plane-shift, 0px\)\)/);
 });
 
 test('Tone reviewed ALPHA states reuse the live source in one scrollable Landscape surface', () => {

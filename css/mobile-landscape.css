@@ -1102,9 +1102,21 @@
     align-content: stretch !important;
     overflow: hidden;
   }
+  /* Lin Human review 2026-09-06: when the derivation has exactly two
+     choices, the question card and both side choices share one horizontal
+     plane. Their widths/heights may remain different. */
+  body[data-gsh-game="tone"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-position-two-zone="open"]
+  .tf-options:has(> .tf-opt-wrap:nth-child(2):last-child),
+  body[data-gsh-game="tone"].gsh-ml-active #gsh-ml-stage[data-gsh-ml-position-two-zone="open"]
+  .tf-mark-opts:has(> .tf-mark-btn:nth-child(2):last-child) {
+    grid-template-rows: min-content;
+    grid-auto-rows: min-content;
+    align-content: center !important;
+  }
   body[data-gsh-game="tone"].gsh-ml-active .tf-options:has(> .tf-opt-wrap:nth-child(2):last-child) > .tf-opt-wrap,
   body[data-gsh-game="tone"].gsh-ml-active .tf-mark-opts:has(> .tf-mark-btn:nth-child(2):last-child) > .tf-mark-btn {
-    grid-row: 2;
+    grid-row: 1;
+    transform: translateY(var(--gsh-ml-tone-plane-shift, 0px));
   }
   body[data-gsh-game="tone"].gsh-ml-active .tf-options:has(> .tf-opt-wrap:nth-child(3):last-child) > .tf-opt-wrap[data-gsh-side="left"] {
     grid-row: 2;
