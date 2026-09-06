@@ -3,6 +3,9 @@
 (function (global) {
   'use strict';
 
+  // Temporary public GAME-audio kill switch. Flip only this source constant to restore
+  // the preserved audio runtime after a separately authorized re-enable decision.
+  var GAME_AUDIO_ENABLED = false;
   var available = Object.create(null);
   var signed = Object.create(null);
   var audioByText = Object.create(null);
@@ -11,15 +14,125 @@
   var styled = false;
   var errorToastAt = 0;
 
+  function audioRequestUrl(input) {
+    if (typeof input === 'string') return input;
+    return input && typeof input.url === 'string' ? input.url : '';
+  }
+
+  function isGameAudioRequest(input) {
+    var url = audioRequestUrl(input);
+    return /(?:^|\/)functions\/v1\/game-audio(?:[/?#]|$)/.test(url) ||
+      /(?:^|\/)storage\/v1\/object\/(?:sign\/)?game-audio-private(?:[/?#]|$)/.test(url) ||
+      /(?:^|\/)assets\/flashcard-audio(?:[/?#]|$)/.test(url) ||
+      /\.(?:mp3|m4a|ogg|wav)(?:[?#]|$)/i.test(url);
+  }
+
+  function disableAudioControl(node) {
+    if (!node || node.nodeType !== 1) return;
+    var selector = '.word-audio-btn,#rg-sound-toggle,#lg-sound-btn,#wo-sound-btn,' +
+      'button[onclick*="WordAudio.play"],button[onclick*="flashSpeak"]';
+    var controls = [];
+    try {
+      if (node.matches && node.matches(selector)) controls.push(node);
+      if (node.querySelectorAll) controls = controls.concat(Array.prototype.slice.call(node.querySelectorAll(selector)));
+    } catch (e) {}
+    controls.forEach(function (control) {
+      control.hidden = true;
+      control.disabled = true;
+      control.setAttribute('aria-hidden', 'true');
+      control.setAttribute('tabindex', '-1');
+    });
+
+    var tiles = [];
+    try {
+      var tileSelector = '.tf-alpha-tile[onclick*="alphaOverlaySpeak"]';
+      if (node.matches && node.matches(tileSelector)) tiles.push(node);
+      if (node.querySelectorAll) tiles = tiles.concat(Array.prototype.slice.call(node.querySelectorAll(tileSelector)));
+    } catch (e) {}
+    tiles.forEach(function (tile) {
+      tile.disabled = true;
+      tile.removeAttribute('onclick');
+      tile.setAttribute('aria-disabled', 'true');
+      tile.setAttribute('tabindex', '-1');
+    });
+  }
+
+  function installDisabledPolicy() {
+    var doc = global.document;
+    global.GameAudioPolicy = {
+      enabled: false,
+      reason: 'temporary_global_game_audio_disable',
+      isGameAudioRequest: isGameAudioRequest
+    };
+
+    if (doc && doc.documentElement && doc.documentElement.classList) {
+      doc.documentElement.classList.add('game-audio-disabled');
+    }
+    if (doc && doc.createElement && doc.head && !doc.getElementById('game-audio-policy-css')) {
+      var policyStyle = doc.createElement('style');
+      policyStyle.id = 'game-audio-policy-css';
+      policyStyle.textContent =
+        '.game-audio-disabled .word-audio-btn,.game-audio-disabled #rg-sound-toggle,' +
+        '.game-audio-disabled #lg-sound-btn,.game-audio-disabled #wo-sound-btn,' +
+        '.game-audio-disabled button[onclick*="WordAudio.play"],' +
+        '.game-audio-disabled button[onclick*="flashSpeak"]{display:none!important}' +
+        '.game-audio-disabled .tf-alpha-tile-sound{display:none!important}' +
+        '.game-audio-disabled .tf-alpha-tile[aria-disabled="true"]{cursor:default;pointer-events:none;opacity:1}';
+      doc.head.appendChild(policyStyle);
+    }
+
+    var nativeFetch = global.fetch;
+    if (typeof nativeFetch === 'function') {
+      global.fetch = function (input, init) {
+        var url = audioRequestUrl(input);
+        if (/assets\/flashcard-audio\/manifest\.json(?:[?#]|$)/.test(url)) {
+          return Promise.resolve({ ok: true, json: function () { return Promise.resolve({}); } });
+        }
+        if (isGameAudioRequest(input)) return Promise.reject(new Error('game_audio_disabled'));
+        return nativeFetch.call(this, input, init);
+      };
+    }
+
+    global.Audio = function DisabledGameAudio() {
+      this.src = '';
+      this.currentTime = 0;
+      this.preload = 'none';
+      this.paused = true;
+    };
+    global.Audio.prototype.pause = function () { this.paused = true; };
+    global.Audio.prototype.play = function () { return Promise.resolve(false); };
+    global.Audio.prototype.load = function () {};
+    global.Audio.prototype.addEventListener = function () {};
+    global.Audio.prototype.removeEventListener = function () {};
+    global.Audio.prototype.canPlayType = function () { return ''; };
+
+    if (doc) {
+      var apply = function () { disableAudioControl(doc.documentElement || doc.body); };
+      if (doc.readyState === 'loading' && doc.addEventListener) doc.addEventListener('DOMContentLoaded', apply);
+      else apply();
+      if (typeof global.MutationObserver === 'function' && doc.documentElement) {
+        new global.MutationObserver(function (records) {
+          records.forEach(function (record) {
+            Array.prototype.forEach.call(record.addedNodes || [], disableAudioControl);
+          });
+        }).observe(doc.documentElement, { childList: true, subtree: true });
+      }
+    }
+  }
+
+  if (!GAME_AUDIO_ENABLED) installDisabledPolicy();
+  else global.GameAudioPolicy = { enabled: true, reason: null, isGameAudioRequest: isGameAudioRequest };
+
   function setAvailability(items) {
     available = Object.create(null);
+    if (!GAME_AUDIO_ENABLED) return;
     (Array.isArray(items) ? items : []).forEach(function (text) {
       if (typeof text === 'string' && text) available[text] = true;
     });
     signed = Object.create(null);
   }
 
-  function has(text) { return !!available[String(text || '')]; }
+  function has(text) { return GAME_AUDIO_ENABLED && !!available[String(text || '')]; }
 
   function client() {
     try {
@@ -68,6 +181,7 @@
 
   function signedUrl(text) {
     text = String(text || '');
+    if (!GAME_AUDIO_ENABLED) return Promise.resolve(null);
     if (!has(text)) return Promise.resolve(null);
     var cached = signed[text];
     if (cached && cached.url && cached.expiresAt > Date.now() + 10000) return Promise.resolve(cached.url);
@@ -86,6 +200,10 @@
 
   function play(text, btn) {
     text = String(text || '');
+    if (!GAME_AUDIO_ENABLED) {
+      disableAudioControl(btn);
+      return Promise.resolve(false);
+    }
     if (!has(text)) return Promise.resolve(false);
     if (btn) btn.setAttribute('data-playing', '1');
     return signedUrl(text).then(function (url) {
@@ -113,6 +231,7 @@
   }
 
   function createBtn(text) {
+    if (!GAME_AUDIO_ENABLED) return null;
     if (!has(text)) return null;
     injectStyles();
     var btn = document.createElement('button');
@@ -123,6 +242,7 @@
   }
 
   function btnHtml(text) {
+    if (!GAME_AUDIO_ENABLED) return '';
     if (!has(text)) return '';
     injectStyles();
     var escaped = String(text).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
@@ -134,6 +254,11 @@
     var slot = document.getElementById(slotId);
     if (!slot) return;
     slot.innerHTML = '';
+    if (!GAME_AUDIO_ENABLED) {
+      slot.hidden = true;
+      slot.setAttribute('aria-hidden', 'true');
+      return;
+    }
     var btn = createBtn(text);
     if (btn) slot.appendChild(btn);
   }
@@ -142,6 +267,10 @@
   function initCurrentButton() {
     var btn = document.getElementById('rg-sound-toggle');
     if (!btn) return;
+    if (!GAME_AUDIO_ENABLED) {
+      disableAudioControl(btn);
+      return;
+    }
     btn.textContent = '🔊'; btn.title = '聽發音'; btn.setAttribute('aria-label', '聽發音');
     btn.addEventListener('click', function (event) {
       event.stopPropagation();

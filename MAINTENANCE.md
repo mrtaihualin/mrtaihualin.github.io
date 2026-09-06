@@ -2715,3 +2715,10 @@ node scripts/check-site.js
 - Follow-up Human correction removed the visible carrier workaround and now preserves the exact Desktop key-face markup, transparent shaping carrier, labels and handlers; Mobile Landscape changes only the real keys' size, split position and loupe presentation.
 - Added a small inline inset inside both Typing side frames so the enlarged Desktop keys no longer sit directly against the frame edges; the 30/40/30 columns, vertical centering, real controls and handlers remain unchanged.
 - Verification: focused source checks pass; the real-source `844×390` Word Order review passes centered 4-choice and safe 10-/16-choice layouts; the real-source Typing review passes vertical centering, side insets, five-key loupe, cross-side drag, single dispatch, and outside-release cancellation. Human acceptance, merge, deployment, and Production remain unchanged.
+
+# 2026-09-06 — Temporary global game-audio disable
+
+- Disabled player-facing audio through the existing shared protected-audio boundary used by Tone, Reading, Listening, Typing and Word Order; Lego and unrelated website media remain untouched.
+- The reversible switch now blocks game-audio signing, private/audio asset requests, manifest fetches, preload/autoplay/playback and hides or disables every game audio control, while preserving the underlying audio assets and recovery runtime for a later authorized re-enable.
+- Advanced the five game-page cache keys to `protected-word-audio.js?v=4` and retained the previous enabled-path recovery tests behind an in-memory test-only source toggle.
+- Verification covers zero availability, zero signer/network guard calls, zero Audio construction, no rendered usable audio controls, non-audio gameplay/network continuity, exact isolated Preview and the required site gate. Production deployment remains separately bound to the exact authorized package and rollback evidence.

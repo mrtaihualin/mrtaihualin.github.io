@@ -25,7 +25,7 @@ async function asyncTest(label, fn) {
   catch (error) { console.error('✗ ' + label + ': ' + error.message); process.exitCode = 1; }
 }
 
-function audioRuntimeHarness(invokeResults, playResults) {
+function audioRuntimeHarness(invokeResults, playResults, enabled) {
   const appended = [];
   const audios = [];
   let invokeCount = 0;
@@ -94,7 +94,10 @@ function audioRuntimeHarness(invokeResults, playResults) {
     },
   };
   sandbox.window = sandbox;
-  vm.runInNewContext(audio, sandbox, { filename: 'protected-word-audio.js' });
+  const runtime = enabled === false
+    ? audio
+    : audio.replace('var GAME_AUDIO_ENABLED = false;', 'var GAME_AUDIO_ENABLED = true;');
+  vm.runInNewContext(runtime, sandbox, { filename: 'protected-word-audio.js' });
   sandbox.WordAudio.setAvailability(['กา']);
   return {
     WordAudio: sandbox.WordAudio,
@@ -162,6 +165,15 @@ test('LINE callback bounds every remote stage and reports uncertain results trut
 test('protected audio request has a bounded ten-second wait', () => {
   assert.match(audio, /NetworkGuard\.request[\s\S]{0,220}game-audio[\s\S]{0,220}10000/);
 });
+test('temporary global game-audio switch defaults off and owns every network/play boundary', () => {
+  assert.match(audio, /var GAME_AUDIO_ENABLED = false/);
+  assert.match(audio, /functions\\\/v1\\\/game-audio/);
+  assert.match(audio, /storage\\\/v1\\\/object/);
+  assert.match(audio, /assets\\\/flashcard-audio/);
+  assert.match(audio, /global\.Audio = function DisabledGameAudio/);
+  assert.match(audio, /word-audio-btn[\s\S]*rg-sound-toggle[\s\S]*lg-sound-btn[\s\S]*wo-sound-btn/);
+  assert.match(audio, /tf-alpha-tile[\s\S]*alphaOverlaySpeak/);
+});
 test('audio failure resets playing state and tells the learner how to recover', () => {
   assert.match(audio, /btn\.setAttribute\('data-playing', '0'\)/);
   assert.match(audio, /音檔播放失敗，請檢查網路後再試一次/);
@@ -179,7 +191,7 @@ test('Core 5 expose Login Core and retain audio recovery', () => {
     assert.match(html, /reading-auth\.js\?v=34/);
     assert.match(html, /game-account\.js\?v=6/);
     assert.match(html, /practice-events\.js\?v=3/);
-    assert.match(html, /protected-word-audio\.js\?v=3/);
+    assert.match(html, /protected-word-audio\.js\?v=4/);
   });
   const reading = read('reading-game.html');
   assert.match(reading, /auth-widget\.js\?v=20/);
@@ -187,7 +199,7 @@ test('Core 5 expose Login Core and retain audio recovery', () => {
   assert.match(reading, /game-account\.js\?v=6/);
   assert.match(reading, /learning-summary\.js\?v=1/);
   assert.match(reading, /practice-events\.js\?v=3/);
-  assert.match(reading, /protected-word-audio\.js\?v=3/);
+  assert.match(reading, /protected-word-audio\.js\?v=4/);
 });
 test('parked account sources and active Login callback preserve current failure handling', () => {
   ['leaderboard.html','listening-board.html','my-progress.html','reading-board.html',
@@ -204,6 +216,19 @@ test('parked account sources and active Login callback preserve current failure 
 });
 
 (async function runRuntimeAudioRecovery() {
+  await asyncTest('disabled game audio exposes no availability and makes no signer, preload or play request', async () => {
+    const harness = audioRuntimeHarness([
+      { data: { signedUrl: 'https://audio.example/should-not-be-used.mp3', expiresAt: Date.now() + 60000 } },
+    ], [undefined], false);
+    assert.strictEqual(harness.WordAudio.has('กา'), false);
+    assert.strictEqual(await harness.WordAudio.play('กา', harness.button), false);
+    assert.strictEqual(harness.invokeCount(), 0);
+    assert.strictEqual(harness.requestCalls.length, 0);
+    assert.strictEqual(harness.audios.length, 0);
+    assert.strictEqual(harness.WordAudio.createBtn('กา'), null);
+    assert.strictEqual(harness.WordAudio.btnHtml('กา'), '');
+  });
+
   await asyncTest('protected audio timeout resets the button and exposes retry guidance', async () => {
     const harness = audioRuntimeHarness([new Error('client_timeout')], []);
     const result = await harness.WordAudio.play('กา', harness.button);
