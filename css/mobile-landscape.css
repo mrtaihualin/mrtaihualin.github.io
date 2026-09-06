@@ -460,6 +460,10 @@
   }
   body.gsh-ml-active #gsh-ml-stage .gsh-split-thai-keyboard .tk-base { font-size: clamp(10px, 2.8dvh, 15px); }
   body.gsh-ml-active #gsh-ml-stage .gsh-split-thai-keyboard .tk-shift { font-size: clamp(6px, 1.5dvh, 9px); }
+  body[data-gsh-game="typing"].gsh-ml-active #gsh-ml-stage #rg-kbd .comb-base {
+    color: currentColor;
+    opacity: .55;
+  }
   body[data-gsh-game="typing"].gsh-ml-active #gsh-ml-stage #rg-kbd.shift-on .tk-key .tk-shift {
     font-size: clamp(10px, 2.8dvh, 15px);
     color: #3a2a0a;

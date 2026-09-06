@@ -40,7 +40,7 @@ test('the exact four accepted games fetch the released shared Landscape runtime'
   games.forEach(([game, file]) => {
     const html = read(file);
     assert.match(html, new RegExp('<body[^>]+data-gsh-game="' + game + '"'));
-    assert.match(html, /css\/mobile-landscape\.css\?v=68/);
+    assert.match(html, /css\/mobile-landscape\.css\?v=69/);
     assert.match(html, /js\/core\/shared\.min\.js\?v=50/);
     assert.match(html, /js\/core\/mobile-landscape\.js\?v=40/);
   });
