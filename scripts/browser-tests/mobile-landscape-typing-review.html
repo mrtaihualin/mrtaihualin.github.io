@@ -59,6 +59,17 @@
         var bottom = Math.max.apply(null, rows.map(function (rect) { return rect.bottom; }));
         return Math.abs((top + bottom) / 2 - (side.top + side.bottom) / 2);
       }
+      function keyboardSideInsetsReady(doc) {
+        return ['left', 'right'].every(function (sideName) {
+          var side = doc.querySelector('[data-gsh-ml-slot="' + sideName + '"]').getBoundingClientRect();
+          var keys = Array.prototype.slice.call(doc.querySelectorAll(
+            '#rg-kbd .gsh-split-kbd-half[data-gsh-side="' + sideName + '"] .gsh-kbd-key'
+          )).map(function (key) { return key.getBoundingClientRect(); });
+          var left = Math.min.apply(null, keys.map(function (rect) { return rect.left; }));
+          var right = Math.max.apply(null, keys.map(function (rect) { return rect.right; }));
+          return left - side.left >= 2.5 && side.right - right >= 2.5;
+        });
+      }
       function desktopKeyFacesReused(doc, win) {
         var labels = Array.prototype.slice.call(doc.querySelectorAll('#rg-kbd .comb-disp'));
         var sample = doc.querySelector('#rg-kbd .tk-key[data-code="KeyG"]');
@@ -122,10 +133,11 @@
               doc.querySelectorAll('#rg-kbd .rg-shift-key').length === 2;
             if (readyNow) {
               var centered = verticalCenterDelta(doc) <= 2;
+              var sideInsets = keyboardSideInsetsReady(doc);
               var desktopFaces = desktopKeyFacesReused(doc, win);
               var magnifierWorks = await verifyMagnifier(doc, win);
-              status.textContent = centered && desktopFaces && magnifierWorks
-                ? 'พร้อมตรวจ Typing — ใช้ปุ่มและตัวอักษร Desktop เดิม · ไม่มี ก เพิ่ม · ขยายและจัดตำแหน่งใหม่เท่านั้น'
+              status.textContent = centered && sideInsets && desktopFaces && magnifierWorks
+                ? 'พร้อมตรวจ Typing — ใช้ปุ่มและตัวอักษร Desktop เดิม · เว้นขอบเล็กน้อย · ไม่มี ก เพิ่ม'
                 : 'ตรวจ Typing ไม่ผ่าน';
               return;
             }

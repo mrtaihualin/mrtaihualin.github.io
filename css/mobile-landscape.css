@@ -426,6 +426,10 @@
     grid-template-columns: minmax(0, 30fr) minmax(0, 40fr) minmax(0, 30fr) !important;
     column-gap: var(--gsh-ml-gap);
   }
+  body[data-gsh-game="typing"].gsh-ml-active #gsh-ml-stage #rg-kbd .gsh-split-kbd-half {
+    padding-inline: clamp(3px, .8dvh, 5px);
+    box-sizing: border-box;
+  }
   .gsh-split-kbd-row {
     min-width: 0;
     min-height: 0;
