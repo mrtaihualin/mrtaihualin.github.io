@@ -1,6 +1,15 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-09-06 Asia/Bangkok** — FB-02 technical Preview candidate
+**Updated: 2026-09-06 Asia/Bangkok** — FB-03 Time Auto Plan source candidate
+
+## 2026-09-06 — FB-03 Time Auto Plan (`SOURCE_PASS / TECHNICAL_CANDIDATE / PREVIEW_NOT_CREATED / PRODUCTION_UNCHANGED`)
+
+- Restored the locked Free Time Auto Plan entry on the current Games hub and reconnected its existing lifecycle owner before gameplay on all six game pages. Guest selects `5–10` minutes and Login selects `5–20` minutes per start; the selected value is not stored as a recurring preference, and quota is claimed only on confirmation through the existing separate once-per-Taipei-day server boundary.
+- Preserved the existing normal Guest rotation and Login-only game-level weakness rotation. The approximately ten-minute game segment remains a soft target: active time pauses in the background/idle state, never cuts a round, rotates only at a completed-round boundary, and lets the player continue or skip until choosing to exit.
+- Added a session-only, owner/day-bound exit summary listing each practiced game, active time and completed rounds. It clears when a new proposal starts, suppresses stale-day or other-owner evidence, and does not add a remembered daily-minutes plan or combine goal/Game Search planning.
+- Time Plan core PASS, confirmation `16/16`, integration `28/28`, Minimum Guest/Login Free static regression, JavaScript syntax, whitespace and the complete `1,075`-file site gate PASS. No Preview, merge, deploy, Production, Supabase, Auth, account or application-data mutation occurred.
+
+**Prior update: 2026-09-06 Asia/Bangkok** — FB-02 technical Preview candidate
 
 ## 2026-09-06 — FB-02 technical Preview candidate (`TECHNICAL_READY / HUMAN_PENDING / PRODUCTION_UNCHANGED`)
 
