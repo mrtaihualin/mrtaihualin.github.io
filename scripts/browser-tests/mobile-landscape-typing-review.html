@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Typing Mobile Landscape review</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: #ece7de; color: #49350d; font-family: system-ui, sans-serif; }
+    body { display: grid; place-items: start center; width: 100%; padding: 18px; }
+    main { width: 100%; max-width: 844px; min-width: 0; }
+    h1 { margin: 0 0 10px; font-size: 17px; }
+    .screen { width: 100%; aspect-ratio: 844 / 390; border: 1px solid #c9b27e; border-radius: 14px; overflow: hidden; background: #f5f0e8; box-shadow: 0 10px 28px rgba(73,53,13,.16); }
+    iframe { display: block; width: 844px; height: 390px; border: 0; transform-origin: top left; }
+    output { display: block; margin-top: 8px; font-size: 12px; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Typing — คีย์บอร์ดกึ่งกลาง + แว่นขยาย · 844 × 390</h1>
+    <div class="screen"><iframe id="game" title="Typing Mobile Landscape"></iframe></div>
+    <output id="status">กำลังเปิดหน้า Typing…</output>
+  </main>
+  <script>
+    (function () {
+      'use strict';
+      var frame = document.getElementById('game');
+      var screen = frame.parentElement;
+      var status = document.getElementById('status');
+      function fitGame() {
+        frame.style.transform = 'scale(' + Math.min(1, screen.clientWidth / 844) + ')';
+      }
+      fitGame();
+      if (window.ResizeObserver) new ResizeObserver(fitGame).observe(screen);
+      else window.addEventListener('resize', fitGame);
+
+      var words = [{
+        word: 'มา', readingTH: 'มา', en: 'maa', zh: '來', level: '初', category: 'กริยา',
+        syls: [{cons: 'ม', vowel: 'อา', tone_name: 'สามัญ', th: 'มา'}]
+      }];
+      var override = '<script>(function(){var words=' + JSON.stringify(words) + ';try{localStorage.setItem("cookieConsent","denied");localStorage.setItem("howto_tour_seen_typing","1");localStorage.setItem("howto_hint_seen_typing","1");}catch(e){}window.GameContentLoader.boot=function(srcs){window.WORDS_MASTER=words;window.ADV_SENTENCES=[];var chain=new Promise(function(resolve){if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",resolve,{once:true});else resolve();}).then(function(){if(window.GameResume&&typeof window.GameResume.load==="function")window.GameResume.load=function(){return null;};});(srcs||[]).forEach(function(src){chain=chain.then(function(){return new Promise(function(resolve,reject){var script=document.createElement("script");script.src=src;script.onload=resolve;script.onerror=reject;document.head.appendChild(script);});});});return chain;};})();<\/script>';
+
+      function wait(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
+      function point(node) {
+        var rect = node.getBoundingClientRect();
+        return {x: rect.left + rect.width / 2, y: rect.top + rect.height / 2};
+      }
+      function pointer(win, target, type, id, at) {
+        target.dispatchEvent(new win.PointerEvent(type, {
+          bubbles: true, cancelable: true, pointerId: id, pointerType: 'touch', clientX: at.x, clientY: at.y
+        }));
+      }
+      function verticalCenterDelta(doc) {
+        var side = doc.querySelector('[data-gsh-ml-slot="left"]').getBoundingClientRect();
+        var rows = Array.prototype.slice.call(doc.querySelectorAll('#rg-kbd > .gsh-split-kbd-row')).map(function (row) {
+          return row.getBoundingClientRect();
+        });
+        var top = Math.min.apply(null, rows.map(function (rect) { return rect.top; }));
+        var bottom = Math.max.apply(null, rows.map(function (rect) { return rect.bottom; }));
+        return Math.abs((top + bottom) / 2 - (side.top + side.bottom) / 2);
+      }
+      async function verifyMagnifier(doc, win) {
+        var start = doc.querySelector('#rg-kbd .tk-key[data-code="KeyG"]');
+        var destination = doc.querySelector('#rg-kbd .tk-key[data-code="KeyK"]');
+        var all = Array.prototype.slice.call(doc.querySelectorAll('#rg-kbd .tk-key[data-code]'));
+        var original = all.map(function (key) { return key.onclick; });
+        var presses = [];
+        all.forEach(function (key) { key.onclick = function () { presses.push(key.dataset.code); }; });
+        pointer(win, start, 'pointerdown', 81, point(start));
+        await wait(380);
+        pointer(win, win, 'pointermove', 81, point(destination));
+        var magnifier = doc.querySelector('.gsh-ml-typing-magnifier:not([hidden])');
+        var fiveKeys = magnifier && magnifier.querySelectorAll('.gsh-ml-typing-magnifier-key').length === 5;
+        var followsDrag = magnifier && magnifier.querySelector('[data-selected="true"]').dataset.code === destination.dataset.code;
+        pointer(win, win, 'pointerup', 81, point(destination));
+        await wait(20);
+        var typesOnce = presses.length === 1 && presses[0] === destination.dataset.code;
+
+        var beforeCancel = presses.length;
+        pointer(win, start, 'pointerdown', 82, point(start));
+        await wait(380);
+        var center = doc.querySelector('[data-gsh-ml-slot="center"]');
+        pointer(win, win, 'pointermove', 82, point(center));
+        pointer(win, win, 'pointerup', 82, point(center));
+        await wait(20);
+        var cancelsOutside = presses.length === beforeCancel;
+        all.forEach(function (key, index) { key.onclick = original[index]; });
+
+        pointer(win, start, 'pointerdown', 83, point(start));
+        await wait(380);
+        return fiveKeys && followsDrag && typesOnce && cancelsOutside;
+      }
+
+      fetch('../../typing-game.html?review-cache=' + Date.now(), {cache: 'no-store'}).then(function (response) {
+        if (!response.ok) throw new Error('เปิดไฟล์ Typing ไม่สำเร็จ');
+        return response.text();
+      }).then(function (html) {
+        html = html.replace('<head>', '<head><base href="' + new URL('../../', location.href).href + '">');
+        html = html.replace(/game-content-client\.js\?v=\d+"><\/script>/, function (tag) { return tag + override; });
+        frame.onload = function () {
+          var doc = frame.contentDocument;
+          var win = frame.contentWindow;
+          var started = Date.now();
+          (async function ready() {
+            var tour = doc.querySelector('#gt-tour-card .gt-skip');
+            if (tour && getComputedStyle(tour).display !== 'none') tour.click();
+            var readyNow = doc.documentElement.classList.contains('gc-ready') &&
+              doc.body.classList.contains('gsh-ml-active') &&
+              doc.querySelectorAll('#rg-kbd .tk-key[data-code]').length === 47 &&
+              doc.querySelectorAll('#rg-kbd .rg-shift-key').length === 2;
+            if (readyNow) {
+              var centered = verticalCenterDelta(doc) <= 2;
+              var magnifierWorks = await verifyMagnifier(doc, win);
+              status.textContent = centered && magnifierWorks
+                ? 'พร้อมตรวจ Typing — คีย์บอร์ดกึ่งกลาง · กดค้าง 350ms · ลากข้ามฝั่ง · ปล่อยพิมพ์ครั้งเดียว · ปล่อยนอกยกเลิก'
+                : 'ตรวจ Typing ไม่ผ่าน';
+              return;
+            }
+            if (Date.now() - started > 15000) {
+              status.textContent = 'เปิดหน้า Typing ไม่สำเร็จ';
+              return;
+            }
+            setTimeout(ready, 80);
+          })();
+        };
+        frame.srcdoc = html;
+      }).catch(function (error) {
+        status.textContent = error.message;
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -2706,3 +2706,10 @@ node scripts/check-site.js
 - Applied the same rendered-geometry rule to the reviewed two-, three-, and four-choice states: two single sides share the card plane; the three-choice state's single side and opposite two-choice group share one centre; both four-choice groups share that centre and matching rows.
 - Derived the offset from the rendered question and denser-side group rectangles so optional reading visibility does not break the alignment; other choice counts and games retain their existing layout.
 - Verification: local `844×390` geometry shows `0px` center delta for each reviewed plane with unequal card sizes, the 25-state browser review passes `25/25`, focused Mobile Landscape checks pass, and the full `1,081`-file site gate passes. This remains an MR/Draft Preview Human-review change only.
+
+# 2026-09-06 — Word Order choice centering and Typing keyboard loupe
+
+- Centered the Word Order choice group inside its full-width choice field whenever the rendered choices fit, while retaining safe top-start overflow and local scrolling for denser 10- and 16-choice review cases so no choice border is clipped.
+- Vertically centered the real Typing keyboard rows in the left and right 30% frames without moving the 40% question frame or adding any keyboard controls; the keyboard remains 47 character/symbol keys plus the two one-shot Shift controls.
+- Added the locked 350ms Typing long-press loupe using five real keys in a circular cross. It follows continuous movement across rows and both keyboard sides, dispatches the selected real key exactly once on release, and cancels when released outside the keyboard.
+- Verification: focused source checks pass; the real-source `844×390` Word Order review passes centered 4-choice and safe 10-/16-choice layouts; the real-source Typing review passes vertical centering, five-key loupe, cross-side drag, single dispatch, and outside-release cancellation. Human acceptance, merge, deployment, and Production remain unchanged.

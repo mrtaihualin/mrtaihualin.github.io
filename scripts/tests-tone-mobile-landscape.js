@@ -39,8 +39,8 @@ test('all pages bind the shared landscape system and the four in-scope games sha
     assert.match(html, /js\/games\/thai-keyboard\.js\?v=2/, `${file}: missing shared split keyboard`);
     const paused = game === 'listening' || game === 'lego';
     const fourGame = game === 'tone' || game === 'reading' || game === 'typing' || game === 'word-order';
-    assert.match(html, new RegExp(`css/mobile-landscape\\.css\\?v=${fourGame ? 66 : 35}`), `${file}: wrong shared Landscape CSS version`);
-    const controllerVersion = fourGame ? 39 : paused ? 25 : 26;
+    assert.match(html, new RegExp(`css/mobile-landscape\\.css\\?v=${fourGame ? 68 : 35}`), `${file}: wrong shared Landscape CSS version`);
+    const controllerVersion = fourGame ? 40 : paused ? 25 : 26;
     assert.match(html, new RegExp(`js/core/mobile-landscape\\.js\\?v=${controllerVersion}`), `${file}: wrong scoped controller version`);
     assert.match(html, /js\/games\/game-switcher\.js\?v=8/, `${file}: missing fixed six-game navigation`);
   }
@@ -91,7 +91,7 @@ test('Reading reuses Tone menu presentation without replacing Reading menu conte
   assert.ok(css.includes('body.gsh-ml-active #game-switcher[data-gsh-ml-utility-panel] .gs-tab'));
   assert.ok(css.includes('body.gsh-ml-active .grw-menu[data-gsh-ml-utility-panel] .grw-item'));
   assert.match(stage, /game === 'reading'[\s\S]{0,900}labeledNode\('#rg-howto-btn', '玩法', '📖'\)[\s\S]{0,900}labeledNode\('#rg-en-toggle', '英文讀音', '🔤'\)[\s\S]{0,900}labeledNode\('#rg-particle-toggle', '禮貌詞', '🙏'\)/);
-  assert.match(read('reading-game.html'), /css\/mobile-landscape\.css\?v=66/);
+  assert.match(read('reading-game.html'), /css\/mobile-landscape\.css\?v=68/);
 });
 
 test('all six Resume screens reuse Tone 640px geometry and exact three-action copy', () => {
@@ -101,7 +101,7 @@ test('all six Resume screens reuse Tone 640px geometry and exact three-action co
   for (const [game, file] of pages) {
     const html = read(file);
     const fourGame = game === 'tone' || game === 'reading' || game === 'typing' || game === 'word-order';
-    assert.match(html, new RegExp(`css/mobile-landscape\\.css\\?v=${fourGame ? 66 : 35}`), `${file}: must load its current shared Resume CSS`);
+    assert.match(html, new RegExp(`css/mobile-landscape\\.css\\?v=${fourGame ? 68 : 35}`), `${file}: must load its current shared Resume CSS`);
     assert.match(html, new RegExp(`js/core/shared\\.min\\.js\\?v=${fourGame ? 50 : 47}`), `${file}: must load exact Resume copy`);
   }
   const shared = read('js/core/shared.js');
@@ -219,6 +219,8 @@ test('approved games keep position two while Word Order uses one full-width choi
   assert.match(css, /#gsh-ml-word-order-question[\s\S]{0,420}text-align: center/);
   assert.match(css, /data-gsh-game="word-order"[\s\S]{0,180}\.gsh-ml-play[\s\S]{0,260}grid-template-rows: minmax\(104px, 40%\) minmax\(0, 1fr\)/);
   assert.match(css, /data-gsh-game="word-order"[\s\S]{0,180}data-gsh-ml-split="word-order"[\s\S]{0,360}grid-template-columns: repeat\(4, minmax\(0, 1fr\)\) !important/);
+  assert.match(css, /data-gsh-ml-split="word-order"[\s\S]{0,760}align-content: safe center !important/);
+  assert.match(css, /data-gsh-ml-split="word-order"[\s\S]{0,900}row-gap: var\(--gsh-ml-gap\) !important/);
   assert.match(css, /data-gsh-game="word-order"[\s\S]{0,180}data-gsh-ml-slot="right"[\s\S]{0,200}grid-column: 1 \/ 4[\s\S]{0,100}grid-row: 1 \/ 3/);
 });
 
@@ -310,6 +312,13 @@ test('Listening uses two choices per side and Typing keyboard geometry for typed
   assert.match(stage, /splitTypingKeyboard\(keyboard\)/);
   assert.match(stage, /function restoreTypingKeyboard\(\)/);
   assert.match(stage, /restoreTypingKeyboard\(\)/);
+  assert.match(css, /data-gsh-game="typing"[^}]+#rg-kbd[^}]+align-content: center/);
+  assert.match(stage, /typingMagnifierHoldTimer = window\.setTimeout\([\s\S]{0,400}, 350\)/);
+  assert.match(stage, /function typingMagnifierPointerMove\(event\)/);
+  assert.match(stage, /function typingMagnifierPointerUp\(event\)/);
+  assert.match(stage, /selected\.click\(\)/);
+  assert.match(css, /gsh-ml-typing-magnifier[^}]+border-radius: 50%/);
+  assert.match(css, /gsh-ml-typing-magnifier-key\[data-selected="true"\][^}]+font-size:/);
 });
 
 test('Lego has a full-width sentence band and three independent lower frames', () => {
@@ -343,16 +352,23 @@ test('four-game refinements expose original controls and one shared modal shell'
 test('local Landscape review pages load current game assets from the site root', () => {
   const toneReview = read('scripts/browser-tests/mobile-landscape-tone-position-review.html');
   const readingReview = read('scripts/browser-tests/mobile-landscape-reading-review.html');
+  const typingReview = read('scripts/browser-tests/mobile-landscape-typing-review.html');
   const wordOrderReview = read('scripts/browser-tests/mobile-landscape-word-order-review.html');
   assert.match(toneReview, /game-content-client\.js\?v=13/);
   assert.match(readingReview, /game-content-client\.js\?v=13/);
+  assert.match(typingReview, /game-content-client\\\.js\\\?v=\\d\+/);
   assert.match(wordOrderReview, /game-content-client\.js\?v=12/);
   assert.match(toneReview, /new URL\('\.\.\/\.\.\/', location\.href\)\.href/);
   assert.match(readingReview, /new URL\('\.\.\/\.\.\/', location\.href\)\.href/);
+  assert.match(typingReview, /new URL\('\.\.\/\.\.\/', location\.href\)\.href/);
   assert.match(wordOrderReview, /new URL\('\.\.\/\.\.\/', location\.href\)\.href/);
   assert.match(wordOrderReview, /th: 'วันนี้ผมอยากไปกินข้าวกับเพื่อนที่ร้านอาหาร'[\s\S]{0,700}wc: 10/);
   assert.match(wordOrderReview, /var expectedCount = fixture\[0\]\.words\.length/);
-  assert.match(wordOrderReview, /new URLSearchParams\(location\.search\)\.get\('choices'\) === '16'/);
+  assert.match(wordOrderReview, /requestedChoiceCount === 4[\s\S]{0,220}requestedChoiceCount === 16/);
+  assert.match(wordOrderReview, /function bankLayoutReady\(\)[\s\S]{0,1500}centeredWhenFit/);
+  assert.match(typingReview, /function verticalCenterDelta\(doc\)/);
+  assert.match(typingReview, /async function verifyMagnifier\(doc, win\)/);
+  assert.match(typingReview, /presses\.length === 1 && presses\[0\] === destination\.dataset\.code/);
   assert.match(sharedJs, /gameOwnsTranslationControl = !!document\.getElementById\('wo-zh-toggle'\)/);
   assert.match(sharedJs, /gameMarker === 'word-order'\) GAME_ID = 'word_order'/);
   assert.match(wordOrderReview, /!doc\.getElementById\('zh-fab-standalone'\)/);

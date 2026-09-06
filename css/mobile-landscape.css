@@ -417,6 +417,10 @@
   }
   body[data-gsh-game="typing"].gsh-ml-active #gsh-ml-stage #rg-kbd {
     max-width: none !important;
+    align-content: center;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
   }
   body[data-gsh-game="typing"].gsh-ml-active #gsh-ml-stage #rg-kbd .gsh-split-kbd-row {
     grid-template-columns: minmax(0, 30fr) minmax(0, 40fr) minmax(0, 30fr) !important;
@@ -469,6 +473,50 @@
     line-height: 1;
   }
   body.gsh-ml-active #gsh-ml-stage .gsh-split-thai-keyboard .gsh-kbd-function { font-size: var(--gsh-ml-font-sm); }
+
+  body[data-gsh-game="typing"].gsh-ml-active .gsh-ml-typing-magnifier {
+    position: fixed;
+    z-index: 10040;
+    width: clamp(138px, 40dvh, 164px);
+    height: clamp(138px, 40dvh, 164px);
+    box-sizing: border-box;
+    border: 3px solid var(--gold, #c8952c);
+    border-radius: 50%;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+    padding: 8px;
+    background: rgba(255, 252, 244, .97);
+    box-shadow: 0 8px 24px rgba(67, 45, 6, .24);
+    pointer-events: none;
+    overflow: hidden;
+  }
+  body[data-gsh-game="typing"].gsh-ml-active .gsh-ml-typing-magnifier[hidden] { display: none; }
+  .gsh-ml-typing-magnifier-key {
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6b4708;
+    font-family: 'Noto Sans Thai', 'Noto Sans TC', sans-serif;
+    font-size: clamp(15px, 4.2dvh, 21px);
+    font-weight: 700;
+    line-height: 1;
+  }
+  .gsh-ml-typing-magnifier-key--above { grid-column: 2; grid-row: 1; }
+  .gsh-ml-typing-magnifier-key--left { grid-column: 1; grid-row: 2; }
+  .gsh-ml-typing-magnifier-key--center { grid-column: 2; grid-row: 2; }
+  .gsh-ml-typing-magnifier-key--right { grid-column: 3; grid-row: 2; }
+  .gsh-ml-typing-magnifier-key--below { grid-column: 2; grid-row: 3; }
+  .gsh-ml-typing-magnifier-key[data-selected="true"] {
+    border: 2px solid var(--gold, #c8952c);
+    border-radius: 50%;
+    background: #f8e8bd;
+    color: #3a2a0a;
+    font-size: clamp(27px, 7.5dvh, 38px);
+    font-weight: 900;
+  }
 
   body[data-gsh-game="typing"].gsh-ml-active [data-gsh-ml-slot="center"],
   body[data-gsh-game="typing"].gsh-ml-active [data-gsh-ml-slot="question"],
@@ -2378,7 +2426,7 @@
     grid-column: 1 / 3;
     width: 100% !important;
     height: 100% !important;
-    padding: 0 !important;
+    padding: var(--gsh-ml-gap) 0 !important;
     display: grid !important;
     grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
     grid-template-rows: none !important;
@@ -2388,9 +2436,9 @@
        The bank scrolls only when those real row heights exceed its viewport. */
     --wo-ml-choice-row: 34px;
     grid-auto-rows: var(--wo-ml-choice-row) !important;
-    align-content: start !important;
+    align-content: safe center !important;
     column-gap: var(--gsh-ml-gap) !important;
-    row-gap: 0 !important;
+    row-gap: var(--gsh-ml-gap) !important;
     overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
