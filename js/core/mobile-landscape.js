@@ -658,13 +658,18 @@
       }
     });
     container.style.removeProperty('--gsh-ml-tone-plane-shift');
-    if (game === 'tone' && children.length === 2) {
+    if (game === 'tone' && children.length >= 2 && children.length <= 4) {
       var toneQuestion = q('#tf-body .tf-qbox');
       if (toneQuestion) {
+        var leftChoices = children.filter(function (child) { return child.dataset.gshSide === 'left'; });
+        var rightChoices = children.filter(function (child) { return child.dataset.gshSide === 'right'; });
+        var anchorChoices = rightChoices.length >= leftChoices.length ? rightChoices : leftChoices;
         var questionRect = toneQuestion.getBoundingClientRect();
-        var choiceRect = children[0].getBoundingClientRect();
+        var choiceRects = anchorChoices.map(function (child) { return child.getBoundingClientRect(); });
+        var choiceTop = Math.min.apply(null, choiceRects.map(function (rect) { return rect.top; }));
+        var choiceBottom = Math.max.apply(null, choiceRects.map(function (rect) { return rect.bottom; }));
         var planeShift = (questionRect.top + (questionRect.height / 2)) -
-          (choiceRect.top + (choiceRect.height / 2));
+          ((choiceTop + choiceBottom) / 2);
         if (Number.isFinite(planeShift)) {
           container.style.setProperty('--gsh-ml-tone-plane-shift', planeShift.toFixed(2) + 'px');
         }

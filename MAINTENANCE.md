@@ -2702,7 +2702,7 @@ node scripts/check-site.js
 
 # 2026-09-06 — Tone derivation horizontal-plane alignment
 
-- Aligned the live question card and both side choices to one horizontal center line in the two-choice Tone state while allowing their widths and heights to remain independent.
-- Compactly grouped the three- and four-choice states into two lower side rows: the single left three-choice control now shares the lower row with its right counterpart, while both four-choice left/right pairs share their respective rows.
-- Derived the offset from the rendered question and choice rectangles so optional reading visibility does not break the shared plane; other choice counts and games retain their existing layout.
+- Aligned every one-choice Tone side directly to the live centre question card, while allowing the two controls on a side to keep independent sizes and centre as one group around that same card.
+- Applied the same rendered-geometry rule to the reviewed two-, three-, and four-choice states: two single sides share the card plane; the three-choice state's single side and opposite two-choice group share one centre; both four-choice groups share that centre and matching rows.
+- Derived the offset from the rendered question and denser-side group rectangles so optional reading visibility does not break the alignment; other choice counts and games retain their existing layout.
 - Verification: local `844×390` geometry shows `0px` center delta for each reviewed plane with unequal card sizes, the 25-state browser review passes `25/25`, focused Mobile Landscape checks pass, and the full `1,081`-file site gate passes. This remains an MR/Draft Preview Human-review change only.
