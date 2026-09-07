@@ -4,7 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>RUNNING — Mobile Landscape account menu</title>
-  <link rel="stylesheet" href="../../css/mobile-landscape.css?v=45">
+  <link rel="stylesheet" href="../../css/login-surface.css?v=15">
+  <link rel="stylesheet" href="../../css/mobile-landscape.css?v=74">
   <style>
     * { box-sizing: border-box; }
     html, body { margin: 0; background: #f5f0e8; }
@@ -23,11 +24,21 @@
   <div id="qa-source">
     <div id="rg-login-slot" style="display:flex;align-items:center;">
       <span id="sa-badge-rg-login-slot" style="display:inline-flex">
-        <div style="display:flex;align-items:center;gap:7px;background:#fff;border:1.5px solid rgba(200,151,58,.45);border-radius:20px;padding:5px 12px 5px 8px;box-shadow:0 2px 8px rgba(139,99,16,.12);font-family:'Noto Sans TC',sans-serif;">
-          <span style="font-size:15px;flex-shrink:0;">👤</span>
-          <span class="sa-nick" style="color:#5c4410;font-weight:700;font-size:12.5px;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;">Lin</span>
-          <button type="button" class="sa-edit" style="border:none;background:none;color:#a07a1e;cursor:pointer;font-size:12px;padding:0;line-height:1;">✏️</button>
-          <button type="button" class="sa-logout" style="border:none;background:rgba(139,99,16,.12);color:#8b6310;border-radius:20px;padding:3px 10px;cursor:pointer;font-size:11.5px;font-weight:700;">登出</button>
+        <div class="sa-account-bar" role="group" aria-label="帳號選單" style="display:flex;align-items:center;gap:7px;background:#fff;border:1.5px solid rgba(200,151,58,.45);border-radius:20px;padding:5px 12px 5px 8px;box-shadow:0 2px 8px rgba(139,99,16,.12);font-family:'Noto Sans TC',sans-serif;">
+          <span class="sa-avatar" aria-hidden="true">👤</span>
+          <button type="button" class="sa-nick" title="點此編輯個人檔案" aria-label="編輯個人檔案：Lin">Lin</button>
+          <button type="button" class="sa-account-action sa-edit" title="編輯" aria-label="編輯個人檔案">✏️</button>
+          <a class="sa-account-action sa-leaderboard-link" href="#" title="排行榜" aria-label="排行榜">🏆</a>
+          <span class="sa-account-streak" title="連續天數"><span aria-hidden="true">🔥</span> <span class="sa-account-streak-label">連續</span> <b data-account-streak>7</b></span>
+          <a class="sa-account-action sa-progress-link" href="#" title="進度" aria-label="學習進度">📊</a>
+          <a class="sa-account-action sa-vault-link" href="#" title="字庫" aria-label="泰語單字庫">🔖</a>
+          <button type="button" class="sa-account-action sa-logout">登出</button>
+          <button type="button" class="sa-global-search-toggle" title="全站搜尋" aria-label="開啟全站搜尋" aria-expanded="false">🔎</button>
+          <form class="sa-global-search-form" role="search" hidden>
+            <input class="sa-global-search-input" type="search" value="กิน" aria-label="全站搜尋">
+            <button class="sa-global-search-submit" type="submit">搜尋</button>
+          </form>
+          <div class="sa-global-search-results" aria-live="polite" hidden><div class="hs-result-card"><b>搜尋結果：</b>กิน</div></div>
         </div>
       </span>
     </div>
@@ -67,7 +78,7 @@
     var qaLastAction = '';
     function qaAction(game) { qaLastAction = game; }
   </script>
-  <script src="../../js/core/mobile-landscape.js?v=32"></script>
+  <script src="../../js/core/mobile-landscape.js?v=41"></script>
   <script>
     (function () {
       'use strict';
@@ -80,6 +91,19 @@
       var logoutClicks = 0;
       originalEdit.addEventListener('click', function () { editClicks += 1; });
       originalLogout.addEventListener('click', function () { logoutClicks += 1; });
+      originalBadge.querySelectorAll('a[href="#"]').forEach(function (link) {
+        link.addEventListener('click', function (event) { event.preventDefault(); });
+      });
+      var searchToggle = originalBadge.querySelector('.sa-global-search-toggle');
+      var searchForm = originalBadge.querySelector('.sa-global-search-form');
+      var searchResults = originalBadge.querySelector('.sa-global-search-results');
+      searchToggle.addEventListener('click', function () {
+        var open = searchForm.hidden;
+        searchForm.hidden = !open;
+        searchResults.hidden = !open;
+        searchToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+      searchForm.addEventListener('submit', function (event) { event.preventDefault(); });
 
       function shown(node) {
         if (!node || node.hidden) return false;

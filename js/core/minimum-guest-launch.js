@@ -37,12 +37,12 @@
   if (!document.querySelector('link[href*="login-surface.css"]')) {
     var loginStylesheet = document.createElement('link');
     loginStylesheet.rel = 'stylesheet';
-    loginStylesheet.href = 'css/login-surface.css?v=14';
+    loginStylesheet.href = 'css/login-surface.css?v=15';
     document.head.appendChild(loginStylesheet);
   }
   if (!document.querySelector('script[src*="login-surface.js"]')) {
     var loginController = document.createElement('script');
-    loginController.src = 'js/core/login-surface.js?v=14';
+    loginController.src = 'js/core/login-surface.js?v=15';
     loginController.defer = true;
     document.head.appendChild(loginController);
   }
@@ -66,7 +66,7 @@
     '#rg-cta-login,#tf-cta-login,#tf-challenge-banner,[data-mgl-parked],',
     'a[href="games-challenge.html"]{display:none!important}',
     accountParkedCss,
-    '.minimum-guest-launch .gh-main-grid{grid-template-columns:repeat(4,minmax(0,1fr))}',
+    '.minimum-guest-launch .gh-main-grid{grid-template-columns:repeat(5,minmax(0,1fr))}',
     '@media(max-width:959px){.minimum-guest-launch .gh-main-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}',
     '@media(max-width:760px){.minimum-guest-launch .gh-main-grid{grid-template-columns:1fr}}'
   ].join('');

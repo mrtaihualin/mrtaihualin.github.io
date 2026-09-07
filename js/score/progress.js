@@ -46,7 +46,7 @@
     style.id = 'pg-phase1-styles';
     style.textContent = [
       '.pg-panel{background:#fff;border-radius:18px;padding:22px;box-shadow:0 6px 22px rgba(80,55,12,.07);}',
-      '.pg-message{text-align:center;max-width:560px;margin:0 auto;padding:34px 26px;}',
+      '.pg-message{text-align:center;width:100%;max-width:none;margin:0;padding:34px 26px;box-sizing:border-box;}',
       '.pg-message-icon{font-size:44px;margin-bottom:10px}.pg-message h2{margin:0 0 9px;color:#5C4410;font-size:21px}.pg-message p{margin:0;color:#765f32;line-height:1.8;font-size:14px}',
       '.pg-btn{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;padding:10px 20px;font-weight:800;font-size:14px;text-decoration:none;border:1px solid rgba(139,99,16,.35);cursor:pointer;font-family:inherit}',
       '.pg-btn-primary,.pg-btn-primary:visited{background:#8B6310;color:#fff;border-color:#8B6310}.pg-btn-secondary,.pg-btn-secondary:visited{background:#fff;color:#8B6310}',

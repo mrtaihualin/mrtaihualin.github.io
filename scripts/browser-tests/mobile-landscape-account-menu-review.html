@@ -34,7 +34,7 @@
       </nav>
     </div>
     <div class="review__screen">
-      <iframe id="game-preview" title="ตัวอย่างเมนู Mobile Landscape" src="mobile-landscape-account-menu.html?game=tone&amp;preview=1"></iframe>
+      <iframe id="game-preview" title="ตัวอย่างเมนู Mobile Landscape" src="mobile-landscape-account-menu.html?game=tone&amp;preview=1&amp;v=3"></iframe>
     </div>
   </main>
   <script>
@@ -46,7 +46,7 @@
           document.querySelectorAll('[data-game]').forEach(function (item) {
             item.setAttribute('aria-pressed', item === button ? 'true' : 'false');
           });
-          frame.src = 'mobile-landscape-account-menu.html?game=' + encodeURIComponent(button.getAttribute('data-game')) + '&preview=1';
+          frame.src = 'mobile-landscape-account-menu.html?game=' + encodeURIComponent(button.getAttribute('data-game')) + '&preview=1&v=3';
         });
       });
     })();

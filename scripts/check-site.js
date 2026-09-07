@@ -139,6 +139,7 @@ runTest(['scripts/tests-game-flow-delta.js'], 'Locked five-game flow tests');
 runTest(['scripts/tests-study-plan-core.js'], 'Time Auto Plan core tests');
 runTest(['scripts/tests-study-plan-confirmation.js'], 'Time Auto Plan confirmation tests');
 runTest(['scripts/tests-study-plan-integration.js'], 'Time Auto Plan integration tests');
+runTest(['scripts/tests-controlled-beta-p1-h-02.js'], 'Controlled Beta P1-H-02 regression tests');
 runTest(['scripts/tests-phase1-challenge-gate.js'], 'Phase 1 Challenge access-gate tests');
 runTest(['scripts/tests-resource-search-phase1.js'], 'Phase 1 Resource Search tests');
 runTest(['scripts/tests-vault-consent-phase1.js'], 'Phase 1 Vault consent-gate tests');

@@ -247,6 +247,15 @@
     });
   }
 
+  function mountDisabledSearch(gate, message) {
+    gate.removeAttribute('data-search-owner');
+    gate.innerHTML = '<div class="gh-search-prompt">搜尋遊戲</div>' +
+      '<div class="gh-search-row">' +
+        '<div class="gh-search-auth-message">' + esc(message) + '</div>' +
+        '<button type="button" class="gh-search-btn" disabled>搜尋</button>' +
+      '</div>';
+  }
+
   function init() {
     var gate = document.getElementById('gameSearchGate');
     if (!gate) return;
@@ -255,19 +264,16 @@
     function renderAuth() {
       var state = authState();
       if (!state.resolved) {
-        gate.removeAttribute('data-search-owner');
-        gate.innerHTML = '<div class="gh-search-auth-message">正在確認登入狀態…</div>';
+        mountDisabledSearch(gate, '正在確認登入狀態…');
         return;
       }
       if (timeout) { clearTimeout(timeout); timeout = null; }
       if (state.unavailable) {
-        gate.removeAttribute('data-search-owner');
-        gate.innerHTML = '<div class="gh-search-auth-message">登入狀態暫時無法確認，遊戲搜尋目前不可用。</div>';
+        mountDisabledSearch(gate, '登入狀態暫時無法確認，遊戲搜尋目前不可用。');
         return;
       }
       if (!state.user) {
-        gate.removeAttribute('data-search-owner');
-        gate.innerHTML = '<div class="gh-search-auth-message">' + esc(GUEST_MESSAGE) + '</div>';
+        mountDisabledSearch(gate, GUEST_MESSAGE);
         return;
       }
       var uid = String(state.user.id || '');
@@ -277,7 +283,7 @@
 
     renderAuth();
     timeout = setTimeout(function () {
-      if (!authState().resolved) gate.innerHTML = '<div class="gh-search-auth-message">登入狀態暫時無法確認，遊戲搜尋目前不可用。</div>';
+      if (!authState().resolved) mountDisabledSearch(gate, '登入狀態暫時無法確認，遊戲搜尋目前不可用。');
     }, 5000);
     if (window.SITE_AUTH && typeof window.SITE_AUTH.onChange === 'function') window.SITE_AUTH.onChange(renderAuth);
   }

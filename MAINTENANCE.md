@@ -1,6 +1,13 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-09-06 Asia/Bangkok** — FB-03 Time Auto Plan source candidate
+**Updated: 2026-09-07 Asia/Bangkok** — P1-H-02 Controlled Beta source candidate
+
+## 2026-09-07 — P1-H-02 Controlled Beta findings (`SOURCE_PASS / LOCAL_HUMAN_PASS / PRODUCTION_UNCHANGED`)
+
+- Aligned Game Search and Time Plan beside each other on one Desktop line, with matching input/button geometry inside both groups and the previously approved stacked Phone layouts preserved. Also aligned the complete `學習中心` guest/content panel and `泰語單字庫` shell—not only their headings—to the Game Hub width. Per Lin's Human review, Reading alone now uses one continuous existing gold surface from its score row through the learning tools; the other Core-game surfaces and all game behavior remain unchanged.
+- Reordered the existing Login account strip to account, edit, rank, `連續`, progress, Vault, logout and Search across Desktop, Portrait and the compact Landscape popup. Streak now carries its concise visible Chinese name, while Search expands and renders its existing results inside the same bounded menu; its larger data dependencies load only after a search request.
+- Added the required visible `聲調排行榜` destination card to `泰語遊戲中心`. Removed the superseded Time Plan exit-summary source completely: after the existing Result, `換個遊戲` returns directly to the hub while the active-round, persistence and daily-limit boundaries remain intact.
+- Source inspection confirmed the direct-game delay has one intentional daily-quota Edge claim before navigation and no duplicate or accidental source call, so no speculative performance mutation was made. Focused Controlled Beta, Time Plan, Core game, Auth/account and responsive checks plus the complete `1,083`-file site gate pass; Lin accepted every bounded local visual item sequentially. The four-session real-user Production beta remains required. No Preview, merge, deploy, Production, Supabase, Auth, account or application-data mutation occurred.
 
 ## 2026-09-06 — FB-03 Time Auto Plan (`SOURCE_PASS / TECHNICAL_CANDIDATE / PREVIEW_NOT_CREATED / PRODUCTION_UNCHANGED`)
 

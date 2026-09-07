@@ -98,17 +98,13 @@ html body [data-reading-login-component="row"] > #rg-profile-wrap {
   box-sizing: border-box !important;
 }
 
-/* The Vault companion is a chip-style action, not an inline text link. */
-[data-reading-login-component="row"] .mrt-login-vault {
-  text-decoration: none !important;
-}
-
 /* Desktop Account Bar labels follow the input device as well as viewport width,
    so a narrow desktop panel still shows words. Touch/mobile stays icon-only. */
 @media (min-width: 769px), (hover: hover) and (pointer: fine) {
   [data-reading-login-component="row"] .sa-edit,
   [data-reading-login-component="row"] a[title="排行榜"],
-  [data-reading-login-component="row"] a[title="進度"] {
+  [data-reading-login-component="row"] a[title="進度"],
+  [data-reading-login-component="row"] a[title="字庫"] {
     display: inline-flex !important;
     align-items: center;
     gap: 3px;
@@ -117,12 +113,14 @@ html body [data-reading-login-component="row"] > #rg-profile-wrap {
   [data-reading-login-component="row"] .sa-edit::after { content: '編輯'; }
   [data-reading-login-component="row"] a[title="排行榜"]::after { content: '排行'; }
   [data-reading-login-component="row"] a[title="進度"]::after { content: '進度'; }
+  [data-reading-login-component="row"] a[title="字庫"]::after { content: '字庫'; }
 }
 
 @media (orientation: landscape) and (max-width: 1024px) and (max-height: 600px) {
   [data-reading-login-component="row"] .sa-edit::after,
   [data-reading-login-component="row"] a[title="排行榜"]::after,
-  [data-reading-login-component="row"] a[title="進度"]::after {
+  [data-reading-login-component="row"] a[title="進度"]::after,
+  [data-reading-login-component="row"] a[title="字庫"]::after {
     content: none;
   }
 }
@@ -179,6 +177,8 @@ html body [data-reading-login-component="row"] > #rg-profile-wrap {
 [data-reading-login-component="row"] .sa-edit,
 [data-reading-login-component="row"] a[title="排行榜"],
 [data-reading-login-component="row"] a[title="進度"],
+[data-reading-login-component="row"] a[title="字庫"],
+[data-reading-login-component="row"] .sa-account-streak,
 [data-reading-login-component="row"] .sa-logout {
   display: inline-flex !important;
   align-items: center;
@@ -215,10 +215,12 @@ html body [data-reading-login-component="row"] > #rg-profile-wrap {
   font: 700 14px/1 'Noto Sans TC', sans-serif;
   cursor: pointer;
 }
+[data-reading-login-component="row"] .sa-account-streak { cursor: default; }
 [data-reading-login-component="row"] .sa-nick:hover,
 [data-reading-login-component="row"] .sa-edit:hover,
 [data-reading-login-component="row"] a[title="排行榜"]:hover,
 [data-reading-login-component="row"] a[title="進度"]:hover,
+[data-reading-login-component="row"] a[title="字庫"]:hover,
 [data-reading-login-component="row"] .sa-global-search-toggle:hover,
 [data-reading-login-component="row"] .sa-logout:hover,
 [data-reading-login-component="row"] .tf-streak-chip:hover {
@@ -229,6 +231,7 @@ html body [data-reading-login-component="row"] > #rg-profile-wrap {
 [data-reading-login-component="row"] .sa-edit:focus-visible,
 [data-reading-login-component="row"] a[title="排行榜"]:focus-visible,
 [data-reading-login-component="row"] a[title="進度"]:focus-visible,
+[data-reading-login-component="row"] a[title="字庫"]:focus-visible,
 [data-reading-login-component="row"] .sa-global-search-toggle:focus-visible,
 [data-reading-login-component="row"] .sa-global-search-submit:focus-visible,
 [data-reading-login-component="row"] .sa-logout:focus-visible,
@@ -273,6 +276,34 @@ html body [data-reading-login-component="row"] > #rg-profile-wrap {
   font: 700 12px/1.3 'Noto Sans TC', sans-serif;
   cursor: pointer;
 }
+[data-reading-login-component="row"] .sa-global-search-submit:disabled {
+  opacity: .6;
+  cursor: wait;
+}
+[data-reading-login-component="row"] .sa-global-search-results {
+  order: 21;
+  flex: 1 0 100%;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  margin-top: 2px;
+  padding: 12px 14px;
+  border: 1px solid rgba(200, 151, 58, 0.48);
+  border-radius: 12px;
+  background: #fff;
+  text-align: left;
+}
+[data-reading-login-component="row"] .sa-global-search-results[hidden] { display: none !important; }
+[data-reading-login-component="row"] .sa-global-search-results .hs-section-label { margin-bottom: 8px;color:#8B6310;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase; }
+[data-reading-login-component="row"] .sa-global-search-results .hs-card { display:block;margin-bottom:6px;padding:9px 10px;border-radius:8px;text-decoration:none; }
+[data-reading-login-component="row"] .sa-global-search-results .hs-card:hover { background:#F7E8C6; }
+[data-reading-login-component="row"] .sa-global-search-results .hs-card-title { display:block;color:#2d2a22;font:900 14px/1.4 'Noto Serif TC',serif; }
+[data-reading-login-component="row"] .sa-global-search-results .hs-card-desc,
+[data-reading-login-component="row"] .sa-global-search-results .hs-search-note,
+[data-reading-login-component="row"] .sa-global-search-results .hs-empty { color:#6f644c;font:500 12px/1.65 'Noto Sans TC',sans-serif; }
+[data-reading-login-component="row"] .sa-global-search-results .hs-search-note { margin-bottom:8px;padding:7px 9px;border-radius:7px;background:#FAF4E8; }
+[data-reading-login-component="row"] .sa-global-search-results .hs-empty-links { display:flex;flex-wrap:wrap;gap:7px;margin-top:8px; }
+[data-reading-login-component="row"] .sa-global-search-results .hs-empty-links a { padding:6px 10px;border-radius:999px;background:#F7E8C6;color:#6A531E;font-weight:700;text-decoration:none; }
 
 @media (max-width: 700px) {
   [data-reading-login-component="row"] #rg-login-slot:has(.sa-global-search-form:not([hidden])) {
@@ -311,6 +342,8 @@ html body [data-reading-login-component="row"] > #rg-profile-wrap {
   [data-reading-login-component="row"] .sa-edit,
   [data-reading-login-component="row"] a[title="排行榜"],
   [data-reading-login-component="row"] a[title="進度"],
+  [data-reading-login-component="row"] a[title="字庫"],
+  [data-reading-login-component="row"] .sa-account-streak,
   [data-reading-login-component="row"] .sa-logout {
     min-height: 32px;
     padding: 5px 9px !important;
