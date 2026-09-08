@@ -232,7 +232,7 @@ test('all game pages permanently omit the automatic Login cap popup', () => {
   assert.doesNotMatch(gameContentClient, /免費內容你都練過一輪|登入帳號（完全免費）可以解鎖更多/);
   for (const g of games) {
     assert.doesNotMatch(g.htmlText, /gc-cap-banner/, `${g.id}: removed Login popup marker remains`);
-    const contentClientVersion = 14;
+    const contentClientVersion = 15;
     assert.match(g.htmlText, new RegExp('game-content-client\\.js\\?v=' + contentClientVersion), `${g.id}: must load the popup-free game content client`);
   }
   assert.doesNotMatch(legoHtml, /gc-cap-banner|免費內容你都練過一輪|登入帳號（完全免費）可以解鎖更多/);

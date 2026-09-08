@@ -1,5 +1,11 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-09-08 — Batch 1: false-offline startup guard
+
+- Lin authorized only the browser connectivity-check fix and a repeat of Typing startup verification. Removed the premature `navigator.onLine` rejection from the shared content loader; the real request now determines reachability. Existing credentials, server entitlement checks, 15-second timeout, payload validation and failure-closed script execution remain unchanged. Core 5 loader references advance together to v15.
+- New regressions fail on the prior source and pass after the fix: an offline browser hint permits a successful request; an actual failed request still stops startup, displays recovery and does not retry automatically. Network recovery 21/21 and the complete 1,085-file site gate PASS.
+- Normal local Typing now attempts its request, but Batch 1 remains NOT PASS: browser reports `Failed to fetch`; a read-only OPTIONS probe with Origin `http://127.0.0.1:4173` receives HTTP 200 with `Access-Control-Allow-Origin: https://mrtaihualin.com`, not the requesting local origin. Source allowlist confirms localhost is excluded. No CORS/Auth/Edge/server configuration or Production deployment changed; do not treat isolated keyboard-fixture PASS as normal-game startup PASS.
+
 ## 2026-09-08 — BETA-PERF-01 shared loader Delta
 
 - Preload public app script bytes during protected-content loading, removing the avoidable content-then-script download waterfall for both direct entry and Auto Plan destinations. Execution still waits for validated content, and quota/Auth/data behavior is unchanged. Core 5 loader includes advance together to v14.

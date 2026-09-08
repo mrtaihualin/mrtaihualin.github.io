@@ -133,6 +133,26 @@ const validConfig = { url: 'https://project.supabase.co', anonKey: 'public-anon-
     await assert.rejects(harness.sandbox.GameContentLoader.boot(['js/games/example.js']), /offline/);
     assert.strictEqual(harness.appended.filter(el => el.tagName === 'SCRIPT').length, 0);
   });
+  await test('offline browser hint does not block a successful real content request', async () => {
+    const harness = createBootHarness({ readyState: 'complete', config: validConfig });
+    harness.sandbox.navigator.onLine = false;
+    await harness.sandbox.GameContentLoader.boot(['js/games/example.js'], { game: 'typing' });
+    assert.strictEqual(harness.requests.length, 1);
+    assert.strictEqual(harness.requests[0].timeoutMs, 15000);
+    assert.deepStrictEqual(JSON.parse(harness.requests[0].requestOptions.body), { game: 'typing' });
+    assert.strictEqual(harness.appended.filter(el => el.tagName === 'SCRIPT').length, 1);
+  });
+  await test('actual network failure while browser reports offline still fails closed without retrying', async () => {
+    const harness = createBootHarness({ readyState: 'complete', config: validConfig });
+    harness.sandbox.navigator.onLine = false;
+    let attempts = 0;
+    harness.sandbox.NetworkGuard.request = () => { attempts++; return Promise.reject(new TypeError('Failed to fetch')); };
+    await assert.rejects(harness.sandbox.GameContentLoader.boot(['js/games/example.js']), /Failed to fetch/);
+    assert.strictEqual(attempts, 1);
+    assert.strictEqual(harness.sandbox.WORDS_MASTER, undefined);
+    assert.strictEqual(harness.appended.filter(el => el.tagName === 'SCRIPT').length, 0);
+    assert.ok(harness.sandbox.document.getElementById('gc-error-banner'));
+  });
   await test('request resolves normally before the deadline', async () => {
     const result = await guard.request(() => Promise.resolve({ ok: true }), '/ok', {}, 50, null);
     assert.strictEqual(result.ok, true);
@@ -200,7 +220,7 @@ const validConfig = { url: 'https://project.supabase.co', anonKey: 'public-anon-
   });
   await test('Core 5 load the guard before the protected content client', async () => {
     ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html'].forEach((page) => {
-      const version = 14;
+      const version = 15;
       assert.match(read(page), new RegExp('network-guard\\.js\\?v=1[\\s\\S]*game-content-client\\.js\\?v=' + version));
     });
   });
@@ -260,7 +280,7 @@ const validConfig = { url: 'https://project.supabase.co', anonKey: 'public-anon-
     assert.deepStrictEqual(JSON.parse(legacy.requests[0].requestOptions.body), {});
   });
   await test('offline and timeout errors use an understandable recovery branch', async () => {
-    assert.match(client, /navigator\.onLine === false/);
+    assert.doesNotMatch(client, /navigator\.onLine === false/);
     assert.match(client, /NETWORK_TIMEOUT\|NETWORK_OFFLINE/);
     assert.match(client, /無法連線，請檢查網路訊號後再試一次/);
     assert.match(client, /gc-error-retry/);

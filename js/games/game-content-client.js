@@ -144,9 +144,8 @@
     if (game != null && !GAME_SURFACES[game]) return Promise.reject(new Error('game-content: invalid game surface'));
     var minimumGuest = typeof global.isMinimumGuestOnly === 'function' && global.isMinimumGuestOnly();
     var token = minimumGuest ? cfg.anonKey : (readAccessTokenGuess(cfg.url) || cfg.anonKey);
-    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-      return Promise.reject(new Error('NETWORK_OFFLINE'));
-    }
+    // Browser connectivity is only a hint; it can report offline while requests work.
+    // Let the actual request decide, retaining the timeout and fail-closed validation.
     if (!global.NetworkGuard || typeof global.NetworkGuard.request !== 'function') {
       return Promise.reject(new Error('NETWORK_GUARD_UNAVAILABLE'));
     }
