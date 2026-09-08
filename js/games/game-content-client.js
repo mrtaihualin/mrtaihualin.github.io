@@ -302,6 +302,20 @@
     });
   }
 
+  // Fetch public app bytes while the protected content request is pending.
+  // Preload never executes code: injection below still waits for valid content.
+  function preloadAppScripts(sources) {
+    (sources || []).forEach(function (src) {
+      try {
+        var link = document.createElement('link');
+        link.rel = 'preload';
+        link.as = 'script';
+        link.href = src;
+        (document.head || document.body).appendChild(link);
+      } catch (_) { /* Optional hint: normal script loading remains the fallback. */ }
+    });
+  }
+
   // ════════════════════════════════════════════════════════════
   // GA4: game_content_cap_hit — เพิ่ม 2026-08-08 (P6-08 ข้อ 1 ในหัวข้อ 5 ของ
   // 39_P6-08_ตัววัดผลเกมแยกจากคลาส.md) — ยิงเมื่อ Edge Function บอกว่าระดับนั้น "ชนเพดาน
@@ -345,6 +359,7 @@
   // รู้ด้วยว่าพัง (ผู้เรียกไม่ต้องแสดง error ซ้ำ แค่ปล่อยปุ่มเป็น disabled ต่อไปตามที่ CSS ทำอยู่แล้ว)
   global.GameContentLoader = {
     boot: function (appScriptSrcs, options) {
+      preloadAppScripts(appScriptSrcs);
       if (document.body) showLoadingBanner();
       else document.addEventListener('DOMContentLoaded', showLoadingBanner);
 

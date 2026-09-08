@@ -19,10 +19,12 @@ function createBootHarness(options = {}) {
   const listeners = Object.create(null);
   const globalListeners = Object.create(null);
   const requests = [];
+  const appended = [];
   const storage = new Map();
   const elementsById = Object.create(null);
   const body = {
     appendChild(element) {
+      appended.push(element);
       element.parentNode = body;
       if (element.id) elementsById[element.id] = element;
       if (element.tagName === 'SCRIPT' && typeof element.onload === 'function') {
@@ -93,6 +95,7 @@ function createBootHarness(options = {}) {
   return {
     sandbox,
     requests,
+    appended,
     dispatchDomReady() {
       document.readyState = 'interactive';
       const queued = (listeners.DOMContentLoaded || []).slice();
@@ -109,6 +112,27 @@ function createBootHarness(options = {}) {
 const validConfig = { url: 'https://project.supabase.co', anonKey: 'public-anon-key' };
 
 (async function () {
+  await test('app bytes preload before content, but execution waits for valid data', async () => {
+    const harness = createBootHarness({ config: validConfig });
+    const boot = harness.sandbox.GameContentLoader.boot(['js/games/example.js?v=1']);
+    const hints = harness.appended.filter(el => el.tagName === 'LINK');
+    assert.strictEqual(hints.length, 1);
+    assert.strictEqual(hints[0].rel, 'preload');
+    assert.strictEqual(hints[0].as, 'script');
+    assert.strictEqual(hints[0].href, 'js/games/example.js?v=1');
+    assert.strictEqual(harness.appended.filter(el => el.tagName === 'SCRIPT').length, 0);
+    assert.strictEqual(harness.requests.length, 0);
+    harness.dispatchDomReady();
+    await boot;
+    assert.strictEqual(harness.requests.length, 1);
+    assert.strictEqual(harness.appended.filter(el => el.tagName === 'SCRIPT').length, 1);
+  });
+  await test('failed content never executes preloaded app code', async () => {
+    const harness = createBootHarness({ readyState: 'complete', config: validConfig });
+    harness.sandbox.NetworkGuard.request = () => Promise.reject(new Error('offline'));
+    await assert.rejects(harness.sandbox.GameContentLoader.boot(['js/games/example.js']), /offline/);
+    assert.strictEqual(harness.appended.filter(el => el.tagName === 'SCRIPT').length, 0);
+  });
   await test('request resolves normally before the deadline', async () => {
     const result = await guard.request(() => Promise.resolve({ ok: true }), '/ok', {}, 50, null);
     assert.strictEqual(result.ok, true);
@@ -176,7 +200,7 @@ const validConfig = { url: 'https://project.supabase.co', anonKey: 'public-anon-
   });
   await test('Core 5 load the guard before the protected content client', async () => {
     ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html'].forEach((page) => {
-      const version = /^(?:tone-finder|reading-game|typing-game)\.html$/.test(page) ? 13 : 12;
+      const version = 14;
       assert.match(read(page), new RegExp('network-guard\\.js\\?v=1[\\s\\S]*game-content-client\\.js\\?v=' + version));
     });
   });

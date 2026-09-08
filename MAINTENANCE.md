@@ -1,5 +1,11 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-09-08 — BETA-PERF-01 shared loader Delta
+
+- Preload public app script bytes during protected-content loading, removing the avoidable content-then-script download waterfall for both direct entry and Auto Plan destinations. Execution still waits for validated content, and quota/Auth/data behavior is unchanged. Core 5 loader includes advance together to v14.
+- Behavioral regression covers early preload, delayed execution, one content request and failure-closed execution. This source optimization does not prove the reported 4/8-second delays resolved; live timing and deployment remain separate evidence.
+- Verification: targeted network recovery 19 checks and full `node scripts/check-site.js` gate (1,084 files) PASS; no Production change in this source checkpoint.
+
 **Updated: 2026-09-07 Asia/Bangkok** — P1-H-02 Controlled Beta source candidate
 
 ## 2026-09-07 — P1-H-02 Controlled Beta findings (`SOURCE_PASS / LOCAL_HUMAN_PASS / PRODUCTION_UNCHANGED`)
