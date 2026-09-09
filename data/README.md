@@ -7,6 +7,8 @@
 - `data/adv-sentences.js` remains Lin's sentence-authoring source; this does not authorize access to the protected legacy word corpus.
 - `data/approved-vocabulary-catalog.json` is the single active Lin-approved canonical vocabulary master. Version `free-200-v1` contains exactly 200 semantic records: Guest Free 50 `初` + 50 `中`, and Login Free adds 50 `初` + 50 `中`. Paid content is not active.
 - Protected history and its former combined lock/checker are retired from default AI and CI access. Reactivation requires Lin's explicit old/legacy-corpus instruction and a separately authorized release.
+- `data/approved-paid-vocabulary-queue.json` indexes the exact 189-record payload rebound from local evidence commit `9200d15`. The migration embeds the immutable reviewed fields, while default AI/CI verification uses only that commit-bound payload and must not open protected history.
+- The Paid queue remains `queued-inactive` and unavailable to every game until a separate Product entitlement decision and Production HIGH approval. The separate 64 unreviewed records remain outside this queue.
 - AI may not invent, add, remove or change words, sentences, translations or readings. Computed decomposition fields require Lin to review every word and every field before publish.
 - Builders such as `buildWordsForPhonicsGames` and `buildSentencesForPhonicsGames` must preserve every field used by games, including `readingTH`.
 - Reviewed verb rows require explicit `word`, `spellingTH` and `readingTH`. Split both authority strings on `-`; their part counts must equal `syls.length`, and the `spellingTH` parts must join exactly to `word`. A mismatch fails closed for manual review.

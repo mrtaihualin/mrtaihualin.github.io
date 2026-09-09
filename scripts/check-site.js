@@ -129,6 +129,7 @@ runTest(['scripts/tests-listening-phase1.js'], 'Phase 1 Listening tests');
 runTest(['scripts/tests-phase1-game-content-rl-grants.mjs'], 'Phase 1 game-content rate-limit grant tests');
 runTest(['scripts/tests-typing-phase1.js'], 'Phase 1 Typing tests');
 runTest(['scripts/tests-reading-phase1.js'], 'Phase 1 Reading tests');
+runTest(['scripts/tests-paid-vocabulary-queue.js'], 'Inactive Paid vocabulary queue migration tests');
 runTest(['scripts/tests-word-order-phase1.js'], 'Phase 1 Word Order tests');
 runTest(['scripts/tests-account-export-phase1.js'], 'Phase 1 account-export tests');
 runTest(['scripts/tests-shared-games-phase1.js'], 'Phase 1 shared-game-system tests');
