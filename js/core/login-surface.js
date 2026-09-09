@@ -68,7 +68,7 @@
   function authDependencies() {
     return loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2', function () { return !!window.supabase; })
       .then(function () { return loadScript('js/core/supabase-config.js?v=9', function () { return !!window.SUPABASE_CONFIG; }); })
-      .then(function () { return loadScript('js/core/auth-widget.js?v=20', function () { return !!window.SITE_AUTH; }); })
+      .then(function () { return loadScript('js/core/auth-widget.js?v=23', function () { return !!window.SITE_AUTH; }); })
       .then(function () { return loadScript('js/games/reading-auth.js?v=34', function () { return !!window.READING_AUTH; }); });
   }
 
@@ -105,10 +105,6 @@
 
   // Exact Reading Account Bar template. Every scoped page calls this one
   // function; the only structural variant is omitting Help on non-game pages.
-  function showsVaultCompanion() {
-    return !gamePages[filename] && filename !== 'vault.html' && filename !== 'my-progress.html';
-  }
-
   function readingSurface(slot, withHelp, originalHelp) {
     var row = document.createElement('div');
     row.className = 'rg-tools-row';
@@ -142,28 +138,7 @@
         }
       });
       surface.appendChild(help);
-    } else if (showsVaultCompanion()) {
-      var vault = document.createElement('a');
-      vault.className = 'tf-streak-chip mrt-login-vault';
-      vault.href = 'vault.html';
-      vault.title = '開啟泰語單字庫';
-      vault.textContent = '🔖 字庫';
-      surface.appendChild(vault);
     }
-    var stats = document.createElement('div');
-    stats.className = 'rg-stat-row';
-    stats.id = 'rg-stat-row';
-    stats.setAttribute('style', 'display:none;justify-content:flex-start;margin:0;width:auto;max-width:none;gap:8px;');
-    var streak = document.createElement('span');
-    streak.className = 'tf-streak-chip';
-    streak.setAttribute('title', '連續天數');
-    streak.appendChild(document.createTextNode('🔥 '));
-    var streakValue = document.createElement('b');
-    streakValue.id = 'rg-streak-num';
-    streakValue.textContent = '0';
-    streak.appendChild(streakValue);
-    stats.appendChild(streak);
-    surface.appendChild(stats);
     var cta = document.createElement('div');
     cta.id = 'rg-cta-login';
     cta.setAttribute('style', 'flex:1;min-width:220px;');

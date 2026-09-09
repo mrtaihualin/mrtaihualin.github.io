@@ -232,7 +232,7 @@ test('all game pages permanently omit the automatic Login cap popup', () => {
   assert.doesNotMatch(gameContentClient, /免費內容你都練過一輪|登入帳號（完全免費）可以解鎖更多/);
   for (const g of games) {
     assert.doesNotMatch(g.htmlText, /gc-cap-banner/, `${g.id}: removed Login popup marker remains`);
-    const contentClientVersion = ['tone', 'reading', 'typing'].includes(g.id) ? 13 : 12;
+    const contentClientVersion = 15;
     assert.match(g.htmlText, new RegExp('game-content-client\\.js\\?v=' + contentClientVersion), `${g.id}: must load the popup-free game content client`);
   }
   assert.doesNotMatch(legoHtml, /gc-cap-banner|免費內容你都練過一輪|登入帳號（完全免費）可以解鎖更多/);
@@ -259,13 +259,13 @@ test('all scoped pages use one fail-closed Login surface and game pages permanen
   for (const file of gamePages) {
     const html = fs.readFileSync(path.join(root, file), 'utf8');
     assert.doesNotMatch(html, /ANN-BAND|ann-band|avail-band|annDismissed|annGoTo|annPrev|annNext/, `${file}: announcement DOM/marker/script/style hook must be removed`);
-    assert.match(html, /minimum-guest-launch\.js\?v=23/, `${file}: must load the current Reading-authority Login gate`);
+    assert.match(html, /minimum-guest-launch\.js\?v=24/, `${file}: must load the current Reading-authority Login gate`);
     assert.match(html, /shared\.min\.js\?v=(?:47|50)/, `${file}: must load the announcement-free game runtime`);
   }
   for (const file of nonGameScopedPages) {
     const html = fs.readFileSync(path.join(root, file), 'utf8');
     assert.match(html, /<!--ANN-BAND:START--><!-- Login UI scope: no announcement strip\. --><!--ANN-BAND:END-->/, `${file}: existing non-game announcement capability boundary must remain`);
-    assert.match(html, /minimum-guest-launch\.js\?v=23/, `${file}: must load the current Reading-authority Login gate`);
+    assert.match(html, /minimum-guest-launch\.js\?v=24/, `${file}: must load the current Reading-authority Login gate`);
     assert.match(html, file === 'vault.html' ? /shared\.min\.js\?v=47/ : /shared\.min\.js\?v=45/, `${file}: non-game cache binding must stay on its current runtime`);
   }
   assert.equal(scopedInventory.length, 17, 'FB-01 inventory must stay on the six games and eleven existing account surfaces');
@@ -280,7 +280,7 @@ test('all scoped pages use one fail-closed Login surface and game pages permanen
   assert.match(sharedMin, /document\.body&&!document\.body\.hasAttribute\("data-gsh-game"\)\?document\.getElementById\("ann-band"\):null/, 'deployed shared runtime must keep the non-game announcement guard');
   assert.doesNotMatch(sharedCss, /(^|[},]\s*)\.avail-band\s*\{/m, 'announcement CSS must never target an unscoped game surface');
   assert.match(minimumGuest, /window\.MRT_PARKED_ACCOUNT_SURFACE = parked\.test\(path\)/);
-  assert.match(minimumGuest, /loginController\.src = 'js\/core\/login-surface\.js\?v=14'/, 'public pages must request the current account-menu controller');
+  assert.match(minimumGuest, /loginController\.src = 'js\/core\/login-surface\.js\?v=15'/, 'public pages must request the current account-menu controller');
   assert.doesNotMatch(minimumGuest, /location\.replace\('\/games\.html\?guest_launch=1'\)/);
   assert.match(loginJs, /'tone-finder\.html'[\s\S]*'reading-game\.html'[\s\S]*'listening-game\.html'[\s\S]*'typing-game\.html'[\s\S]*'word-order\.html'[\s\S]*'lego\.html'/);
   assert.match(loginJs, /function sourceFilename\(pathname\)[\s\S]{0,520}if \(filename\.indexOf\('\.'\) === -1\) filename \+= '\.html'[\s\S]{0,120}var filename = sourceFilename\(window\.location\.pathname\)/, 'Cloudflare extensionless routes must resolve to canonical Login page keys');
@@ -302,22 +302,23 @@ test('all scoped pages use one fail-closed Login surface and game pages permanen
   assert.ok(loginJs.includes(`surface.setAttribute('style', '${readingProfileStyle}')`), 'shared template must copy the exact Reading profile markup style');
   assert.ok(loginJs.includes(`slot.setAttribute('style', '${readingSlotStyle}')`), 'shared template must copy the exact Reading Login-slot style');
   assert.match(loginJs, /help\.className = 'tf-streak-chip mrt-login-howto'[\s\S]{0,320}help\.textContent = '📖 玩法'/, 'game Help must use the Reading class/order/copy');
-  assert.match(loginJs, /stats\.className = 'rg-stat-row'[\s\S]{0,180}stats\.setAttribute\('style', 'display:none;justify-content:flex-start;margin:0;width:auto;max-width:none;gap:8px;'\)/, 'shared template must retain Reading hidden stat slot');
+  assert.doesNotMatch(loginJs, /stats\.className = 'rg-stat-row'/, 'shared surface must not duplicate Streak outside the account menu');
   assert.match(loginJs, /cta\.id = 'rg-cta-login'[\s\S]{0,120}cta\.setAttribute\('style', 'flex:1;min-width:220px;'\)/, 'shared template must retain Reading hidden CTA slot');
   assert.match(loginCss, /\[data-reading-login-component="header"\][\s\S]{0,520}font-size: clamp\(20px, 4vw, 28px\) !important;/, 'header geometry must come from Reading');
   assert.match(loginCss, /\[data-reading-login-component="row"\][\s\S]{0,320}max-width: 640px;[\s\S]{0,80}padding-bottom: 2px;/, 'Account Bar outer geometry must come from Reading');
   assert.match(loginCss, /#rg-profile-wrap:not\(:has\(\.mrt-login-howto\)\)[\s\S]{0,100}justify-content: center !important;/, 'single Login must be centered by Help omission only');
-  assert.match(loginCss, /\.mrt-login-vault[\s\S]{0,100}text-decoration: none !important;/, 'Vault companion chip must not render as an underlined text link');
-  assert.match(loginCss, /@media \(min-width: 769px\)[\s\S]*\.sa-edit::after \{ content: '編輯'; \}[\s\S]*a\[title="排行榜"\]::after \{ content: '排行'; \}[\s\S]*a\[title="進度"\]::after \{ content: '進度'; \}/, 'Desktop Account Bar must show short Edit, Board and Progress labels');
+  assert.match(loginCss, /a\[title="字庫"\]::after \{ content: '字庫'; \}/, 'Vault must be a labeled account-menu action');
+  assert.match(loginCss, /@media \(min-width: 769px\)[\s\S]*\.sa-edit::after \{ content: '編輯'; \}[\s\S]*a\[title="排行榜"\]::after \{ content: '排行'; \}[\s\S]*a\[title="進度"\]::after \{ content: '進度'; \}[\s\S]*a\[title="字庫"\]::after \{ content: '字庫'; \}/, 'Desktop Account Bar must show short Edit, Board, Progress and Vault labels');
   assert.match(loginCss, /@media \(orientation: landscape\) and \(max-width: 1024px\) and \(max-height: 600px\)[\s\S]*a\[title="排行榜"\]::after,[\s\S]*a\[title="進度"\]::after[\s\S]*content: none;/, 'Mobile Landscape must not inherit Desktop Board and Progress labels');
   assert.match(authWidget, /class="sa-account-bar" role="group" aria-label="帳號選單"/, 'authenticated controls must expose one named account group');
   assert.match(authWidget, /<button type="button" class="sa-nick"[\s\S]{0,220}aria-label="編輯個人檔案：/, 'the displayed account name must remain an accessible profile-edit action');
   assert.match(authWidget, /class="sa-account-action sa-leaderboard-link"[\s\S]{0,220}class="sa-account-action sa-progress-link"/, 'existing account destinations must share one action hook without changing destinations');
+  assert.match(authWidget, /class="sa-account-action sa-edit"[\s\S]{0,200}leaderboardAccountLinkHTML \+[\s\S]{0,360}class="sa-account-streak"[\s\S]{0,260}learningAccountLinksHTML \+[\s\S]{0,400}class="sa-account-action sa-logout"[\s\S]{0,280}globalSearchHTML/, 'account actions must stay in the approved edit, board, streak, progress, vault, logout, search order');
   assert.match(loginCss, /#rg-profile-wrap \{[\s\S]{0,520}background: #FAF4E8 !important;[\s\S]{0,120}border: 2px solid #C8973A !important;[\s\S]{0,80}border-radius: 26px !important;/, 'Desktop and Portrait must use the approved cream, gold and long-rounded account frame');
   assert.match(loginCss, /\.sa-edit,[\s\S]{0,260}\.sa-logout \{[\s\S]{0,360}border-radius: 999px !important;[\s\S]{0,120}background: rgba\(255, 255, 255, 0\.72\) !important;/, 'all existing account actions must use the approved pill language');
-  assert.match(loginCss, /\.sa-nick:focus-visible,[\s\S]{0,420}\.sa-logout:focus-visible,[\s\S]{0,100}\.tf-streak-chip:focus-visible[\s\S]{0,100}outline: 2px solid #C8973A;/, 'keyboard focus must stay visible on every account action');
+  assert.match(loginCss, /\.sa-nick:focus-visible,[\s\S]{0,520}a\[title="字庫"\]:focus-visible,[\s\S]{0,420}\.sa-logout:focus-visible,[\s\S]{0,140}\.tf-streak-chip:focus-visible[\s\S]{0,100}outline: 2px solid #C8973A;/, 'keyboard focus must stay visible on every account action');
   assert.match(loginCss, /@media \(max-width: 600px\)[\s\S]{0,620}border-radius: 22px !important;[\s\S]{0,420}max-width: min\(38vw, 150px\) !important;/, 'Portrait must wrap safely and truncate long account names inside the frame');
-  assert.match(mobileLandscapeCss, /#sa-badge-rg-login-slot\[data-gsh-ml-account-panel="true"\][\s\S]*a\[title="排行榜"\]::after[\s\S]*content: '排行榜';[\s\S]*a\[title="進度"\]::after[\s\S]*content: '學習進度';[\s\S]*\.sa-global-search-toggle::after[\s\S]*content: '全站搜尋';/, 'Mobile Landscape popup must retain every existing account action in readable order');
+  assert.match(mobileLandscapeCss, /#sa-badge-rg-login-slot\[data-gsh-ml-account-panel="true"\][\s\S]*a\[title="排行榜"\]::after[\s\S]*content: '排行榜';[\s\S]*a\[title="進度"\]::after[\s\S]*content: '學習進度';[\s\S]*a\[title="字庫"\]::after[\s\S]*content: '泰語單字庫';[\s\S]*\.sa-account-streak::before[\s\S]*content: '🔥 連續';[\s\S]*\.sa-global-search-toggle::after[\s\S]*content: '全站搜尋';/, 'Mobile Landscape popup must retain every existing account action with readable Chinese labels');
   assert.doesNotMatch(loginCss, /data-gsh-game=|tone|listening|typing|word-order|lego/i, 'Login CSS must not contain a page-specific substitute geometry');
   assert.match(loginJs, /activateLegacyLandscapeSurface\(\)[\s\S]{0,1800}gameState\.header\.insertAdjacentElement\('afterend', gameState\.row\)/, 'Mobile Landscape must restore the existing per-game surface');
   assert.match(loginCss, /@media \(orientation: landscape\) and \(max-width: 1024px\) and \(max-height: 600px\)[\s\S]{0,180}\.mrt-login-surface,[\s\S]{0,100}display: none !important;/, 'Mobile Landscape must show no Login');

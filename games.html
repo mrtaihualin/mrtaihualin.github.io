@@ -98,7 +98,7 @@
   /* Main destination cards share one visual weight and geometry. */
   .gh-main-grid{display:grid;grid-template-columns:1fr;gap:16px;margin-top:4px;}
   @media(min-width:640px){.gh-main-grid{grid-template-columns:repeat(2,1fr);}}
-  @media(min-width:960px){.gh-main-grid{grid-template-columns:repeat(4,1fr);}}
+  @media(min-width:960px){.gh-main-grid{grid-template-columns:repeat(5,1fr);}}
   .gh-main-card{position:relative;background:#fff;border:1.5px solid #e0d2a8;border-radius:18px;padding:24px 20px;text-decoration:none;color:inherit;display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:8px;box-shadow:0 4px 20px rgba(90,62,10,.08);transition:transform .15s,box-shadow .15s;height:100%;}
   .gh-main-card:hover{transform:translateY(-4px);box-shadow:0 10px 28px rgba(90,62,10,.16);}
   .gh-main-card:focus-visible{outline:3px solid #C8973A;outline-offset:2px;}
@@ -125,11 +125,13 @@
   .gh-links-row .sep{color:#b0a080;font-weight:400;}
 
   /* Game Search V2.3 — Guest hidden controls + Login Free shared daily quota */
+  .gh-controls-grid{display:grid;grid-template-columns:1fr;gap:0;align-items:start;}
   .gh-search-wrap{max-width:860px;margin:0 0 30px;text-align:left;}
+  .gh-controls-grid .gh-search-wrap{width:100%;max-width:none;}
   .gh-search-auth-message{font-size:13.5px;color:#6f644c;line-height:1.7;background:#fff;border:1.5px solid #e0d2a8;border-radius:12px;padding:14px 16px;}
   .gh-search-prompt{font-size:15px;font-weight:700;color:#5a3e10;margin-bottom:10px;text-align:left;}
-  .gh-search-row{display:grid;grid-template-columns:minmax(260px,1fr) auto;gap:8px;align-items:stretch;}
-  .gh-time-plan-row{grid-template-columns:minmax(120px,220px) auto auto;align-items:center;}
+  .gh-search-row{display:grid;grid-template-columns:minmax(0,1fr) 138px;gap:8px;align-items:stretch;}
+  .gh-time-input{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;min-width:0;}
   .gh-search-input{width:100%;padding:13px 16px;border:1.5px solid #e0d2a8;border-radius:6px;background:#fff;font-family:'Noto Sans TC',sans-serif;font-size:13.5px;color:#2d2a22;}
   .gh-search-input:focus{outline:none;border-color:#C8973A;}
   .gh-search-btn{padding:13px 22px;background:#C8973A;color:#1C1C1C;border:none;border-radius:6px;font-weight:900;font-size:13.5px;cursor:pointer;white-space:nowrap;}
@@ -157,10 +159,12 @@
   .time-plan-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;}
   .time-plan-cancel{padding:11px 18px;border:1.5px solid #8B6310;border-radius:6px;background:#fff;color:#8B6310;font-weight:900;cursor:pointer;}
   .time-plan-cancel:hover{background:#FAF4E8;}
+  @media(min-width:960px){
+    .gh-controls-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;}
+  }
   @media(max-width:760px){
     .gh-search-row{grid-template-columns:1fr;}
-    .gh-time-plan-row{grid-template-columns:minmax(0,1fr) auto;}
-    .gh-time-plan-row .gh-search-btn{grid-column:1/-1;}
+    .gh-time-input{grid-template-columns:minmax(0,1fr) auto;}
     .gh-search-btn{width:100%;}
     .time-plan-proposal-row{grid-template-columns:1fr;gap:7px;}
     .time-plan-actions>*{width:100%;}
@@ -238,10 +242,10 @@
 <script defer src="js/core/supabase-config.js?v=10"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script>
 <script defer src="js/games/game-account.js?v=7"></script>
-<script defer src="js/core/auth-widget.js?v=20"></script>
+<script defer src="js/core/auth-widget.js?v=23"></script>
 <script defer src="js/games/study-plan-core.js?v=2"></script>
-<script defer src="js/games/study-plan.js?v=4"></script>
-<script src="js/core/minimum-guest-launch.js?v=23"></script>
+<script defer src="js/games/study-plan.js?v=5"></script>
+<script src="js/core/minimum-guest-launch.js?v=24"></script>
 </head>
 <body>
 <!--ANN-BAND:START--><!-- Login UI scope: no announcement strip. --><!--ANN-BAND:END-->
@@ -257,29 +261,33 @@
   <h1>🎮 泰語遊戲中心</h1>
   <p class="gh-sub">五款免費遊戲直接開始，聽力練習室即將開幕。</p>
 
-  <div id="gameSearchGate" class="gh-search-wrap" aria-live="polite">
-    <div class="gh-search-auth-message">正在確認登入狀態…</div>
-  </div>
+  <div class="gh-controls-grid">
+    <div id="gameSearchGate" class="gh-search-wrap" aria-live="polite">
+      <div class="gh-search-auth-message">正在確認登入狀態…</div>
+    </div>
 
-  <section class="gh-search-wrap" aria-labelledby="timePlanTitle">
-    <div class="gh-search-prompt" id="timePlanTitle">今天有多少時間？</div>
-    <div class="gh-search-row gh-time-plan-row">
-      <input id="timePlanMinutes" class="gh-search-input" type="number" min="5" max="10" step="1" value="5" inputmode="numeric" aria-label="今天可練習的分鐘數">
-      <span aria-hidden="true">分鐘</span>
-      <button id="timePlanBtn" class="gh-search-btn" type="button" disabled>幫我安排</button>
-    </div>
-    <div id="timePlanHint" class="gh-search-match-note" style="margin-top:8px">正在確認登入狀態…</div>
-    <div id="timePlanProposal" class="time-plan-proposal" hidden aria-labelledby="timePlanProposalTitle">
-      <div id="timePlanProposalTitle" class="time-plan-proposal-title">建議這樣練</div>
-      <div class="time-plan-proposal-help">勾選想玩的遊戲，選好等級後再開始。</div>
-      <div id="timePlanProposalList" class="time-plan-proposal-list"></div>
-      <div class="time-plan-actions">
-        <button id="timePlanConfirm" class="gh-search-btn" type="button" disabled>開始這個安排</button>
-        <button id="timePlanCancel" class="time-plan-cancel" type="button">取消</button>
+    <section class="gh-search-wrap" aria-labelledby="timePlanTitle">
+      <div class="gh-search-prompt" id="timePlanTitle">今天有多少時間？</div>
+      <div class="gh-search-row gh-time-plan-row">
+        <div class="gh-time-input">
+          <input id="timePlanMinutes" class="gh-search-input" type="number" min="5" max="10" step="1" value="5" inputmode="numeric" aria-label="今天可練習的分鐘數">
+          <span aria-hidden="true">分鐘</span>
+        </div>
+        <button id="timePlanBtn" class="gh-search-btn" type="button" disabled>幫我安排</button>
       </div>
-    </div>
-    <div id="timePlanMessage" class="gh-search-empty" role="status" aria-live="polite"></div>
-  </section>
+      <div id="timePlanHint" class="gh-search-match-note" style="margin-top:8px">正在確認登入狀態…</div>
+      <div id="timePlanProposal" class="time-plan-proposal" hidden aria-labelledby="timePlanProposalTitle">
+        <div id="timePlanProposalTitle" class="time-plan-proposal-title">建議這樣練</div>
+        <div class="time-plan-proposal-help">勾選想玩的遊戲，選好等級後再開始。</div>
+        <div id="timePlanProposalList" class="time-plan-proposal-list"></div>
+        <div class="time-plan-actions">
+          <button id="timePlanConfirm" class="gh-search-btn" type="button" disabled>開始這個安排</button>
+          <button id="timePlanCancel" class="time-plan-cancel" type="button">取消</button>
+        </div>
+      </div>
+      <div id="timePlanMessage" class="gh-search-empty" role="status" aria-live="polite"></div>
+    </section>
+  </div>
 
   <!-- Main destination cards use equal dimensions and weight; individual games live in games-practice.html. -->
   <div class="gh-main-grid">
@@ -309,6 +317,13 @@
       <div class="gh-main-title">學習進度</div>
       <div class="gh-main-desc">登入後查看五項技能的練習紀錄、SRS 階段與待複習項目。</div>
       <span class="gh-main-action">查看進度 →</span>
+    </a>
+
+    <a class="gh-main-card" href="leaderboard.html" onclick="if(window.gtag)gtag('event','game_link_click',{category:'game',target:'tone_leaderboard',from:'games_hub'})">
+      <div class="gh-main-icon">🏆</div>
+      <div class="gh-main-title">聲調排行榜</div>
+      <div class="gh-main-desc">查看聲調練習的公開排行榜。</div>
+      <span class="gh-main-action">查看排行榜 →</span>
     </a>
   </div>
 

@@ -31,18 +31,19 @@ expect(gameUi.includes('claimGameSearch(state.user, query).then')&&gameUi.indexO
 expect(!gameUi.includes('gameSearchSelect')&&gameUi.includes('body: JSON.stringify({ request_id: reqId })'), 'Game Search removes direct selector and sends request_id only');
 expect(games.includes('href="my-progress.html"')&&games.includes('<div class="gh-main-title">學習進度</div>'), 'Game Hub exposes the Learning Progress destination card');
 expect(authWidget.includes('sa-global-search-toggle')&&authWidget.includes('sa-global-search-form')&&authWidget.includes('name="search"'), 'Account Bar exposes a compact expandable Global Search control');
-expect(/\.sa-edit,[\s\S]*a\[title="排行榜"\],[\s\S]*a\[title="進度"\][\s\S]*color: #666666 !important;[\s\S]*font-size: 13px !important;[\s\S]*font-weight: 700 !important/.test(loginCss), 'Account Bar actions use one color, size and weight');
-expect(/\.sa-global-search-toggle \{[\s\S]*width: 28px;[\s\S]*background: rgba\(139, 99, 16, 0\.10\)/.test(loginCss), 'Account Bar search icon remains compact and visibly discoverable');
-expect(/#rg-profile-wrap \{[\s\S]*background: #FAF4E8 !important;[\s\S]*border: 1\.5px solid #C8973A !important;[\s\S]*border-radius: 16px !important/.test(loginCss), 'outer Login Bar keeps its gold frame');
-expect(/\.sa-account-bar \{[\s\S]*background: transparent !important;[\s\S]*border: 0 !important/.test(loginCss)&&/\.sa-global-search-input \{[\s\S]*border: 0;/.test(loginCss), 'nested Account and Search surfaces remain borderless');
+expect(authWidget.includes('event.preventDefault();')&&authWidget.includes('GlobalSearchUI.render(query, searchResults)'), 'Account Search renders inside its menu without navigating home');
+expect(authWidget.includes('sa-vault-link')&&authWidget.includes('sa-account-streak'), 'Account Bar retains Vault and Streak in the shared menu');
+expect(/\.sa-global-search-toggle \{[\s\S]*width: 32px;[\s\S]*background: rgba\(255, 255, 255, 0\.82\)/.test(loginCss), 'Account Bar search icon remains compact and visibly discoverable');
+expect(/#rg-profile-wrap \{[\s\S]*background: #FAF4E8 !important;[\s\S]*border: 2px solid #C8973A !important;[\s\S]*border-radius: 26px !important/.test(loginCss), 'outer Login Bar keeps its gold frame');
+expect(/\.sa-account-bar \{[\s\S]*background: transparent !important;[\s\S]*border: 0 !important/.test(loginCss), 'nested Account surface remains visually subordinate to the shared frame');
 expect(/\.sa-global-search-form \{[\s\S]*width: min\(320px, calc\(100vw - 64px\)\)/.test(loginCss)&&/max-width: 600px[\s\S]*pointer: coarse[\s\S]*\.sa-global-search-form \{[\s\S]*width: 100%/.test(loginCss), 'Account Search stays bounded on narrow desktop and fits touch mobile width');
 expect(/max-width: 700px[\s\S]*#rg-login-slot:has\(\.sa-global-search-form:not\(\[hidden\]\)\)[\s\S]*flex: 1 1 100% !important[\s\S]*\.sa-account-bar:has/.test(loginCss), 'expanded Account Search owns a full safe row before narrow-screen wrapping');
-expect(ui.includes("new URLSearchParams(window.location.search).get('search')")&&ui.includes('if (initialQuery) { input.value = initialQuery; run(); }'), 'Global Search destination restores and runs the Account Bar query');
+expect(ui.includes('window.GlobalSearchUI = { render: render }')&&ui.includes('target || document.getElementById'), 'Global Search exposes its existing renderer to the account menu');
 expect(/@media \(min-width: 769px\), \(hover: hover\) and \(pointer: fine\)/.test(loginCss)&&/\.sa-edit::after \{ content: '編輯'; \}/.test(loginCss), 'Desktop Account Bar labels survive a narrow desktop viewport');
 expect(/orientation: landscape[\s\S]*\.sa-edit::after,[\s\S]*content: none/.test(loginCss), 'Mobile Landscape keeps Account Bar actions icon-only');
 expect(quotaEdge.indexOf("service.auth.getUser(accessToken)")<quotaEdge.indexOf("const raw = await req.text()"), 'quota Edge authenticates before parsing the request payload');
 expect(quotaEdge.includes("keys.length !== 1 || keys[0] !== 'request_id'"), 'quota Edge rejects raw query, user id, and every extra client field');
-const scripts=['https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2','data/search-index.js?v=1','data/game-problem-corpus-v2_3.js?v=1','js/core/search-engine.js?v=3','js/games/game-problem-search.js?v=2','js/core/global-search-game-adapter.js?v=2','js/core/search-ui.js?v=6'];
+const scripts=['https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2','data/search-index.js?v=1','data/game-problem-corpus-v2_3.js?v=1','js/core/search-engine.js?v=3','js/games/game-problem-search.js?v=2','js/core/global-search-game-adapter.js?v=2','js/core/search-ui.js?v=7'];
 let last=-1, orderOk=true;
 for(const src of scripts){const i=index.indexOf(src); if(i<0||i<=last){orderOk=false;break;} last=i;}
 expect(orderOk,'index.html loads auth client, corpus, shared GameProblemSearch, adapter, then Global UI in order');

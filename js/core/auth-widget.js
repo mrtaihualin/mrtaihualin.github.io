@@ -939,6 +939,70 @@
   // มี modal อื่นเปิดอยู่ไหม (จองเรียน/QR ฯลฯ) → ถ้าเปิด ซ่อน badge กันทับปุ่มกากบาท
   function anyModalOpen() { try { return !!document.querySelector('.modal-overlay.open'); } catch (e) { return false; } }
 
+  var accountSearchReady = null;
+  var accountStreakOwner = '';
+  function loadAccountScript(src, readyCheck) {
+    if (readyCheck && readyCheck()) return Promise.resolve();
+    var base = src.split('?')[0];
+    var existing = Array.prototype.find.call(document.scripts, function (node) {
+      return String(node.src || '').indexOf(base) !== -1;
+    });
+    if (existing) {
+      return new Promise(function (resolve, reject) {
+        if (readyCheck && readyCheck()) return resolve();
+        existing.addEventListener('load', resolve, { once: true });
+        existing.addEventListener('error', reject, { once: true });
+        window.setTimeout(function () {
+          if (!readyCheck || readyCheck()) resolve();
+          else reject(new Error('account_search_dependency_timeout'));
+        }, 5000);
+      });
+    }
+    return new Promise(function (resolve, reject) {
+      var script = document.createElement('script');
+      script.src = src;
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+  }
+
+  function accountSearchDependencies() {
+    if (window.GlobalSearchUI && typeof window.GlobalSearchUI.render === 'function') return Promise.resolve();
+    if (accountSearchReady) return accountSearchReady;
+    accountSearchReady = loadAccountScript('data/search-index.js?v=1', function () { return !!window.SEARCH_INDEX; })
+      .then(function () { return loadAccountScript('data/game-problem-corpus-v2_3.js?v=1', function () { return !!window.GAME_PROBLEM_CORPUS; }); })
+      .then(function () { return loadAccountScript('js/core/search-engine.js?v=3', function () { return !!window.SearchEngine; }); })
+      .then(function () { return loadAccountScript('js/games/game-problem-search.js?v=2', function () { return !!window.GameProblemSearch; }); })
+      .then(function () { return loadAccountScript('js/core/global-search-game-adapter.js?v=2', function () { return !!window.GlobalSearchGameAdapter; }); })
+      .then(function () { return loadAccountScript('js/core/search-ui.js?v=7', function () { return !!window.GlobalSearchUI; }); });
+    accountSearchReady.catch(function () { accountSearchReady = null; });
+    return accountSearchReady;
+  }
+
+  function paintAccountStreaks() {
+    var value = 0;
+    try { if (window.GAME_ACCOUNT) value = GAME_ACCOUNT.getStreak(); } catch (e) {}
+    Array.prototype.forEach.call(document.querySelectorAll('[data-account-streak]'), function (node) {
+      node.textContent = String(value);
+    });
+  }
+
+  function refreshAccountStreak() {
+    loadAccountScript('js/games/game-account.js?v=7', function () { return !!window.GAME_ACCOUNT; }).then(function () {
+      paintAccountStreaks();
+      if (API.user && window.GAME_ACCOUNT && typeof GAME_ACCOUNT.sync === 'function') {
+        if (accountStreakOwner === API.user.id) return;
+        accountStreakOwner = API.user.id;
+        GAME_ACCOUNT.sync(sb, API.user.id);
+      } else {
+        accountStreakOwner = '';
+      }
+    }).catch(function () {});
+  }
+
+  if (window.addEventListener) window.addEventListener('phase1-gamification-status', paintAccountStreaks);
+
   // ── badge ต่อหน้า: แต่ละหน้าเรียก renderBadge(containerId, opts) ครั้งเดียวตอน init ──
   //    ระบบสร้าง <span id="sa-badge-<containerId>"> เป็นลูกของ container นั้น แล้วคุมแค่ตัวเอง
   //    ไม่แตะ children อื่นของ container (กันไปลบปุ่ม/element อื่นที่หน้านั้นวางไว้ในสล็อตเดียวกัน)
@@ -992,15 +1056,18 @@
     }
     var leaderboardHref = opts.leaderboardHref || 'leaderboard.html';
     var progressHref = opts.progressHref || 'my-progress.html';
-    var parkedAccountLinksHTML = opts.showParkedAccountLinks === false ? '' :
-      '<a class="sa-account-action sa-leaderboard-link" href="' + esc(leaderboardHref) + '" title="排行榜" aria-label="排行榜">🏆</a>' +
-      '<a class="sa-account-action sa-progress-link" href="' + esc(progressHref) + '" title="進度" aria-label="學習進度">📊</a>';
+    var leaderboardAccountLinkHTML = opts.showParkedAccountLinks === false ? '' :
+      '<a class="sa-account-action sa-leaderboard-link" href="' + esc(leaderboardHref) + '" title="排行榜" aria-label="排行榜">🏆</a>';
+    var learningAccountLinksHTML = opts.showParkedAccountLinks === false ? '' :
+      '<a class="sa-account-action sa-progress-link" href="' + esc(progressHref) + '" title="進度" aria-label="學習進度">📊</a>' +
+      '<a class="sa-account-action sa-vault-link" href="vault.html" title="字庫" aria-label="泰語單字庫">🔖</a>';
     var globalSearchHTML =
       '<button type="button" class="sa-global-search-toggle" title="全站搜尋" aria-label="開啟全站搜尋" aria-expanded="false">🔎</button>' +
-      '<form class="sa-global-search-form" action="index.html" method="get" hidden>' +
+      '<form class="sa-global-search-form" role="search" hidden>' +
         '<input class="sa-global-search-input" type="search" name="search" maxlength="100" autocomplete="off" aria-label="全站搜尋" placeholder="全站搜尋">' +
         '<button class="sa-global-search-submit" type="submit">搜尋</button>' +
-      '</form>';
+      '</form>' +
+      '<div class="sa-global-search-results" aria-live="polite" hidden></div>';
 
     el.style.display = anyModalOpen() ? 'none' : 'inline-flex';
     el.innerHTML =
@@ -1011,10 +1078,12 @@
       '<button type="button" class="sa-nick" title="點此編輯個人檔案" aria-label="編輯個人檔案：' + esc(displayName) + '">' + esc(displayName) + '</button>' +
       pinHTML +
       '<button type="button" class="sa-account-action sa-edit" title="編輯" aria-label="編輯個人檔案">✏️</button>' +
-      parkedAccountLinksHTML +
-      globalSearchHTML +
+      leaderboardAccountLinkHTML +
+      '<span class="sa-account-streak" title="連續天數"><span aria-hidden="true">🔥</span> <span class="sa-account-streak-label">連續</span> <b data-account-streak>0</b></span>' +
+      learningAccountLinksHTML +
       '<button type="button" class="sa-account-action sa-logout" style="border:none;background:rgba(139,99,16,0.12);color:#8B6310;' +
       'border-radius:20px;padding:3px 10px;cursor:pointer;font-size:11.5px;font-weight:700;">登出</button>' +
+      globalSearchHTML +
       '</div>';
     el.querySelector('.sa-logout').onclick = doLogout;
     el.querySelector('.sa-edit').onclick = openProfileEditor;
@@ -1022,23 +1091,35 @@
     var searchToggle = el.querySelector('.sa-global-search-toggle');
     var searchForm = el.querySelector('.sa-global-search-form');
     var searchInput = el.querySelector('.sa-global-search-input');
+    var searchSubmit = el.querySelector('.sa-global-search-submit');
+    var searchResults = el.querySelector('.sa-global-search-results');
     function setSearchOpen(open) {
       if (!searchToggle || !searchForm) return;
       searchForm.hidden = !open;
+      if (searchResults) searchResults.hidden = !open;
       searchToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
       searchToggle.setAttribute('aria-label', open ? '關閉全站搜尋' : '開啟全站搜尋');
       if (open && searchInput) window.setTimeout(function () { searchInput.focus(); }, 0);
     }
     if (searchToggle) searchToggle.onclick = function () { setSearchOpen(searchForm.hidden); };
     if (searchForm) searchForm.onsubmit = function (event) {
-      if (!searchInput || !searchInput.value.trim()) {
-        event.preventDefault();
-        if (searchInput) searchInput.focus();
-      }
+      event.preventDefault();
+      var query = searchInput ? searchInput.value.trim() : '';
+      if (!query) { if (searchInput) searchInput.focus(); return; }
+      if (searchSubmit) searchSubmit.disabled = true;
+      if (searchResults) { searchResults.hidden = false; searchResults.innerHTML = '<div class="hs-empty">搜尋中…</div>'; }
+      accountSearchDependencies().then(function () {
+        return window.GlobalSearchUI.render(query, searchResults);
+      }).catch(function () {
+        if (searchResults) searchResults.innerHTML = '<div class="hs-empty">搜尋功能暫時無法載入，請稍後再試。</div>';
+      }).finally(function () {
+        if (searchSubmit) searchSubmit.disabled = false;
+      });
     };
     if (searchInput) searchInput.onkeydown = function (event) {
       if (event.key === 'Escape') { event.preventDefault(); setSearchOpen(false); searchToggle.focus(); }
     };
+    refreshAccountStreak();
   }
 
   // ── เฝ้าการเปิด/ปิด modal → ซ่อน/โชว์ badge ทุกอันให้ถูก (ครอบทุกวิธีปิด modal) ──

@@ -52,9 +52,9 @@ check('ปุ่มรองคงสีทองทั้งก่อนแล�
   /\.pg-btn-secondary,\.pg-btn-secondary:visited\{background:#fff;color:#8B6310\}/.test(js));
 check('Paid readiness เป็น benefit แต่ไม่มีสูตร/ปลายทางเปิด', /想知道自己的泰語實戰準備度？升級方案即可查看。/.test(js) && /查看升級方案/.test(js) && /disabled/.test(js));
 check('account switch ใช้ user id ไม่ใช่แค่ boolean auth', /var before = currentUser && currentUser\.id;[\s\S]*var after = user && user\.id/.test(js));
-check('หน้า HTML ใช้ชื่อ 學習中心 บรรทัดเดียวกึ่งกลางแบบหัวข้อเกม และ canonical summary loader',
-  /<div style="width:100%;text-align:center;">[\s\S]*<h1 style="[^"]*white-space:nowrap;[^"]*font-size:clamp\(20px,4vw,28px\)[^"]*color:#8B6310;">學習中心<\/h1>/.test(html) &&
-  /learning-summary\.js\?v=1/.test(html) && /progress\.js\?v=11/.test(html));
+check('หน้า HTML ใช้ชื่อ 學習中心 บรรทัดเดียวชิดซ้ายด้วยสัดส่วนหัวข้อ Game Hub และ canonical summary loader',
+  /<div style="width:100%;text-align:left;">[\s\S]*<h1 style="[^"]*white-space:nowrap;[^"]*font-size:clamp\(26px,5vw,38px\)[^"]*color:#2d2a22;">學習中心<\/h1>/.test(html) &&
+  /learning-summary\.js\?v=1/.test(html) && /progress\.js\?v=12/.test(html));
 check('學習中心มี Account Bar เดียวใต้หัวข้อเหมือนหน้าเกม',
   /'my-progress\.html': '\.section-wrap > div:first-child'/.test(loginSurface) &&
   /legacy\.style\.setProperty\('display', 'none', 'important'\)/.test(loginSurface));

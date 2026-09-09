@@ -1,6 +1,25 @@
 # ประวัติงานดูแลเว็บ
 
-**Updated: 2026-09-06 Asia/Bangkok** — FB-03 Time Auto Plan source candidate
+## 2026-09-08 — Batch 1: false-offline startup guard
+
+- Lin authorized only the browser connectivity-check fix and a repeat of Typing startup verification. Removed the premature `navigator.onLine` rejection from the shared content loader; the real request now determines reachability. Existing credentials, server entitlement checks, 15-second timeout, payload validation and failure-closed script execution remain unchanged. Core 5 loader references advance together to v15.
+- New regressions fail on the prior source and pass after the fix: an offline browser hint permits a successful request; an actual failed request still stops startup, displays recovery and does not retry automatically. Network recovery 21/21 and the complete 1,085-file site gate PASS.
+- Normal local Typing now attempts its request, but Batch 1 remains NOT PASS: browser reports `Failed to fetch`; a read-only OPTIONS probe with Origin `http://127.0.0.1:4173` receives HTTP 200 with `Access-Control-Allow-Origin: https://mrtaihualin.com`, not the requesting local origin. Source allowlist confirms localhost is excluded. No CORS/Auth/Edge/server configuration or Production deployment changed; do not treat isolated keyboard-fixture PASS as normal-game startup PASS.
+
+## 2026-09-08 — BETA-PERF-01 shared loader Delta
+
+- Preload public app script bytes during protected-content loading, removing the avoidable content-then-script download waterfall for both direct entry and Auto Plan destinations. Execution still waits for validated content, and quota/Auth/data behavior is unchanged. Core 5 loader includes advance together to v14.
+- Behavioral regression covers early preload, delayed execution, one content request and failure-closed execution. This source optimization does not prove the reported 4/8-second delays resolved; live timing and deployment remain separate evidence.
+- Verification: targeted network recovery 19 checks and full `node scripts/check-site.js` gate (1,084 files) PASS; no Production change in this source checkpoint.
+
+**Updated: 2026-09-07 Asia/Bangkok** — P1-H-02 Controlled Beta source candidate
+
+## 2026-09-07 — P1-H-02 Controlled Beta findings (`SOURCE_PASS / LOCAL_HUMAN_PASS / PRODUCTION_UNCHANGED`)
+
+- Aligned Game Search and Time Plan beside each other on one Desktop line, with matching input/button geometry inside both groups and the previously approved stacked Phone layouts preserved. Also aligned the complete `學習中心` guest/content panel and `泰語單字庫` shell—not only their headings—to the Game Hub width. Per Lin's Human review, Reading alone now uses one continuous existing gold surface from its score row through the learning tools; the other Core-game surfaces and all game behavior remain unchanged.
+- Reordered the existing Login account strip to account, edit, rank, `連續`, progress, Vault, logout and Search across Desktop, Portrait and the compact Landscape popup. Streak now carries its concise visible Chinese name, while Search expands and renders its existing results inside the same bounded menu; its larger data dependencies load only after a search request.
+- Added the required visible `聲調排行榜` destination card to `泰語遊戲中心`. Removed the superseded Time Plan exit-summary source completely: after the existing Result, `換個遊戲` returns directly to the hub while the active-round, persistence and daily-limit boundaries remain intact.
+- Source inspection confirmed the direct-game delay has one intentional daily-quota Edge claim before navigation and no duplicate or accidental source call, so no speculative performance mutation was made. Focused Controlled Beta, Time Plan, Core game, Auth/account and responsive checks plus the complete `1,083`-file site gate pass; Lin accepted every bounded local visual item sequentially. The four-session real-user Production beta remains required. No Preview, merge, deploy, Production, Supabase, Auth, account or application-data mutation occurred.
 
 ## 2026-09-06 — FB-03 Time Auto Plan (`SOURCE_PASS / TECHNICAL_CANDIDATE / PREVIEW_NOT_CREATED / PRODUCTION_UNCHANGED`)
 

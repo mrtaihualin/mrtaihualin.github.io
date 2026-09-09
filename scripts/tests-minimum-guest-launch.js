@@ -24,7 +24,7 @@ function ok(value, message) {
 
 activePages.concat(['vault.html', 'games-challenge.html']).forEach(function (file) {
   var html = read(file);
-  var binding = 'js/core/minimum-guest-launch.js?v=23';
+  var binding = 'js/core/minimum-guest-launch.js?v=24';
   ok(html.indexOf(binding) !== -1, file + ' loads the current Login-entry launch gate');
   ok(html.indexOf(binding) < html.indexOf('</head>'), file + ' loads the launch gate in head');
 });
@@ -35,10 +35,10 @@ var gate = read('js/core/minimum-guest-launch.js');
 ok(gate.indexOf('MRT_MINIMUM_GUEST_LAUNCH = true') !== -1, 'launch flag is explicit');
 ok(gate.indexOf('LOGIN_FREE_SRS_PUBLIC_ENTRY = true') !== -1, 'Login Free SRS entry flag is explicit');
 ok(gate.indexOf('LOGIN_FREE_ACCOUNT_PUBLIC_ENTRY = true') !== -1, 'Login Free account entry flag is explicit');
-ok(gate.indexOf("login-surface.js?v=14") !== -1, 'Login surface cache key activates the account-aware client');
-ok(gate.indexOf("login-surface.css?v=14") !== -1, 'Login surface stylesheet cache key activates the account-menu visual system');
-ok(gate.indexOf("repeat(4,minmax(0,1fr))") !== -1 && gate.indexOf('@media(max-width:959px)') !== -1,
-  'Game Hub keeps four equal desktop destinations and a two-column compact layout');
+ok(gate.indexOf("login-surface.js?v=15") !== -1, 'Login surface cache key activates the account-aware client');
+ok(gate.indexOf("login-surface.css?v=15") !== -1, 'Login surface stylesheet cache key activates the account-menu visual system');
+ok(gate.indexOf("repeat(5,minmax(0,1fr))") !== -1 && gate.indexOf('@media(max-width:959px)') !== -1,
+  'Game Hub keeps five equal desktop destinations and a two-column compact layout');
 ok(gate.indexOf('MRT_PARKED_ACCOUNT_SURFACE = parked.test(path)') !== -1, 'parked account surfaces remain fail-closed');
 ok(gate.indexOf('my-progress') !== -1 && gate.indexOf('games-challenge') !== -1, 'reversible fallback keeps account and Challenge route inventory');
 ok(gate.indexOf('vault-btn-slot') === -1 && gate.indexOf('a[href="vault.html"]') === -1,
@@ -91,13 +91,13 @@ var accountBundles = ['game-account.js','phase1-canonical-state.js','learning-su
 coreFive.forEach(function (file) {
   var html = read(file);
   accountBundles.forEach(function (bundle) { ok(html.indexOf(bundle) !== -1, file + ' executes Login Free ' + bundle); });
-  ok(html.indexOf('study-plan-core.js?v=2') !== -1 && html.indexOf('study-plan.js?v=4') !== -1,
+  ok(html.indexOf('study-plan-core.js?v=2') !== -1 && html.indexOf('study-plan.js?v=5') !== -1,
     file + ' executes the separately authorized Free Time Auto Plan');
   ok(!/(?:reading|typing|listening|word-order|lego)-board\.html/.test(html), file + ' does not expose a leaderboard route');
 });
 var legoHtml = read('lego.html');
 accountBundles.forEach(function (bundle) { ok(legoHtml.indexOf(bundle) === -1, 'Lego does not execute Core 5 ' + bundle); });
-ok(legoHtml.indexOf('study-plan-core.js?v=2') !== -1 && legoHtml.indexOf('study-plan.js?v=4') !== -1,
+ok(legoHtml.indexOf('study-plan-core.js?v=2') !== -1 && legoHtml.indexOf('study-plan.js?v=5') !== -1,
   'Lego executes the separately authorized Free Time Auto Plan');
 ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html'].forEach(function (file) {
   ok(read(file).indexOf('tone-server.js?v=6') !== -1, file + ' executes only the approved Login Free SRS transport');
@@ -161,7 +161,7 @@ ok(gameFlow.indexOf('LOGIN_FREE_ACCOUNT_PUBLIC_ENTRY === true') !== -1,
   'durable report submission is enabled only for the Login Free account entry');
 
 var progressHtml = read('my-progress.html');
-ok(progressHtml.indexOf('data-mrt-parked-runtime') === -1 && progressHtml.indexOf('js/score/progress.js?v=11') !== -1,
+ok(progressHtml.indexOf('data-mrt-parked-runtime') === -1 && progressHtml.indexOf('js/score/progress.js?v=12') !== -1,
   'Learning Center runtime is active');
 ['leaderboard.html','reading-board.html','listening-board.html','typing-board.html','word-order-board.html'].forEach(function (file) {
   var html = read(file);

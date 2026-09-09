@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>ตรวจเมนูบัญชี — Desktop</title>
+  <link rel="stylesheet" href="../../css/login-surface.css?v=15">
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body { background: #f5f0e8; color: #49350d; font-family: 'Noto Sans TC', system-ui, sans-serif; }
+    .review-label { max-width: 1080px; margin: 24px auto 6px; padding: 0 20px; font: 800 16px/1.4 system-ui, sans-serif; }
+    .page-shell { width: min(100% - 40px, 1080px); min-height: 560px; margin: 0 auto; padding: 28px 20px; background: #fffdf7; border: 1px solid #ead7ac; }
+    [data-reading-login-component="host"] { width: min(100%, 1080px) !important; }
+    [data-reading-login-component="header"],
+    [data-reading-login-component="row"] { max-width: 1000px; }
+    .sa-account-bar { font-family: 'Noto Sans TC', system-ui, sans-serif; }
+    .preview-note { margin: 28px auto 0; color: #80682f; font: 600 13px/1.6 system-ui, sans-serif; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="review-label">Desktop — เมนูบัญชีร่วมหลังล็อกอิน</div>
+  <main class="page-shell">
+    <section data-reading-login-component="host">
+      <header data-reading-login-component="header">
+        <h1 class="page-title">🎮 泰語練習室</h1>
+        <div class="page-sub">พรีวิวเมนูบัญชีบนคอม</div>
+      </header>
+      <div data-reading-login-component="row">
+        <div id="rg-profile-wrap">
+          <div id="rg-login-slot">
+            <span id="sa-badge-rg-login-slot">
+              <div class="sa-account-bar" role="group" aria-label="帳號選單">
+                <span class="sa-avatar" aria-hidden="true">👤</span>
+                <button type="button" class="sa-nick" title="點此編輯個人檔案" aria-label="編輯個人檔案：Lin">Lin</button>
+                <button type="button" class="sa-account-action sa-edit" title="編輯" aria-label="編輯個人檔案">✏️</button>
+                <a class="sa-account-action sa-leaderboard-link" href="#" title="排行榜" aria-label="排行榜">🏆</a>
+                <span class="sa-account-streak" title="連續天數"><span aria-hidden="true">🔥</span> <span class="sa-account-streak-label">連續</span> <b>7</b></span>
+                <a class="sa-account-action sa-progress-link" href="#" title="進度" aria-label="學習進度">📊</a>
+                <a class="sa-account-action sa-vault-link" href="#" title="字庫" aria-label="泰語單字庫">🔖</a>
+                <button type="button" class="sa-account-action sa-logout">登出</button>
+                <button type="button" class="sa-global-search-toggle" title="全站搜尋" aria-label="開啟全站搜尋" aria-expanded="false">🔎</button>
+                <form class="sa-global-search-form" role="search" hidden>
+                  <input class="sa-global-search-input" type="search" value="กิน" aria-label="全站搜尋">
+                  <button class="sa-global-search-submit" type="submit">搜尋</button>
+                </form>
+                <div class="sa-global-search-results" aria-live="polite" hidden>
+                  <div class="hs-search-note">ผลการค้นหาจะแสดงภายในกรอบบัญชีเดิม</div>
+                </div>
+              </div>
+            </span>
+          </div>
+        </div>
+      </div>
+    </section>
+    <p class="preview-note">กด 🔎 เพื่อตรวจช่องค้นหาภายในเมนูเดิม</p>
+  </main>
+  <script>
+    (function () {
+      'use strict';
+      document.querySelectorAll('a[href="#"]').forEach(function (link) {
+        link.addEventListener('click', function (event) { event.preventDefault(); });
+      });
+      var toggle = document.querySelector('.sa-global-search-toggle');
+      var form = document.querySelector('.sa-global-search-form');
+      var results = document.querySelector('.sa-global-search-results');
+      toggle.addEventListener('click', function () {
+        var open = form.hidden;
+        form.hidden = !open;
+        results.hidden = !open;
+        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+      form.addEventListener('submit', function (event) { event.preventDefault(); });
+    })();
+  </script>
+</body>
+</html>

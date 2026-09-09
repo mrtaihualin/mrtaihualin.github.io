@@ -8,7 +8,6 @@
   var GUEST_KEY='gsh_study_plan_guest_v1';
   var PLAN_KEY='gsh_auto_plan_session_v1';
   var PROPOSAL_KEY='gsh_time_plan_proposal_v1';
-  var SUMMARY_KEY='gsh_time_plan_exit_summary_v1';
   var IDLE_MS=3*60*1000;
   var SEGMENT_SECONDS=10*60;
   var saveCounter=0,started=false,paused=false,lastInteraction=Date.now();
@@ -23,8 +22,6 @@
   function sessionWrite(v){try{if(v)sessionStorage.setItem(PLAN_KEY,JSON.stringify(v));else sessionStorage.removeItem(PLAN_KEY);}catch(_){}}
   function proposalRead(){try{var x=JSON.parse(sessionStorage.getItem(PROPOSAL_KEY)||'null');return x&&x.version===1?x:null;}catch(_){return null;}}
   function proposalWrite(v){try{if(v)sessionStorage.setItem(PROPOSAL_KEY,JSON.stringify(v));else sessionStorage.removeItem(PROPOSAL_KEY);}catch(_){}}
-  function summaryRead(){try{var x=JSON.parse(sessionStorage.getItem(SUMMARY_KEY)||'null');return x&&x.version===1?x:null;}catch(_){return null;}}
-  function summaryWrite(v){try{if(v)sessionStorage.setItem(SUMMARY_KEY,JSON.stringify(v));else sessionStorage.removeItem(SUMMARY_KEY);}catch(_){}}
   function clone(v){return JSON.parse(JSON.stringify(v));}
   function taipeiDay(){
     try{
@@ -104,7 +101,7 @@
     if(!a.resolved||a.unavailable)return {ok:false,reason:'auth_unavailable'};
     var valid=Core.validateMinutes(minutes,!!a.user);
     if(!valid.ok)return {ok:false,reason:'minutes',min:valid.min,max:valid.max};
-    summaryWrite(null);showHubResult();
+    setHubMessage('');
     var preview=previewGames(a.user?2:1);
     var proposal={
       version:1,requestId:uuid(),owner:ownerIdentity(),minutes:valid.minutes,
@@ -149,34 +146,8 @@
     return {ok:true,items:queue.items,index:index,phase:phase,item:phase==='initial'?queue.items[index]:null};
   }
 
-  function practiceForToday(plan){
-    var day=taipeiDay();
-    if(plan.practiceDay!==day||!plan.practiced||typeof plan.practiced!=='object'||Array.isArray(plan.practiced)){
-      plan.practiceDay=day;plan.practiced={};
-    }
-    return plan.practiced;
-  }
-
-  function touchPractice(plan){
-    var game=Core.normalizeGameType(currentGame||plan.currentGame);if(!game)return null;
-    var practiced=practiceForToday(plan);
-    if(!practiced[game])practiced[game]={seconds:0,rounds:0};
-    return practiced[game];
-  }
-
-  function buildExitSummary(plan,reason){
-    var practiced=practiceForToday(plan),items=[];
-    Core.GAME_ORDER.forEach(function(game){
-      var row=practiced[game];if(!row)return;
-      items.push({game:game,seconds:Math.max(0,Math.floor(Number(row.seconds)||0)),rounds:Math.max(0,Math.floor(Number(row.rounds)||0))});
-    });
-    return {version:1,day:taipeiDay(),owner:plan.owner||ownerIdentity(),reason:reason||'ended',items:items};
-  }
-
-  function endPlan(reason){
-    var p=sessionRead();if(!p)return;
-    p.active=false;p.reason=reason||'ended';
-    summaryWrite(buildExitSummary(p,p.reason));
+  function endPlan(){
+    if(!sessionRead())return;
     sessionWrite(null);
     renderPlanUi();
   }
@@ -295,7 +266,7 @@
 
   function onRoundStart(){
     started=true;paused=false;lastInteraction=Date.now();
-    var p=sessionRead();if(p&&p.active){p.roundInProgress=true;p.atBoundary=false;touchPractice(p);sessionWrite(p);}
+    var p=sessionRead();if(p&&p.active){p.roundInProgress=true;p.atBoundary=false;sessionWrite(p);}
     renderPlanUi();
   }
   function onRoundComplete(ev){
@@ -304,7 +275,6 @@
     if(report)recordReport(report);
     var p=sessionRead();
     if(p&&p.active){
-      var practice=touchPractice(p);if(practice)practice.rounds=Math.max(0,Number(practice.rounds)||0)+1;
       p.roundInProgress=false;p.atBoundary=true;sessionWrite(p);
       if(Number(p.segmentSeconds||0)>=SEGMENT_SECONDS)advance('round_complete');
     }
@@ -321,7 +291,6 @@
       s.daily.seconds=Math.max(0,Number(s.daily.seconds)||0)+1;
       var p=sessionRead();
       if(p&&p.active&&p.quotaCommitted){
-        var practice=touchPractice(p);if(practice)practice.seconds=Math.max(0,Number(practice.seconds)||0)+1;
         p.segmentSeconds=Math.max(0,Number(p.segmentSeconds)||0)+1;
         sessionWrite(p);
         if(p.segmentSeconds>=SEGMENT_SECONDS&&p.atBoundary&&!p.roundInProgress){persist(s);advance('boundary_due');return;}
@@ -387,22 +356,12 @@
     confirm.disabled=confirmInFlight||!(p.recommendedItems||[]).some(function(item){return item.selected;});
   }
 
-  function showHubResult(){
+  function showHubMessage(){
     var msg=document.getElementById('timePlanMessage');if(!msg)return;
     var reason='',parts=[];
     try{reason=new URL(location.href).searchParams.get('time_plan')||'';}catch(_){}
     if(reason==='limit')parts.push('今天的自動安排已使用 1 次。');
     else if(reason)parts.push('目前無法開始安排，請稍後再試。');
-    var summary=summaryRead(),a=auth();
-    if(summary&&a.resolved&&summary.day===taipeiDay()&&summary.owner===ownerIdentity()){
-      if(summary.items&&summary.items.length){
-        parts.push('今天的自動安排：'+summary.items.map(function(item){
-          var text=(Core.GAME_TITLES[item.game]||item.game)+' '+Core.formatSeconds(item.seconds);
-          if(item.rounds)text+='（'+item.rounds+' 輪）';
-          return text;
-        }).join('・'));
-      }else parts.push('今天的自動安排尚未開始練習。');
-    }
     msg.textContent=parts.join(' ');
   }
 
@@ -418,8 +377,8 @@
       var hint=document.getElementById('timePlanHint');
       if(hint)hint.textContent=a.user?'登入會員：每天 1 次・5–20 分鐘':'訪客：每天 1 次・5–10 分鐘';
     }
-    paint();showHubResult();renderProposalUi();
-    if(window.SITE_AUTH&&SITE_AUTH.onChange)SITE_AUTH.onChange(function(){paint();showHubResult();});
+    paint();showHubMessage();renderProposalUi();
+    if(window.SITE_AUTH&&SITE_AUTH.onChange)SITE_AUTH.onChange(function(){paint();});
     btn.onclick=function(){
       var r=startPlan(input.value);
       if(!r.ok&&msg)msg.textContent=r.reason==='minutes'?'請輸入 '+r.min+'–'+r.max+' 分鐘':'目前無法開始安排，請稍後再試。';
@@ -470,7 +429,7 @@
   }else if(location.pathname==='/games.html'||location.pathname.endsWith('/games.html')){
     // Returning to hub means the player exited Auto Plan unless this page is preparing a new start.
     if(sessionRead())endPlan('exit_to_games');
-    showHubResult();
+    showHubMessage();
   }
 
   window.StudyPlan={

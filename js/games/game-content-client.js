@@ -144,9 +144,8 @@
     if (game != null && !GAME_SURFACES[game]) return Promise.reject(new Error('game-content: invalid game surface'));
     var minimumGuest = typeof global.isMinimumGuestOnly === 'function' && global.isMinimumGuestOnly();
     var token = minimumGuest ? cfg.anonKey : (readAccessTokenGuess(cfg.url) || cfg.anonKey);
-    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-      return Promise.reject(new Error('NETWORK_OFFLINE'));
-    }
+    // Browser connectivity is only a hint; it can report offline while requests work.
+    // Let the actual request decide, retaining the timeout and fail-closed validation.
     if (!global.NetworkGuard || typeof global.NetworkGuard.request !== 'function') {
       return Promise.reject(new Error('NETWORK_GUARD_UNAVAILABLE'));
     }
@@ -302,6 +301,20 @@
     });
   }
 
+  // Fetch public app bytes while the protected content request is pending.
+  // Preload never executes code: injection below still waits for valid content.
+  function preloadAppScripts(sources) {
+    (sources || []).forEach(function (src) {
+      try {
+        var link = document.createElement('link');
+        link.rel = 'preload';
+        link.as = 'script';
+        link.href = src;
+        (document.head || document.body).appendChild(link);
+      } catch (_) { /* Optional hint: normal script loading remains the fallback. */ }
+    });
+  }
+
   // ════════════════════════════════════════════════════════════
   // GA4: game_content_cap_hit — เพิ่ม 2026-08-08 (P6-08 ข้อ 1 ในหัวข้อ 5 ของ
   // 39_P6-08_ตัววัดผลเกมแยกจากคลาส.md) — ยิงเมื่อ Edge Function บอกว่าระดับนั้น "ชนเพดาน
@@ -345,6 +358,7 @@
   // รู้ด้วยว่าพัง (ผู้เรียกไม่ต้องแสดง error ซ้ำ แค่ปล่อยปุ่มเป็น disabled ต่อไปตามที่ CSS ทำอยู่แล้ว)
   global.GameContentLoader = {
     boot: function (appScriptSrcs, options) {
+      preloadAppScripts(appScriptSrcs);
       if (document.body) showLoadingBanner();
       else document.addEventListener('DOMContentLoaded', showLoadingBanner);
 

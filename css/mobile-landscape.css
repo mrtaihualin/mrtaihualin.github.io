@@ -1915,25 +1915,27 @@
     z-index: 1300;
     display: inline-flex !important;
     box-sizing: border-box;
-    width: min(224px, calc(100vw - var(--gsh-ml-safe-l) - var(--gsh-ml-safe-r))) !important;
+    width: min(260px, calc(100vw - var(--gsh-ml-safe-l) - var(--gsh-ml-safe-r))) !important;
     min-width: 0 !important;
     max-width: calc(100vw - var(--gsh-ml-safe-l) - var(--gsh-ml-safe-r)) !important;
     height: auto !important;
     min-height: 0 !important;
     margin: 0 !important;
-    padding: 11px !important;
+    max-height: calc(100dvh - var(--gsh-ml-safe-t) - var(--gsh-ml-top-h) - var(--gsh-ml-gap) - var(--gsh-ml-safe-b)) !important;
+    padding: 8px !important;
     border: 2px solid var(--gold-bright, #c8973a);
     border-radius: 20px;
     background: #faf4e8;
     box-shadow: 0 10px 28px rgba(58, 42, 10, .25);
-    overflow: visible;
+    overflow-x: hidden;
+    overflow-y: auto;
     pointer-events: auto;
   }
   body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] > div {
     display: grid !important;
     grid-template-columns: 30px minmax(0, 1fr) auto;
     align-items: center !important;
-    gap: 7px !important;
+    gap: 4px !important;
     width: 100% !important;
     min-width: 0 !important;
     padding: 0 !important;
@@ -1969,22 +1971,23 @@
   body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] .sa-edit,
   body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] a[title="排行榜"],
   body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] a[title="進度"],
+  body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] a[title="字庫"],
   body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] .sa-global-search-toggle,
   body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] .sa-logout {
     grid-column: 1 / 4;
     display: flex !important;
     align-items: center;
     justify-content: flex-start;
-    gap: 9px;
+    gap: 7px;
     width: 100% !important;
-    min-height: 34px;
+    min-height: 28px;
     margin: 0 !important;
-    padding: 6px 8px !important;
+    padding: 4px 7px !important;
     border: 1px solid rgba(200, 151, 58, .48) !important;
     border-radius: 999px !important;
     background: rgba(255, 255, 255, .72) !important;
     box-shadow: none !important;
-    font-size: 13px !important;
+    font-size: 12px !important;
     font-weight: 700 !important;
     line-height: 1 !important;
     text-align: left;
@@ -1998,14 +2001,14 @@
   }
   body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] .sa-edit::before {
     content: '✏️';
-    font-size: 13px;
+    font-size: 12px;
   }
   body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] .sa-edit::after {
     content: '編輯個人檔案';
-    font-size: 13px;
+    font-size: 12px;
   }
   body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] .sa-logout {
-    grid-row: 6;
+    grid-row: 7;
     color: #8b3c20 !important;
   }
   body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] a[title="排行榜"] {
@@ -2015,33 +2018,71 @@
     content: '排行榜';
   }
   body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] a[title="進度"] {
-    grid-row: 4;
+    grid-row: 5;
   }
   body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] a[title="進度"]::after {
     content: '學習進度';
   }
+  body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] a[title="字庫"] {
+    grid-row: 6;
+  }
+  body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] a[title="字庫"]::after {
+    content: '泰語單字庫';
+  }
+  body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] .sa-account-streak {
+    grid-column: 1 / 4;
+    grid-row: 4;
+    display: flex !important;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100% !important;
+    min-height: 28px;
+    margin: 0 !important;
+    padding: 4px 7px !important;
+    border: 1px solid rgba(200, 151, 58, .48) !important;
+    border-radius: 999px !important;
+    background: rgba(255, 255, 255, .72) !important;
+    color: #5c4410 !important;
+    font-size: 0 !important;
+    line-height: 1 !important;
+  }
+  body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] .sa-account-streak::before {
+    content: '🔥 連續';
+    margin-right: 6px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] .sa-account-streak b {
+    font-size: 12px;
+  }
   body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] .sa-global-search-toggle {
-    grid-row: 5;
+    grid-row: 8;
     width: 100% !important;
     font-size: 0 !important;
   }
   body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] .sa-global-search-toggle::before {
     content: '🔎';
-    font-size: 13px;
+    font-size: 12px;
   }
   body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] .sa-global-search-toggle::after {
     content: '全站搜尋';
-    font-size: 13px;
+    font-size: 12px;
   }
   body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] .sa-global-search-form {
     grid-column: 1 / 4;
-    grid-row: 6;
+    grid-row: 9;
     width: 100% !important;
     min-width: 0 !important;
     margin: 0 !important;
   }
-  body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] .sa-global-search-form:not([hidden]) + .sa-logout {
-    grid-row: 7;
+  body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] .sa-global-search-results {
+    grid-column: 1 / 4;
+    grid-row: 10;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-height: 80px;
+    margin: 0 !important;
+    overflow: auto;
   }
   body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] .sa-logout::before {
     content: '↪';
@@ -2052,6 +2093,8 @@
   body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] a[title="排行榜"]:focus-visible,
   body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] a[title="進度"]:hover,
   body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] a[title="進度"]:focus-visible,
+  body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] a[title="字庫"]:hover,
+  body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] a[title="字庫"]:focus-visible,
   body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] .sa-global-search-toggle:hover,
   body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] .sa-global-search-toggle:focus-visible,
   body.gsh-ml-active #sa-badge-rg-login-slot[data-gsh-ml-account-panel="true"] .sa-logout:hover,
