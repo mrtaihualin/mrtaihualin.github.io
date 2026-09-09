@@ -55,6 +55,7 @@ const ALLOWED_ORIGINS = [
   // 2026-08-10 (P7-02 staging): หน้าทดสอบ staging บน Netlify
   'https://gentle-moxie-bf64ad.netlify.app',
   'https://mrtaihualin-release-7c823713.mrtaihualin.workers.dev',
+  'https://1fd7118d-mrtaihualin-release-7c823713.mrtaihualin.workers.dev',
 ];
 
 function corsHeaders(origin) {
