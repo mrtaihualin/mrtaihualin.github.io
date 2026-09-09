@@ -2722,3 +2722,9 @@ node scripts/check-site.js
 - The reversible switch now blocks game-audio signing, private/audio asset requests, manifest fetches, preload/autoplay/playback and hides or disables every game audio control, while preserving the underlying audio assets and recovery runtime for a later authorized re-enable.
 - Advanced the five game-page cache keys to `protected-word-audio.js?v=4` and retained the previous enabled-path recovery tests behind an in-memory test-only source toggle.
 - Verification covers zero availability, zero signer/network guard calls, zero Audio construction, no rendered usable audio controls, non-audio gameplay/network continuity, exact isolated Preview and the required site gate. Production deployment remains separately bound to the exact authorized package and rollback evidence.
+
+# 2026-09-09 — FB-05 inactive Paid vocabulary queue rebind
+
+- Freshly rebound only the exact Paid queue patch from local evidence commit `9200d15` onto current GitLab `main`.
+- Kept the 189 records byte-bound to the preserved migration payload, kept the active Free 200 unchanged, excluded every other record, and avoided all protected-history/legacy-corpus reads in CI.
+- Paid rows remain `queued-inactive`; current Guest/Login Edge delivery, audio gate and browser table denial remain fail-closed. Production SQL and Paid runtime activation are separately gated.
