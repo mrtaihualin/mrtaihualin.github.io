@@ -45,10 +45,12 @@ const removalMigration = read('supabase/migrations/20260910010000_remove_vocabul
 const schemaSource = read('supabase/sql/2026-08-02_game_content_schema.sql');
 
 assert.match(contentEdge, /canonical_record/);
+assert.match(contentEdge, /requestBody\?\.contract !== 'canonical-v1'/);
 assert.match(contentEdge, /select\('catalog:canonical_record'\)/);
 assert.doesNotMatch(contentEdge, /runtimeSpelling|computeTone|getInitClass|getVowelType|tone_override/i);
 assert.match(client, /var exactWords = validateCatalogPayload\(data\.words\)/);
 assert.match(client, /global\.WORDS_MASTER = exactWords/);
+assert.match(client, /contract: 'canonical-v1'/);
 assert.match(client, /var exactSentences = validateSentencePayload\(data\.sentences\)/);
 assert.match(client, /global\.ADV_SENTENCES = exactSentences/);
 assert.match(client, /toneNumber: record\.toneNumber/);

@@ -259,7 +259,7 @@
     return global.NetworkGuard.request(fetch, cfg.url + '/functions/v1/game-content', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', apikey: cfg.anonKey, Authorization: 'Bearer ' + token },
-      body: JSON.stringify(game ? { game: game } : {})
+      body: JSON.stringify(game ? { game: game, contract: 'canonical-v1' } : { contract: 'canonical-v1' })
     }, 15000).then(function (res) {
       if (!res.ok) throw new Error('game-content HTTP ' + res.status);
       return res.json();

@@ -112,6 +112,9 @@ serve(async (req) => {
 
     let requestBody = {};
     try { requestBody = await req.json(); } catch (_) { return json({ error: 'bad json' }, 400, origin); }
+    if (requestBody?.contract !== 'canonical-v1') {
+      return json({ error: 'content_contract_upgrade_required' }, 409, origin);
+    }
     const requestedGame = typeof requestBody?.game === 'string' ? requestBody.game : '';
     if (requestedGame && !GAME_SURFACES.has(requestedGame)) return json({ error: 'bad game surface' }, 400, origin);
     // ── หา tier จาก JWT จริงฝั่งเซิร์ฟเวอร์เท่านั้น (ไม่อ่าน/ไม่เชื่อ body ใดๆ ที่ client ส่งมาเรื่อง tier) ──

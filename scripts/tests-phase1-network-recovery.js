@@ -170,7 +170,7 @@ const validConfig = { url: 'https://project.supabase.co', anonKey: 'public-anon-
     await harness.sandbox.GameContentLoader.boot(['js/games/example.js'], { game: 'typing' });
     assert.strictEqual(harness.requests.length, 1);
     assert.strictEqual(harness.requests[0].timeoutMs, 15000);
-    assert.deepStrictEqual(JSON.parse(harness.requests[0].requestOptions.body), { game: 'typing' });
+    assert.deepStrictEqual(JSON.parse(harness.requests[0].requestOptions.body), { game: 'typing', contract: 'canonical-v1' });
     assert.strictEqual(harness.appended.filter(el => el.tagName === 'SCRIPT').length, 1);
   });
   await test('actual network failure while browser reports offline still fails closed without retrying', async () => {
@@ -266,7 +266,7 @@ const validConfig = { url: 'https://project.supabase.co', anonKey: 'public-anon-
   });
   await test('Core 5 load the guard before the protected content client', async () => {
     ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html'].forEach((page) => {
-      const version = 15;
+      const version = 16;
       assert.match(read(page), new RegExp('network-guard\\.js\\?v=1[\\s\\S]*game-content-client\\.js\\?v=' + version));
     });
   });
@@ -320,10 +320,10 @@ const validConfig = { url: 'https://project.supabase.co', anonKey: 'public-anon-
   await test('scoped pages send the requested game while legacy pages keep an empty body', async () => {
     const scoped = createBootHarness({ readyState: 'complete', config: validConfig });
     await scoped.sandbox.GameContentLoader.boot([], { game: 'reading' });
-    assert.deepStrictEqual(JSON.parse(scoped.requests[0].requestOptions.body), { game: 'reading' });
+    assert.deepStrictEqual(JSON.parse(scoped.requests[0].requestOptions.body), { game: 'reading', contract: 'canonical-v1' });
     const legacy = createBootHarness({ readyState: 'complete', config: validConfig });
     await legacy.sandbox.GameContentLoader.boot([]);
-    assert.deepStrictEqual(JSON.parse(legacy.requests[0].requestOptions.body), {});
+    assert.deepStrictEqual(JSON.parse(legacy.requests[0].requestOptions.body), { contract: 'canonical-v1' });
   });
   await test('offline and timeout errors use an understandable recovery branch', async () => {
     assert.doesNotMatch(client, /navigator\.onLine === false/);
