@@ -1,7 +1,7 @@
 // Supabase Edge Function: tone-round
 // Language authority: public.game_words.canonical_record only.
 // This file contains no Thai spelling, tone, consonant, vowel or exception rules.
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.3";
 
 /* ===== srsEngine ===== */
 var TF_SRS_CFG = { INTERVALS: [1, 7], CLEAN_ROUNDS_TO_MASTER: 3 };

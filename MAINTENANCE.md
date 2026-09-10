@@ -1,5 +1,10 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-09-10 — Pin vocabulary Edge dependencies before Production
+
+- Pinned the Supabase client used by `game-content`, `tone-round` and `score-submit` to exact `2.112.3`, matching the already-pinned `practice-events` runtime. This removes dependency drift between the reviewed source, the temporary compatibility stage and any recovery redeploy; no vocabulary, tier, Auth, score or gameplay behavior changed.
+- The no-vocabulary-judge regression now rejects a floating Supabase client major version in these three functions. Production remains unchanged pending the exact database/Edge/static mutation gate.
+
 ## 2026-09-08 — Batch 1: false-offline startup guard
 
 - Lin authorized only the browser connectivity-check fix and a repeat of Typing startup verification. Removed the premature `navigator.onLine` rejection from the shared content loader; the real request now determines reachability. Existing credentials, server entitlement checks, 15-second timeout, payload validation and failure-closed script execution remain unchanged. Core 5 loader references advance together to v15.
