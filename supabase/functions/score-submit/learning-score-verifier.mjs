@@ -30,56 +30,46 @@ function string(value, code) {
   return result;
 }
 
+function exactString(value, code) {
+  if (typeof value !== 'string' || !value || value.trim() !== value) fail(code);
+  return value;
+}
+
 function assertNoClientScore(item) {
   ['learning_score', 'learningScore', 'canonical_learning_score', 'canonicalLearningScore'].forEach((key) => {
     if (own(item, key)) fail('client_learning_score_forbidden');
   });
 }
 
-function canonicalKey(row) {
-  return String(row && (row.th || row.word) || '').trim();
+function canonicalContentRefKey(row, source) {
+  const field = source === 'game_sentences' ? 'th' : 'content_key';
+  return exactString(row && row[field], 'canonical_content_identity_missing');
 }
 
-function canonicalContentRefKey(row, source, difficulty) {
-  if (source === 'game_sentences') return canonicalKey(row);
-  const stableKey = String(row && row.content_key || '').trim();
-  if (stableKey) return stableKey;
-  return canonicalKey(row) + '@' + levelNumber(difficulty, row);
-}
-
-function itemContentRef(game, difficulty, item, requireExplicit) {
+function itemContentRef(item) {
   const raw = item.contentRef || item.content_ref;
-  if (!raw) {
-    if (requireExplicit) fail('missing_content_ref');
-    const key = string(item.key, 'invalid_content_key');
-    return difficulty === '高' || game === 'word_order'
-      ? { source: 'game_sentences', key }
-      : { source: 'game_words', key: key + '@' + levelNumber(difficulty, null) };
-  }
+  if (!raw) fail('missing_content_ref');
   const source = String(raw.source || '');
-  const key = string(raw.key, 'invalid_content_ref');
+  const key = exactString(raw.key, 'invalid_content_ref');
   if (source !== 'game_words' && source !== 'game_sentences') fail('invalid_content_ref');
   return { source, key };
 }
 
-function exactCanonicalRow(game, difficulty, item, rows, requireExplicit) {
-  const ref = itemContentRef(game, difficulty, item, requireExplicit);
+function exactCanonicalRow(game, difficulty, item, rows) {
+  const ref = itemContentRef(item);
+  const itemKey = exactString(item && item.key, 'invalid_content_key');
   const matches = (Array.isArray(rows) ? rows : []).filter((row) => {
-    return canonicalContentRefKey(row, ref.source, difficulty) === ref.key;
+    return canonicalContentRefKey(row, ref.source) === ref.key;
   });
   if (matches.length !== 1) fail('content_ref_not_unique');
   const row = matches[0];
   if (ref.source === 'game_words') {
-    if (!own(row, 'word') || ref.key !== canonicalContentRefKey(row, ref.source, difficulty)) {
+    if (itemKey !== ref.key || !own(row, 'word') || ref.key !== canonicalContentRefKey(row, ref.source)) {
       fail('content_ref_identity_mismatch');
     }
-  } else if (!own(row, 'th') || ref.key !== canonicalKey(row)) {
-    fail('content_ref_identity_mismatch');
-  }
-  if (game === 'tone' && ref.source === 'game_sentences') {
-    const component = string(item.key, 'invalid_content_key');
-    const words = Array.isArray(row.words) ? row.words : [];
-    if (!words.some((word) => String(word && word.th || '') === component)) fail('invalid_tone_sentence_component');
+  } else {
+    if (!own(row, 'th') || ref.key !== canonicalContentRefKey(row, ref.source)) fail('content_ref_identity_mismatch');
+    if (itemKey !== ref.key) fail('content_ref_identity_mismatch');
   }
   return { row, ref };
 }
@@ -92,11 +82,7 @@ function levelNumber(difficulty, row) {
 }
 
 function canonicalUnitCount(row) {
-  if (Array.isArray(row && row.read_syls) && row.read_syls.length) return row.read_syls.length;
-  if (Array.isArray(row && row.syls) && row.syls.length) return row.syls.length;
-  if (row && typeof row.reading_th === 'string' && row.reading_th.trim()) {
-    return row.reading_th.split('-').filter(Boolean).length;
-  }
+  if (Array.isArray(row && row.syllables) && row.syllables.length) return row.syllables.length;
   return integer(row && row.wc, 'invalid_canonical_units', 1, 100);
 }
 
@@ -141,7 +127,7 @@ function listeningScore(item, row) {
   const mode = item.mode === 'type' ? 'type' : item.mode === 'mc' ? 'mc' : fail('invalid_listening_mode');
   const listens = integer(item.listens, 'invalid_listens', 1, 100);
   if (mode === 'mc') return listens <= 2 ? 5 : ({ 3: 3, 4: 2, 5: 1 }[listens] || 0);
-  const words = canonicalKey(row).split(/\s+/).filter(Boolean).length || 1;
+  const words = string(row && row.word, 'canonical_word_missing').split(/\s+/).filter(Boolean).length || 1;
   if (words >= 3) return listens <= 3 ? 10 : ({ 4: 7, 5: 4, 6: 1 }[listens] || 0);
   return listens <= 2 ? 10 : ({ 3: 7, 4: 4, 5: 1 }[listens] || 0);
 }
@@ -174,7 +160,7 @@ export function verifyLearningScore(input) {
   const item = input.item;
   if (!item || typeof item !== 'object' || Array.isArray(item)) fail('invalid_item');
   assertNoClientScore(item);
-  const canonical = exactCanonicalRow(game, input.difficulty, item, input.canonicalRows, input.requireExplicitContentRef === true);
+  const canonical = exactCanonicalRow(game, input.difficulty, item, input.canonicalRows);
   const row = canonical.row;
   const score = integer(scoreFor(game, item, row), 'invalid_verified_learning_score', 0, 10);
   return {
@@ -196,7 +182,6 @@ export function verifyRoundLearningScores(input) {
       difficulty: input.difficulty,
       item,
       canonicalRows: input.canonicalRows,
-      requireExplicitContentRef: input.requireExplicitContentRef === true,
     });
     const identity = result.contentRef.source + ':' + result.contentRef.key;
     const old = grouped.get(identity);

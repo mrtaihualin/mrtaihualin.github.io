@@ -3,7 +3,7 @@
 // สร้าง 2026-08-02 · เกมที่ 6 ของเว็บ: ฟังเสียงคำศัพท์จริง (WordAudio) แล้วเลือก/พิมพ์คำตอบ
 // กติกาสำคัญ: ใช้เฉพาะคำใน WORDS_MASTER ที่ "มีไฟล์เสียงจริงอยู่แล้ว" (WordAudio.has()) เท่านั้น
 // ห้ามใช้เสียงสังเคราะห์ของเบราว์เซอร์เด็ดขาด (เว็บปิดฟีเจอร์นี้ถาวรตามคำสั่ง Lin 2026-06-18) — ใช้ไฟล์เสียงจริงผ่าน WordAudio เท่านั้น
-// ห้ามแต่ง/เพิ่มคำศัพท์เอง — วัตถุดิบทุกคำมาจาก data/words-data.js (WORDS_MASTER) ที่ Lin เป็นคนกรอกเท่านั้น (กฎ 16)
+// ห้ามแต่ง/เพิ่มคำศัพท์เอง — วัตถุดิบทุกคำต้องมาจาก canonical_record ผ่าน game-content เท่านั้น
 (function () {
   'use strict';
 
@@ -343,8 +343,11 @@
     return shuffle(pool).slice(0, Math.min(n, pool.length));
   }
 
-  function srsKey(word) { return (word && word.th || '') + '@' + levelNumber(word); }
-  function listeningReviewRef(word){return {source:'game_words',key:word.contentKey||srsKey(word)};}
+  function srsKey(word) {
+    if(!word||typeof word.contentKey!=='string'||!word.contentKey.trim())throw new Error('CATALOG_AUTHORITY_INCOMPLETE:listening contentKey');
+    return word.contentKey;
+  }
+  function listeningReviewRef(word){if(!word||!word.contentKey)throw new Error('CATALOG_AUTHORITY_INCOMPLETE:listening contentKey');return {source:'game_words',key:word.contentKey};}
   var listeningReviewPlan={all:[],selected:[],srsOwned:[]};
   var listeningSrsDuePolicy = createListeningSrsDuePolicy({ keyOf: srsKey });
   function taipeiDate(value) {
@@ -390,7 +393,12 @@
     apply: function (rows) {
       var next = {};
       rows.forEach(function (row) {
-        next[(row.word || '') + '@' + (row.level || 0)] = {
+        var stateId = String(row.word || '');
+        var exact = state.pool.some(function (word) {
+          return word.contentKey === stateId && levelNumber(word) === Number(row.level);
+        });
+        if (!exact) return;
+        next[stateId] = {
           stage: row.stage || 0, dueDate: row.due_date || '',
           everFailed: !!row.ever_failed, mastered: !!row.mastered
         };
@@ -635,7 +643,7 @@
     if (el.vaultSlot && window.WordVault) {
       WordVault.injectStyles();
       el.vaultSlot.innerHTML = '';
-      el.vaultSlot.appendChild(WordVault.createSaveBtn(w.th, { zh: w.zh, en: w.en, source: 'listening-game' }, {
+      el.vaultSlot.appendChild(WordVault.createSaveBtn(w.th, { zh: w.zh, en: w.en, contentKey: srsKey(w), source: 'listening-game' }, {
         onSave: function () { try { if (window.gtag) gtag('event', 'listening_game_vault_save', { category: 'game', word: w.th }); } catch (e) {} },
         onRemove: function () { try { if (window.gtag) gtag('event', 'listening_game_vault_remove', { category: 'game', word: w.th }); } catch (e) {} }
       }));
@@ -744,7 +752,7 @@
     state.audioFailed = false;
     state.itemAttempts = [];
     state.log.push({
-      th: w.th, contentKey: w.contentKey || (w.th + '@' + levelNumber(w)), zh: w.zh, userAnswer: '', correct: false, skipped: true,
+      th: w.th, contentKey: w.contentKey, zh: w.zh, userAnswer: '', correct: false, skipped: true,
       mode: state.mode, listens: state.listenCount,
       listeningScore: 0, typingBonus: 0, totalScore: 0,
       typingWrong: 0, wordCount: LISTENING_SCORE.wordCount(w.th),
@@ -864,11 +872,12 @@
     if (!state.answered || !el.reveal.classList.contains('show')) return;
     var w = state.lastAnswered;
     if (!w) return;
-    var readingTxt = w.readingTH || w.th;
+    if (!w.readingTH) throw new Error('CATALOG_AUTHORITY_INCOMPLETE:listening reading');
+    var readingTxt = w.readingTH;
     var html = '<div class="lg-rev-th">' + escapeHtml(w.th) + '</div>';
     if (rgPronMode) html += '<div class="lg-rev-pron">讀音：' + escapeHtml(readingTxt) + '</div>';
     if (rgEnMode && w.en) html += '<div class="lg-rev-en">英文讀音：' + escapeHtml(w.en) + '</div>';
-    html += '<div class="lg-rev-zh">意思：' + escapeHtml(w.zh || '') + '</div>';
+    html += '<div class="lg-rev-zh">意思：' + escapeHtml(w.zh) + '</div>';
     el.reveal.innerHTML = html;
   }
 
@@ -931,7 +940,7 @@
     state.primaryTotal += primary;
     state.typingBonusTotal += bonus;
     state.log.push({
-      th: w.th, contentKey: w.contentKey || (w.th + '@' + levelNumber(w)), zh: w.zh, userAnswer: detail.userAnswer || '', correct: isCorrect,
+      th: w.th, contentKey: w.contentKey, zh: w.zh, userAnswer: detail.userAnswer || '', correct: isCorrect,
       mode: state.mode, listens: state.listenCount,
       listeningScore: primary, typingBonus: bonus, totalScore: primary + bonus,
       typingWrong: state.typingWrong,
@@ -945,14 +954,14 @@
     });
     if (state.report && window.RoundReport) {
       RoundReport.addItem(state.report, {
-        content_ref: { source: 'game_words', key: w.contentKey || (w.th + '@' + levelNumber(w)) },
-        question: w.th, meaning: w.zh || '',
+        content_ref: { source: 'game_words', key: w.contentKey },
+        question: w.th, meaning: w.zh,
         attempts: state.itemAttempts,
         user_answer: state.itemAttempts.length ? state.itemAttempts[state.itemAttempts.length - 1].answer : (detail.userAnswer || ''),
         correct_answer: w.th, is_correct: isCorrect,
         wrong_count: state.mode === 'type' ? state.typingWrong : (isCorrect ? 0 : 1),
         item_score: primary + bonus, listen_count: state.listenCount,
-        linguistic: { reading_th: w.readingTH || '', reading_en: w.en || '', level: w.level || '', answer_mode: state.mode, listening_score: primary, typing_score: bonus },
+        linguistic: { reading_th: w.readingTH, reading_en: w.en, level: w.level, answer_mode: state.mode, listening_score: primary, typing_score: bonus },
         srs_state: existingSrs.stage == null ? null : existingSrs.stage,
         review_state: null,
         mastered_state: !!existingSrs.mastered
@@ -1015,7 +1024,7 @@
       window.GameResume.save('listening-game', {
         mode: state.mode,
         level: state.level,
-        wordIds: state.round.map(function (w) { return w.th; }),
+        wordIds: state.round.map(function (w) { return srsKey(w); }),
         idx: state.idx,
         correct: state.correct,
         wrong: state.wrong,
@@ -1035,11 +1044,19 @@
 
   // เอา wordIds ที่บันทึกไว้ กลับไปจับคู่กับ pool ปัจจุบันเป็นลำดับเดิม — ถ้าคำไหนหายไปจาก pool (เช่นเสียงถูกปิด) ให้ถือว่ากู้ไม่ได้ทั้งรอบ
   function rebuildRoundFromIds(wordIds, pool) {
-    var byTh = {};
-    pool.forEach(function (w) { byTh[w.th] = w; });
+    var byKey = Object.create(null), duplicate = false, seenIds = Object.create(null);
+    pool.forEach(function (w) {
+      var key = srsKey(w);
+      if (byKey[key]) duplicate = true;
+      byKey[key] = w;
+    });
+    if (duplicate) return [];
     var round = [];
     for (var i = 0; i < wordIds.length; i++) {
-      if (byTh[wordIds[i]]) round.push(byTh[wordIds[i]]);
+      var id = typeof wordIds[i] === 'string' ? wordIds[i] : '';
+      if (!id || id.trim() !== id || !byKey[id] || seenIds[id]) return [];
+      seenIds[id] = true;
+      round.push(byKey[id]);
     }
     return round;
   }
@@ -1056,7 +1073,7 @@
     var savedLevel = saved.level === '初' || saved.level === '中' ? saved.level : null;
     if (!savedLevel) {
       var allPlayable = buildPlayablePool(), levels = {};
-      allPlayable.forEach(function (w) { if (saved.wordIds.indexOf(w.th) >= 0) levels[w.level] = true; });
+      allPlayable.forEach(function (w) { if (saved.wordIds.indexOf(srsKey(w)) >= 0) levels[w.level] = true; });
       var legacyLevels = Object.keys(levels).filter(function (level) { return level === '初' || level === '中'; });
       if (legacyLevels.length === 1) savedLevel = legacyLevels[0];
       else { try { window.GameResume.clear('listening-game'); } catch (e) {} return; }
@@ -1234,7 +1251,7 @@
       difficulty: state.level,
       items: state.log.map(function (entry) {
         return {
-          key: entry.contentKey || (entry.th + '@' + levelNumber({ level: entry.level })), contentRef: { source: 'game_words', key: entry.contentKey || (entry.th + '@' + levelNumber({ level: entry.level })) }, points: entry.totalScore, wrong: entry.correct || entry.skipped ? 0 : 1,
+          key: entry.contentKey, contentRef: { source: 'game_words', key: entry.contentKey }, points: entry.totalScore, wrong: entry.correct || entry.skipped ? 0 : 1,
           guide: false, failed: false, mastered: false,
           mode: entry.mode, listens: entry.listens, correct: entry.correct,
           wordCount: entry.wordCount, unitCount: entry.unitCount, typingWrong: entry.typingWrong

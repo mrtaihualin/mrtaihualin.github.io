@@ -48,15 +48,8 @@
       fitGame();
       if (window.ResizeObserver) new ResizeObserver(fitGame).observe(screen);
       else window.addEventListener('resize', fitGame);
-      var fixture = [
-        {word:'หนึ่ง',en:'nèung',zh:'一',level:'初',category:'ตัวเลข',syls:[{cons:'น',lead:'ห',vowel:'อึ',tone:'่',final:'ง',tone_name:'เอก',th:'หนึ่ง'}]},
-        {word:'กิน',en:'gin',zh:'吃',level:'初',category:'กริยา',syls:[{cons:'ก',vowel:'อิ',final:'น',tone_name:'สามัญ',th:'กิน'}]},
-        {word:'ไป',en:'bpai',zh:'去',level:'初',category:'กริยา',syls:[{cons:'ป',vowel:'ไอ',tone_name:'สามัญ',th:'ไป'}]},
-        {word:'ดี',en:'dii',zh:'好',level:'初',category:'คำขยาย',syls:[{cons:'ด',vowel:'อี',tone_name:'สามัญ',th:'ดี'}]},
-        {word:'บ้าน',en:'bâan',zh:'家',level:'初',category:'สถานที่',syls:[{cons:'บ',vowel:'อา',tone:'้',final:'น',tone_name:'โท',th:'บ้าน'}]}
-      ];
-      var previewFixture = [fixture[0]];
-      var override = '<script>(function(){var rows=' + JSON.stringify(previewFixture) + ';var seed=173;Math.random=function(){seed=(seed*9301+49297)%233280;return seed/233280;};window.__GSH_ML_READING_LAYOUT_PREVIEW=' + requestedLayout + ';window.GameContentLoader.boot=function(srcs){window.WORDS_MASTER=rows;window.ADV_SENTENCES=[];var chain=new Promise(function(resolve){if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",resolve,{once:true});else resolve();}).then(function(){if(window.GameResume&&typeof window.GameResume.load==="function")window.GameResume.load=function(){return null;};});(srcs||[]).forEach(function(src){chain=chain.then(function(){return new Promise(function(resolve,reject){var script=document.createElement("script");script.src=src;script.onload=resolve;script.onerror=reject;document.head.appendChild(script);});});});return chain;};})();<\/script>';
+      var previewKeys = ['หนึ่ง@初#numeral'];
+      var override = '<script>(function(){var keys=' + JSON.stringify(previewKeys) + ';var seed=173;Math.random=function(){seed=(seed*9301+49297)%233280;return seed/233280;};window.__GSH_ML_READING_LAYOUT_PREVIEW=' + requestedLayout + ';window.GameContentLoader.boot=function(srcs){var chain=new Promise(function(resolve){if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",resolve,{once:true});else resolve();}).then(function(){return fetch("data/approved-vocabulary-catalog.json",{cache:"no-store"}).then(function(res){if(!res.ok)throw new Error("canonical fixture unavailable");return res.json();}).then(function(catalog){window.WORDS_MASTER=keys.map(function(key){var record=catalog.records.find(function(row){return row.contentKey===key;});if(!record)throw new Error("canonical fixture missing: "+key);return {catalog:record};});window.ADV_SENTENCES=[];});}).then(function(){if(window.GameResume&&typeof window.GameResume.load==="function")window.GameResume.load=function(){return null;};});(srcs||[]).forEach(function(src){chain=chain.then(function(){return new Promise(function(resolve,reject){var script=document.createElement("script");script.src=src;script.onload=resolve;script.onerror=reject;document.head.appendChild(script);});});});return chain;};})();<\/script>';
       var clientTag = '<script src="' + 'js/games/game-content-client.js?v=13"><\/script>';
 
       fetch('../../reading-game.html?review-cache=' + Date.now(), {cache:'no-store'}).then(function (response) {

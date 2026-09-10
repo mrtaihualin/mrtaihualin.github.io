@@ -9,10 +9,7 @@ import {
   legacyLegoRequestId,
   resolveLegoRequestId,
 } from '../supabase/functions/_shared/phase1-rollout-compatibility.mjs';
-import {
-  canonicalContentKey,
-  resolveContentRefItemIds,
-} from '../supabase/functions/practice-events/practice-events-engine.mjs';
+import { resolveContentRefItemIds } from '../supabase/functions/practice-events/practice-events-engine.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
@@ -122,16 +119,12 @@ await test('Lego bridge preserves server-derived Guest/account identity and atom
   assert.match(legoSql, /pg_advisory_xact_lock/);
 });
 
-await test('Played bridge maps numeric word levels to canonical learning-item labels only at lookup', () => {
-  assert.equal(canonicalContentKey('game_words', 'เขา@1'), 'เขา@初');
-  assert.equal(canonicalContentKey('game_words', 'กินข้าว@2'), 'กินข้าว@中');
-  assert.equal(canonicalContentKey('game_words', 'คำ@3'), 'คำ@高');
-  assert.equal(canonicalContentKey('game_words', 'เขา@初'), 'เขา@初');
-  assert.equal(canonicalContentKey('game_sentences', 'ฉันมีอีเมล@1'), 'ฉันมีอีเมล@1');
-  assert.match(practiceEdge, /canonicalContentKey\(item\.content_ref\.source, item\.content_ref\.key\)/);
+await test('Played bridge sends the exact game content identity without conversion', () => {
+  assert.match(practiceEdge, /key: item\.content_ref\.key/);
+  assert.doesNotMatch(practiceEdge, /canonicalContentKey/);
 });
 
-await test('Played stale-level fallback accepts only one unambiguous canonical word base', () => {
+await test('Played bridge resolves only an exact content identity and never a word-base substitute', () => {
   const exactRows = [{ item_id: 'item-initial', content_source: 'game_words', content_key: 'เขา@初' }];
   assert.deepEqual(
     resolveContentRefItemIds([{ source: 'game_words', key: 'เขา@初' }], exactRows),
@@ -139,7 +132,7 @@ await test('Played stale-level fallback accepts only one unambiguous canonical w
   );
   assert.deepEqual(
     resolveContentRefItemIds([{ source: 'game_words', key: 'เขา@高' }], exactRows),
-    ['item-initial']
+    [null]
   );
   const ambiguousRows = [
     { item_id: 'item-a', content_source: 'game_words', content_key: 'เขา@初' },
@@ -153,7 +146,7 @@ await test('Played stale-level fallback accepts only one unambiguous canonical w
     resolveContentRefItemIds([{ source: 'game_sentences', key: 'เขา@高' }], exactRows),
     [null]
   );
-  assert.match(practiceEdge, /learningItemRows\(admin, \['game_words'\]\)/);
+  assert.doesNotMatch(practiceEdge, /learningItemRows\(admin, \['game_words'\]\)/);
   assert.match(practiceEdge, /if \(resolved\.some\(\(item: any\) => !item\.item_id\)\) throw new Error\('unknown_content_ref'\)/);
 });
 

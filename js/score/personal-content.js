@@ -27,9 +27,9 @@
   };
   var PRACTICE_GAMES = {
     'tone-finder': { label: '聲調', href: 'tone-finder.html' },
-    'reading-game': { label: '拼讀', href: 'reading-game.html', wordParam: 'word' },
+    'reading-game': { label: '拼讀', href: 'reading-game.html' },
     'listening-game': { label: '聽力', href: 'listening-game.html' },
-    'typing-game': { label: '打字', href: 'typing-game.html', wordParam: 'word' },
+    'typing-game': { label: '打字', href: 'typing-game.html' },
     'lego': { label: '造句', href: 'lego.html' },
     'lego-user-created': { label: '造句', href: 'lego.html' },
     'word-order': { label: '語序', href: 'word-order.html', sentenceParam: 'sentence' }
@@ -59,14 +59,30 @@
     } catch (e) { return String(value); }
   }
   function sourceLabel(source) { return SOURCE_LABELS[source] || source || '來源未記錄'; }
-  function playedKey(item, kind) { return (kind === 'sentence' ? 'sentence:' : 'word:') + String(item && item.th || ''); }
-  function playedFor(item, kind) { return playedItems[playedKey(item, kind)] || null; }
+  function exactContentKeys(item) {
+    if (!item || !Array.isArray(item.contentKeys)) return [];
+    return item.contentKeys.filter(function (key, index, keys) {
+      return typeof key === 'string' && !!key && key.trim() === key && keys.indexOf(key) === index;
+    });
+  }
+  function playedFor(item, kind) {
+    if (kind === 'sentence') return playedItems['sentence:' + String(item && item.th || '')] || null;
+    var matches = exactContentKeys(item).map(function (key) { return playedItems['word:' + key]; }).filter(function (row) { return row && row.played; });
+    matches.sort(function (a, b) { return String(b.last_played_at || '').localeCompare(String(a.last_played_at || '')); });
+    return matches[0] || null;
+  }
 
   function loadPlayedStatus(entries) {
     if (!user || !window.PracticeEvents || typeof PracticeEvents.status !== 'function') return;
-    var requestItems = entries.map(function (entry) {
-      return { kind: entry.kind, key: String(entry.item && entry.item.th || '') };
-    }).filter(function (item) { return item.key; });
+    var requestItems = [];
+    entries.forEach(function (entry) {
+      if (entry.kind === 'sentence') {
+        var sentenceKey = entry.item && entry.item.th;
+        if (typeof sentenceKey === 'string' && sentenceKey && sentenceKey.trim() === sentenceKey) requestItems.push({ kind: 'sentence', key: sentenceKey });
+        return;
+      }
+      exactContentKeys(entry.item).forEach(function (contentKey) { requestItems.push({ kind: 'word', key: contentKey }); });
+    });
     var key = String(user.id || '') + '|' + requestItems.map(function (item) { return item.kind + ':' + item.key; }).sort().join('|');
     if (!requestItems.length) return;
     if (playedCache[key]) { playedItems = playedCache[key]; return; }

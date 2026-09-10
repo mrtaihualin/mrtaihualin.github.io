@@ -53,7 +53,7 @@ function fakeOwner(initialByGame, verifiedScores, resolutionCounts) {
       return {
         matchCount: count,
         itemId: count === 1 ? 'item-' + input.game : null,
-        contentRef: count === 1 ? { source: input.contentRef.source, key: input.contentRef.key.replace(/@1$/, '@初') } : null
+        contentRef: count === 1 ? { source: input.contentRef.source, key: input.contentRef.key } : null
       };
     },
     async verifyLearningScore(input) {

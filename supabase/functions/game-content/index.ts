@@ -1,6 +1,6 @@
 // ════════════════════════════════════════════════════════════
 // Supabase Edge Function: game-content
-// หน้าที่: จุดเดียวที่เกม (games-challenge/reading/tone-finder/typing/word-order/listening)
+// หน้าที่: จุดเดียวที่เกมคำศัพท์ (reading/tone-finder/typing/word-order/listening)
 //   ดึงคำ/ประโยคมาใช้ — แทนที่การโหลด data/words-data.js, data/adv-sentences.js ตรงๆ
 //   (ของเดิมเป็นไฟล์ public เปิด URL ตรงๆ เห็นครบทุกคำ/ทุกประโยคเสมอ ไม่ว่าจะล็อกอินหรือไม่
 //   — เพดานเดิมเป็นแค่ JS ตัดอาร์เรย์ฝั่ง browser ไม่ใช่ด่านความปลอดภัยจริง)
@@ -21,10 +21,8 @@
 //   (ยังไม่มีระบบสมาชิกจ่ายเงิน — เกินเพดานคนล็อกอินตอนนี้ "ไม่มีใครเข้าถึงได้เลย" กันไว้
 //   สำหรับแพ็กเกจจ่ายเงินในอนาคต ตามที่ Lin ยืนยัน)
 //
-// วิธี deploy (Lin ต้องทำเอง เพราะ AI ไม่มีสิทธิ์ล็อกอิน Supabase ของ Lin):
-//   1. รัน supabase/sql/2026-08-02_game_content_schema.sql ใน SQL Editor ก่อน (สร้างตาราง)
-//   2. รัน scripts/migrate-game-content.js เติมข้อมูลเข้าตาราง (ดูวิธีที่หัวไฟล์นั้น)
-//   3. supabase functions deploy game-content
+// วิธี deploy: ใช้ migration ปัจจุบันที่บันทึก canonical_record ที่ Lin ตรวจแล้วเท่านั้น
+// แล้ว deploy Edge Function นี้ ห้ามใช้ตัวนำเข้าที่สร้าง/คำนวณช่องภาษาใหม่
 //      ⚠️ ไม่ใส่ --no-verify-jwt (ต่างจาก line-webhook) — ฟังก์ชันนี้ถูกเรียกจาก Supabase
 //      client ในเบราว์เซอร์เสมอ (แนบ apikey/anon JWT อัตโนมัติ แม้ยังไม่ได้ล็อกอิน) จึงใช้
 //      ค่า default (verify_jwt เปิด) ได้เหมือน game-reward/tone-round — เกตเวย์เช็คแค่ว่า
@@ -44,6 +42,23 @@ const CAPS = {
   login: { '初': 100, '中': 100, sentences: 40 },
 };
 const GAME_SURFACES = new Set(['tone', 'reading', 'typing', 'word_order', 'listening']);
+const REQUIRED_CATALOG_STRING_FIELDS = [
+  'contentKey', 'reviewSet', 'word', 'spellingTH', 'readingTH', 'roman', 'zhTW',
+  'level', 'type', 'category', 'audioStatus',
+];
+const REQUIRED_SYLLABLE_STRING_FIELDS = [
+  'roman', 'lead', 'consonant', 'cluster', 'vowel', 'writtenFinal', 'toneMark',
+  'toneName', 'liveDead', 'consonantReadDifference', 'finalReadDifference', 'silent',
+];
+const isExactNonblank = (value) => (
+  typeof value === 'string' && value.length > 0 && value.trim() === value
+);
+const hasExactStringBoundaries = (value) => {
+  if (typeof value === 'string') return value.trim() === value;
+  if (Array.isArray(value)) return value.every(hasExactStringBoundaries);
+  if (value && typeof value === 'object') return Object.values(value).every(hasExactStringBoundaries);
+  return true;
+};
 
 // โดเมนจริงของเว็บ (ตรงกับ allowedHosts ใน line-login/index.ts) — www เผื่อไว้แม้ CNAME ปัจจุบันไม่ใช้
 const ALLOWED_ORIGINS = [
@@ -97,6 +112,9 @@ serve(async (req) => {
 
     let requestBody = {};
     try { requestBody = await req.json(); } catch (_) { return json({ error: 'bad json' }, 400, origin); }
+    if (requestBody?.contract !== 'canonical-v1') {
+      return json({ error: 'content_contract_upgrade_required' }, 409, origin);
+    }
     const requestedGame = typeof requestBody?.game === 'string' ? requestBody.game : '';
     if (requestedGame && !GAME_SURFACES.has(requestedGame)) return json({ error: 'bad game surface' }, 400, origin);
     // ── หา tier จาก JWT จริงฝั่งเซิร์ฟเวอร์เท่านั้น (ไม่อ่าน/ไม่เชื่อ body ใดๆ ที่ client ส่งมาเรื่อง tier) ──
@@ -125,12 +143,12 @@ serve(async (req) => {
     const [rl, w1, w2, sent] = await Promise.all([
       admin.rpc('game_content_rl_check', { p_key: rlKey, p_limit: 60, p_window: 60 }),
       readWithTransientAuthRetry(() => admin.from('game_words')
-        .select('content_key,word,en,zh,level,category,syls,spelling_th,reading_th,read_syls,type,subcategory,audio_status,access_tier,catalog_version')
+        .select('catalog:canonical_record')
         .eq('level', '初').eq('status', 'active')
         .in('access_tier', tier === 'login' ? ['guest', 'login'] : ['guest'])
         .order('rank', { ascending: true }).limit(caps['初'])),
       readWithTransientAuthRetry(() => admin.from('game_words')
-        .select('content_key,word,en,zh,level,category,syls,spelling_th,reading_th,read_syls,type,subcategory,audio_status,access_tier,catalog_version')
+        .select('catalog:canonical_record')
         .eq('level', '中').eq('status', 'active')
         .in('access_tier', tier === 'login' ? ['guest', 'login'] : ['guest'])
         .order('rank', { ascending: true }).limit(caps['中'])),
@@ -144,38 +162,66 @@ serve(async (req) => {
     if (w2.error) throw w2.error;
     if (sent.error) throw sent.error;
 
-    // ── แปลงชื่อคอลัมน์ snake_case (DB) → ชื่อฟิลด์ที่ฝั่งเว็บใช้อยู่เดิม (เท่ากับรูปแบบ WORDS_MASTER/ADV_SENTENCES เดิม) ──
-    const toWord = (r) => {
-      let syllables = r.syls;
-      let runtimeSpelling = null;
-      if (r.spelling_th) {
-        const spellingParts = String(r.spelling_th).split('-');
-        const readingParts = String(r.reading_th || '').split('-');
-        if (!Array.isArray(syllables) || readingParts.length !== syllables.length ||
-            spellingParts.join('') !== r.word || syllables.some((syllable) => !syllable?.th) ||
-            syllables.map((syllable) => syllable.th).join('') !== r.word) {
-          throw new Error('game_word_syllable_authority_mismatch:' + r.content_key);
-        }
-        // Old cached clients require one written segment per analyzed syllable. The seven approved
-        // spelling rows with a different segmentation already carry their reviewed runtime `syls.th`;
-        // omit only the optional top-level spelling field for those clients while retaining it in DB.
-        if (spellingParts.length === syllables.length) {
-          runtimeSpelling = r.spelling_th;
-          syllables = syllables.map((syllable, index) => ({ ...syllable, th: spellingParts[index] }));
-        }
+    // Vocabulary authority is the exact Lin-reviewed canonical_record. This function may
+    // authenticate, apply entitlement caps and filter rows, but must never rewrite,
+    // normalize, infer or recalculate a language field.
+    const validateWord = (r) => {
+      const record = r.catalog;
+      if (!record || typeof record !== 'object' || Array.isArray(record)) {
+        throw new Error('catalog_authority_missing');
       }
-      return {
-        contentKey: r.content_key, word: r.word, en: r.en, zh: r.zh, level: r.level, category: r.category, syls: syllables,
-        spellingTH: runtimeSpelling, readingTH: r.reading_th, readSyls: r.read_syls,
-        type: r.type, subcategory: r.subcategory, audioStatus: r.audio_status,
-        accessTier: r.access_tier, catalogVersion: r.catalog_version,
-      };
+      if (!hasExactStringBoundaries(record) ||
+          !REQUIRED_CATALOG_STRING_FIELDS.every((field) => isExactNonblank(record[field])) ||
+          !Array.isArray(record.approvalRefs) || !record.approvalRefs.length ||
+          !record.approvalRefs.every(isExactNonblank) ||
+          !Array.isArray(record.syllables) || !record.syllables.length || !Array.isArray(record.spellingSyllables)) {
+        throw new Error('catalog_authority_incomplete:' + (record.contentKey || record.word || 'unknown'));
+      }
+      if (record.spellingSyllables.length !== record.syllables.length ||
+          !record.spellingSyllables.every((syllable) => syllable && isExactNonblank(syllable.th)) ||
+          record.spellingSyllables.map((syllable) => syllable.th).join('') !== record.word) {
+        throw new Error('catalog_display_segmentation_incomplete:' + record.contentKey);
+      }
+      record.syllables.forEach((syllable, index) => {
+        if (!syllable || !REQUIRED_SYLLABLE_STRING_FIELDS.every((field) => isExactNonblank(syllable[field])) ||
+            !Number.isInteger(syllable.toneNumber) || syllable.toneNumber < 1 || syllable.toneNumber > 5) {
+          throw new Error('catalog_authority_incomplete:' + record.contentKey + ':' + index);
+        }
+      });
+    };
+    const validateSentence = (r) => {
+      if (!hasExactStringBoundaries(r) ||
+          !isExactNonblank(r?.th) || !isExactNonblank(r?.zh) || !isExactNonblank(r?.reading_th) ||
+          !Number.isInteger(r?.wc) || !Array.isArray(r?.words) || !r.words.length) {
+        throw new Error('sentence_authority_incomplete:' + (r?.th || 'unknown'));
+      }
+      let syllableCount = 0;
+      r.words.forEach((word) => {
+        if (!isExactNonblank(word?.th) || !isExactNonblank(word?.zh) || !Array.isArray(word?.syls) || !word.syls.length) {
+          throw new Error('sentence_authority_incomplete:' + r.th);
+        }
+        word.syls.forEach((syllable) => {
+          if (!isExactNonblank(syllable?.th) || !isExactNonblank(syllable?.en) ||
+              !isExactNonblank(syllable?.cons) || !isExactNonblank(syllable?.vowel) ||
+              !isExactNonblank(syllable?.tone_name)) {
+            throw new Error('sentence_authority_incomplete:' + r.th);
+          }
+          syllableCount += 1;
+        });
+      });
+      const readingParts = r.reading_th.split('-');
+      if (r.words.map((word) => word.th).join('') !== r.th || r.wc !== syllableCount ||
+          readingParts.length !== syllableCount || readingParts.some((part) => !isExactNonblank(part))) {
+        throw new Error('sentence_authority_mismatch:' + r.th);
+      }
     };
     const toSentence = (r) => ({
       th: r.th, zh: r.zh, readingTH: r.reading_th, wc: r.wc, politeF: r.polite_f, words: r.words,
     });
 
-    const words = (w1.data || []).map(toWord).concat((w2.data || []).map(toWord));
+    const words = (w1.data || []).concat(w2.data || []);
+    words.forEach(validateWord);
+    (sent.data || []).forEach(validateSentence);
     const sentences = (sent.data || []).map(toSentence);
     if (!words.length || !sentences.length) {
       return json({ error: 'content_unavailable — empty required dataset' }, 503, origin);
@@ -183,7 +229,7 @@ serve(async (req) => {
 
     // Audio availability is derived server-side from private metadata and filtered to this response's
     // entitled content. Never return storage paths, hashes, filenames, or a catalog-wide manifest.
-    const entitledTexts = new Set(words.map((row) => row.word).concat(sentences.map((row) => row.th)));
+    const entitledTexts = new Set(words.map((row) => row.catalog.word).concat(sentences.map((row) => row.th)));
     const { data: audioRows, error: audioError } = await readWithTransientAuthRetry(() => admin.from('audio_assets')
       .select('text_th').in('status', ['generated', 'approved']).not('storage_path', 'is', null));
     if (audioError) return json({ error: 'audio_availability_unavailable' }, 503, origin);

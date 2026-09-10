@@ -152,7 +152,7 @@ async function main(){
     vm.runInNewContext(read('js/games/round-report.js'),context,{filename:'round-report.js'});
     const report=context.RoundReport.create({game_type:'wordorder'});
     assert.strictEqual(events[0].type,'gsh:round-start');
-    context.RoundReport.addItem(report,{content_ref:{key:'x'},is_correct:true,item_score:10});
+    context.RoundReport.addItem(report,{content_ref:{source:'game_sentences',key:'x'},is_correct:true,item_score:10});
     context.RoundReport.finish(report,{});
     assert.strictEqual(events[1].type,'gsh:item-complete');
     assert.strictEqual(events[1].detail.report.item.item_score,10);

@@ -45,9 +45,10 @@
 
   function normalizeContentRef(value) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) fail('MISSING_CONTENT_REF');
-    var source = requireString(value.source, 'MISSING_CONTENT_REF_SOURCE');
-    var key = requireString(value.key, 'MISSING_CONTENT_REF_KEY');
+    var source = value.source;
+    var key = value.key;
     if (source !== 'game_words' && source !== 'game_sentences') fail('UNKNOWN_CONTENT_REF_SOURCE');
+    if (typeof key !== 'string' || !key || key.trim() !== key) fail('MISSING_CONTENT_REF_KEY');
     return { source: source, key: key };
   }
 
@@ -70,7 +71,7 @@
     });
     if (!resolved || resolved.matchCount !== 1 || !resolved.itemId || !resolved.contentRef) fail('CONTENT_REF_NOT_UNIQUE');
     var canonicalContentRef = normalizeContentRef(resolved.contentRef);
-    if (canonicalContentRef.source !== contentRef.source) fail('CONTENT_REF_IDENTITY_MISMATCH');
+    if (canonicalContentRef.source !== contentRef.source || canonicalContentRef.key !== contentRef.key) fail('CONTENT_REF_IDENTITY_MISMATCH');
     var verified = await owner.verifyLearningScore({
       ownerKey: ownerKey, game: game, level: level, contentRef: contentRef,
       report: report, item: item, ordinal: ordinal

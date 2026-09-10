@@ -119,17 +119,12 @@ test('approved menus, hints and six-game navigation are exact', () => {
   assert.match(switcher, /label: '🔖 我的單字庫'/);
 });
 
-test('polite particles are playable but score-free in the four approved games', () => {
-  assert.match(toneApp, /TF_PARTICLE_ENTRIES[\s\S]{0,900}isParticle:true/);
-  assert.match(toneApp, /entries\.push\(TF_PARTICLE_ENTRIES\[_particle\]\)/);
-  assert.match(toneApp, /scoredResults = session\.results\.filter[\s\S]{0,120}isParticle/);
-  assert.match(readingApp, /var RG_PARTICLE_SYLS=[\s\S]{0,700}isParticle:true/);
-  assert.match(readingApp, /sylList=sylList\.concat\(\[RG_PARTICLE_SYLS\[_rgParticle\]\]\)/);
-  assert.match(readingApp, /function rgScoreSylCount\(\)[\s\S]{0,360}isParticle/);
-  assert.match(typingApp, /var TG_PARTICLE_SYLS=[\s\S]{0,700}isParticle:true/);
-  assert.match(wordOrderApp, /function woBuildPlayableSentence\(s\)[\s\S]{0,900}isParticle:true/);
-  assert.match(wordOrderApp, /particleOnlyWrong[\s\S]{0,260}不扣分/);
-  assert.match(wordOrderApp, /var particleHint =[\s\S]{0,180}if \(!particleHint\)/);
+test('polite-particle controls never synthesize language-answer records', () => {
+  assert.doesNotMatch(toneApp, /TF_PARTICLE_ENTRIES/);
+  assert.doesNotMatch(readingApp, /RG_PARTICLE_SYLS/);
+  assert.doesNotMatch(typingApp, /TG_PARTICLE_SYLS/);
+  assert.doesNotMatch(wordOrderApp, /particleSyl|words:\s*s\.words\.concat/);
+  assert.match(wordOrderApp, /function woBuildPlayableSentence\(s\)\{[\s\S]{0,120}return s;/);
 });
 
 test('Tone preserves three left, three right and reveal actions in the right slots', () => {

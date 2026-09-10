@@ -285,6 +285,11 @@ function srsHarness(kind) {
     window: null, localStorage, SITE_AUTH, PHASE1_ACCOUNT_BOUNDARY: boundary, READING_AUTH,
     srsRecords: {}, totalStars: 0, totalBadges: 0, LEVEL_NUM: 3,
     ADV_SENTENCES: [{ th: 'A-old' }, { th: 'B-new' }],
+    WORDS: [{ th: 'A-old', contentKey: 'A-old', level: '初' }, { th: 'B-new', contentKey: 'B-new', level: '初' }],
+    WORD_LIST: [{ word: 'A-old', contentKey: 'A-old', level: 1 }, { word: 'B-new', contentKey: 'B-new', level: 1 }],
+    RG_LEVEL_TO_NUM: { '初': 1, '中': 2, '高': 3 },
+    rgContentKey(word) { return word.contentKey; },
+    tgContentKey(word) { return word.contentKey; },
     getSupabaseClient() { return client; },
     doSave() { context.saveCount++; }, woSaveSrs() { context.saveCount++; },
     rgLoggedIn() { return !!READING_AUTH.srsUser; }, woLoggedIn() { return !!READING_AUTH.srsUser; },
@@ -312,8 +317,10 @@ for (const kind of ['reading', 'typing', 'wordorder']) {
     requestA.resolve({ data: [{ word: 'A-old', level: h.spec.level, stage: 2, due_date: '2026-08-20', mastered: false }] });
     await promiseA; await settle();
     const state = h.context[h.spec.state];
-    assert.ok(state['B-new@' + h.spec.level], 'new owner SRS was not applied');
-    assert.ok(!state['A-old@' + h.spec.level], 'old owner SRS leaked into new owner');
+    const expectedKey = kind === 'wordorder' ? 'B-new@' + h.spec.level : 'B-new';
+    const staleKey = kind === 'wordorder' ? 'A-old@' + h.spec.level : 'A-old';
+    assert.ok(state[expectedKey], 'new owner SRS was not applied');
+    assert.ok(!state[staleKey], 'old owner SRS leaked into new owner');
     assert.strictEqual(h.context[h.spec.promise], promiseB, 'stale completion replaced/cleared newer promise');
     assert.deepStrictEqual(requestA.filters.find(([key]) => key === 'user_id'), ['user_id', 'account-a']);
   });

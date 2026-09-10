@@ -61,9 +61,14 @@
   }
 
   function contentRef(input) {
-    input = input || {};
-    var source = input.source === 'game_sentences' ? 'game_sentences' : 'game_words';
-    var key = String(input.key || '').trim();
+    // Lego reports are outside the central-vocabulary path and intentionally have no content_ref.
+    // For every supplied Core-5 identity, preserve the exact value or fail; never invent a default.
+    if (input == null) return null;
+    if (typeof input !== 'object' || Array.isArray(input)) throw new Error('CONTENT_REF_REQUIRED');
+    var source = input.source;
+    if (source !== 'game_words' && source !== 'game_sentences') throw new Error('CONTENT_REF_SOURCE_INVALID');
+    var key = input.key;
+    if (typeof key !== 'string' || !key || key.trim() !== key) throw new Error('CONTENT_REF_KEY_INVALID');
     return { source: source, key: key };
   }
 

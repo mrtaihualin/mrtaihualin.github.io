@@ -82,24 +82,42 @@ function reviewCallerAllowed(user: any, url: string) {
   return user?.app_metadata?.test_scope === REVIEW_STAGING_TEST_SCOPE;
 }
 
+function vocabularyScoreRow(row: any) {
+  const record = row?.canonical_record;
+  if (!record || !record.contentKey || !record.word || !record.level || !Array.isArray(record.syllables) || !record.syllables.length) {
+    throw Object.assign(new Error('content_validation_unavailable'), { code: 'content_validation_unavailable' });
+  }
+  return {
+    content_key: record.contentKey,
+    word: record.word,
+    level: record.level,
+    syllables: record.syllables,
+    reading_th: record.readingTH,
+  };
+}
+
 async function reviewCanonical(admin: any, game: string, level: number, item: any) {
   const ref = item && (item.contentRef || item.content_ref);
-  if (!ref || !['game_words', 'game_sentences'].includes(String(ref.source || '')) || !String(ref.key || '').trim()) {
+  if (!ref || !['game_words', 'game_sentences'].includes(ref.source) || typeof ref.key !== 'string' || !ref.key || ref.key.trim() !== ref.key) {
     throw Object.assign(new Error('missing_content_ref'), { code: 'missing_content_ref' });
   }
   let result;
   if (ref.source === 'game_words') {
     result = await admin.from('game_words')
-      .select('content_key,word,level,syls,read_syls,reading_th')
+      .select('canonical_record')
       .eq('content_key', String(ref.key)).limit(2);
   } else {
     result = await admin.from('game_sentences')
       .select('th,wc,reading_th,words').eq('th', String(ref.key)).limit(2);
   }
   if (result.error) throw Object.assign(new Error('content_validation_unavailable'), { code: 'content_validation_unavailable' });
+  const exactItemKey = String(item?.key || '').trim();
+  if (!exactItemKey || exactItemKey !== item.key) {
+    throw Object.assign(new Error('invalid_content_key'), { code: 'invalid_content_key' });
+  }
   const normalizedItem = {
     ...item,
-    key: item.key || item.question,
+    key: exactItemKey,
     skipped: item.skipped === true || item.is_skipped === true,
     guide: item.guide === true || item.hint_used === true,
     failed: item.failed === true || (item.is_correct === false && Number(item.item_score) <= 0),
@@ -109,9 +127,12 @@ async function reviewCanonical(admin: any, game: string, level: number, item: an
     mode: item.mode || item.linguistic?.answer_mode,
     learningEvidence: item.learningEvidence || item.learning_evidence,
   };
+  const canonicalRows = ref.source === 'game_words'
+    ? (result.data || []).map(vocabularyScoreRow)
+    : (result.data || []);
   return verifyLearningScore({
     game, difficulty: ({ 1: '初', 2: '中', 3: '高' })[level], item: normalizedItem,
-    canonicalRows: result.data || [], requireExplicitContentRef: true,
+    canonicalRows, requireExplicitContentRef: true,
   });
 }
 
@@ -240,30 +261,36 @@ serve(async (req) => {
     const isSentence = accepted.difficulty === '高' || accepted.game === 'word_order';
     let canonical;
     if (accepted.game === 'tone' && accepted.difficulty === '高') {
-      const sentenceRows = await admin.from('game_sentences').select('words');
-      canonical = sentenceRows.error ? sentenceRows : {
-        data: (sentenceRows.data || []).flatMap((row) => Array.isArray(row.words)
-          ? row.words.map((word) => ({ word: word.th })) : []),
-        error: null,
-      };
+      canonical = await admin.from('game_sentences').select('th,wc').in('th', keys);
     } else if (isSentence) {
       canonical = await admin.from('game_sentences').select('th,wc').in('th', keys);
     } else {
-      let query = admin.from('game_words').select('content_key,word,level,syls,read_syls,reading_th').in('content_key', keys);
+      let query = admin.from('game_words').select('canonical_record').in('content_key', keys);
       if (accepted.difficulty !== 'mixed') query = query.eq('level', accepted.difficulty);
       canonical = await query;
     }
     if (canonical.error) return reply(origin, { error: 'content_validation_unavailable' }, 503);
-    const canonicalKeys = new Set((canonical.data || []).map((row) => row.content_key || row.th || row.word));
+    let canonicalRows = canonical.data || [];
+    if (!isSentence) {
+      try { canonicalRows = canonicalRows.map(vocabularyScoreRow); }
+      catch (_) { return reply(origin, { error: 'content_validation_unavailable' }, 503); }
+    }
+    const canonicalIdentityField = isSentence ? 'th' : 'content_key';
+    const canonicalKeys = new Set<string>();
+    for (const row of canonicalRows) {
+      const key = row && typeof row[canonicalIdentityField] === 'string' ? row[canonicalIdentityField] : '';
+      if (!key || key.trim() !== key) return reply(origin, { error: 'content_validation_unavailable' }, 503);
+      canonicalKeys.add(key);
+    }
     if (keys.some((key) => !canonicalKeys.has(key))) return reply(origin, { error: 'invalid_content_evidence' }, 400);
-    try { validateCanonicalScoreEvidence(accepted, canonical.data || []); }
+    try { validateCanonicalScoreEvidence(accepted, canonicalRows); }
     catch (error) { return reply(origin, { error: error?.code || 'invalid_content_evidence' }, 400); }
 
     // Hidden pre-SRS source seam. It is deliberately compile-time OFF and performs no Review/SRS
     // mutation. Activation requires a separately authorized release and the atomic owner RPC.
     if (HIDDEN_REVIEW_SCORE_DEFAULT_ENABLED) {
       try {
-        let learningCanonical = canonical.data || [];
+        let learningCanonical = canonicalRows;
         if (accepted.game === 'tone' && accepted.difficulty === '高') {
           const sentenceRows = await admin.from('game_sentences').select('th,wc,reading_th,words');
           if (sentenceRows.error) return reply(origin, { error: 'content_validation_unavailable' }, 503);

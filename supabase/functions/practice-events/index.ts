@@ -4,12 +4,10 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2.112.3';
 import {
-  canonicalContentKey,
   normalizeGamificationStatusBody,
   normalizeRecordBody,
   normalizeStatusBody,
   resolveContentRefItemIds,
-  wordBase,
 } from './practice-events-engine.mjs';
 
 const ALLOWED_ORIGINS = [
@@ -75,17 +73,12 @@ async function learningItemRows(admin: any, sources: string[], keys?: string[]) 
 async function record(admin: any, userId: string, normalized: any) {
   const refs = normalized.items.map((item: any) => ({
     source: item.content_ref.source,
-    key: canonicalContentKey(item.content_ref.source, item.content_ref.key),
+    key: item.content_ref.key,
   }));
   const sources = Array.from(new Set(refs.map((ref: any) => ref.source)));
   const keys = Array.from(new Set(refs.map((ref: any) => ref.key)));
-  let rows = await learningItemRows(admin, sources, keys);
-  let ids = resolveContentRefItemIds(refs, rows);
-  if (ids.some((id: any) => !id) && refs.some((ref: any) => ref.source === 'game_words')) {
-    const allWordRows = await learningItemRows(admin, ['game_words']);
-    rows = rows.concat(allWordRows);
-    ids = resolveContentRefItemIds(refs, rows);
-  }
+  const rows = await learningItemRows(admin, sources, keys);
+  const ids = resolveContentRefItemIds(refs, rows);
   const resolved = normalized.items.map((item: any, index: number) => ({
     item_id: ids[index],
     ordinal: item.ordinal,
@@ -134,7 +127,7 @@ async function status(admin: any, userId: string, normalized: any) {
   rows.forEach((row: any) => {
     const id = row.content_source === 'game_sentences'
       ? 'sentence:' + row.content_key
-      : 'word:' + wordBase(row.content_key);
+      : 'word:' + row.content_key;
     if (byRequest.has(id)) byRequest.get(id).push(row.item_id);
   });
   const ids = Array.from(new Set(Array.from(byRequest.values()).flat()));

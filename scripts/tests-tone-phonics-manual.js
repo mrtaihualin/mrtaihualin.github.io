@@ -18,9 +18,9 @@ function test(name, fn) {
   console.log('✓ ' + name);
 }
 
-test('字母練習區 opens the overlay instead of resetting game state', () => {
+test('字母練習區 uses the overlay outside the dedicated Landscape surface', () => {
   assert.match(html, /id="tf-alpha-btn"[^>]+TF\.openAlphabetOverlay\('home'\)/);
-  assert.doesNotMatch(html.match(/id="tf-alpha-btn"[^>]+>/)[0], /TF\.openAlpha\(\)/);
+  assert.match(html.match(/id="tf-alpha-btn"[^>]+>/)[0], /gsh-ml-active[^>]+TF\.openAlpha\(\)[^>]+TF\.openAlphabetOverlay\('home'\)/);
   const opener = app.match(/function tfOpenAlphabetOverlay[\s\S]+?\n}\n\nfunction tfAlphaView/)[0];
   assert.doesNotMatch(opener, /\bS\s*=|\bsession\s*=|\bhist\s*=|score\s*[+\-=]/);
 });
@@ -101,10 +101,9 @@ test('tone marks are visible and have no fabricated audio', () => {
   assert.match(app, /這一區只顯示符號，不製作假錄音/);
 });
 
-test('existing hint charge and zero-lock order remains ahead of the same-overlay link', () => {
-  const hint = app.match(/function tfUseHint\(keys\)[\s\S]+?\n}/)[0];
-  assert.match(hint, /TF_WORDSCORE\.onPeek\(session\)[\s\S]+showTip\(keys\)[\s\S]+tfForceRevealZero\(\)/);
-  assert.match(app, /showTip\(keys\)[\s\S]{0,1500}查看拼音規則手冊/);
+test('alphabet manual is isolated from the vocabulary answer path', () => {
+  assert.doesNotMatch(app, /function tfUseHint\(|navigateToInflection|tryNavigate|function navigate\(/);
+  assert.match(app, /startGuidedQuestion:[\s\S]{0,420}tfForceRevealZero\(\)/);
   assert.match(app, /openManualFromTip[\s\S]{0,420}tfOpenAlphabetOverlay\('manual'/);
 });
 

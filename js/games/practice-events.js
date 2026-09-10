@@ -55,8 +55,8 @@
         return {
           ordinal: index + 1,
           content_ref: {
-            source: String(item && item.content_ref && item.content_ref.source || ''),
-            key: String(item && item.content_ref && item.content_ref.key || '')
+            source: item && item.content_ref && item.content_ref.source,
+            key: item && item.content_ref && item.content_ref.key
           },
           is_correct: !!(item && item.is_correct),
           wrong_count: Math.max(0, Number(item && item.wrong_count) || 0),
@@ -140,7 +140,7 @@
     var owner = ownerSnapshot();
     if (!owner || !Array.isArray(items) || !items.length) return Promise.resolve({});
     var payload = { action: 'status', items: items.slice(0, 30).map(function (item) {
-      return { kind: item.kind === 'sentence' ? 'sentence' : 'word', key: String(item.key || '') };
+      return { kind: item.kind, key: item.key };
     }) };
     return invoke(payload).then(function (result) {
       if (!ownerIsCurrent(owner)) return {};

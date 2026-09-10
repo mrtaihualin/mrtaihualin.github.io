@@ -32,8 +32,8 @@
 -- 📌 ลำดับการรัน: **รันบน staging (xufxvwcelbovzsxywawg) ก่อนเสมอ** แล้วค่อย production
 --   (qzkxlhpcputsvbqmtqfi) · รวบรันทั้งไฟล์ได้ในครั้งเดียว ไม่ต้องแบ่งขั้น
 --
--- 🔑 **เรื่องที่ต้องทำทุกครั้ง ห้ามลืม:** เพิ่มคำ/ประโยคใหม่แล้วรัน `scripts/migrate-game-content.js`
---   เสร็จ → **ต้องกลับมารันหัวข้อ [K] ของไฟล์นี้ซ้ำ** เพื่อออกเลขตัวตนให้ของใหม่
+-- 🔑 **เรื่องที่ต้องทำทุกครั้ง ห้ามลืม:** หลังเพิ่ม canonical_record ที่ Lin อนุมัติแล้ว
+--   ต้องกลับมารันหัวข้อ [K] ของไฟล์นี้ซ้ำเพื่อออกเลขตัวตนให้ของใหม่
 --   ไม่รัน = คำใหม่ไม่มีตัวตนในระบบเรียน (ระบบยังใช้งานได้ ไม่พัง แต่คำใหม่จะไม่มีประวัติ/ความจำ)
 --   วิธีรู้ว่าลืม: ตัวทดสอบ `supabase/tests/2026-08-11_learning_foundation_TEST.sql` ข้อ 2 จะฟ้องให้
 --   (รันหัวข้อ [K] ซ้ำได้ปลอดภัย เป็น on conflict do nothing ไม่สร้างซ้ำ ไม่ทับของเดิม)
@@ -95,7 +95,7 @@ on conflict (code) do nothing;
 -- 🛑 **ตั้งใจไม่ใส่ข้อมูลใดๆ** — Lin ยังไม่ล็อกรายชื่อ และ AI ห้ามเดา taxonomy
 --    ตอนนี้ game_words มีช่อง `category` เดียวที่ปน 2 แกนอยู่ (เช่น 'กริยา' = 詞類
 --    แต่ 'โรงแรม' = 情境 และ 'นามอาหาร' = ปนทั้งสองแกนในค่าเดียว)
---    → รายงานการปนอยู่ที่ `node scripts/audit-learning-content.js` รอ Lin ตัดสินการจับคู่
+--    → ต้องให้ Lin ตรวจและบันทึกการจับคู่ใน canonical_record โดยตรง ห้ามสคริปต์เดา taxonomy
 create table if not exists public.learning_tags (
   tag_id     uuid primary key default gen_random_uuid(),
   axis_code  text not null references public.learning_tag_axes(code),
@@ -201,7 +201,7 @@ on conflict (code) do nothing;
 -- 🔴 ปัญหาจริงที่ตารางนี้แก้ (เจอจาก audit 2026-08-11 — สำคัญที่สุดของรอบนี้):
 --   วันนี้ "ตัวตน" ของคำ = ตัวหนังสือไทยเอง (game_words unique(word,level) ·
 --   tone_srs_state คีย์ (user_id, game, level, word) · star_ledger เก็บ word เป็น text)
---   และ scripts/migrate-game-content.js มีขั้น pruneStale() ที่ **ลบแถวที่ไม่มีในไฟล์ต้นฉบับแล้ว**
+--   และตัวนำเข้ารุ่นเก่าเคยลบแถวที่ไม่มีในไฟล์ต้นฉบับแล้ว
 --   → ถ้า Lin แก้ typo ของคำหนึ่ง: แถวเก่าถูกลบ + แถวใหม่ถูกสร้าง (id ใหม่)
 --     ประวัติการเรียนของนักเรียนที่ผูกกับคำเดิม "ขาดทันที" และไม่มีใครรู้เลย
 --   → ตารางนี้จึงถือ item_id (uuid) เป็นตัวตนที่ไม่เปลี่ยนตาม "ตัวหนังสือ"
@@ -277,7 +277,7 @@ create table if not exists public.learning_item_audit (
   id         bigint generated always as identity primary key,
   item_id    uuid references public.learning_items(item_id) on delete set null,
   action     text not null,        -- 'created' | 'status_changed' | 'key_changed' | 'flagged' | ...
-  actor      text,                 -- 'lin' | 'script:migrate-game-content' | 'edge:game-content' | ...
+  actor      text,                 -- 'lin' | 'edge:game-content' | ... (ห้ามตัวนำเข้าคำนวณภาษา)
   detail     jsonb,
   created_at timestamptz not null default now()
 );
@@ -320,14 +320,14 @@ create index if not exists idx_lir_to on public.learning_item_relations(to_item_
 -- Lin: "item ไม่จำเป็นต้องใช้ได้ทุกเกม" + "อย่าสร้าง compatibility จากการเดา
 --       ให้ตรวจ data / game requirements ของจริงก่อน"
 -- 🛑 ตารางนี้จึงถูกสร้างไว้ "ว่าง" — ตัวช่วยตรวจว่าข้อมูลจริงขาดฟิลด์อะไรบ้างอยู่ที่
---    `node scripts/audit-learning-content.js` (อ่านอย่างเดียว ไม่เขียนฐานข้อมูล)
+--    ตรวจจาก canonical_record ที่ Lin อนุมัติเท่านั้น; ช่องไม่ครบต้องหยุดเป็น error
 --    รอ Lin ยืนยันเกณฑ์ก่อนค่อยเติมแถว
 -- ════════════════════════════════════════════════════════════════════════════
 create table if not exists public.learning_item_surfaces (
   item_id         uuid not null references public.learning_items(item_id) on delete cascade,
   surface_code    text not null references public.practice_surfaces(code),
   supported       boolean not null,
-  verified_source text,       -- ยืนยันจากอะไร เช่น 'lin-approved' | 'script:audit-learning-content'
+  verified_source text,       -- ยืนยันจากอะไร เช่น 'lin-approved' (ห้ามใช้ผลคำนวณเป็นผู้อนุมัติ)
   note            text,
   updated_at      timestamptz not null default now(),
   primary key (item_id, surface_code)

@@ -17,11 +17,11 @@ function payload(game, difficulty, points, roundBonus = 20, extraItem = {}) {
     : game === 'word_order' ? 3
     : (game === 'reading' || game === 'typing') && difficulty === '高' ? 1
     : game === 'tone' && difficulty === '高' ? 3 : 5;
-  const items = Array.from({ length: total }, (_, index) => item(
-    game === 'listening' ? 'กา' : `กา${index + 1}`,
-    points,
-    extraItem,
-  ));
+  const items = Array.from({ length: total }, (_, index) => {
+    const key = game === 'listening' ? 'กา' : `กา${index + 1}`;
+    const source = difficulty === '高' || game === 'word_order' ? 'game_sentences' : 'game_words';
+    return item(key, points, { contentRef: { source, key }, ...extraItem });
+  });
   const score = Math.round((points * total + roundBonus) * ({ 初: 1, 中: 1.5, 高: 2, mixed: 1 })[difficulty]);
   return {
     submission_id: uuid,
@@ -53,7 +53,7 @@ reading142.evidence.items[3].points = 15;
 reading142.evidence.items[4].points = 22;
 reading142.client_score = 142;
 const reading142Accepted = validateScoreSubmission(reading142);
-validateCanonicalScoreEvidence(reading142Accepted, reading142Accepted.evidence.items.map((entry) => ({ content_key: entry.key, level: '初', syls: [{}, {}] })));
+validateCanonicalScoreEvidence(reading142Accepted, reading142Accepted.evidence.items.map((entry) => ({ content_key: entry.key, level: '初', syllables: [{}, {}] })));
 assert.equal(reading142Accepted.score, 142);
 const reading142MissingEvidence = structuredClone(reading142);
 reading142MissingEvidence.evidence.items[4].points = 20;
@@ -76,6 +76,12 @@ console.log('NEGATIVE_SCORE=REJECT');
 const malformed = payload('tone', '初', 10);
 malformed.client_score = 30.5;
 rejects(malformed, 'invalid_client_score');
+const normalizedIdentity = payload('reading', '初', 10);
+normalizedIdentity.evidence.items[0].key = '  กา1  ';
+rejects(normalizedIdentity, 'invalid_content_key');
+const mismatchedRef = payload('reading', '初', 10);
+mismatchedRef.evidence.items[0].contentRef.key = 'คนละรหัส';
+rejects(mismatchedRef, 'invalid_content_ref');
 console.log('MALFORMED_SCORE=REJECT');
 
 const wrongUser = { ...payload('reading', '初', 10), user_id: '00000000-0000-4000-8000-000000000000' };
@@ -105,18 +111,41 @@ assert.throws(
 );
 validCases.forEach((body) => {
   const accepted = validateScoreSubmission(body);
-  const rows = Array.from(new Set(accepted.evidence.items.map((entry) => entry.key))).map((key) =>
-    body.difficulty === '高' ? { th: key, wc: 8 } : { word: key, level: body.difficulty, syls: [{}] });
+  const rows = Array.from(new Set(accepted.evidence.items.map((entry) => entry.key))).map((key) => {
+    if (body.game === 'tone' && body.difficulty === '高') return { word: key, wc: 8 };
+    if (body.difficulty === '高' || body.game === 'word_order') return { th: key, wc: 8 };
+    return { content_key: key, word: 'กา', level: body.difficulty, syllables: [{}] };
+  });
   validateCanonicalScoreEvidence(accepted, rows);
 });
 console.log('GAME_SPECIFIC_ITEM_BOUNDS=ENFORCED');
 
+const toneHigh = payload('tone', '高', 10);
+toneHigh.evidence.items.forEach((entry) => {
+  entry.key = 'ฉันเรียนภาษาไทย';
+  entry.contentRef = { source: 'game_sentences', key: 'ฉันเรียนภาษาไทย' };
+});
+const toneHighAccepted = validateScoreSubmission(toneHigh);
+validateCanonicalScoreEvidence(toneHighAccepted, [{ th: 'ฉันเรียนภาษาไทย', wc: 3 }]);
+assert.throws(
+  () => validateCanonicalScoreEvidence(toneHighAccepted, [{ th: 'ฉันเรียนภาษาไทย', wc: 2 }]),
+  (error) => error && error.code === 'invalid_total',
+);
+console.log('TONE_HIGH_SENTENCE_COMPONENT_EVIDENCE=PASS');
+
 const impossibleSequence = validateScoreSubmission(payload('tone', '初', 60));
 assert.throws(
-  () => validateCanonicalScoreEvidence(impossibleSequence, impossibleSequence.evidence.items.map((entry) => ({ word: entry.key, level: '初' }))),
+  () => validateCanonicalScoreEvidence(impossibleSequence, impossibleSequence.evidence.items.map((entry) => ({ content_key: entry.key, word: 'กา', level: '初' }))),
   (error) => error && error.code === 'impossible_item_score',
 );
 console.log('IMPOSSIBLE_COMBO_SEQUENCE=REJECT');
+
+const exactIdentity = validateScoreSubmission(payload('reading', '初', 10));
+assert.throws(
+  () => validateCanonicalScoreEvidence(exactIdentity, exactIdentity.evidence.items.map((entry) => ({ content_key: ' ' + entry.key + ' ', word: 'กา', level: '初', syllables: [{}] }))),
+  (error) => error && error.code === 'invalid_content_evidence',
+);
+console.log('CANONICAL_IDENTITY_NORMALIZATION=REJECT');
 
 const fakePerfect = payload('typing', '初', 7, 70);
 fakePerfect.evidence.items[0].wrong = 1;

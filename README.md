@@ -15,8 +15,8 @@
 | `blog/`, `en/` | หน้าบทความและหน้าภาษาอังกฤษ |
 | `classroom/` | หน้าระบบห้องเรียนและ CSS เฉพาะระบบ |
 | `css/` | CSS ส่วนกลางของเว็บ |
-| `data/` | คลังคำ/ประโยคจริง (`words-data.js`, `adv-sentences.js`, `tone-engine.js` ฯลฯ) + หน้าแอดมิน 2 หน้า (ตั้งใจไม่ย้าย — ผูกโดเมนจริง ดู `data/game-content-tester.html`, `data/review-tool.html`) |
-| `data/tools/` | ตัวตรวจ/ตัวทดสอบข้อมูลเกม (`check-data-health.js`, `tests-*.js`, `regression-check-tone.js` ฯลฯ) — ย้ายออกจาก `data/` แล้ว 2026-08-08 |
+| `data/` | คลังข้อมูลและเครื่องมือตรวจข้อมูลที่ยังใช้งานอยู่; คำตอบภาษาในเกมมาจาก canonical catalog ผ่าน `game-content` เท่านั้น |
+| `data/tools/` | เครื่องมือข้อมูลที่ยังได้รับอนุญาต; ตัวโหลดคลังเก่าและตัวคำนวณคำตอบถูกลบแล้ว |
 | `data/reports/` | รายงาน/เอกสารที่ตัวตรวจสร้างหรือใช้ (`tone-regression-report.json`, `game-behavioral-checklist-manual.md`) — ย้ายออกจาก `data/` แล้ว 2026-08-08 |
 | `js/core/` | ระบบกลาง เช่น auth, shared UI และ Supabase |
 | `js/classroom/` | logic ระบบห้องเรียน |
@@ -65,11 +65,11 @@ GitHub รับการเปลี่ยนจาก GitLab ผ่าน push
 | `check-nav-consistency.js` | เมนู/แถบประกาศ/เมนูล่างทุกหน้า ตรงกับ `data/nav-template.js` | 🔴 มีหน้าตกหล่นจาก generator |
 | `check-mobile-accessibility.js` | `<img>` ไม่มี `alt` · ปุ่มไม่มีชื่อที่โปรแกรมอ่านหน้าจอเรียกได้ ฯลฯ | ⚠️ คำเตือนล้วน ไม่บล็อก |
 | `tests-*-behavioral.js` | กฎที่ **เคยพังมาแล้วจริง** ของ marketing / เกม / ห้องเรียน / Search / คลังคำ | 🔴 มีคนแก้โค้ดจนกฎเดิมหาย |
-| `data/tools/*` | ความถูกต้องของคลังคำ/ประโยค + เครื่องคิดวรรณยุกต์ | 🔴 ข้อมูลเกมพัง |
+| `data/tools/*` | ความถูกต้องของคลังคำ/ประโยคตามข้อมูลที่ Lin ตรวจแล้ว | 🔴 ข้อมูลเกมพัง |
 
 ```bash
 node scripts/check-seo-sitemap.js --full   # ดูรายการ SEO/sitemap ครบทุกบรรทัด
-node scripts/audit-learning-content.js --full
+node scripts/tests-current-free-200.js
 node scripts/check-minified-sync.js        # ต้องรันมือ (ไม่อยู่ใน check-site.js — ดูคอมเมนต์ในไฟล์)
 ```
 

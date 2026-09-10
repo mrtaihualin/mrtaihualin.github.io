@@ -15,6 +15,37 @@ async function test(label, fn) {
   catch (error) { console.error('✗ ' + label + ': ' + error.message); process.exitCode = 1; }
 }
 
+function catalogBundle(options = {}) {
+  const word = options.word || 'ทดสอบ';
+  const contentKey = options.contentKey || (word + '@' + (options.level || '初'));
+  const spellings = options.spellings || [word];
+  const syllables = spellings.map((spelling, index) => ({
+    roman: (options.romans && options.romans[index]) || 'test',
+    lead: 'ไม่มี', consonant: 'ท', cluster: 'ไม่มี', vowel: 'โอะ', writtenFinal: 'ไม่มี',
+    toneMark: 'ไม่มี', toneNumber: 1, toneName: 'สามัญ', liveDead: '活音',
+    consonantReadDifference: 'ไม่มี', finalReadDifference: 'ไม่มี', silent: 'ไม่มี'
+  }));
+  return {
+    catalog: {
+      contentKey, reviewSet: 'TEST-REVIEWED', word, spellingTH: options.spellingTH || spellings.join('-'),
+      readingTH: Object.prototype.hasOwnProperty.call(options, 'readingTH') ? options.readingTH : word,
+      roman: options.roman || 'test', zhTW: options.zh || '測試',
+      level: options.level || '初', type: 'กริยา', category: 'ไม่มี', audioStatus: 'ยังไม่เช็ก',
+      approvalRefs: ['TEST'], syllables,
+      spellingSyllables: options.spellingSyllables || spellings.map((th) => ({ th }))
+    }
+  };
+}
+
+function sentenceFixture() {
+  return { th: 'ทดสอบ', zh: '測試', readingTH: 'ทด-สอบ', wc: 2, politeF: null, words: [
+    { th: 'ทดสอบ', zh: '測試', syls: [
+      { th: 'ทด', en: 'thot', cons: 'ท', vowel: 'โอะ', tone_name: 'โท' },
+      { th: 'สอบ', en: 'sop', cons: 'ส', vowel: 'ออ', tone_name: 'เอก' }
+    ] }
+  ] };
+}
+
 function createBootHarness(options = {}) {
   const listeners = Object.create(null);
   const globalListeners = Object.create(null);
@@ -55,8 +86,8 @@ function createBootHarness(options = {}) {
   };
   const payload = options.payload || {
     tier: 'anon',
-    words: [{ word: 'ทดสอบ', level: '初', syls: [] }],
-    sentences: [{ th: 'ทดสอบ', words: [] }],
+    words: [catalogBundle()],
+    sentences: [sentenceFixture()],
     audioAvailable: [],
     capped: {},
   };
@@ -139,7 +170,7 @@ const validConfig = { url: 'https://project.supabase.co', anonKey: 'public-anon-
     await harness.sandbox.GameContentLoader.boot(['js/games/example.js'], { game: 'typing' });
     assert.strictEqual(harness.requests.length, 1);
     assert.strictEqual(harness.requests[0].timeoutMs, 15000);
-    assert.deepStrictEqual(JSON.parse(harness.requests[0].requestOptions.body), { game: 'typing' });
+    assert.deepStrictEqual(JSON.parse(harness.requests[0].requestOptions.body), { game: 'typing', contract: 'canonical-v1' });
     assert.strictEqual(harness.appended.filter(el => el.tagName === 'SCRIPT').length, 1);
   });
   await test('actual network failure while browser reports offline still fails closed without retrying', async () => {
@@ -157,20 +188,22 @@ const validConfig = { url: 'https://project.supabase.co', anonKey: 'public-anon-
     const result = await guard.request(() => Promise.resolve({ ok: true }), '/ok', {}, 50, null);
     assert.strictEqual(result.ok, true);
   });
-  await test('Tone pronunciation falls back to the written word when protected 初 data has no reading_th', async () => {
+  await test('missing reviewed reading fails closed instead of falling back to the written word', async () => {
     const harness = createBootHarness({ readyState: 'complete', config: validConfig });
+    assert.throws(() => harness.sandbox.buildWordListForToneFinder([
+      catalogBundle({ word: 'จาก', readingTH: null, roman: 'jaak', zh: '從' }),
+    ]), /catalog authority incomplete/);
+    assert.throws(() => harness.sandbox.buildWordListForToneFinder([
+      catalogBundle({ word: 'กิน', readingTH: '', roman: 'gin', zh: '吃' }),
+    ]), /catalog authority incomplete/);
     const rows = harness.sandbox.buildWordListForToneFinder([
-      { word: 'จาก', readingTH: null, en: 'jaak', zh: '從', level: '初' },
-      { word: 'กิน', readingTH: '', en: 'gin', zh: '吃', level: '初' },
-      { word: 'เครื่องบิน', readingTH: 'เครื่อง-บิน', en: 'khrueang-bin', zh: '飛機', level: '中' },
+      catalogBundle({ word: 'เครื่องบิน', readingTH: 'เครื่อง-บิน', roman: 'khrueang-bin', zh: '飛機', level: '中', spellings: ['เครื่อง', 'บิน'] }),
     ]);
-    assert.strictEqual(rows[0].readingTH, 'จาก');
-    assert.strictEqual(rows[1].readingTH, 'กิน');
-    assert.strictEqual(rows[2].readingTH, 'เครื่อง-บิน');
+    assert.strictEqual(rows[0].readingTH, 'เครื่อง-บิน');
   });
   await test('sense identity survives the protected-content adapters without object-use metadata', async () => {
     const harness = createBootHarness({ readyState: 'complete', config: validConfig });
-    const source = [{ word: 'ร้อง', contentKey: 'ร้อง@初#sing', level: '初', syls: [] }];
+    const source = [catalogBundle({ word: 'ร้อง', contentKey: 'ร้อง@初#sing' })];
     const tone = harness.sandbox.buildWordListForToneFinder(source);
     const phonics = harness.sandbox.buildWordsForPhonicsGames(source);
     assert.strictEqual(tone[0].contentKey, 'ร้อง@初#sing');
@@ -181,30 +214,43 @@ const validConfig = { url: 'https://project.supabase.co', anonKey: 'public-anon-
   await test('reviewed spelling authority hydrates syllable text before game boot', async () => {
     const payload = {
       tier: 'anon',
-      words: [{ word: 'อธิบาย', contentKey: 'อธิบาย@中', spellingTH: 'อ-ธิ-บาย', readingTH: 'อะ-ธิ-บาย', level: '中', syls: [{}, {}, {}] }],
-      sentences: [{ th: 'ทดสอบ', words: [] }],
+      words: [catalogBundle({ word: 'อธิบาย', contentKey: 'อธิบาย@中', spellingTH: 'อ-ธิ-บาย', readingTH: 'อะ-ธิ-บาย', level: '中', spellings: ['อ', 'ธิ', 'บาย'] })],
+      sentences: [sentenceFixture()],
       audioAvailable: [],
       capped: {},
     };
     const harness = createBootHarness({ readyState: 'complete', config: validConfig, payload });
     await harness.sandbox.GameContentLoader.boot([]);
-    assert.deepStrictEqual(Array.from(harness.sandbox.WORDS_MASTER[0].syls, (s) => s.th), ['อ', 'ธิ', 'บาย']);
+    assert.deepStrictEqual(Array.from(harness.sandbox.WORDS_MASTER[0].catalog.spellingSyllables, (s) => s.th), ['อ', 'ธิ', 'บาย']);
     const tone = harness.sandbox.buildWordListForToneFinder(harness.sandbox.WORDS_MASTER);
     const phonics = harness.sandbox.buildWordsForPhonicsGames(harness.sandbox.WORDS_MASTER);
     assert.strictEqual(tone[0].spellingTH, 'อ-ธิ-บาย');
     assert.strictEqual(phonics[0].spellingTH, 'อ-ธิ-บาย');
+    assert.deepStrictEqual(Array.from(tone[0].syls, (s) => s.th), ['อ', 'ธิ', 'บาย']);
   });
   await test('reviewed syllable authority mismatch fails closed before content globals are assigned', async () => {
     const payload = {
       tier: 'anon',
-      words: [{ word: 'อธิบาย', contentKey: 'อธิบาย@中', spellingTH: 'อ-ธิ-บาย', readingTH: 'อะ-ทิบาย', level: '中', syls: [{}, {}, {}] }],
-      sentences: [{ th: 'ทดสอบ', words: [] }],
+      words: [catalogBundle({ word: 'อธิบาย', contentKey: 'อธิบาย@中', spellingTH: 'อ-ธิ-บาย', readingTH: 'อะ-ทิ-บาย', level: '中', spellings: ['อ', 'ธิ', 'บาย'], spellingSyllables: [{ th: 'อ' }] })],
+      sentences: [sentenceFixture()],
       audioAvailable: [],
       capped: {},
     };
     const harness = createBootHarness({ readyState: 'complete', config: validConfig, payload });
-    await assert.rejects(harness.sandbox.GameContentLoader.boot([]), /reviewed syllable authority mismatch/);
+    await assert.rejects(harness.sandbox.GameContentLoader.boot([]), /reviewed display segmentation missing/);
     assert.strictEqual(harness.sandbox.WORDS_MASTER, undefined);
+  });
+  await test('malformed sentence fails closed before any content global or game script is assigned', async () => {
+    const malformedSentence = sentenceFixture();
+    malformedSentence.words[0].syls[0].lead = ' ';
+    const payload = {
+      tier: 'anon', words: [catalogBundle()], sentences: [malformedSentence], audioAvailable: [], capped: {},
+    };
+    const harness = createBootHarness({ readyState: 'complete', config: validConfig, payload });
+    await assert.rejects(harness.sandbox.GameContentLoader.boot(['js/games/example.js']), /sentence authority incomplete/);
+    assert.strictEqual(harness.sandbox.WORDS_MASTER, undefined);
+    assert.strictEqual(harness.sandbox.ADV_SENTENCES, undefined);
+    assert.strictEqual(harness.appended.filter(el => el.tagName === 'SCRIPT').length, 0);
   });
   await test('request rejects deterministically when fetch never settles', async () => {
     await assert.rejects(guard.request(() => new Promise(() => {}), '/hang', {}, 10, null), (error) => error.code === 'NETWORK_TIMEOUT');
@@ -220,7 +266,7 @@ const validConfig = { url: 'https://project.supabase.co', anonKey: 'public-anon-
   });
   await test('Core 5 load the guard before the protected content client', async () => {
     ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html'].forEach((page) => {
-      const version = 15;
+      const version = 16;
       assert.match(read(page), new RegExp('network-guard\\.js\\?v=1[\\s\\S]*game-content-client\\.js\\?v=' + version));
     });
   });
@@ -274,10 +320,10 @@ const validConfig = { url: 'https://project.supabase.co', anonKey: 'public-anon-
   await test('scoped pages send the requested game while legacy pages keep an empty body', async () => {
     const scoped = createBootHarness({ readyState: 'complete', config: validConfig });
     await scoped.sandbox.GameContentLoader.boot([], { game: 'reading' });
-    assert.deepStrictEqual(JSON.parse(scoped.requests[0].requestOptions.body), { game: 'reading' });
+    assert.deepStrictEqual(JSON.parse(scoped.requests[0].requestOptions.body), { game: 'reading', contract: 'canonical-v1' });
     const legacy = createBootHarness({ readyState: 'complete', config: validConfig });
     await legacy.sandbox.GameContentLoader.boot([]);
-    assert.deepStrictEqual(JSON.parse(legacy.requests[0].requestOptions.body), {});
+    assert.deepStrictEqual(JSON.parse(legacy.requests[0].requestOptions.body), { contract: 'canonical-v1' });
   });
   await test('offline and timeout errors use an understandable recovery branch', async () => {
     assert.doesNotMatch(client, /navigator\.onLine === false/);
@@ -288,8 +334,9 @@ const validConfig = { url: 'https://project.supabase.co', anonKey: 'public-anon-
   });
   await test('content globals are assigned only after required data validation', async () => {
     const validation = client.indexOf("if (!data.words.length || !data.sentences.length)");
-    const assignment = client.indexOf('global.WORDS_MASTER = validateAndHydrateSyllableText(data.words)');
+    const assignment = client.indexOf('global.WORDS_MASTER = exactWords');
     assert.ok(validation >= 0 && assignment > validation);
+    assert.ok(client.indexOf('var exactSentences = validateSentencePayload(data.sentences)') < assignment);
   });
   if (!process.exitCode) console.log('\n✅ Phase 1 network recovery passed (' + passed + ' checks)');
 })();

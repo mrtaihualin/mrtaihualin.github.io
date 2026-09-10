@@ -193,21 +193,36 @@
     return rows.filter(function (row) { return row && row.source; });
   }
 
+  function _contentKeysFor(value) {
+    var candidates = [];
+    if (value && Array.isArray(value.contentKeys)) candidates = candidates.concat(value.contentKeys);
+    if (value && value.contentKey !== undefined) candidates.push(value.contentKey);
+    var seen = Object.create(null), exact = [];
+    candidates.forEach(function (key) {
+      if (typeof key !== 'string' || !key || key.trim() !== key || seen[key]) return;
+      seen[key] = true;
+      exact.push(key);
+    });
+    return exact;
+  }
+
   function _sourceRawFor(w) {
     return JSON.stringify({
       kind: 'word',
       readingTH: (w && w.readingTH) || '',
+      contentKeys: _contentKeysFor(w),
       provenance: _provenanceFor(w)
     });
   }
 
   function _decodeSourceRaw(raw, savedAt) {
-    var result = { source: '', readingTH: '', provenance: [] };
+    var result = { source: '', readingTH: '', contentKeys: [], provenance: [] };
     if (!raw) return result;
     try {
       var parsed = JSON.parse(raw);
       if (parsed && typeof parsed === 'object') {
         result.readingTH = parsed.readingTH || '';
+        result.contentKeys = _contentKeysFor(parsed);
         result.provenance = Array.isArray(parsed.provenance) ? parsed.provenance.filter(function (row) { return row && row.source; }) : [];
         result.source = result.provenance.length ? result.provenance[0].source : '';
         return result;
@@ -224,6 +239,11 @@
     if (!w.zh && meta.zh) { w.zh = meta.zh; changed = true; }
     if (!w.en && meta.en) { w.en = meta.en; changed = true; }
     if (!w.readingTH && meta.readingTH) { w.readingTH = meta.readingTH; changed = true; }
+    var knownKeys = _contentKeysFor(w);
+    _contentKeysFor(meta).forEach(function (key) {
+      if (knownKeys.indexOf(key) < 0) { knownKeys.push(key); changed = true; }
+    });
+    if (knownKeys.length) w.contentKeys = knownKeys;
     var source = meta.source || '';
     if (source) {
       var provenance = _provenanceFor(w);
@@ -271,6 +291,7 @@
     if (word.zh && word.zh !== (remoteRow.zh || '')) return true;
     if (word.en && word.en !== (remoteRow.en || '')) return true;
     if (word.readingTH && word.readingTH !== (remoteMeta.readingTH || '')) return true;
+    if (_contentKeysFor(word).some(function (key) { return remoteMeta.contentKeys.indexOf(key) < 0; })) return true;
     var remoteSources = {};
     _provenanceFor({ source: remoteMeta.source, provenance: remoteMeta.provenance }).forEach(function (row) { remoteSources[row.source] = true; });
     if (_provenanceFor(word).some(function (row) { return !remoteSources[row.source]; })) return true;
@@ -500,7 +521,7 @@
         var remoteMeta = _decodeSourceRaw(activeRemote[w.th].source_raw, activeRemote[w.th].saved_at);
         _mergeMetaIntoWord(w, {
           zh: activeRemote[w.th].zh || '', en: activeRemote[w.th].en || '',
-          readingTH: remoteMeta.readingTH || '', source: remoteMeta.source || ''
+          readingTH: remoteMeta.readingTH || '', contentKeys: remoteMeta.contentKeys, source: remoteMeta.source || ''
         });
         (remoteMeta.provenance || []).forEach(function (row) {
           if (!row || !row.source) return;
@@ -536,7 +557,7 @@
       var sourceMeta = _decodeSourceRaw(x.source_raw, ts);
       merged.push({
         th: x.word_th, zh: x.zh || '', en: x.en || '', source: sourceMeta.source,
-        readingTH: sourceMeta.readingTH, provenance: sourceMeta.provenance,
+        readingTH: sourceMeta.readingTH, contentKeys: sourceMeta.contentKeys, provenance: sourceMeta.provenance,
         saved_at: ts, tags: (x.tags && x.tags.length) ? x.tags : [], synced: true
       });
     });
@@ -584,6 +605,7 @@
       zh: (meta && meta.zh) || '',
       en: (meta && meta.en) || '',
       readingTH: (meta && meta.readingTH) || '',
+      contentKeys: _contentKeysFor(meta),
       source: (meta && meta.source) || '',   // 'tone-finder' | 'reading-game' | 'typing-game' | ...
       saved_at: Date.now(),
       provenance: (meta && meta.source) ? [{ source: meta.source, saved_at: Date.now() }] : [],

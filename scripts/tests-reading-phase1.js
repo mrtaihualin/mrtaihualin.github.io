@@ -127,8 +127,9 @@ test('direct word boot binds the protected level before Reading starts and resto
   assert.ok(start >= 0 && end > start, 'direct-word protected-level bridge missing');
   const bridge = gameContentClient.slice(start, end);
   assert.match(bridge, /reading-game\\\.html/);
-  assert.match(bridge, /row\.word === wanted/);
-  assert.match(bridge, /row\.level === '初' \|\| row\.level === '中'/);
+  assert.match(bridge, /record\.contentKey === wanted/);
+  assert.doesNotMatch(bridge, /record\.word === wanted/);
+  assert.match(bridge, /record\.level === '初' \|\| record\.level === '中'/);
   assert.match(bridge, /if \(rows\.length !== 1\) return null/);
   assert.match(bridge, /localStorage\.setItem\('rg_reading_level', level\)/);
   assert.match(bridge, /studyPlan\.preferredLevel = function \(game\)/);
@@ -141,26 +142,25 @@ test('direct word boot binds the protected level before Reading starts and resto
   const bootEnd = gameContentClient.indexOf('// ════════════════════════════════════════════════════════════\n  // GLOBAL CRASH HANDLER', bootStart);
   assert.ok(bootStart >= 0 && bootEnd > bootStart, 'game-content boot block missing');
   const boot = gameContentClient.slice(bootStart, bootEnd);
-  assert.ok(boot.indexOf('applyDirectReadingWordLevel(data);') < boot.indexOf('global.WORDS_MASTER = validateAndHydrateSyllableText(data.words);'));
+  assert.ok(boot.indexOf('applyDirectReadingWordLevel(data);') < boot.indexOf('var exactWords = validateCatalogPayload(data.words);'));
   assert.ok(boot.indexOf('applyDirectReadingWordLevel(data);') < boot.indexOf('injectScript(src)'));
   assert.strictEqual((boot.match(/restoreDirectReadingWordLevelOverride\(\)/g) || []).length, 2);
 });
 
 test('Reading option generator keeps displayed vowel choices complete and unique', () => {
-  const dataStart = source.indexOf('var VOWEL_SYMBOL=');
+  const dataStart = source.indexOf('var CONS_GROUPS=');
   const dataEnd = source.indexOf('// ════════════════════════════════════════════\n// PHONETIC MAPS', dataStart);
-  const readStart = source.indexOf('var VOWEL_READ=');
-  const readEnd = source.indexOf('// ════════════════════════════════════════════\n// WORDS', readStart);
   const utilStart = source.indexOf('function shuffle(');
   const utilEnd = source.indexOf('// ════════════════════════════════════════════\n// LEVEL SWITCH', utilStart);
-  assert.ok(dataStart >= 0 && dataEnd > dataStart && readStart >= 0 && readEnd > readStart && utilStart >= 0 && utilEnd > utilStart);
+  assert.ok(dataStart >= 0 && dataEnd > dataStart && utilStart >= 0 && utilEnd > utilStart);
   const math = Object.create(Math);
   math.random = () => 0;
   const context = { Math: math, W: { cluster: '' } };
   vm.createContext(context);
   vm.runInContext(source.slice(dataStart, dataEnd), context);
-  vm.runInContext(source.slice(readStart, readEnd), context);
   vm.runInContext(source.slice(utilStart, utilEnd), context);
+  assert.strictEqual(context.dispOpt('vowel', 'ใอ'), 'ใอ', 'reviewed vowel must not be rewritten');
+  assert.strictEqual(context.dispOpt('cons', 'ญ'), 'ญ', 'reviewed consonant must not be prefixed or rewritten');
   const raw = context.buildOpts('อา', 'vowel', [['อา']], ['อา', 'อั', 'อะ', 'เออ', 'เอิ', 'โอ'], 4, null, []);
   const shown = raw.map((value) => context.dispOpt('vowel', value));
   assert.strictEqual(raw.length, 4);

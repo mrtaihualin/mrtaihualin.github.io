@@ -15,10 +15,8 @@
 --   ประโยค (game_sentences): rank = ลำดับตามไฟล์เดิม data/adv-sentences.js (Lin ยืนยัน 2026-08-02
 --     ให้ใช้แบบนี้ก่อน เร็วกว่า — ยังไม่มีระบบให้คะแนนความถี่ของประโยคจริงจัง)
 --
--- วิธีเติมข้อมูลเข้าตาราง: รัน scripts/migrate-game-content.js (ต้องตั้ง env SUPABASE_URL +
---   SUPABASE_SERVICE_ROLE_KEY ในเครื่อง Lin เอง — ห้ามใส่ใน repo เด็ดขาด) ทุกครั้งหลัง Lin
---   อนุมัติคำ/ประโยคใหม่ผ่านสกิลร่างเดิม (ไฟล์ .js ยังเป็นต้นฉบับที่ Lin แก้เหมือนเดิมทุกอย่าง —
---   สคริปต์นี้แค่ซิงก์เข้า Supabase หลังอนุมัติ)
+-- ไฟล์นี้เป็น schema ประวัติศาสตร์เท่านั้น การเติมข้อมูลปัจจุบันต้องใช้ canonical_record
+-- ที่ Lin อนุมัติแล้วทั้งระเบียน ห้ามใช้ตัวนำเข้าที่คำนวณหรือสร้างช่องภาษาเพิ่ม
 --
 -- ปลอดภัยที่จะรันซ้ำ (create table if not exists / create or replace ทั้งหมด)
 -- ════════════════════════════════════════════════════════════
@@ -26,21 +24,21 @@
 
 -- ── 1) game_words ──────────────────────────────────────────────
 create table if not exists public.game_words (
-  id         bigint generated always as identity primary key,
-  word       text not null,                    -- ตัวสะกดจริง (key หลัก เหมือน words-data.js)
-  en         text,                              -- คำอ่านโรมัน
-  zh         text,                              -- คำแปลจีน
-  level      text not null check (level in ('初','中')),
-  category   text,                              -- หมวดคำ (ใช้ในเกมเสียง)
-  syls       jsonb not null,                    -- อาร์เรย์แยกพยางค์ {cons,lead,cluster,vowel,tone,final,tone_name,th,en,...}
-  reading_th text,                              -- คำอ่านจริงระดับคำ (ใส่เฉพาะตอนอ่านต่างจาก word)
-  read_syls  jsonb,                             -- การแตกเสียงตามพยางค์อ่าน (คำที่พยางค์เขียน≠อ่าน)
-  rank       int not null,                      -- ลำดับความถี่ใช้จริง — ยิ่งน้อยยิ่งมาก่อน (ดูหัวไฟล์)
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  id               bigint generated always as identity primary key,
+  content_key      text not null,
+  word             text not null,               -- ดัชนีค้นหาเท่านั้น; คำตอบเกมอ่านจาก canonical_record
+  level            text not null check (level in ('初','中')),
+  status           text not null default 'active' check (status in ('active','history')),
+  access_tier      text not null check (access_tier in ('guest','login','paid')),
+  catalog_version  text not null,
+  record_hash      text not null,
+  canonical_record jsonb not null,               -- ระเบียนที่ Lin ตรวจแล้วทั้งก้อน: ผู้ตัดสินภาษาเพียงชุดเดียว
+  rank             int not null,                 -- ลำดับสิทธิ์ส่งข้อมูล; ไม่ใช่ข้อมูลคำตอบ
+  created_at       timestamptz not null default now(),
+  updated_at       timestamptz not null default now()
 );
--- ห้าม 2 คำซ้ำกันในระดับเดียวกัน (unique key ที่ migrate-game-content.js ใช้ upsert ทับ)
-create unique index if not exists uq_game_words_word_level on public.game_words(word, level);
+-- content_key แยกความหมายของคำที่สะกดเหมือนกันโดยไม่สร้างคำตอบใหม่
+create unique index if not exists uq_game_words_content_key on public.game_words(content_key);
 create index if not exists idx_game_words_level_rank on public.game_words(level, rank);
 
 alter table public.game_words enable row level security;

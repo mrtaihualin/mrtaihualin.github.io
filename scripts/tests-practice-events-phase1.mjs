@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
-import { normalizeRecordBody, normalizeStatusBody, wordBase } from '../supabase/functions/practice-events/practice-events-engine.mjs';
+import { normalizeRecordBody, normalizeStatusBody } from '../supabase/functions/practice-events/practice-events-engine.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (name) => fs.readFileSync(path.join(root, name), 'utf8');
@@ -46,6 +46,7 @@ check('record keeps canonical item identity and outcome', normalized.items[0].co
 check('record normalization drops raw learner answers', !Object.prototype.hasOwnProperty.call(normalized.items[0], 'answer'));
 rejects('record rejects non-v4 round identity', () => normalizeRecordBody({ ...valid, round_id: 'bad' }));
 rejects('record rejects a noncanonical content source', () => normalizeRecordBody({ ...valid, items: [{ ...valid.items[0], content_ref: { source: 'saved_provenance', key: 'กา' } }] }));
+rejects('record rejects whitespace-repaired content identity', () => normalizeRecordBody({ ...valid, items: [{ ...valid.items[0], content_ref: { source: 'game_words', key: ' กา@1 ' } }] }));
 rejects('record rejects duplicate round positions', () => normalizeRecordBody({ ...valid, items: [valid.items[0], { ...valid.items[0] }] }));
 rejects('record requires completed-play evidence', () => normalizeRecordBody({ ...valid, completed_at: '' }));
 
@@ -53,7 +54,9 @@ const status = normalizeStatusBody({ action: 'status', items: [
   { kind: 'word', key: 'กา' }, { kind: 'word', key: 'กา' }, { kind: 'sentence', key: 'ฉันกินข้าว' }
 ] });
 check('status request deduplicates exact personal items', status.items.length === 2);
-check('word identity strips only the final level suffix', wordBase('email@example@2') === 'email@example');
+check('status keeps the exact requested content identity', status.items[0].key === 'กา');
+rejects('status rejects whitespace-repaired content identity', () => normalizeStatusBody({ action: 'status', items: [{ kind: 'word', key: ' กา@初 ' }] }));
+check('Edge does not derive a word base from canonical content identity', !/wordBase/.test(edge));
 
 check('Edge authenticates the JWT through getUser', /auth\.getUser\(\)/.test(edge));
 check('Edge derives user identity and never accepts body user_id', /clients\.user\.id/.test(edge) && !/body\.user_id/.test(edge));

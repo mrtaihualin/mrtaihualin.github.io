@@ -11,13 +11,13 @@
 - The Paid queue remains `queued-inactive` and unavailable to every game until a separate Product entitlement decision and Production HIGH approval. The separate 64 unreviewed records remain outside this queue.
 - AI may not invent, add, remove or change words, sentences, translations or readings. Computed decomposition fields require Lin to review every word and every field before publish.
 - Builders such as `buildWordsForPhonicsGames` and `buildSentencesForPhonicsGames` must preserve every field used by games, including `readingTH`.
-- Reviewed verb rows require explicit `word`, `spellingTH` and `readingTH`. Split both authority strings on `-`; their part counts must equal `syls.length`, and the `spellingTH` parts must join exactly to `word`. A mismatch fails closed for manual review.
-- Do not store per-syllable written/read text redundantly for reviewed verbs. Runtime adapters derive `syls[].th` from `spellingTH`; synced verb JSON must omit that derived field.
+- Reviewed verb rows require explicit `word`, `spellingTH`, `readingTH`, canonical `syllables`, and `spellingSyllables`. Some reviewed words intentionally have written grouping that differs from phonological syllables, so runtime must never split these strings to manufacture display parts. A mismatch fails closed for manual review.
+- Every active catalog record contains `spellingSyllables`, the exact already-reviewed written-syllable objects used by the UI. The cleanup migration promotes the complete explicit catalog record and then drops the retired parallel column; it must not read or repair from that column. Runtime copies this field exactly and may not infer Thai boundaries or fall back to another record.
 - Reviewed verbs carry no image/object-use metadata. Real audio remains `audioStatus: 'ยังไม่เช็ก'` until separately verified; never infer PASS from a filename or generated asset.
-- Run only checks that do not load a protected legacy path unless Lin explicitly unlocks that corpus. When `data/tone-engine.js` changes, do not run the legacy-corpus regression path without that authorization.
-- Lin-authored content and `tone_name` are the authority over a calculator result.
+- Run only checks that do not load a protected legacy path unless Lin explicitly unlocks that corpus. Runtime language calculators are forbidden; validate reviewed catalog fields instead.
+- Every field in Lin's approved `canonical_record`, including `toneNumber` and `toneName`, is final authority. There is no calculator result to compare with or override it.
 - Do not reintroduce `CONS_SOUND` or `FINAL_SOUND` transformation. `CONS_GROUPS`, `VOWEL_GROUPS` and `FINAL_GROUPS` remain distractor-group data, not pronunciation conversion.
 - Stored `cons` and `final` values must satisfy the existing data checks and preserve the written form expected by the games.
 - In the established advanced-sentence data rule, `นะ` uses `politeF: 'คะ'`.
 - A source-content change does not authorize migration/deploy to server content or identity tables. The `free-200-v1` cutover has its own explicit Lin authorization; every later release still requires a separate Production gate.
-- Legacy-loading tools are forbidden by default, including `scripts/migrate-game-content.js`, `scripts/audit-learning-content.js`, `scripts/check-approved-vocabulary-catalog.js`, `scripts/tests-approved-vocabulary-catalog.js`, `scripts/tests-vocab-sense-scope.js`, `data/tools/check-data-health.js`, `data/tools/check-duplicate-words.js` and `data/tools/regression-check-tone.js`.
+- Legacy-loading/import/calculation tools have been deleted. Do not restore them. Current checks may read only the authorized canonical catalog and must validate stored fields without deriving language answers.

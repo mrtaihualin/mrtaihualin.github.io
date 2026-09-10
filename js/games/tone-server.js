@@ -23,13 +23,15 @@
   function wait(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
   // ส่ง 1 รอบให้เซิร์ฟเวอร์ตัดสิน · คืน Promise { ok, correct, justMastered, stars, totalStars, reason }
   async function finishRound(args) {
+    var exactContentKey = args && typeof args.contentKey === 'string' ? args.contentKey.trim() : '';
+    if (!exactContentKey || exactContentKey !== args.contentKey) {
+      return { ok: false, reason: 'catalog_authority_incomplete' };
+    }
     try {
       if (window.LearningReview && LearningReview.runtimeEnabled && LearningReview.runtimeEnabled()) {
-        var reviewKey = args.contentKey || args.word || '';
         var gameKey = args.game === 'wordorder' ? 'word_order' : (args.game || 'tone');
-        if (LearningReview.ownsCurrent(gameKey, args.level, { source: 'game_words', key: reviewKey }) ||
-            LearningReview.ownsCurrent(gameKey, args.level, { source: 'game_words', key: (args.word || '') + '@' + args.level }) ||
-            LearningReview.ownsCurrent(gameKey, args.level, { source: 'game_sentences', key: args.word || reviewKey })) {
+        var reviewSource = args.game === 'wordorder' || Number(args.level) === 3 ? 'game_sentences' : 'game_words';
+        if (LearningReview.ownsCurrent(gameKey, args.level, { source: reviewSource, key: exactContentKey })) {
           return { ok: false, reason: 'learning_review_owner' };
         }
       }
@@ -39,7 +41,7 @@
     var payload = {
       round_id: roundId(),
       word: args.word,
-      content_key: args.contentKey,
+      content_key: exactContentKey,
       level: args.level,
       game: args.game,                    // 'tone'(default)/'reading'/'typing'/'wordorder' — แยก SRS ต่อเกม
       clean: args.clean,                  // เกมสะกด/เรียงประโยค: รอบนี้เลื่อนขั้น(clean)ไหม
