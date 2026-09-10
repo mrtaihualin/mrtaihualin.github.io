@@ -44,6 +44,11 @@ const catalog = JSON.parse(read('data/approved-vocabulary-catalog.json'));
 const removalMigration = read('supabase/migrations/20260910010000_remove_vocabulary_second_judge.sql');
 const schemaSource = read('supabase/sql/2026-08-02_game_content_schema.sql');
 
+[contentEdge, roundEdge, scoreEdge].forEach((source) => {
+  assert.match(source, /@supabase\/supabase-js@2\.112\.3/);
+  assert.doesNotMatch(source, /@supabase\/supabase-js@2(?:['"]|\/)/);
+});
+
 assert.match(contentEdge, /canonical_record/);
 assert.match(contentEdge, /requestBody\?\.contract !== 'canonical-v1'/);
 assert.match(contentEdge, /select\('catalog:canonical_record'\)/);
