@@ -26,7 +26,10 @@
     if (!level) fail('INVALID_LEVEL');
     return level;
   }
-  function keyOfRef(ref) { return String(ref && ref.source || '') + ':' + String(ref && ref.key || ''); }
+  function keyOfRef(ref) {
+    if (!ref || (ref.source !== 'game_words' && ref.source !== 'game_sentences') || typeof ref.key !== 'string' || !ref.key || ref.key.trim() !== ref.key) fail('INVALID_CONTENT_REF');
+    return ref.source + ':' + ref.key;
+  }
   function readState(storage) {
     try {
       var value = JSON.parse(storage && storage.getItem(STORAGE_KEY) || '{}');
@@ -50,7 +53,8 @@
   function allocate(options) {
     options = options || {};
     var total = Math.max(0, Math.floor(Number(options.total) || 0));
-    var idOf = typeof options.idOf === 'function' ? options.idOf : function (item) { return item && (item.contentKey || item.th || item.word); };
+    if (typeof options.idOf !== 'function') fail('IDENTITY_REQUIRED');
+    var idOf = options.idOf;
     var state = readState(options.storage);
     var scope = String(options.scope || 'default');
     var carried = Math.max(0, Math.min(0.999999, Number(state[scope]) || 0));
@@ -241,7 +245,7 @@
       return counts && counts.length ? Math.round(counts.slice(0, 7).reduce(function (sum, n) { return sum + ls(n); }, 0) / Math.min(counts.length, 7)) : 0;
     }
     if (game === 'typing') {
-      var units = item.linguistic && ((item.linguistic.read_syls && item.linguistic.read_syls.length) || (item.linguistic.syls && item.linguistic.syls.length)) || 1;
+      var units = item.linguistic && item.linguistic.syls && item.linguistic.syls.length || 1;
       var quota = Math.min(4 + Math.max(0, units - 4), 9), wrong = Math.max(0, Number(item.wrong_count) || 0);
       return wrong >= quota ? 0 : Math.round(10 - (10 / quota) * wrong);
     }
@@ -286,7 +290,7 @@
       if (buffer.length < groupSize) return Promise.resolve({ ok: true, pending_group: true });
       var group = buffer.splice(0, groupSize);
       item = Object.assign({}, group[0], {
-        key: group[0].question,
+        key: group[0].content_ref.key,
         wrong_count: group.reduce(function (sum, row) { return sum + (Number(row.wrong_count) || 0); }, 0),
         learning_evidence: {
           componentWrongCounts: group.reduce(function (all, row) {

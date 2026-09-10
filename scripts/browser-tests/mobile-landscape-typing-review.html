@@ -34,11 +34,8 @@
       if (window.ResizeObserver) new ResizeObserver(fitGame).observe(screen);
       else window.addEventListener('resize', fitGame);
 
-      var words = [{
-        word: 'มา', readingTH: 'มา', en: 'maa', zh: '來', level: '初', category: 'กริยา',
-        syls: [{cons: 'ม', vowel: 'อา', tone_name: 'สามัญ', th: 'มา'}]
-      }];
-      var override = '<script>(function(){var words=' + JSON.stringify(words) + ';try{localStorage.setItem("cookieConsent","denied");localStorage.setItem("howto_tour_seen_typing","1");localStorage.setItem("howto_hint_seen_typing","1");}catch(e){}window.GameContentLoader.boot=function(srcs){window.WORDS_MASTER=words;window.ADV_SENTENCES=[];var chain=new Promise(function(resolve){if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",resolve,{once:true});else resolve();}).then(function(){if(window.GameResume&&typeof window.GameResume.load==="function")window.GameResume.load=function(){return null;};});(srcs||[]).forEach(function(src){chain=chain.then(function(){return new Promise(function(resolve,reject){var script=document.createElement("script");script.src=src;script.onload=resolve;script.onerror=reject;document.head.appendChild(script);});});});return chain;};})();<\/script>';
+      var wordKeys = ['มา@初'];
+      var override = '<script>(function(){var keys=' + JSON.stringify(wordKeys) + ';try{localStorage.setItem("cookieConsent","denied");localStorage.setItem("howto_tour_seen_typing","1");localStorage.setItem("howto_hint_seen_typing","1");}catch(e){}window.GameContentLoader.boot=function(srcs){var chain=new Promise(function(resolve){if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",resolve,{once:true});else resolve();}).then(function(){return fetch("data/approved-vocabulary-catalog.json",{cache:"no-store"}).then(function(res){if(!res.ok)throw new Error("canonical fixture unavailable");return res.json();}).then(function(catalog){window.WORDS_MASTER=keys.map(function(key){var record=catalog.records.find(function(row){return row.contentKey===key;});if(!record)throw new Error("canonical fixture missing: "+key);return {catalog:record};});window.ADV_SENTENCES=[];});}).then(function(){if(window.GameResume&&typeof window.GameResume.load==="function")window.GameResume.load=function(){return null;};});(srcs||[]).forEach(function(src){chain=chain.then(function(){return new Promise(function(resolve,reject){var script=document.createElement("script");script.src=src;script.onload=resolve;script.onerror=reject;document.head.appendChild(script);});});});return chain;};})();<\/script>';
 
       function wait(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
       function point(node) {

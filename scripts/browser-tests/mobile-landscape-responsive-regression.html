@@ -26,7 +26,7 @@
         {name:'Portrait', width:390, height:844},
         {name:'Desktop', width:1280, height:800}
       ];
-      var words = [{word:'มา',readingTH:'มา',en:'maa',zh:'來',level:'初',category:'กริยา',syls:[{cons:'ม',vowel:'อา',tone_name:'สามัญ',th:'มา'}]}];
+      var wordKeys = ['มา@初'];
       var sentences = [{th:'วันนี้ผมไปเรียน',zh:'今天我去上課',readingTH:'วัน-นี้-ผม-ไป-เรียน',wc:4,politeF:null,words:[
         {th:'วันนี้',zh:'今天',syls:[{th:'วันนี้',en:'wan-níi'}]},
         {th:'ผม',zh:'我',syls:[{th:'ผม',en:'phǒm'}]},
@@ -55,7 +55,7 @@
         return style.display !== 'none' && style.visibility !== 'hidden';
       }
       function override() {
-        return '<script>(function(){var words=' + JSON.stringify(words) + ';var sentences=' + JSON.stringify(sentences) + ';try{localStorage.setItem("cookieConsent","denied");["tone","typing","reading","wordorder"].forEach(function(g){localStorage.setItem("howto_tour_seen_"+g,"1");localStorage.setItem("howto_hint_seen_"+g,"1");});}catch(e){}window.GameContentLoader.boot=function(srcs){window.WORDS_MASTER=words;window.ADV_SENTENCES=sentences;var chain=new Promise(function(resolve){if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",resolve,{once:true});else resolve();}).then(function(){if(window.GameResume&&typeof window.GameResume.load==="function")window.GameResume.load=function(){return null;};});(srcs||[]).forEach(function(src){chain=chain.then(function(){return new Promise(function(resolve,reject){var script=document.createElement("script");script.src=src;script.onload=resolve;script.onerror=reject;document.head.appendChild(script);});});});return chain;};})();<\/script>';
+        return '<script>(function(){var keys=' + JSON.stringify(wordKeys) + ';var sentences=' + JSON.stringify(sentences) + ';try{localStorage.setItem("cookieConsent","denied");["tone","typing","reading","wordorder"].forEach(function(g){localStorage.setItem("howto_tour_seen_"+g,"1");localStorage.setItem("howto_hint_seen_"+g,"1");});}catch(e){}window.GameContentLoader.boot=function(srcs){var chain=new Promise(function(resolve){if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",resolve,{once:true});else resolve();}).then(function(){return fetch("data/approved-vocabulary-catalog.json",{cache:"no-store"}).then(function(res){if(!res.ok)throw new Error("canonical fixture unavailable");return res.json();}).then(function(catalog){window.WORDS_MASTER=keys.map(function(key){var record=catalog.records.find(function(row){return row.contentKey===key;});if(!record)throw new Error("canonical fixture missing: "+key);return {catalog:record};});window.ADV_SENTENCES=sentences;});}).then(function(){if(window.GameResume&&typeof window.GameResume.load==="function")window.GameResume.load=function(){return null;};});(srcs||[]).forEach(function(src){chain=chain.then(function(){return new Promise(function(resolve,reject){var script=document.createElement("script");script.src=src;script.onload=resolve;script.onerror=reject;document.head.appendChild(script);});});});return chain;};})();<\/script>';
       }
       async function load(page, mode) {
         frame.style.width = mode.width + 'px';

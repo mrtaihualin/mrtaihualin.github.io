@@ -18,9 +18,11 @@ function rejects(code, fn) {
   assert.throws(fn, (error) => error && error.code === code);
 }
 
-const word = { content_key: 'กา@1', word: 'กา', level: '初', syls: [{ th: 'กา' }], read_syls: null, reading_th: 'กา' };
-const longWord = { content_key: 'มหาวิทยาลัย@2', word: 'มหาวิทยาลัย', level: '中', syls: new Array(6).fill({}), read_syls: null, reading_th: 'มะ-หา-วิด-ทะ-ยา-ไล' };
+const word = { content_key: 'กา@1', word: 'กา', level: '初', syllables: [{ roman: 'gaa' }], reading_th: 'กา' };
+const longWord = { content_key: 'มหาวิทยาลัย@2', word: 'มหาวิทยาลัย', level: '中', syllables: new Array(6).fill({}), reading_th: 'มะ-หา-วิด-ทะ-ยา-ไล' };
 const sentence = { th: 'ฉัน เรียน ภาษา ไทย', wc: 8, reading_th: 'ฉัน-เรียน-พา-สา-ไท-ทุก-วัน-เลย', words: [] };
+const wordItem = (row, extra = {}) => ({ key: row.content_key, contentRef: { source: 'game_words', key: row.content_key }, ...extra });
+const sentenceItem = (row, extra = {}) => ({ key: row.th, contentRef: { source: 'game_sentences', key: row.th }, ...extra });
 
 check('hidden verifier is default OFF and versioned', () => {
   assert.equal(HIDDEN_REVIEW_SCORE_DEFAULT_ENABLED, false);
@@ -28,62 +30,65 @@ check('hidden verifier is default OFF and versioned', () => {
 });
 
 check('Tone uses the raw 10/7/4/1/0 ladder before every bonus', () => {
-  const out = verifyLearningScore({ game: 'tone', difficulty: '初', item: { key: 'กา', wrong: 1 }, canonicalRows: [word] });
-  assert.deepEqual(out, { serverVerified: true, verifiedBy: 'edge:tone:v1', score: 7, contentRef: { source: 'game_words', key: 'กา@1' } });
-  assert.equal(verifyLearningScore({ game: 'tone', difficulty: '初', item: { key: 'กา', wrong: 0, guide: true }, canonicalRows: [word] }).score, 0);
+  const out = verifyLearningScore({ game: 'tone', difficulty: '初', item: wordItem(word, { wrong: 1 }), canonicalRows: [word] });
+  assert.deepEqual(out, { serverVerified: true, verifiedBy: 'edge:tone:v1', score: 7, contentRef: { source: 'game_words', key: word.content_key } });
+  assert.equal(verifyLearningScore({ game: 'tone', difficulty: '初', item: wordItem(word, { wrong: 0, guide: true }), canonicalRows: [word] }).score, 0);
 });
 
 check('Tone component evidence averages raw component scores without combo or golden values', () => {
-  const out = verifyLearningScore({ game: 'tone', difficulty: '初', item: { key: 'กา', wrong: 3, learningEvidence: { componentWrongCounts: [0, 2] } }, canonicalRows: [word] });
+  const out = verifyLearningScore({ game: 'tone', difficulty: '初', item: wordItem(word, { wrong: 3, learningEvidence: { componentWrongCounts: [0, 2] } }), canonicalRows: [word] });
   assert.equal(out.score, 7);
 });
 
 check('Reading verifies first-check syllable evidence against canonical units and excludes long-item bonus', () => {
-  const out = verifyLearningScore({ game: 'reading', difficulty: '高', item: { key: sentence.th, wrong: 3, learningEvidence: { firstCheckSyllableWrongCounts: [0, 0, 0, 0, 0, 0, 0, 4] } }, canonicalRows: [sentence] });
+  const out = verifyLearningScore({ game: 'reading', difficulty: '高', item: sentenceItem(sentence, { wrong: 3, learningEvidence: { firstCheckSyllableWrongCounts: [0, 0, 0, 0, 0, 0, 0, 4] } }), canonicalRows: [sentence] });
   assert.equal(out.score, 10);
   assert.deepEqual(out.contentRef, { source: 'game_sentences', key: sentence.th });
 });
 
 check('Reading fails closed on missing or mismatched first-check evidence', () => {
-  rejects('missing_reading_first_check_evidence', () => verifyLearningScore({ game: 'reading', difficulty: '初', item: { key: 'กา', wrong: 0 }, canonicalRows: [word] }));
-  rejects('reading_unit_count_mismatch', () => verifyLearningScore({ game: 'reading', difficulty: '初', item: { key: 'กา', wrong: 0, learningEvidence: { firstCheckSyllableWrongCounts: [0, 0] } }, canonicalRows: [word] }));
+  rejects('missing_reading_first_check_evidence', () => verifyLearningScore({ game: 'reading', difficulty: '初', item: wordItem(word, { wrong: 0 }), canonicalRows: [word] }));
+  rejects('reading_unit_count_mismatch', () => verifyLearningScore({ game: 'reading', difficulty: '初', item: wordItem(word, { wrong: 0, learningEvidence: { firstCheckSyllableWrongCounts: [0, 0] } }), canonicalRows: [word] }));
 });
 
 check('Typing derives quota from protected canonical units and never trusts item points', () => {
-  const out = verifyLearningScore({ game: 'typing', difficulty: '中', item: { key: longWord.word, wrong: 2, points: 999 }, canonicalRows: [longWord] });
+  const out = verifyLearningScore({ game: 'typing', difficulty: '中', item: wordItem(longWord, { wrong: 2, points: 999 }), canonicalRows: [longWord] });
   assert.equal(out.score, 7);
-  assert.deepEqual(out.contentRef, { source: 'game_words', key: longWord.word + '@2' });
+  assert.deepEqual(out.contentRef, { source: 'game_words', key: longWord.content_key });
 });
 
 check('Listening returns only primary listening score and excludes typing bonus', () => {
-  const typed = verifyLearningScore({ game: 'listening', difficulty: 'mixed', item: { key: 'กา', contentRef: { source: 'game_words', key: 'กา@1' }, wrong: 0, correct: true, mode: 'type', listens: 3, typingWrong: 0, points: 17 }, canonicalRows: [word] });
-  const mc = verifyLearningScore({ game: 'listening', difficulty: 'mixed', item: { key: 'กา', contentRef: { source: 'game_words', key: 'กา@1' }, wrong: 0, correct: true, mode: 'mc', listens: 1, points: 5 }, canonicalRows: [word] });
+  const typed = verifyLearningScore({ game: 'listening', difficulty: 'mixed', item: { key: 'กา@1', contentRef: { source: 'game_words', key: 'กา@1' }, wrong: 0, correct: true, mode: 'type', listens: 3, typingWrong: 0, points: 17 }, canonicalRows: [word] });
+  const mc = verifyLearningScore({ game: 'listening', difficulty: 'mixed', item: { key: 'กา@1', contentRef: { source: 'game_words', key: 'กา@1' }, wrong: 0, correct: true, mode: 'mc', listens: 1, points: 5 }, canonicalRows: [word] });
   assert.equal(typed.score, 7);
   assert.equal(mc.score, 5);
 });
 
 check('Word Order verifies wrong and hint primitives before combo/golden/level bonuses', () => {
-  const out = verifyLearningScore({ game: 'word_order', difficulty: '高', item: { key: sentence.th, wrong: 1, guide: true, failed: false, points: 99, learningEvidence: { hintCount: 1 } }, canonicalRows: [sentence] });
+  const out = verifyLearningScore({ game: 'word_order', difficulty: '高', item: sentenceItem(sentence, { wrong: 1, guide: true, failed: false, points: 99, learningEvidence: { hintCount: 1 } }), canonicalRows: [sentence] });
   assert.equal(out.score, 5);
 });
 
 check('Word Order fails closed when hint or failure evidence conflicts', () => {
-  rejects('hint_evidence_mismatch', () => verifyLearningScore({ game: 'word_order', difficulty: '高', item: { key: sentence.th, wrong: 0, guide: false, failed: false, learningEvidence: { hintCount: 1 } }, canonicalRows: [sentence] }));
-  rejects('word_order_failure_mismatch', () => verifyLearningScore({ game: 'word_order', difficulty: '高', item: { key: sentence.th, wrong: 1, guide: false, failed: true, learningEvidence: { hintCount: 0 } }, canonicalRows: [sentence] }));
+  rejects('hint_evidence_mismatch', () => verifyLearningScore({ game: 'word_order', difficulty: '高', item: sentenceItem(sentence, { wrong: 0, guide: false, failed: false, learningEvidence: { hintCount: 1 } }), canonicalRows: [sentence] }));
+  rejects('word_order_failure_mismatch', () => verifyLearningScore({ game: 'word_order', difficulty: '高', item: sentenceItem(sentence, { wrong: 1, guide: false, failed: true, learningEvidence: { hintCount: 0 } }), canonicalRows: [sentence] }));
 });
 
 check('Client-computed learning scores are rejected, not compared or copied', () => {
-  rejects('client_learning_score_forbidden', () => verifyLearningScore({ game: 'tone', difficulty: '初', item: { key: 'กา', wrong: 0, learning_score: 10 }, canonicalRows: [word] }));
+  rejects('client_learning_score_forbidden', () => verifyLearningScore({ game: 'tone', difficulty: '初', item: wordItem(word, { wrong: 0, learning_score: 10 }), canonicalRows: [word] }));
 });
 
 check('Missing and duplicate canonical content both fail closed', () => {
-  rejects('content_ref_not_unique', () => verifyLearningScore({ game: 'tone', difficulty: '初', item: { key: 'กา', wrong: 0 }, canonicalRows: [] }));
-  rejects('content_ref_not_unique', () => verifyLearningScore({ game: 'tone', difficulty: '初', item: { key: 'กา', wrong: 0 }, canonicalRows: [word, { ...word }] }));
+  rejects('content_ref_not_unique', () => verifyLearningScore({ game: 'tone', difficulty: '初', item: wordItem(word, { wrong: 0 }), canonicalRows: [] }));
+  rejects('content_ref_not_unique', () => verifyLearningScore({ game: 'tone', difficulty: '初', item: wordItem(word, { wrong: 0 }), canonicalRows: [word, { ...word }] }));
+  rejects('missing_content_ref', () => verifyLearningScore({ game: 'tone', difficulty: '初', item: { key: word.content_key, wrong: 0 }, canonicalRows: [word] }));
+  rejects('content_ref_identity_mismatch', () => verifyLearningScore({ game: 'tone', difficulty: '初', item: { ...wordItem(word, { wrong: 0 }), key: 'WRONG' }, canonicalRows: [word] }));
+  rejects('invalid_content_key', () => verifyLearningScore({ game: 'tone', difficulty: '初', item: { ...wordItem(word, { wrong: 0 }), key: '  ' + word.content_key }, canonicalRows: [word] }));
 });
 
 check('Listening stable level suffix disambiguates the same word across levels', () => {
   const otherLevel = { ...word, content_key: 'กา@2', level: '中' };
-  const out = verifyLearningScore({ game: 'listening', difficulty: 'mixed', item: { key: 'กา', contentRef: { source: 'game_words', key: 'กา@2' }, wrong: 0, correct: true, mode: 'type', listens: 1 }, canonicalRows: [word, otherLevel] });
+  const out = verifyLearningScore({ game: 'listening', difficulty: 'mixed', item: { key: 'กา@2', contentRef: { source: 'game_words', key: 'กา@2' }, wrong: 0, correct: true, mode: 'type', listens: 1 }, canonicalRows: [word, otherLevel] });
   assert.equal(out.score, 10);
   assert.deepEqual(out.contentRef, { source: 'game_words', key: 'กา@2' });
 });
@@ -107,7 +112,7 @@ check('Canonical Free200 sense suffix selects one stable item without display-wo
 });
 
 check('One round cannot emit the same stable item twice', () => {
-  rejects('duplicate_stable_item_in_round', () => verifyRoundLearningScores({ game: 'tone', difficulty: '初', items: [{ key: 'กา', wrong: 0 }, { key: 'กา', wrong: 1 }], canonicalRows: [word] }));
+  rejects('duplicate_stable_item_in_round', () => verifyRoundLearningScores({ game: 'tone', difficulty: '初', items: [wordItem(word, { wrong: 0 }), wordItem(word, { wrong: 1 })], canonicalRows: [word] }));
 });
 
 check('Tone sentence components aggregate once for one stable sentence item', () => {
@@ -115,14 +120,19 @@ check('Tone sentence components aggregate once for one stable sentence item', ()
   const out = verifyRoundLearningScores({
     game: 'tone', difficulty: '高', requireExplicitContentRef: true,
     items: [
-      { key: 'ฉัน', contentRef: { source: 'game_sentences', key: sentence.th }, wrong: 0 },
-      { key: 'เรียน', contentRef: { source: 'game_sentences', key: sentence.th }, wrong: 2 },
+      { key: sentence.th, contentRef: { source: 'game_sentences', key: sentence.th }, wrong: 0 },
+      { key: sentence.th, contentRef: { source: 'game_sentences', key: sentence.th }, wrong: 2 },
     ],
     canonicalRows: [toneSentence],
   });
   assert.equal(out.length, 1);
   assert.equal(out[0].score, 7);
   assert.deepEqual(out[0].contentRef, { source: 'game_sentences', key: sentence.th });
+  rejects('content_ref_identity_mismatch', () => verifyRoundLearningScores({
+    game: 'tone', difficulty: '高', requireExplicitContentRef: true,
+    items: [{ key: 'ฉัน', contentRef: { source: 'game_sentences', key: sentence.th }, wrong: 0 }],
+    canonicalRows: [toneSentence],
+  }));
 });
 
 check('real five-game source supplies explicit stable refs and required primitive evidence', () => {
@@ -147,9 +157,12 @@ check('score-submit resolves protected Free200 words by exact content_key', () =
   const root = new URL('../', import.meta.url);
   const edge = fs.readFileSync(new URL('supabase/functions/score-submit/index.ts', root), 'utf8');
   const engine = fs.readFileSync(new URL('supabase/functions/score-submit/score-engine.mjs', root), 'utf8');
-  assert.match(edge, /select\('content_key,word,level,syls,read_syls,reading_th'\)\.in\('content_key', keys\)/);
-  assert.match(edge, /row\.content_key \|\| row\.th \|\| row\.word/);
-  assert.match(engine, /row\.content_key \|\| row\.th \|\| row\.word/);
+  assert.match(edge, /select\('canonical_record'\)\.in\('content_key', keys\)/);
+  assert.match(edge, /function vocabularyScoreRow/);
+  assert.doesNotMatch(edge, /row\.content_key \|\| row\.th \|\| row\.word/);
+  assert.doesNotMatch(engine, /row\.content_key \|\| row\.th \|\| row\.word/);
+  assert.match(edge, /canonicalIdentityField/);
+  assert.match(engine, /identityField/);
 });
 
 process.stdout.write('LEARNING_SCORE_VERIFIER_PASS ' + passed + '\n');

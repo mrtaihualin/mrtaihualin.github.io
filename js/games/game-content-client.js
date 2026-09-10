@@ -3,64 +3,151 @@
  * FILE MAP: [01] data adapters → [02] auth token lookup → [03] content fetch → [04] loading/error UI → [05] script injection + public loader
  * ────────────────────────────────────────────────────────────
  * แทนที่ <script src="data/words-data.js"> / <script src="data/adv-sentences.js"> เดิม
- * ในหน้าเกมทั้ง 6 หน้า (games-challenge / reading-game / tone-finder / typing-game /
- * word-order / listening-game) — ของเดิมโหลดไฟล์ที่มีคำ/ประโยค "ครบทุกอัน" ตรงๆ ผ่าน URL
+ * ในเกมคำศัพท์ 5 หน้า (reading-game / tone-finder / typing-game / word-order /
+ * listening-game) — ของเดิมโหลดไฟล์ที่มีคำ/ประโยค "ครบทุกอัน" ตรงๆ ผ่าน URL
  * public เห็นได้หมดไม่ว่าจะล็อกอินหรือไม่ (ช่องโหว่ความปลอดภัย) ตอนนี้เปลี่ยนเป็นขอข้อมูล
  * (ตัดโควตาแล้วตามสิทธิ์จริง) จาก Edge Function `game-content` แทน
  *
  * ไฟล์นี้ทำ 2 อย่าง:
- *   1) เก็บฟังก์ชันแปลงข้อมูล (adapter) เดิมที่เคยอยู่ท้าย data/words-data.js และ
- *      data/adv-sentences.js ไว้เหมือนเดิมทุกตัว (ล้วนเป็นฟังก์ชันบริสุทธิ์ ไม่ผูกกับ
- *      ข้อมูลจริง — ย้ายมาไว้ที่นี่เพราะ 2 ไฟล์ข้อมูลเดิมเลิกถูกโหลดในเบราว์เซอร์แล้ว)
+ *   1) ตรวจว่าระเบียนที่ Lin ตรวจแล้วครบ และฉายชื่อช่องให้ UI เดิมโดยคัดลอกค่าเท่านั้น
+ *      ห้ามใช้กฎภาษา อนุมาน แก้ หรือสร้างคำตอบขึ้นใหม่
  *   2) GameContentLoader.boot(appScriptSrcs) — ดึงข้อมูลจาก Edge Function, ตั้ง
  *      window.WORDS_MASTER / window.ADV_SENTENCES ให้เหมือนของเดิมทุกอย่าง แล้วค่อยแปะ
  *      <script> ของแอปเกม (เช่น js/games/reading-game-app.min.js) เข้าไปทีหลัง — กันเกม
  *      เริ่มทำงานก่อนข้อมูลมาถึง (เดิมเป็น <script> ธรรมดาโหลดพร้อมข้อมูลในไฟล์เดียวกัน
  *      ตอนนี้ข้อมูลมาจากเน็ตแบบ async เลยต้องรอให้เสร็จก่อนค่อยรันแอปเกม)
  *
- * ⚠️ ห้ามลบ/ย้ายไฟล์นี้แยกไปคนละที่กับหน้าเกม — ทุกหน้าที่เคยโหลด words-data.js/adv-sentences.js
- * ต้องโหลดไฟล์นี้แทน (ดูรายชื่อ 6 หน้าด้านบน)
+ * ⚠️ ห้ามลบ/ย้ายไฟล์นี้แยกไปคนละที่กับหน้าเกม — เกมคำศัพท์ทั้ง 5 หน้าต้องโหลด
+ * ข้อมูลที่ผ่าน game-content เท่านั้น
  * ────────────────────────────────────────────────────────────
  */
 (function (global) {
   'use strict';
 
   // ════════════════════════════════════════════════════════════
-  // ADAPTER — ย้ายมาจาก data/words-data.js / data/adv-sentences.js เดิมทุกตัว ไม่ได้แก้ logic
+  // VIEW PROJECTION — names used by the existing UI, copied only from the exact
+  // canonical record. No Thai-language rule, inference, fallback or correction lives here.
   // ════════════════════════════════════════════════════════════
   var LEVEL_TXT_TO_NUM = { '初': 1, '中': 2 };
+  var REQUIRED_CATALOG_STRING_FIELDS = [
+    'contentKey', 'reviewSet', 'word', 'spellingTH', 'readingTH', 'roman', 'zhTW',
+    'level', 'type', 'category', 'audioStatus'
+  ];
+  var REQUIRED_SYLLABLE_STRING_FIELDS = [
+    'roman', 'lead', 'consonant', 'cluster', 'vowel', 'writtenFinal', 'toneMark',
+    'toneName', 'liveDead', 'consonantReadDifference', 'finalReadDifference', 'silent'
+  ];
 
-  function validateAndHydrateSyllableText(master) {
-    master.forEach(function (w) {
-      if (!w.spellingTH) return;
-      var spellingParts = String(w.spellingTH).split('-');
-      var readingParts = String(w.readingTH || '').split('-');
-      if (!Array.isArray(w.syls) || spellingParts.length !== w.syls.length ||
-          readingParts.length !== w.syls.length || spellingParts.join('') !== w.word) {
-        throw new Error('game-content: reviewed syllable authority mismatch (' + (w.contentKey || w.word) + ')');
-      }
-      w.syls.forEach(function (syllable, index) { syllable.th = spellingParts[index]; });
+  function isExactNonblank(value) {
+    return typeof value === 'string' && value.length > 0 && value.trim() === value;
+  }
+
+  function hasExactStringBoundaries(value) {
+    if (typeof value === 'string') return value.trim() === value;
+    if (Array.isArray(value)) return value.every(hasExactStringBoundaries);
+    if (value && typeof value === 'object') return Object.keys(value).every(function (key) {
+      return hasExactStringBoundaries(value[key]);
     });
+    return true;
+  }
+
+  function hasRequiredStrings(value, fields) {
+    return fields.every(function (field) {
+      return isExactNonblank(value[field]);
+    });
+  }
+
+  function requireCatalogBundle(bundle) {
+    var record = bundle && bundle.catalog;
+    if (!record || typeof record !== 'object' || Array.isArray(record)) {
+      throw new Error('game-content: catalog authority missing');
+    }
+    if (!hasExactStringBoundaries(record) ||
+        !hasRequiredStrings(record, REQUIRED_CATALOG_STRING_FIELDS) ||
+        !Array.isArray(record.approvalRefs) || !record.approvalRefs.length ||
+        !record.approvalRefs.every(isExactNonblank) ||
+        !Array.isArray(record.syllables) || !record.syllables.length || !Array.isArray(record.spellingSyllables)) {
+      throw new Error('game-content: catalog authority incomplete (' + (record.contentKey || record.word || 'unknown') + ')');
+    }
+    if (record.spellingSyllables.length !== record.syllables.length ||
+        !record.spellingSyllables.every(function (syllable) { return syllable && isExactNonblank(syllable.th); }) ||
+        record.spellingSyllables.map(function (syllable) { return syllable.th; }).join('') !== record.word) {
+      throw new Error('game-content: reviewed display segmentation missing (' + record.contentKey + ')');
+    }
+    return record;
+  }
+
+  function projectSyllable(record, display, contentKey, index) {
+    if (!record || !display || !isExactNonblank(display.th) || !hasRequiredStrings(record, REQUIRED_SYLLABLE_STRING_FIELDS)) {
+      throw new Error('game-content: syllable authority incomplete (' + contentKey + ':' + index + ')');
+    }
+    if (!Number.isInteger(record.toneNumber) || record.toneNumber < 1 || record.toneNumber > 5) {
+      throw new Error('game-content: reviewed answer missing (' + contentKey + ':' + index + ')');
+    }
+    return {
+      th: display.th,
+      en: record.roman,
+      lead: record.lead,
+      cons: record.consonant,
+      cluster: record.cluster,
+      vowel: record.vowel,
+      final: record.writtenFinal,
+      tone: record.toneMark,
+      toneNumber: record.toneNumber,
+      tone_name: record.toneName,
+      liveDead: record.liveDead,
+      consRead: record.consonantReadDifference,
+      finalRead: record.finalReadDifference,
+      silent: record.silent,
+      catalog: record
+    };
+  }
+
+  function projectWord(bundle) {
+    var record = requireCatalogBundle(bundle);
+    var syllables = record.syllables.map(function (syllable, index) {
+      return projectSyllable(syllable, record.spellingSyllables[index], record.contentKey, index);
+    });
+    return {
+      contentKey: record.contentKey,
+      word: record.word,
+      spellingTH: record.spellingTH,
+      readingTH: record.readingTH,
+      en: record.roman,
+      zh: record.zhTW,
+      level: record.level,
+      type: record.type,
+      category: record.category,
+      audioStatus: record.audioStatus,
+      approvalRefs: record.approvalRefs,
+      syls: syllables,
+      catalog: record
+    };
+  }
+
+  function projectWords(master) {
+    return master.map(projectWord);
+  }
+
+  function validateCatalogPayload(master) {
+    projectWords(master); // validation only; exact payload remains untouched
     return master;
   }
 
   // เกมเสียง (tone-finder.html) ใช้: word, readingTH, readingEN, zh, level(เลข 1/2), category, syls
   global.buildWordListForToneFinder = function (master) {
-    return master.map(function (w) {
+    return projectWords(master).map(function (w) {
       return {
         word: w.word,
         contentKey: w.contentKey,
         spellingTH: w.spellingTH,
-        readingTH: (typeof w.readingTH === 'string' && w.readingTH.trim()) ? w.readingTH : w.word,
+        readingTH: w.readingTH,
         readingEN: w.en,
         zh: w.zh,
         level: LEVEL_TXT_TO_NUM[w.level],
         category: w.category,
         syls: w.syls,
-        readSyls: w.readSyls,
-        toneSpecial: w.toneSpecial,
-        toneOverride: w.toneOverride,
-        toneDerivation: w.toneDerivation,
+        catalog: w.catalog,
       };
     });
   };
@@ -68,9 +155,9 @@
   // เกมอ่าน (reading-game.html) / เกมพิมพ์ (typing-game.html) / เกมฟัง (listening-game.html)
   // ใช้: th, zh, en, level(初/中), cons/lead/cluster/vowel/tone/final/tone_name, syls
   global.buildWordsForPhonicsGames = function (master) {
-    return master.map(function (w) {
+    return projectWords(master).map(function (w) {
       var out = { th: w.word, zh: w.zh, en: w.en, level: w.level, contentKey: w.contentKey };
-      ['cons', 'lead', 'cluster', 'vowel', 'tone', 'final', 'tone_name', 'syls', 'spellingTH', 'readingTH', 'readSyls'].forEach(function (f) {
+      ['cons', 'lead', 'cluster', 'vowel', 'tone', 'final', 'tone_name', 'syls', 'spellingTH', 'readingTH'].forEach(function (f) {
         if (w[f] !== undefined) out[f] = w[f];
       });
       return out;
@@ -80,13 +167,33 @@
   // เกมอ่าน/เกมพิมพ์ ต้องการ WORDS_HIGH แบบแบน (syls รวมทั้งประโยค ไม่แยกกลุ่มตามคำ)
   global.buildSentencesForPhonicsGames = function (sentences) {
     return sentences.map(function (s) {
+      if (!s || !hasExactStringBoundaries(s) ||
+          !isExactNonblank(s.th) || !isExactNonblank(s.zh) || !isExactNonblank(s.readingTH) ||
+          !Number.isInteger(s.wc) || !Array.isArray(s.words) || !s.words.length) {
+        throw new Error('game-content: sentence authority incomplete');
+      }
       var flatSyls = [];
-      s.words.forEach(function (w) { flatSyls = flatSyls.concat(w.syls); });
+      s.words.forEach(function (w) {
+        if (!w || !isExactNonblank(w.th) || !isExactNonblank(w.zh) || !Array.isArray(w.syls) || !w.syls.length) throw new Error('game-content: sentence authority incomplete (' + s.th + ')');
+        w.syls.forEach(function (sy) {
+          if (!sy || !isExactNonblank(sy.th) || !isExactNonblank(sy.en) || !isExactNonblank(sy.cons) ||
+              !isExactNonblank(sy.vowel) || !isExactNonblank(sy.tone_name)) throw new Error('game-content: sentence syllable authority incomplete (' + s.th + ')');
+          flatSyls.push(sy);
+        });
+      });
+      var readingParts = s.readingTH.split('-');
+      if (s.words.map(function (w) { return w.th; }).join('') !== s.th || s.wc !== flatSyls.length ||
+          readingParts.length !== flatSyls.length || readingParts.some(function (part) { return !isExactNonblank(part); })) throw new Error('game-content: sentence reading authority mismatch (' + s.th + ')');
       var en = flatSyls.map(function (sy) { return sy.en; }).join('-');
       var wordMeanings = s.words.map(function (w) { return { th: w.th, zh: w.zh }; });
       return { th: s.th, zh: s.zh, en: en, readingTH: s.readingTH, level: '高', syls: flatSyls, words: wordMeanings, politeF: s.politeF };
     });
   };
+
+  function validateSentencePayload(sentences) {
+    global.buildSentencesForPhonicsGames(sentences); // validation only; exact payload remains untouched
+    return sentences;
+  }
 
   // ════════════════════════════════════════════════════════════
   // LOADER — ดึงข้อมูลจาก Edge Function game-content แล้วค่อยรันแอปเกม
@@ -176,10 +283,11 @@
       if (!match) return null;
       var wanted = decodeURIComponent(match[1]);
       var rows = (data && Array.isArray(data.words) ? data.words : []).filter(function (row) {
-        return row && (row.contentKey === wanted || row.word === wanted) && (row.level === '初' || row.level === '中');
+        var record = row && row.catalog;
+        return record && record.contentKey === wanted && (record.level === '初' || record.level === '中');
       });
       if (rows.length !== 1) return null;
-      var level = rows[0].level;
+      var level = rows[0].catalog.level;
       var hadStoredLevel = false;
       var storedLevel = null;
       if (typeof localStorage !== 'undefined') {
@@ -369,8 +477,12 @@
           global.WordAudio.setAvailability(data.audioAvailable);
         }
         applyDirectReadingWordLevel(data);
-        global.WORDS_MASTER = validateAndHydrateSyllableText(data.words);
-        global.ADV_SENTENCES = data.sentences;
+        // Preserve the exact server payload. Individual game views may rename fields for
+        // presentation, but they never change or recompute the reviewed catalog record.
+        var exactWords = validateCatalogPayload(data.words);
+        var exactSentences = validateSentencePayload(data.sentences);
+        global.WORDS_MASTER = exactWords;
+        global.ADV_SENTENCES = exactSentences;
         var chain = Promise.resolve();
         (appScriptSrcs || []).forEach(function (src) {
           chain = chain.then(function () { return injectScript(src); });

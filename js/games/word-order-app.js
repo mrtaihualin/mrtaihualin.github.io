@@ -170,7 +170,7 @@
   function woServerFinish(sentThai, clean, extra){
     try{
       if(woLoggedIn() && !practiceMode && window.TONE_SERVER && TONE_SERVER.available()){
-        var body = { game:'wordorder', word:sentThai, level:LEVEL_NUM, clean:clean };
+        var body = { game:'wordorder', word:sentThai, contentKey:sentThai, level:LEVEL_NUM, clean:clean };
         if(extra) for(var k in extra) body[k]=extra[k];
         TONE_SERVER.finishRound(body).then(function(r){
           if(r&&r.ok&&r.justMastered&&r.stars>0&&window.console) console.log('[P4] ⭐ server',r.stars,'→ total',r.totalStars);
@@ -227,22 +227,27 @@
   // ── ปุ่ม/ข้อมูลใต้คำที่เฉลย + คำอ่านติดไทล์คำ — Lin 2026-07-25
   // ════════════════════════════════════════════════════════════
   // คำอ่านรายคำ: readingTH ของประโยคเป็น "รายพยางค์" คั่นด้วย '-' → หั่นแบ่งให้แต่ละคำตามจำนวน syls ของคำนั้น
-  // ถ้าจำนวนพยางค์ไม่ตรงกัน (ข้อมูลผิด) → fallback เป็นตัวเขียนของคำเอง ไม่เดา
+  // ถ้าจำนวนพยางค์ไม่ตรงกัน ข้อมูลไม่ครบ: หยุดทันที ห้ามสร้างคำอ่านทดแทน
   var _woReadCache = null, _woReadCacheTh = '';
   function woWordReads(s){
     if (!s) return [];
     var cacheKey = woSentenceText(s) + '|' + (s.readingTH || '');
     if (_woReadCacheTh === cacheKey && _woReadCache) return _woReadCache;
-    var parts = String(s.readingTH || '').split('-');
+    if (!s.readingTH || !Array.isArray(s.words) || !s.words.length) throw new Error('CATALOG_AUTHORITY_INCOMPLETE:sentence reading');
+    var parts = String(s.readingTH).split('-');
     var total = 0;
     s.words.forEach(function(w){ total += (w.syls && w.syls.length) || 1; });
-    var ok = (parts.length === total);
+    if (parts.length !== total || parts.some(function(part){ return !part; })) throw new Error('CATALOG_AUTHORITY_INCOMPLETE:sentence reading segmentation');
     var out = [], p = 0;
     s.words.forEach(function(w){
-      var n = (w.syls && w.syls.length) || 1;
-      var thRead = ok ? parts.slice(p, p + n).join('-') : w.th;
-      var enRead = (w.syls || []).map(function(sy){ return sy.en || ''; }).filter(Boolean).join('-');
-      out.push({ th: thRead || w.th, en: enRead });
+      if (!w || !Array.isArray(w.syls) || !w.syls.length) throw new Error('CATALOG_AUTHORITY_INCOMPLETE:sentence syllables');
+      var n = w.syls.length;
+      var thRead = parts.slice(p, p + n).join('-');
+      var enRead = w.syls.map(function(sy){
+        if (!sy || !sy.en) throw new Error('CATALOG_AUTHORITY_INCOMPLETE:sentence romanization');
+        return sy.en;
+      }).join('-');
+      out.push({ th: thRead, en: enRead });
       p += n;
     });
     _woReadCacheTh = cacheKey; _woReadCache = out;
@@ -324,24 +329,12 @@
   var woSentenceRevealed = false; // true เมื่อเรียงถูก/ตายแล้วเฉลย — ใช้คุมว่าจะโชว์บรรทัดครับ/ค่ะ/คะ ไหม
   function woShowParticleFor(s){
     if (!s) return null;
-    if (woParticleMode === 'm') return 'ครับ'; // ชายใช้ครับได้ทุกประโยคเหมือนกันหมด ไม่ต้องมีข้อมูลเพิ่ม
-    if (woParticleMode === 'f') return s.politeF || 'ครับ'; // ไม่มี politeF (ประโยคขึ้นด้วยผม) → บังคับครับต่อ เหมือนเกมอื่น
+    if (woParticleMode === 'f' && s.politeF) return s.politeF;
     return null;
   }
-  function woParticleZh(p){
-    return p === 'ครับ' ? '男性禮貌詞' : (p === 'คะ' ? '女性禮貌詞・疑問句' : '女性禮貌詞・句尾非疑問');
-  }
+  // ห้ามต่อคำหรือพยางค์จำลองเข้าชุดคำตอบ ถ้าคลังกลางไม่ได้ส่งระเบียนนั้นมา
   function woBuildPlayableSentence(s){
-    var p = woShowParticleFor(s);
-    if (!s || !p) return s;
-    var particleSyl = p === 'ครับ'
-      ? {th:p,cons:'ค',cluster:'ร',vowel:'อะ',final:'บ',tone_name:'ตรี',en:'kráp',isParticle:true}
-      : {th:p,cons:'ค',vowel:'อะ',tone:p === 'ค่ะ' ? '่' : '',tone_name:p === 'ค่ะ' ? 'เอก' : 'ตรี',en:p === 'ค่ะ' ? 'khà' : 'khá',isParticle:true};
-    return Object.assign({}, s, {
-      words: s.words.concat([{th:p,zh:woParticleZh(p),syls:[particleSyl],isParticle:true}]),
-      readingTH: [s.readingTH,p].filter(Boolean).join('-'),
-      activeParticle: p
-    });
+    return s;
   }
   function woSentenceText(s){ return s && s.activeParticle ? s.th + s.activeParticle : (s ? s.th : ''); }
   function woSyncParticleBtn(){
@@ -430,6 +423,7 @@
   var lastSubmittedAnswer = '';
   var submittedAttempts = [];
   var roundReport = null;
+  function woRequiredCorrectAnswer(w){if(!w||typeof w.correctAnswer!=='string'||!w.correctAnswer.trim())throw new Error('CATALOG_AUTHORITY_INCOMPLETE:word-order report answer');return w.correctAnswer;}
   function woReportRows(){
     if(!roundReport||!roundReport.items)return [];
     return roundReport.items.map(function(i){return {th:i.question,wordsArr:i.words.map(function(w){return w.th;}),wordGlosses:i.words,zh:i.meaning,userAnswer:i.user_answer,correctAnswer:i.correct_answer,wrong:i.wrong_count,failed:!i.is_correct,guide:!!i.hint_used,pts:i.item_score,srsDue:i.srs_state||'',mastered:!!i.mastered_state,attempts:i.attempts};});
@@ -437,11 +431,15 @@
   function woLogSentence(o){
     try{
       var s = curSentence();
+      if(!s||typeof s.th!=='string'||!s.th.trim()||!Array.isArray(s.words)||!s.words.length||
+          !s.words.every(function(w){return w&&typeof w.th==='string'&&w.th.trim();})){
+        throw new Error('CATALOG_AUTHORITY_INCOMPLETE:word-order sentence answer');
+      }
       // wordsArr: รายคำ (s.words[].th) ใช้ตอนทำ PDF เท่านั้น — ใส่จุดตัดคำที่มองไม่เห็น (ZWSP) ระหว่างคำ
       // กันประโยคยาวไม่มีเว้นวรรค (เขียนไทยจริงไม่เว้นวรรคระหว่างคำ) ตกขอบหน้ากระดาษ/ถูกตัดกลางคำ — Lin 2026-07-31
-      var wordsArr = (s && s.words && s.words.length) ? s.words.map(function(w){return w.th;}) : null;
-      var wordGlosses = (s && s.words && s.words.length) ? s.words.map(function(w){return {th:w.th||'', zh:w.zh||''};}) : null;
-      var base = {th:s?s.th:'', wordsArr:wordsArr, wordGlosses:wordGlosses, zh:s?s.zh:'', userAnswer:lastSubmittedAnswer||'', correctAnswer:s&&s.words?s.words.map(function(w){return w.th;}).join(' '):(s?s.th:''), wrong:(typeof wrongCount!=='undefined'?wrongCount:0), attempts:submittedAttempts.slice(), learningEvidence:{hintCount:hintCountThisSentence}, failed:false, guide:hintCountThisSentence>0, pts:0, srsDue:'', mastered:false};
+      var wordsArr = s.words.map(function(w){return w.th;});
+      var wordGlosses = s.words.map(function(w){return {th:w.th, zh:w.zh||''};});
+      var base = {th:s.th, wordsArr:wordsArr, wordGlosses:wordGlosses, zh:s.zh||'', userAnswer:lastSubmittedAnswer||'', correctAnswer:s.th, wrong:(typeof wrongCount!=='undefined'?wrongCount:0), attempts:submittedAttempts.slice(), learningEvidence:{hintCount:hintCountThisSentence}, failed:false, guide:hintCountThisSentence>0, pts:0, srsDue:'', mastered:false};
       for (var k in o) { if (Object.prototype.hasOwnProperty.call(o,k)) base[k] = o[k]; }
       roundLog.push(base);
       if(roundReport&&window.RoundReport)RoundReport.addItem(roundReport,{content_ref:{source:'game_sentences',key:base.th},question:base.th,meaning:base.zh,attempts:base.attempts,user_answer:base.userAnswer,correct_answer:base.correctAnswer,is_correct:!base.skipped&&!base.failed&&!base.guide&&base.wrong===0,is_skipped:!!base.skipped,skip_reason:base.skipped?'user_skip':null,wrong_count:base.wrong,item_score:base.pts,hint_used:!!base.guide,learning_evidence:base.learningEvidence,words:wordGlosses||[],srs_state:base.srsDue||null,mastered_state:!!base.mastered});
@@ -1520,7 +1518,7 @@
     var rows = woReportRows().map(function(w, i){
       return '<tr>'
         +'<td style="padding:7px 6px;font-size:12px;color:#888;text-align:center;">'+(i+1)+'</td>'
-        +'<td style="padding:7px 6px;font-size:14px;font-weight:700;word-break:keep-all;overflow-wrap:break-word;">'+wrapThai(w)+'<div style="font-size:10px;font-weight:400;color:#777;">作答：'+esc(w.userAnswer||'（未保留）')+'<br>正解：'+esc(w.correctAnswer||w.th)+'</div>'+wordBreakdown(w)+'</td>'
+        +'<td style="padding:7px 6px;font-size:14px;font-weight:700;word-break:keep-all;overflow-wrap:break-word;">'+wrapThai(w)+'<div style="font-size:10px;font-weight:400;color:#777;">作答：'+esc(w.userAnswer||'（未保留）')+'<br>正解：'+esc(woRequiredCorrectAnswer(w))+'</div>'+wordBreakdown(w)+'</td>'
         +'<td style="padding:7px 6px;font-size:12px;color:#666;">'+esc(w.zh)+'</td>'
         +'<td style="padding:7px 6px;font-size:12px;text-align:center;">'+statusLabel(w)+'</td>'
         +'<td style="padding:7px 6px;font-size:12px;text-align:center;">'+(w.wrong||0)+'</td>'

@@ -174,8 +174,9 @@ test('Typing and Listening share the same bonus score module', () => {
 });
 
 test('Typing report uses the Thai target and never stores raw keystrokes', () => {
-  assert.match(source, /correctAnswer:submitted/);
-  assert.match(source, /attempts:submitted\?\[\{answer:submitted,is_correct:true\}\]/);
+  assert.match(source, /correctAnswer:w\.th/);
+  assert.match(source, /attempts:\[\{answer:submitted,is_correct:true\}\]/);
+  assert.doesNotMatch(source, /correctAnswer\s*\|\|/);
   assert.doesNotMatch(source, /rawKeystrokes|raw_keystrokes|keypresses/);
 });
 

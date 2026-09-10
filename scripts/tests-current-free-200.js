@@ -9,7 +9,7 @@ const path = require('path');
 const root = path.resolve(__dirname, '..');
 const catalogPath = path.join(root, 'data/approved-vocabulary-catalog.json');
 const edgePath = path.join(root, 'supabase/functions/game-content/index.ts');
-const EXPECTED_CATALOG_SHA256 = 'f4b340436099aa5baab9ea1dbd7517470a6fd573f4f84c219266cedc995bc4a1';
+const EXPECTED_CATALOG_SHA256 = 'e8d16b678d0af654197ecddff433d5e777dbddf9f50ed9438e4515bdb8bcbf2c';
 const EXPECTED_REVIEW_SET_COUNTS = Object.freeze({
   'pronouns-i-you-he': 5,
   'verbs-225-final-notes': 90,
@@ -20,7 +20,7 @@ const EXPECTED_REVIEW_SET_COUNTS = Object.freeze({
   'checkpoint-verbs-2': 1,
   'months-12': 12
 });
-const RECORD_KEYS = ['contentKey','reviewSet','word','spellingTH','readingTH','roman','zhTW','level','type','category','audioStatus','approvalRefs','syllables'].sort();
+const RECORD_KEYS = ['contentKey','reviewSet','word','spellingTH','readingTH','roman','zhTW','level','type','category','audioStatus','approvalRefs','syllables','spellingSyllables'].sort();
 const SYLLABLE_KEYS = ['roman','lead','consonant','cluster','vowel','writtenFinal','toneMark','toneNumber','toneName','liveDead','consonantReadDifference','finalReadDifference','silent'].sort();
 const TONE_NAMES = Object.freeze({ 1: 'สามัญ', 2: 'เอก', 3: 'โท', 4: 'ตรี', 5: 'จัตวา' });
 const NON_ALIGNED_WRITTEN = new Set([
@@ -72,12 +72,19 @@ catalog.records.forEach((row, index) => {
   assert.ok(row.level === '初' || row.level === '中', label + ': invalid level');
   assert.ok(Array.isArray(row.approvalRefs) && row.approvalRefs.length, label + ': approvalRefs required');
   assert.ok(Array.isArray(row.syllables) && row.syllables.length, label + ': syllables required');
+  assert.ok(Array.isArray(row.spellingSyllables), label + ': spellingSyllables required');
   const written = row.spellingTH.split('-');
   const reading = row.readingTH.split('-');
   const roman = row.roman.split('-');
   assert.strictEqual(written.join(''), row.word, label + ': spellingTH must join to word');
   assert.strictEqual(reading.length, row.syllables.length, label + ': readingTH count mismatch');
   assert.strictEqual(roman.length, row.syllables.length, label + ': roman count mismatch');
+  assert.strictEqual(row.spellingSyllables.length, row.syllables.length, label + ': reviewed display count mismatch');
+  assert.strictEqual(row.spellingSyllables.map((part) => part.th).join(''), row.word, label + ': reviewed display must join to word');
+  row.spellingSyllables.forEach((part, partIndex) => {
+    assert.ok(part && typeof part === 'object' && !Array.isArray(part), label + '.spellingSyllables[' + partIndex + ']: object required');
+    nonEmpty(part.th, label + '.spellingSyllables[' + partIndex + '].th');
+  });
   if (!NON_ALIGNED_WRITTEN.has(row.contentKey)) {
     assert.strictEqual(written.length, row.syllables.length, label + ': spellingTH count mismatch');
   }
@@ -109,7 +116,9 @@ assert.match(edge, /\.eq\('status', 'active'\)/, 'runtime must return active row
 assert.match(edge, /\.in\('access_tier', tier === 'login' \? \['guest', 'login'\] : \['guest'\]\)/,
   'runtime must keep Guest 100 and Login Free additional 100 boundaries');
 assert.doesNotMatch(edge, /access_tier[^\n]*(?:paid|challenge)/i, 'Current Free runtime must not expose Paid or Challenge tiers');
-assert.match(edge, /catalogVersion: r\.catalog_version/, 'runtime must expose the catalog version');
-assert.match(edge, /runtimeSpelling = null/, 'runtime must preserve server-owned spelling derivation');
+assert.match(edge, /select\('catalog:canonical_record'\)/,
+  'runtime must forward only the reviewed canonical record');
+assert.doesNotMatch(edge, /runtimeSpelling|spellingParts|\.map\(toWord\)/,
+  'game-content must not rewrite or derive vocabulary fields');
 
 console.log('CURRENT_FREE_200_DATA_HEALTH_DUPLICATE_RUNTIME_PASS');

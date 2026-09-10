@@ -46,20 +46,6 @@ function setSlotContent(box, v, stateClass){
 // ════════════════════════════════════════════
 // DATA
 // ════════════════════════════════════════════
-var VOWEL_SYMBOL={
-  'อะ':'ะ','อา':'า','ออ':'อ',
-  'เอาะ':'เาะ','เออะ':'เะ',
-  'โอ':'โ','ไอ':'ไ','ใอ':'ใ','โอะ':'โะ',
-  'อุ':'ุ','อู':'ู',
-  'อิ':'ิ','อี':'ี','อื':'ื','อึ':'ึ',
-  'เอะ':'เะ','แอะ':'แะ',
-  'เอ':'เ','แอ':'แ',
-  'เออ':'เอ','เอา':'เา',
-  'เอีย':'เีย','เอือ':'เือ','เอิ':'เิ',
-  'อัว':'ัว','อั':'ั','อำ':'ำ',
-  'แอ็':'แ็','เอ็':'เ็','อ็':'็','็อ':'็'
-};
-
 var CONS_GROUPS=[
   ['ก','ภ','ถ'],['ข','ช','ซ'],['ค','ด','ศ','ต'],['บ','ษ','ป'],
   ['พ','ฟ','ผ','ฝ'],['ม','ห','น','ฆ'],['อ','ย'],['ท'],
@@ -84,20 +70,8 @@ var CP=poolOf(CONS_GROUPS),VP=poolOf(VOWEL_GROUPS),FP=poolOf(FINAL_GROUPS);
 
 // ลำดับ slot ตามการเขียนจริง: ซ้ายไปขวา + ล่างขึ้นบน
 // → 2 กรณีเท่านั้น: สระหน้า (เขียนซ้ายสุดก่อน) vs ทุกสระอื่น (พยัญชนะก่อน แล้วสระ แล้ววรรณยุกต์)
-function getSlotOrder(vowel,final){
-  var sym=VOWEL_SYMBOL[vowel]||vowel;
-  // สระหน้า (เ แ โ ไ ใ): สระ → พยัญชนะ → วรรณยุกต์ → ตัวสะกด
-  if(FRONT_V_SET[sym[0]])return['vowel','cons','tone','final'];
-  // สระบน/ล่าง เกาะพยัญชนะ (ิ ี ึ ื ั ุ ู ็): วรรณยุกต์ซ้อนบนสระ → พยัญชนะ → สระ → วรรณยุกต์ → ตัวสะกด
-  // ยกเว้น "อัว" ที่มีตัวสะกด (เช่น ด้วย/ช่วย) → ั หาย เขียนเป็น ว ลอย วรรณยุกต์กลับไปอยู่บนพยัญชนะ
-  var attached=false;
-  if(!(vowel==='อัว'&&final)){
-    for(var i=0;i<sym.length;i++){ if(isCombining(sym[i])){ attached=true; break; } }
-  }
-  if(attached)return['cons','vowel','tone','final'];
-  // สระขวา/ลอย (า อ ะ ำ): วรรณยุกต์เขียนบนพยัญชนะ จึงมาก่อนสระ → พยัญชนะ → วรรณยุกต์ → สระ → ตัวสะกด
-  return['cons','tone','vowel','final'];
-}
+function getSlotOrder(){ return['cons','vowel','final','tone']; }
+function reviewedPresent(value){return value!==undefined&&value!==null&&value!==''&&value!=='ไม่มี';}
 
 // ════════════════════════════════════════════
 // PHONETIC MAPS
@@ -106,23 +80,6 @@ function getSlotOrder(vowel,final){
 // เหตุผล: Lin จะตรวจ+แก้ฟิลด์ cons/vowel/final ในข้อมูลเองให้ถูกต้องโดยตรงทีละคำ (ผ่าน Current Content source
 // data/words-data.js + data/adv-sentences.js) แทนที่จะให้เกมคอย "แปลงเสียง" ผ่านตารางอีกชั้น —
 // ตอนนี้ 尾音 ในหน้าเฉลยโชว์ค่าที่เก็บในข้อมูลตรงๆ ไม่มีการแปลง/ลูกศรแสดงเสียงอีกต่อไป
-var VOWEL_READ={
-  'อะ':'อะ（短母音）','อา':'อา（長母音）','ออ':'ออ',
-  'เอาะ':'เอาะ','เออะ':'เออะ（短母音）',
-  'โอ':'โอ','ไอ':'ไ','ใอ':'ใ',
-  'โอะ':'โอะ（短母音）',
-  'อุ':'อุ（短母音）','อู':'อู（長母音）',
-  'อิ':'อิ（短母音）','อี':'อี（長母音）',
-  'อื':'อือ（長母音）','อึ':'อึ（短母音）',
-  'เอะ':'เอะ（短母音）','แอะ':'แอะ（短母音）',
-  'เอ':'เอ（長母音）','แอ':'แอ（長母音）',
-  'เออ':'เออ','เอา':'เอา',
-  'เอีย':'เอีย','เอือ':'เอือ','เอิ':'เออ',
-  'อัว':'อัว','อั':'อะ（有尾音）','อำ':'อำ',
-  // ตัวลวงสระลดรูป (มีตัวสะกด) — Lin สั่ง 2026-07-10: ต้องโชว์เป็นสระตัวจริง ไม่ใช่รูปลดรูป
-  'แอ็':'แอะ（有尾音）','เอ็':'เอะ（有尾音）','อ็':'เอาะ（有尾音）','็อ':'เอาะ（有尾音）'
-};
-
 // ════════════════════════════════════════════
 // WORDS  — tone_name: ให้ Lin ตรวจสอบก่อนใช้งานจริง
 // ════════════════════════════════════════════
@@ -138,17 +95,13 @@ WORDS = WORDS.concat(WORDS_HIGH);
 // กล่อง #bonus-section เหลือหน้าที่เดียว: โชว์คำอธิบายเฉลย (renderBonusReason) อัตโนมัติตอนเฉลย
 
 function buildRevealRules(w){
-  // Lin 2026-07-30: เปลี่ยนมาใช้ตัวสร้างแถวเฉลยกลาง buildAnswerRows (data/tone-engine.js) — รูปแบบเดียวกัน 3 เกม
+  // Shared display reads reviewed catalog fields only; it never calculates language answers.
   // (ใช้กับ 初/中 เท่านั้น — 高級 ประโยคโชว์คำแปลรายคำแบบเดิม ไม่ผ่านฟังก์ชันนี้)
   // ลูกศรเสียง (ญ→ย, ติ→ด) มาจากฟิลด์ consRead/finalRead/finalDisp/silent ที่ Lin ตรวจ 100% ในคลังเท่านั้น
   return buildAnswerRows(w).map(function(r){return {tag:r.tag,sp:false,text:r.text};});
 }
 
-// Lin 2026-07-15: TH_ENGINE + computeToneFromSpelling + buildToneReason ย้ายไปรวมเป็นไฟล์เดียว
-// data/tone-engine.js แล้ว (ก่อนหน้านี้ก็อปปี้เหมือนกันเป๊ะอยู่ 3 ที่: tone-finder.html/reading-game.html/
-// typing-game.html — แก้บั๊กอักษรนำ+ตัวการันต์ที่ไฟล์เดียวพอ) โหลดผ่าน <script src="data/tone-engine.js">
-// ด้านบน ได้ตัวแปร/ฟังก์ชันชื่อเดิมเป๊ะ (TH_ENGINE, computeToneFromSpelling, buildToneReason,
-// TONE_CLASS_ZH, TONE_MARK_NAME, TONE_NUM_NAME) ใช้ต่อได้โดยไม่ต้องแก้โค้ดข้างล่างนี้เลย
+// reviewed-vocabulary-display.js owns presentation only. No Thai-language judge is loaded.
 
 // Lin 2026-07-30 (แก้อีกรอบ): ทำหน้าตากล่องเฉลย 初級 ให้เหมือน 中級 เป๊ะๆ
 // (📍 หัวคำ（第X聲）+ แถวเฉลยเปล่าๆ ต่อกัน — ตัดบรรทัด 💡 เหตุผลวรรณยุกต์ทิ้ง เพราะ 中 ไม่มีบรรทัดนี้)
@@ -205,7 +158,12 @@ var roundQueue=[],cur=0,okC=0,badC=0,streak=0,maxStreak=0,roundScore=0,cleanC=0,
 var tgRoundActive=false;
 var roundLog=[]; // {th,zh,wrong,failed,guide,pts,srsDue,mastered} ต่อคำ — เอาไว้ทำรายงาน PDF ท้ายรอบ — Lin 2026-07-07
 var roundReport=null;
-function tgContentKey(w){return w&&w.contentKey?w.contentKey:((w&&w.words&&w.words.length)?w.th:((w&&w.th||'')+'@'+(w&&w.level||curLevel)));}
+function tgContentKey(w){
+  if(w&&w.words&&w.words.length){if(!w.th)throw new Error('CATALOG_AUTHORITY_INCOMPLETE:sentence identity');return w.th;}
+  if(!w||typeof w.contentKey!=='string'||!w.contentKey.trim())throw new Error('CATALOG_AUTHORITY_INCOMPLETE:word contentKey');
+  return w.contentKey;
+}
+function tgRequiredCorrectAnswer(w){if(!w||typeof w.correctAnswer!=='string'||!w.correctAnswer.trim())throw new Error('CATALOG_AUTHORITY_INCOMPLETE:typing report answer');return w.correctAnswer;}
 function tgReviewRef(i){var w=WORDS[i];return {source:(w&&w.words&&w.words.length)?'game_sentences':'game_words',key:tgContentKey(w)};}
 function tgPrimeReview(){try{return window.LearningReview&&LearningReview.prime?LearningReview.prime({game:'typing',level:RG_LEVEL_TO_NUM[curLevel]||1,playSetSize:tgRoundSize()}):Promise.resolve([]);}catch(e){return Promise.resolve([]);}}
 function tgReviewOwns(w){try{return !!(window.LearningReview&&LearningReview.owns(roundReport,{source:(w&&w.words&&w.words.length)?'game_sentences':'game_words',key:tgContentKey(w)}));}catch(e){return false;}}
@@ -219,11 +177,12 @@ function rgLogWord(o){
     var idx=roundQueue[cur];
     var w=WORDS[idx];
     var wordGlosses=(w&&w.words&&w.words.length)?w.words.map(function(part){return {th:part.th||'',zh:part.zh||''};}):null;
-    var submitted=w&&w.th?w.th:'';
-    var base={th:w?w.th:'',contentKey:tgContentKey(w),zh:w?w.zh:'',wordGlosses:wordGlosses,reading:w&&w.readingTH?w.readingTH:'',userAnswer:submitted,correctAnswer:submitted,wrong:wordWrongTotal||0,attempts:submitted?[{answer:submitted,is_correct:true}]:[],failed:false,guide:false,pts:0,srsDue:'',mastered:false};
+    if(!w||!w.th||!w.readingTH)throw new Error('CATALOG_AUTHORITY_INCOMPLETE:typing answer');
+    var submitted=w.th;
+    var base={th:w.th,contentKey:tgContentKey(w),zh:w.zh,wordGlosses:wordGlosses,reading:w.readingTH,userAnswer:submitted,correctAnswer:w.th,wrong:wordWrongTotal||0,attempts:[{answer:submitted,is_correct:true}],failed:false,guide:false,pts:0,srsDue:'',mastered:false};
     for(var k in o){ if(Object.prototype.hasOwnProperty.call(o,k)) base[k]=o[k]; }
     roundLog.push(base);
-    if(roundReport&&window.RoundReport)RoundReport.addItem(roundReport,{content_ref:{source:(w&&w.words&&w.words.length)?'game_sentences':'game_words',key:tgContentKey(w)},question:base.th,meaning:base.zh,attempts:base.attempts,user_answer:base.userAnswer,correct_answer:base.correctAnswer,is_correct:!base.skipped&&!base.failed&&!base.guide&&base.wrong===0,is_skipped:!!base.skipped,skip_reason:base.skipped?'user_skip':null,wrong_count:base.wrong,item_score:base.pts,hint_used:!!base.guide,linguistic:{reading_th:base.reading,syls:w&&w.syls||null,read_syls:w&&w.readSyls||null},words:wordGlosses||[],srs_state:base.srsDue||null,mastered_state:!!base.mastered});
+    if(roundReport&&window.RoundReport)RoundReport.addItem(roundReport,{content_ref:{source:(w&&w.words&&w.words.length)?'game_sentences':'game_words',key:tgContentKey(w)},question:base.th,meaning:base.zh,attempts:base.attempts,user_answer:base.userAnswer,correct_answer:base.correctAnswer,is_correct:!base.skipped&&!base.failed&&!base.guide&&base.wrong===0,is_skipped:!!base.skipped,skip_reason:base.skipped?'user_skip':null,wrong_count:base.wrong,item_score:base.pts,hint_used:!!base.guide,linguistic:{reading_th:base.reading,syls:w&&w.syls||null},words:wordGlosses||[],srs_state:base.srsDue||null,mastered_state:!!base.mastered});
   }catch(e){}
 }
 // 2026-07-13 Lin：ดึงคำที่พลาดในรอบนี้จาก roundLog ไปเก็บลง reading_sessions.wrong_items (ฐานข้อมูลจุดอ่อน)
@@ -263,7 +222,7 @@ var RG_SRS={
 // Lin 2026-07-15: เปลี่ยน key จาก "ลำดับ index ใน WORDS" เป็น "คำ+ระดับ" (rgSrsKey) กันบั๊ก —
 // เดิม key เป็นตำแหน่งเลขในลิสต์ พอ Lin เพิ่ม/ลบคำ ตำแหน่งขยับ ความจำของนักเรียนที่เคยเล่นแล้วจะไปติดผิดคำ
 // ฝั่งเซิร์ฟเวอร์ (tone_srs_state, tone-round) เก็บด้วย "คำ+ระดับ" อยู่แล้วเป็นความจริงหลัก — อันนี้แค่ทำให้ local ตรงกัน
-function rgSrsKey(w){ var k=w&&w.contentKey||'';return k.indexOf('#')>=0?k:((w&&w.th||'')+'@'+(RG_LEVEL_TO_NUM[w&&w.level]||0)); }
+function rgSrsKey(w){return tgContentKey(w);}
 var srsRecords={}; // key = rgSrsKey(word) → SRS record
 function rgSrsGet(key){return srsRecords[key]||null;}
 function rgSrsSet(key,rec){srsRecords[key]=rec;}
@@ -273,18 +232,12 @@ var SAVE_KEY='rgv3_save';
 var rememberStep=0,rememberTimer=null,curWordIsKnownCheck=false; // curWordIsKnownCheck: ด่านพิสูจน์ 已記得 (ไม่มีคำใบ้ ไม่ได้แต้ม/ดาว)
 var wordUsedGuide=false; // งาน 9: เปิดคำใบ้ระหว่างคำนี้ไหม (ถ้าใช่ = 0 คะแนน + ไม่นับ SRS/ดาว)
 var wordWrongTotal=0; // นับผิดสะสม "ทั้งคำ/ประโยค" (ไม่แยกพยางค์) ใช้กับ rgWrongScore()
-// ── ปุ่มครับ/ค่ะ/คะ ท้ายประโยค高級 (Lin 2026-08-01) — เกมพิมพ์ "ให้พิมพ์ได้จริง" (ต่างจากเกมอ่านที่ไม่โชว์เลย) แต่ "ไม่นับคะแนนถ้าผิด"
-//   วิธีทำ: ต่อพยางค์ synthetic เข้า sylList จริง (พิมพ์ได้ มีกล่องเฉลย子音/母音/尾音เหมือนพยางค์อื่น) แต่ isParticle:true กันไว้ไม่ให้กระทบ wordWrongTotal/sylCount ที่ใช้คิดคะแนน
-var TG_PARTICLE_SYLS={
-  'ครับ':{th:'ครับ',read:'ครับ',cons:'ค',cluster:'ร',vowel:'อะ',final:'บ',tone_name:'ตรี',en:'kráp',isParticle:true},
-  'ค่ะ':{th:'ค่ะ',read:'ค่ะ',cons:'ค',vowel:'อะ',tone:'่',tone_name:'เอก',en:'khà',isParticle:true},
-  'คะ':{th:'คะ',read:'คะ',cons:'ค',vowel:'อะ',tone_name:'ตรี',en:'khá',isParticle:true}
-};
+// คำลงท้ายสุภาพเป็นข้อความประกอบประโยคเท่านั้น จนกว่าคลังกลางจะส่งระเบียนที่ Lin
+// ตรวจแล้วมาให้โดยตรง ห้ามสร้างพยางค์หรือคำตอบภาษาไว้ในเกม
 var tgParticleMode=(function(){try{return localStorage.getItem('games_particle_mode')||'off';}catch(e){return 'off';}})();
 function tgShowParticleFor(w){
   if(!w) return null;
-  if(tgParticleMode==='m') return 'ครับ';
-  if(tgParticleMode==='f') return w.politeF||'ครับ'; // ไม่มี politeF (ประโยคขึ้นด้วยผม) → บังคับครับต่อ เหมือนเกมเสียง/เกมอ่าน
+  if(tgParticleMode==='f' && w.politeF) return w.politeF;
   return null;
 }
 // จำนวนพยางค์ที่ใช้คิดโควต้า/คะแนนจริง — ไม่นับพยางค์ครับ/ค่ะ/คะ synthetic ที่ต่อท้าย (ถ้ามี) เพราะไม่เกี่ยวกับคะแนนเลย
@@ -395,7 +348,11 @@ function tgSyncSrsFromServer(force){
       if(res.error||!res.data){ window.__tgSrsSyncedOnce=true; return false; }
       var changed=false;
       res.data.forEach(function(row){
-        var key=String(row.word||'').indexOf('#')>=0?String(row.word):(row.word||'')+'@'+(row.level||0);
+        var key=String(row.word||'');
+        var exact=WORDS.some(function(item){
+          return tgContentKey(item)===key && (RG_LEVEL_TO_NUM[item.level]||0)===Number(row.level);
+        });
+        if(!exact)return;
         var srv={stage:row.stage||0,dueDate:row.due_date||'',dueAt:0,everFailed:!!row.ever_failed,mastered:!!row.mastered};
         var cur=srsRecords[key];
         var win=tgSrsPickAdvanced(cur,srv);
@@ -453,9 +410,6 @@ function buildOpts(ans,groups,pool2,count,exclude){
 }
 
 function dispOpt(comp,x){
-  if(comp==='cons'){if(W.lead)return W.lead+x;if(W.cluster)return x+W.cluster;return x;}
-  if(comp==='tone')return x;
-  if(comp==='vowel')return VOWEL_SYMBOL[x]||x;
   return x;
 }
 
@@ -503,7 +457,7 @@ function initGame(){
     var _m=location.search.match(/[?&]word=([^&]+)/);
     if(_m){
       var _wanted=decodeURIComponent(_m[1]);
-      for(var _wi=0;_wi<WORDS.length;_wi++){ if(WORDS[_wi].th===_wanted){ _wq=[_wi]; break; } }
+      for(var _wi=0;_wi<WORDS.length;_wi++){ if(WORDS[_wi].contentKey===_wanted){ _wq=[_wi]; break; } }
     }
   }catch(e){}
   var _reviewAllIdx=[],_reviewSelected=[],_reviewSrsOwned=[];
@@ -574,12 +528,10 @@ function initGame(){
 
 // แตกคำเป็นอาเรย์พยางค์ (พยางค์เดียว = อาเรย์ 1 ตัว)
 function buildSyls(w){
-  // เพิ่ม en (คำอ่าน/拼音) ต่อพยางค์ด้วย — เอาไว้โชว์ตรงจุดเลือกวรรณยุกต์ (bonus-reading) — Lin 2026-07-07
-  // พยางค์เดียวไม่มี en ของตัวเอง → ใช้ en ของทั้งคำ (w.en) แทน
-  // Lin 2026-07-12: เพิ่ม read = คำอ่านของพยางค์ (จาก readingTH ตัดด้วย -) ให้ช่อง讀音โชว์ "คำอ่าน" ไม่ใช่ "ตัวเขียน" (แก้บั๊ก สนามบิน โชว์ นาม แทน สะ-หนาม-บิน)
-  var _reads=(w.readingTH?String(w.readingTH).split('-'):[]);
-  if(w.syls&&w.syls.length)return w.syls.map(function(s,i){return {th:s.th,read:((_reads.length===w.syls.length&&_reads[i])?_reads[i]:s.th),cons:s.cons,vowel:s.vowel,tone:s.tone,final:s.final,lead:s.lead,cluster:s.cluster,tone_name:s.tone_name,en:s.en||w.en,consRead:s.consRead,finalRead:s.finalRead,finalDisp:s.finalDisp,silent:s.silent};}); // 2026-07-30: พ่วงฟิลด์เฉลยเสียง (ตัวประกอบต้อง copy ทุกฟิลด์ที่เกมใช้)
-  return [{th:w.th,read:(w.readingTH||w.th),cons:w.cons,vowel:w.vowel,tone:w.tone,final:w.final,lead:w.lead,cluster:w.cluster,tone_name:w.tone_name,en:w.en,consRead:w.consRead,finalRead:w.finalRead,finalDisp:w.finalDisp,silent:w.silent}];
+  if(!w||!w.readingTH||!w.syls||!w.syls.length)throw new Error('CATALOG_AUTHORITY_INCOMPLETE:typing syllables');
+  var _reads=String(w.readingTH).split('-');
+  if(_reads.length!==w.syls.length||_reads.some(function(x){return !x;}))throw new Error('CATALOG_AUTHORITY_INCOMPLETE:typing segmentation');
+  return w.syls.map(function(s,i){return {th:s.th,read:_reads[i],cons:s.cons,vowel:s.vowel,tone:s.tone,final:s.final,lead:s.lead,cluster:s.cluster,tone_name:s.tone_name,en:s.en,consRead:s.consRead,finalRead:s.finalRead,finalDisp:s.finalDisp,silent:s.silent,catalog:s.catalog};});
 }
 // แถบบอกพยางค์ (โชว์เฉพาะคำหลายพยางค์)
 function renderSylStrip(){
@@ -617,7 +569,7 @@ function setRgPronMode(on){
     btn.setAttribute('aria-label',btn.title);
   }
   if(typeof WORD!=='undefined' && WORD){
-    var _rpTxt=checked?(typeof buildThaiPron==='function'?buildThaiPron():(WORD.readingTH||WORD.th||'')):((WORD.th)?(WORD.readingTH||WORD.th):'');
+    var _rpTxt=checked?buildThaiPron():(WORD.readingTH||'');
     document.getElementById('rev-pron').textContent=(rgPronMode&&_rpTxt)?_rpTxt:''; // ใช้ readingTH เสมอ ห้ามใช้ syls[].th
   }
 }
@@ -656,16 +608,14 @@ function loadWord(){
   if(rb){rb.textContent='跳過';rb.style.cssText='';rb.style.display='';}
   WORD=WORDS[roundQueue[cur]];
   sylList=buildSyls(WORD);
-  // Lin 2026-08-01: ต่อพยางค์ครับ/ค่ะ/คะ synthetic เข้า sylList จริง ถ้าเป็นประโยค高級 + เปิดปุ่มไว้ — พิมพ์ได้จริงแต่ไม่นับคะแนน (ดู isParticle ใน tgScoreSylCount/wordWrongTotal guard)
   var _tgParticle=(WORD.level==='高')?tgShowParticleFor(WORD):null;
-  if(_tgParticle && TG_PARTICLE_SYLS[_tgParticle]) sylList=sylList.concat([TG_PARTICLE_SYLS[_tgParticle]]);
   sylIdx=0;wordHadWrong=false;wordFailed=false;wrongCount=0;wordWrongTotal=0;wordUsedGuide=false;sylCache=[]; // sylCache: เก็บ state แต่ละพยางค์ ให้เลือกพยางค์ไหนก่อนก็ได้ (คำใหม่ = ล้าง)
   wordGolden=Math.random()<GOLDEN_WORD_CHANCE; // สุ่มคำทองใหม่ทุกคำ (Lin 2026-07-03)
-  document.getElementById('wth').textContent=WORD.th+(_tgParticle||''); // ต้องตรงกับ sylList จริง (รวมครับ/ค่ะ/คะ ถ้ามี) — ไม่งั้นข้อความเห็นกับสิ่งที่ต้องพิมพ์ไม่ตรงกัน
+  document.getElementById('wth').textContent=WORD.th; // แบบฝึกใช้เฉพาะข้อมูลประโยคที่คลังกลางส่งมา
   document.getElementById('wzh').textContent=WORD.zh;
   tgSyncParticleBtn();
   rgRenderEnLine(); // Lin 2026-07-25: คำอ่านโรมันของคำใหม่ (ถ้าเปิด 英文讀音 อยู่)
-  document.getElementById('rev-pron').textContent=(rgPronMode&&WORD.th)?((WORD.readingTH||WORD.th)):''; // Lin 2026-07-16: โชว์คำอ่านตั้งแต่คำใหม่โหลดถ้าปุ่ม🐣เปิดอยู่ (แทนการล้างทิ้งเฉยๆ เดิม — ยังกันบั๊กคำอ่านค้างจากคำก่อน เพราะเซ็ตค่าใหม่ทุกคำ) · ใช้ readingTH เสมอ ห้ามใช้ syls[].th
+  document.getElementById('rev-pron').textContent=(rgPronMode&&WORD.readingTH)?WORD.readingTH:'';
   var _gb=document.getElementById('word-golden-badge');
   if(_gb)_gb.style.display=wordGolden?'':'none';
   // บอกระบบเสียงว่าคำปัจจุบันคือคำไหน — ปุ่ม 🔊 กด 1 ที = เล่นเสียงคำนี้ 1 ที (2026-07-16)
@@ -675,7 +625,7 @@ function loadWord(){
   if(vslot && window.WordVault){
     WordVault.injectStyles();
     vslot.innerHTML='';
-    vslot.appendChild(WordVault.createSaveBtn(WORD.th,{zh:WORD.zh,en:WORD.en,source:'typing-game'},{
+    vslot.appendChild(WordVault.createSaveBtn(WORD.th,{zh:WORD.zh,en:WORD.en,contentKey:WORD.words&&WORD.words.length?undefined:tgContentKey(WORD),source:'typing-game'},{
       onSave: function(){ try{ gtag('event','typing_game_vault_save',{category:'game', word: WORD.th}); }catch(e){} },
       onRemove: function(){ try{ gtag('event','typing_game_vault_remove',{category:'game', word: WORD.th}); }catch(e){} }
     }));
@@ -689,11 +639,11 @@ function loadWord(){
 function loadSyl(){
   updateSyllableCounter();
   var SY=sylList[sylIdx];
-  W={th:SY.th,read:SY.read,zh:WORD.zh,en:SY.en||WORD.en,cons:SY.cons,vowel:SY.vowel,tone:SY.tone,final:SY.final,lead:SY.lead,cluster:SY.cluster,tone_name:SY.tone_name,consRead:SY.consRead,finalRead:SY.finalRead,finalDisp:SY.finalDisp,silent:SY.silent}; // 2026-07-30: พ่วงฟิลด์เฉลยเสียง
+  W={th:SY.th,read:SY.read,zh:WORD.zh,en:SY.en,cons:SY.cons,vowel:SY.vowel,tone:SY.tone,final:SY.final,lead:SY.lead,cluster:SY.cluster,tone_name:SY.tone_name,consRead:SY.consRead,finalRead:SY.finalRead,finalDisp:SY.finalDisp,silent:SY.silent}; // คัดลอกเฉลยที่ตรวจแล้วเท่านั้น
   checked=false;picks=[]; // wrongCount ย้ายไปนับระดับ "ทั้งคำ" แล้ว (reset ที่ loadWord)
   comps=['cons','vowel'];
-  if(W.final)comps.push('final');
-  if(W.tone) comps.push('tone');
+  if(reviewedPresent(W.final))comps.push('final');
+  if(reviewedPresent(W.tone)) comps.push('tone');
   slotFills={cons:null,vowel:null,final:null,tone:null};
 
   var n=comps.length,oc={};
@@ -735,7 +685,7 @@ function loadSyl(){
   optTiles=[];correctVal={};
   comps.forEach(function(comp){
     var ans,groups,pool2,ex=null;
-    if     (comp==='cons' ){ans=W.cons;  groups=CONS_GROUPS;  pool2=CP; ex=W.lead||null;}
+    if     (comp==='cons' ){ans=W.cons;  groups=CONS_GROUPS;  pool2=CP; ex=reviewedPresent(W.lead)?W.lead:null;}
     else if(comp==='vowel'){ans=W.vowel; groups=VOWEL_GROUPS; pool2=VP;}
     else if(comp==='final'){ans=W.final; groups=FINAL_GROUPS; pool2=FP;}
     else                   {ans=W.tone;  groups=[TONE_POOL];  pool2=TONE_POOL;}
@@ -881,7 +831,7 @@ function finalizeWord(){
       // Phase 4: บอกเซิร์ฟเวอร์ด้วย (已記得 = พิสูจน์ครั้งเดียว → mastered แต่ไม่ให้ดาว)
       try{
         if(window.TONE_SERVER && TONE_SERVER.available())
-          TONE_SERVER.finishRound({ game:'typing', word:WORD.th, contentKey:WORD.contentKey, level:RG_LEVEL_TO_NUM[curLevel]||1, clean:passedClean, knownCheck:true });
+          TONE_SERVER.finishRound({ game:'typing', word:WORD.th, contentKey:tgContentKey(WORD), level:RG_LEVEL_TO_NUM[curLevel]||1, clean:passedClean, knownCheck:true });
       }catch(e){}
     }
     curWordIsKnownCheck=false;
@@ -928,7 +878,7 @@ function finalizeWord(){
   //   คู่ขนาน ไม่รื้อ local · เน็ตล่ม/ไม่ล็อกอิน = เกมทำงานเหมือนเดิมทุกอย่าง
   try{
     if(loggedIn && window.TONE_SERVER && TONE_SERVER.available()){
-      TONE_SERVER.finishRound({ game:'typing', word:WORD.th, contentKey:WORD.contentKey, level:RG_LEVEL_TO_NUM[curLevel]||1, clean:clean }).then(function(r){
+      TONE_SERVER.finishRound({ game:'typing', word:WORD.th, contentKey:tgContentKey(WORD), level:RG_LEVEL_TO_NUM[curLevel]||1, clean:clean }).then(function(r){
         if(r&&r.ok&&r.justMastered&&r.stars>0&&window.console) console.log('[P4] ⭐ server',r.stars,'→ total',r.totalStars);
         else if(r&&!r.ok&&window.console) console.log('[P4] server not-ok:',r.reason);
       });
@@ -1050,7 +1000,7 @@ function check(){
 var TONE_ZH={'สามัญ':'第一聲','เอก':'第二聲','โท':'第三聲','ตรี':'第四聲','จัตวา':'第五聲'};
 
 function evaluateBonus(){
-  if(!W.tone_name)return; // ไม่มีข้อมูลเสียง → ใช้แผงเฉลยแยก (#reveal) ตามเดิมใน showReveal()
+  if(!W||!W.tone_name)throw new Error('CATALOG_AUTHORITY_INCOMPLETE:typing tone display');
   var sec=document.getElementById('bonus-section');
   if(sec)sec.className='bonus-section show';
   renderBonusReason(W);
@@ -1059,7 +1009,7 @@ function evaluateBonus(){
 // ════════════════════════════════════════════
 // Shared Game UI Phase D2 (2026-08-10): กล่องคำอธิบายเฉลย (子音/母音/尾音 + เหตุผลเสียงวรรณยุกต์)
 // เปลี่ยนจาก "โชว์อัตโนมัติตอนเฉลย" → opt-in (ผู้เล่นกด [ 查看詳細解說 ] เอง)
-// ⚠️ ไม่แตะเนื้อหาที่ evaluateBonus()/renderBonusReason()/showReveal()/showRevealMulti() คำนวณเลยแม้แต่นิดเดียว
+// เนื้อหาใน evaluateBonus()/renderBonusReason()/showReveal()/showRevealMulti() คัดลอกเฉลยจากคลังกลางเท่านั้น
 // แค่ห่อ #bonus-section + #reveal ด้วย #tg-detail-box ที่ปิดอยู่ก่อนเสมอ ปุ่มโผล่เองเฉพาะรอบที่มีเนื้อหาจริง
 // ════════════════════════════════════════════
 function tgHasDetailContent(){
@@ -1067,7 +1017,7 @@ function tgHasDetailContent(){
   var rr=document.getElementById('reveal-rules');
   return !!((br && br.innerHTML && br.innerHTML.trim()!=='') || (rr && rr.innerHTML && rr.innerHTML.trim()!==''));
 }
-// เรียกตอน "เนื้อหาเฉลยเพิ่งถูกคำนวณเสร็จ" (ท้าย showReveal()/showRevealMulti() เท่านั้น) — โผล่ปุ่มถ้ามีของจริงให้ดู
+// เรียกตอนคัดลอกเนื้อหาเฉลยเสร็จ (ท้าย showReveal()/showRevealMulti() เท่านั้น) — โผล่ปุ่มถ้ามีของจริงให้ดู
 function tgSyncDetailToggle(){
   var btn=document.getElementById('tg-detail-toggle');
   if(!btn)return;
@@ -1168,7 +1118,7 @@ function endRound(){
   try{
     if(window.READING_AUTH && READING_AUTH.saveScore) submissionId=READING_AUTH.saveScore(weightedScore,1,'typing',rgWrongItemsFromLog(),{
       difficulty:curLevel,
-      items:roundLog.map(function(w){return {key:w.contentKey||w.th,contentRef:{source:curLevel==='高'?'game_sentences':'game_words',key:w.contentKey||w.th},points:Number(w.pts)||0,wrong:Number(w.wrong)||0,guide:!!w.guide,failed:!!w.failed,mastered:!!w.mastered};}),
+      items:roundLog.map(function(w){if(!w.contentKey)throw new Error('CATALOG_AUTHORITY_INCOMPLETE:report contentKey');return {key:w.contentKey,contentRef:{source:curLevel==='高'?'game_sentences':'game_words',key:w.contentKey},points:Number(w.pts)||0,wrong:Number(w.wrong)||0,guide:!!w.guide,failed:!!w.failed,mastered:!!w.mastered};}),
       roundBonus:roundBonus,srsBonus:0
     });
   }catch(e){} // S29: คะแนน Core 5 ผ่าน score-submit เท่านั้น
@@ -1232,7 +1182,7 @@ function tgRenderMistakes(){
     var b1=document.createElement('b'); b1.textContent=w.zh||''; r1.appendChild(b1);
     item.appendChild(r1);
     var rAnswer=document.createElement('div');rAnswer.className='gsh-mistake-row';rAnswer.appendChild(document.createTextNode('你的作答：'));var bAnswer=document.createElement('b');bAnswer.textContent=w.userAnswer||'（未保留逐次答案）';rAnswer.appendChild(bAnswer);item.appendChild(rAnswer);
-    var rCorrect=document.createElement('div');rCorrect.className='gsh-mistake-row';rCorrect.appendChild(document.createTextNode('正確答案：'));var bCorrect=document.createElement('b');bCorrect.textContent=w.correctAnswer||w.reading||w.th||'';rCorrect.appendChild(bCorrect);item.appendChild(rCorrect);
+    var rCorrect=document.createElement('div');rCorrect.className='gsh-mistake-row';rCorrect.appendChild(document.createTextNode('正確答案：'));var bCorrect=document.createElement('b');bCorrect.textContent=tgRequiredCorrectAnswer(w);rCorrect.appendChild(bCorrect);item.appendChild(rCorrect);
     var r2=document.createElement('div'); r2.className='gsh-mistake-row';
     r2.appendChild(document.createTextNode('打錯次數：'));
     var b2=document.createElement('b'); b2.textContent=String(w.wrong||0); r2.appendChild(b2);
@@ -1268,14 +1218,20 @@ function restart(){
 // ระดับความละเอียดที่ทำได้: "ชุดคำเดิม + ตำแหน่งเดิม พร้อมพิมพ์พยางค์ใหม่" เท่านั้น — ไม่กู้คืนตัวที่พิมพ์ค้างกลางคำ/สถานะ IME
 // เพราะระบบคีย์บอร์ด/IME ของเกมนี้ละเอียดอ่อนมาก (ดูคอมเมนต์ยาวเรื่อง iOS compose ในไฟล์นี้) เสี่ยงเกินไปถ้าจะพยายามกู้ระดับนั้น
 // ════════════════════════════════════════════
-function tgResumeWordId(w){return w&&(w.contentKey||w.th)||null;}
+function tgResumeWordId(w){return w&&w.words&&w.words.length?w.th:tgContentKey(w);}
 function tgResumeWordIndex(id,level){
+  if(typeof id!=='string'||!id||id.trim()!==id)return null;
   var matches=[];
   for(var i=0;i<WORDS.length;i++){
-    if(WORDS[i].contentKey===id)return i;
-    if(WORDS[i].th===id&&WORDS[i].level===level)matches.push(i);
+    if(WORDS[i].contentKey===id&&WORDS[i].level===level)return i;
+    if(WORDS[i].words&&WORDS[i].words.length&&WORDS[i].th===id&&WORDS[i].level===level)matches.push(i);
   }
   return matches.length===1?matches[0]:null;
+}
+function tgResolveResumeWordIds(ids,level){
+  if(!Array.isArray(ids)||!ids.length)return null;
+  var resolved=ids.map(function(id){return tgResumeWordIndex(id,level);});
+  return resolved.some(function(idx){return idx==null;})?null:resolved;
 }
 function tgSaveResume(){
   try{
@@ -1309,16 +1265,16 @@ function tgResumeContinue(){
     var banner=document.getElementById('tg-resume-banner');
     if(banner)banner.style.display='none';
     if(!saved||!saved.wordIds||!saved.wordIds.length)return;
-    // หา index ปัจจุบันของแต่ละคำจาก th (ข้อมูลอาจเปลี่ยนไปตั้งแต่ครั้งก่อน — ข้ามคำที่หาไม่เจอ)
-    var q=saved.wordIds.map(function(id){return tgResumeWordIndex(id,saved.level);}).filter(function(v){return v!=null;});
-    if(!q.length){ tgResumeRestart(); return; } // หาไม่เจอสักคำเลย (ข้อมูลเปลี่ยนไปมาก) → เริ่มรอบใหม่แทน ปลอดภัยกว่าเดา
+    // กู้ได้ต่อเมื่อทุกตัวตนยังตรงกับข้อมูลปัจจุบันทั้งรอบ ห้ามข้ามคำหายหรือซ่อมคิวบางส่วน
+    var q=tgResolveResumeWordIds(saved.wordIds,saved.level);
+    if(!q){ tgResumeRestart(); return; }
     try{ if(typeof gtag==='function') gtag('event','typing_game_resume_continue',{category:'game', level: saved.level}); }catch(e){}
     curLevel=saved.level||curLevel;
     try{localStorage.setItem('tg_level',curLevel);}catch(e){}
     document.querySelectorAll('.ltab').forEach(function(b){b.classList.remove('active');});
     var lt=document.getElementById('ltab-'+curLevel); if(lt)lt.classList.add('active');
     roundQueue=q;roundTotal=q.length;
-    cur=Math.min(saved.cur||0,q.length-1); // กันกรณีบางคำหาไม่เจอ ตำแหน่งเลื่อนขึ้นเล็กน้อย
+    cur=Math.min(saved.cur||0,q.length-1);
     okC=saved.okC||0;badC=saved.badC||0;streak=saved.streak||0;maxStreak=saved.maxStreak||0;
     roundScore=saved.roundScore||0;cleanC=saved.cleanC||0;roundHadGuide=!!saved.roundHadGuide;
     roundLog=Array.isArray(saved.roundLog)?saved.roundLog:[];
@@ -1336,8 +1292,8 @@ function tgResumeContinue(){
 function tgResumeRestartSame(){
   var saved=window.__tgResumeData;
   if(!saved){tgResumeNewRound();return;}
-  var q=(saved.wordIds||[]).map(function(id){return tgResumeWordIndex(id,saved.level);}).filter(function(v){return v!=null;});
-  if(!q.length){tgResumeNewRound();return;}
+  var q=tgResolveResumeWordIds(saved.wordIds,saved.level);
+  if(!q){tgResumeNewRound();return;}
   var banner=document.getElementById('tg-resume-banner');if(banner)banner.style.display='none';
   curLevel=saved.level||curLevel;roundQueue=q;roundTotal=q.length;cur=0;okC=0;badC=0;streak=0;maxStreak=0;roundScore=0;cleanC=0;roundHadGuide=false;roundLog=[];roundReport=window.RoundReport?RoundReport.create({game_type:'typing',difficulty:curLevel,mode:'thai-keyboard'}):null;window.__tgResumeData=null;
   tgPrimeReview().then(tgRegisterRestoredReview);
@@ -1387,7 +1343,7 @@ function rgDownloadReport(){
   var rows=tgReportRows().map(function(w,i){
     return '<tr>'
       +'<td style="padding:7px 6px;font-size:12px;color:#888;text-align:center;">'+(i+1)+'</td>'
-      +'<td style="padding:7px 6px;font-size:15px;font-weight:700;word-break:keep-all;overflow-wrap:break-word;">'+esc(w.th)+'<div style="font-size:10px;font-weight:400;color:#777;">作答：'+esc(w.userAnswer||'（未保留）')+'<br>正解：'+esc(w.correctAnswer||w.th)+'</div>'+wordBreakdown(w)+'</td>'
+      +'<td style="padding:7px 6px;font-size:15px;font-weight:700;word-break:keep-all;overflow-wrap:break-word;">'+esc(w.th)+'<div style="font-size:10px;font-weight:400;color:#777;">作答：'+esc(w.userAnswer||'（未保留）')+'<br>正解：'+esc(tgRequiredCorrectAnswer(w))+'</div>'+wordBreakdown(w)+'</td>'
       +'<td style="padding:7px 6px;font-size:12px;color:#666;">'+esc(w.zh)+'</td>'
       +'<td style="padding:7px 6px;font-size:12px;text-align:center;">'+statusLabel(w)+'</td>'
       +'<td style="padding:7px 6px;font-size:12px;text-align:center;">'+(w.wrong||0)+'</td>'
@@ -1482,9 +1438,8 @@ function markOpts(){
 
 // Lin 2026-07-10: เปลี่ยนคำอ่านจากอังกฤษ (náam) เป็นสะกดไทยจริง — คำหลายพยางค์ (มี WORD.syls) ต่อเป็น "ผม-กิน-ข้าว" ให้เห็นจุดแบ่งพยางค์
 function buildThaiPron(){
-  if(WORD&&WORD.readingTH)return WORD.readingTH; // Lin 2026-07-12: คำอ่านจริง (สะ-หนาม-บิน) ไม่ใช่ตัวเขียน
-  if(WORD&&WORD.th)return WORD.th; // Lin 2026-07-16: ปุ่ม/กล่องคำอ่านต้องใช้ readingTH เสมอ (fallback=ตัวคำเอง) ห้ามใช้ syls[].th ต่อกัน
-  return W?(W.read||W.th):'';
+  if(!WORD||!WORD.readingTH)throw new Error('CATALOG_AUTHORITY_INCOMPLETE:readingTH');
+  return WORD.readingTH;
 }
 function showReveal(){
   var _pron=buildThaiPron();
@@ -1550,8 +1505,7 @@ function showRevealMulti(){
     }
     _finishInBox();return;
   }
-  // 2026-07-30: เฉลยแบ่งตาม "พยางค์อ่าน" — คำที่มี readSyls (เช่น เอกสาร = เอก/กะ/สาร) ใช้ readSyls แทน sylList
-  var ansList=(WORD&&WORD.readSyls&&WORD.readSyls.length)?WORD.readSyls:sylList;
+  var ansList=sylList;
   ansList.forEach(function(SY,i){
     var head=document.createElement('div');
     head.className='rule-row';
@@ -2252,7 +2206,7 @@ function rgContFinish(){
   sylIdx=sylList.length-1;
   updateSyllableCounter();
   var SY=sylList[sylIdx];
-  W={th:SY.th,read:SY.read,zh:WORD.zh,en:SY.en||WORD.en,cons:SY.cons,vowel:SY.vowel,tone:SY.tone,final:SY.final,lead:SY.lead,cluster:SY.cluster,tone_name:SY.tone_name,consRead:SY.consRead,finalRead:SY.finalRead,finalDisp:SY.finalDisp,silent:SY.silent}; // 2026-07-30: พ่วงฟิลด์เฉลยเสียง
+  W={th:SY.th,read:SY.read,zh:WORD.zh,en:SY.en,cons:SY.cons,vowel:SY.vowel,tone:SY.tone,final:SY.final,lead:SY.lead,cluster:SY.cluster,tone_name:SY.tone_name,consRead:SY.consRead,finalRead:SY.finalRead,finalDisp:SY.finalDisp,silent:SY.silent}; // คัดลอกเฉลยที่ตรวจแล้วเท่านั้น
   var sec=document.getElementById('bonus-section');
   if(sec)sec.className='bonus-section'; // ซ่อนแผงถามวรรณยุกต์ ก่อนโชว์การ์ดเฉลยท้ายคำ
   rgHideTypePanelForReveal(); // Lin 2026-07-12: คำจบแล้ว ซ่อนแป้นพิมพ์+คำใบ้ที่ค้างอยู่ (บั๊กเดิม: หัวข้อ "選一下...的聲調" ค้างโชว์ทับกล่องอธิบายจนดูเหมือนไม่มีคำอธิบาย/หน้าว่างยาว)

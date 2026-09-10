@@ -173,7 +173,7 @@ function sourceLabel(s){
 }
 // ปุ่มเลือกว่าจะเอาคำนี้ไปฝึกในเกมไหน (แทนที่ป้าย "ที่มา" เดิม) — Lin 2026-07-02
 function practiceBtnsHtml(th){
-  var q='?word='+encodeURIComponent(th);
+  var q='';
   return '<div class="vault-practice-btns">'+
     '<a class="vault-practice-btn" href="reading-game.html'+q+'">✍️ 拼讀練習室</a>'+
     /* Lin 2026-07-25: ถอดปุ่ม 🎵 聲調練習室 ออก — เกมเสียงปิดโหมด 自行搜尋 แล้ว ลิงก์ ?word= ใช้ไม่ได้ (กันปุ่มพัง) */

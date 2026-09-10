@@ -4,7 +4,7 @@
  * scripts/tests-game-behavioral.js — Lin P3 (2026-08-07)
  * ────────────────────────────────────────────────────────────
  * ตรวจ "พฤติกรรมเกม" แบบ static (อ่านโค้ด ไม่ยิงเน็ตจริง) — คนละเรื่องกับ
- * data/tools/tests-tone-engine.js / data/tools/tests-check-data-health.js ที่ตรวจ "ข้อมูล" (คำ/ประโยค/วรรณยุกต์)
+ * catalog checks inspect reviewed data; runtime language calculators are forbidden.
  *
  * ตรวจ 3 กลุ่ม:
  *   A) เกม Free ทั้ง 5 หน้า (reading-game/tone-finder/typing-game/word-order/listening-game)
