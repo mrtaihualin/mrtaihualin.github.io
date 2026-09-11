@@ -81,10 +81,15 @@ ok(runGateAt('', '/leaderboard.html').parked === false, 'per-game boards are act
 ok(runGateAt('', '/games-challenge.html').parked === true, 'Paid Challenge remains parked');
 
 var config = read('js/core/supabase-config.js');
-ok(config.indexOf("runtimeMode: 'minimum-guest'") !== -1, 'one reversible runtime mode is canonical');
+ok(config.indexOf("runtimeMode: 'login-free'") !== -1, 'Login Free is the active reversible runtime mode');
 ok(config.indexOf('getAnonymousSupabaseClient') !== -1 && config.indexOf('persistSession: false') !== -1 &&
   config.indexOf('autoRefreshToken: false') !== -1 && config.indexOf('detectSessionInUrl: false') !== -1,
   'isolated anonymous Supabase client cannot inherit browser auth');
+var configWindow = {};
+vm.runInNewContext(config, { window: configWindow });
+ok(configWindow.isMinimumGuestOnly() === false, 'active runtime does not force authenticated sessions into Guest content');
+configWindow.SUPABASE_CONFIG.runtimeMode = 'minimum-guest';
+ok(configWindow.isMinimumGuestOnly() === true, 'Minimum Guest rollback remains one explicit mode change');
 
 var coreFive = ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html'];
 var accountBundles = ['game-account.js','phase1-canonical-state.js','learning-summary.js','practice-events.js'];
@@ -119,7 +124,8 @@ ok(read('reading-game.html').indexOf('reading-auth.js') !== -1,
   'Reading remains the direct provider-flow owner while other pages reuse it through the shared Login controller');
 
 var contentClient = read('js/games/game-content-client.js');
-ok(contentClient.indexOf('minimumGuest ? cfg.anonKey') !== -1, 'protected game content ignores stored Login token');
+ok(contentClient.indexOf('minimumGuest ? cfg.anonKey') !== -1 && contentClient.indexOf('readAccessTokenGuess(cfg.url) || cfg.anonKey') !== -1,
+  'protected game content keeps separate Guest and Login Free token paths');
 ok(!/登入解鎖|rg-login-btn|openLogin/.test(contentClient), 'content cap exposes no Login CTA');
 
 var audioClient = read('js/games/protected-word-audio.js');

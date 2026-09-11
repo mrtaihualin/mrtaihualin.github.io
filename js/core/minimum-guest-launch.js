@@ -1,6 +1,6 @@
-// Minimum Guest Launch (PD-MGL-01).
-// This reversible client gate keeps the existing account/SRS/personal systems
-// intact while the public launch exposes only the six Guest game loops.
+// Phase 1 launch compatibility shell (originally PD-MGL-01).
+// Login, SRS and account flags below are active; the Guest/Login content split is
+// controlled separately by SUPABASE_CONFIG.runtimeMode. Paid and Challenge stay parked.
 (function (window, document) {
   'use strict';
 
@@ -27,6 +27,7 @@
   window.LOGIN_FREE_REVIEW_PUBLIC_ENTRY = true;
   window.LOGIN_FREE_ACCOUNT_PUBLIC_ENTRY = true;
   if (window.LOGIN_CORE_PUBLIC_ENTRY !== true) clearAuthCallbackFragment();
+  // Compatibility flag retained for the already-shipped Phase 1 surface guards.
   window.MRT_MINIMUM_GUEST_LAUNCH = true;
   document.documentElement.classList.add('minimum-guest-launch');
   if (window.LOGIN_FREE_ACCOUNT_PUBLIC_ENTRY === true) {

@@ -20,9 +20,9 @@ window.SUPABASE_CONFIG = {
   //   true  = ต้องล็อกอินก่อนถึงเล่นได้
   // ⚠️ เปลี่ยนเป็น true ก็ต่อเมื่อ Google login ใน Supabase พร้อมใช้งานแล้วเท่านั้น
   requireLogin: false,
-  // Reversible Minimum Guest Launch gate. Unlike requireLogin:false, this
-  // deliberately ignores any authenticated browser session underneath.
-  runtimeMode: 'minimum-guest'
+  // Reversible content-tier gate. Guest browsers still use the public client,
+  // while an existing authenticated session receives the additional Login Free set.
+  runtimeMode: 'login-free'
 };
 
 window.isMinimumGuestOnly = function () {

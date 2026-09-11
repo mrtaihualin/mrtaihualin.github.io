@@ -11,11 +11,13 @@ function check(value, message) {
 }
 
 var gate = read('js/core/minimum-guest-launch.js');
+var config = read('js/core/supabase-config.js');
 check(/LOGIN_CORE_PUBLIC_ENTRY = true/.test(gate), 'Public Login remains enabled');
 check(/LOGIN_FREE_SRS_PUBLIC_ENTRY = true/.test(gate), 'Login Free SRS has one explicit reversible flag');
 check(/LOGIN_FREE_ACCOUNT_PUBLIC_ENTRY = true/.test(gate), 'Login Free account runtime has one explicit reversible flag');
-check(/MRT_MINIMUM_GUEST_LAUNCH = true/.test(gate), 'Minimum Guest boundary remains active');
+check(/MRT_MINIMUM_GUEST_LAUNCH = true/.test(gate), 'Phase 1 compatibility surface guards remain active');
 check(/games-challenge/.test(gate), 'Challenge remains parked');
+check(/runtimeMode: 'login-free'/.test(config), 'Login Free content entitlement is active');
 
 var pages = ['tone-finder.html', 'reading-game.html', 'listening-game.html', 'typing-game.html', 'word-order.html'];
 pages.forEach(function (file) {
