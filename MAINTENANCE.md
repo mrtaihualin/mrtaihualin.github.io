@@ -3,7 +3,7 @@
 ## 2026-09-11 — FB-01 Typing Desktop single-Shift Human correction (`SOURCE_PASS / PRODUCTION_UNCHANGED`)
 
 - Applied Lin's Human-review Delta only: Desktop Typing now displays one centered Shift key instead of two. The existing pointer-fine Desktop boundary owns the presentation rule; phone, tablet, keyboard input logic, Shift behavior, Thai key faces, fonts and every other control remain unchanged.
-- Added focused regression coverage that keeps both existing Shift controls in the keyboard runtime and scopes hiding only the right Shift to Desktop presentation. Targeted Typing verification and the complete site gate pass. This isolated branch overlaps `typing-game.html` and `MAINTENANCE.md` with open MRs `!41` and `!42`; no work from either MR is incorporated. Merge, deploy, Production, Supabase/Auth and account/data remain unchanged.
+- Added focused regression coverage that keeps both existing Shift controls in the keyboard runtime and scopes hiding only the right Shift to Desktop presentation. Typing `22/22`, Mobile Landscape `23/23 + 3/3`, shared-game `53/53` and the complete `1,085`-file site gate pass. This isolated branch overlaps `typing-game.html` and `MAINTENANCE.md` with open MRs `!41` and `!42`; no work from either MR is incorporated. Merge, deploy, Production, Supabase/Auth and account/data remain unchanged.
 
 ## 2026-09-11 — Final Go Desktop cookie consent host unification (`SOURCE_PASS / PRODUCTION_UNCHANGED`)
 
