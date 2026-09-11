@@ -2795,3 +2795,9 @@ node scripts/check-site.js
 - Tightened the existing retired source quarantine `/Users/taihualin/Documents/Claude/Projects/04_WORKING/99_ARCHIVE/AI_READ_DENY_LEGACY_735_SOURCE_2026-09-04/` from owner-readable-by-default permissions to directory `700` and protected file `600`, again without content inspection.
 - Preserved the former repository paths as permanent AI-read-deny sentinels in the secret scanner and its regressions, and updated the repository/data routing notes to cover both the quarantine and Git-history copies. Current `data/approved-vocabulary-catalog.json` and `supabase/functions/game-content/index.ts` remain in place and unchanged.
 - This is a reversible source/evidence organization Delta only. It does not read or change vocabulary content, game runtime, tier entitlement, Supabase, Production, account data, Paid activation, Listening, Challenge, audio, or Final Go.
+
+# 2026-09-11 — Typing Thai combining-key visibility correction
+
+- Removed the rules that hid the transparent Thai shaping carrier on Typing keys. Safari had key data in the DOM but could not paint the dependent vowel or tone mark after the carrier was removed, leaving visibly blank buttons in Mobile Landscape.
+- Kept the carrier transparent, so every key remains the same real button and no visible `ก`, dotted circle, wrapper, magnifier or substitute label is added.
+- Strengthened both responsive browser reviews and the focused Mobile Landscape regression to require a laid-out transparent carrier and a non-zero combining-label box. Safari passes all nine reviewed screen sizes with all 47 real keys, both base/Shift faces, active Shift and both font modes visible; the 23 Mobile Landscape checks, 21 Typing checks, three temporary-gate checks and the complete site gate pass across 1,084 files. This is source/local-preview verification only; no Production release was made.

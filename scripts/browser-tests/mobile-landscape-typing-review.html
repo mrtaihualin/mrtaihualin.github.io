@@ -54,17 +54,35 @@
           return left - side.left >= 2.5 && side.right - right >= 2.5;
         });
       }
-      function desktopKeyFacesReused(doc, win) {
+      function keyFacesRender(doc, win) {
+        var faces = Array.prototype.slice.call(doc.querySelectorAll('#rg-kbd .tk-key[data-code] .tk-base, #rg-kbd .tk-key[data-code] .tk-shift'));
         var labels = Array.prototype.slice.call(doc.querySelectorAll('#rg-kbd .comb-disp'));
         var sample = doc.querySelector('#rg-kbd .tk-key[data-code="KeyG"]');
         var baseFace = sample && sample.querySelector('.tk-base');
         var shiftFace = sample && sample.querySelector('.tk-shift');
-        return labels.length > 0 && labels.every(function (label) {
+        var faceAudit = faces.map(function (face) {
+          var style = win.getComputedStyle(face);
+          var rect = face.getBoundingClientRect();
+          return {text: face.textContent, display: style.display, visibility: style.visibility,
+            opacity: style.opacity, fontSize: parseFloat(style.fontSize), width: rect.width, height: rect.height};
+        });
+        var labelAudit = labels.map(function (label) {
           var base = label.querySelector('.comb-base');
           var style = base && win.getComputedStyle(base);
-          return label.textContent.trim().length > 1 && style && style.display === 'none';
-        }) && parseFloat(win.getComputedStyle(baseFace).fontSize) === 15 &&
-          parseFloat(win.getComputedStyle(shiftFace).fontSize) === 9;
+          var rect = label.getBoundingClientRect();
+          return {text: label.textContent, display: style && style.display, color: style && style.color,
+            width: rect.width, height: rect.height};
+        });
+        var baseFont = parseFloat(win.getComputedStyle(baseFace).fontSize);
+        var shiftFont = parseFloat(win.getComputedStyle(shiftFace).fontSize);
+        win.__typingFaceAudit = {faces: faceAudit, labels: labelAudit, baseFont: baseFont, shiftFont: shiftFont};
+        return faces.length === 94 && faceAudit.every(function (item) {
+          return item.text.trim().length > 0 && item.display !== 'none' && item.visibility !== 'hidden' &&
+            parseFloat(item.opacity) > 0 && item.fontSize > 0 && item.width > 0 && item.height > 0;
+        }) && labels.length > 0 && labelAudit.every(function (item) {
+          return item.text.trim().length > 1 && item.display !== 'none' &&
+            item.color === 'rgba(0, 0, 0, 0)' && item.width > 0 && item.height > 0;
+        });
       }
       // Local preview injects one exact record from data/approved-vocabulary-catalog.json; this fixture never authors an answer.
       fetch('/__preview/typing-keys.html?review-cache=' + Date.now(), {cache: 'no-store'}).then(function (response) {
@@ -86,11 +104,19 @@
             if (readyNow) {
               var centered = verticalCenterDelta(doc) <= 2;
               var sideInsets = keyboardSideInsetsReady(doc);
-              var desktopFaces = desktopKeyFacesReused(doc, win);
+              var desktopFaces = keyFacesRender(doc, win);
               var noMagnifier = !doc.querySelector('.tg-touch-magnifier') && !('TG_TOUCH_MAGNIFIER_HOLD_MS' in win);
+              var faceAudit = win.__typingFaceAudit || {labels: []};
+              var badLabels = faceAudit.labels.filter(function (item) {
+                return item.text.trim().length <= 1 || item.display === 'none' ||
+                  item.color !== 'rgba(0, 0, 0, 0)' || item.width <= 0 || item.height <= 0;
+              });
               status.textContent = centered && sideInsets && desktopFaces && noMagnifier
-                ? 'พร้อมตรวจ Typing — ใช้ปุ่มและตัวอักษร Desktop เดิม · ไม่มีแว่นขยาย · ไม่มี ก เพิ่ม'
-                : 'ตรวจ Typing ไม่ผ่าน';
+                ? 'พร้อมตรวจ Typing — ปุ่มทุกปุ่มมีหน้าตัวอักษร · ไม่มีแว่นขยาย · ไม่มี ก เพิ่ม'
+                : 'ตรวจ Typing ไม่ผ่าน — กึ่งกลาง=' + centered + ' · ขอบข้าง=' + sideInsets +
+                  ' · หน้าปุ่ม=' + desktopFaces + ' · ไม่มีแว่นขยาย=' + noMagnifier +
+                  ' · labelเสีย=' + JSON.stringify(badLabels.slice(0, 3)) +
+                  ' · ขนาดหลัก/Shift=' + faceAudit.baseFont + '/' + faceAudit.shiftFont;
               return;
             }
             if (Date.now() - started > 15000) {
