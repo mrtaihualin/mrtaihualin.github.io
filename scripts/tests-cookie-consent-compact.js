@@ -38,6 +38,10 @@ for (const file of htmlFiles) {
   assert.match(html, /onclick="window\.__cookieConsentDecide\(false\)"/, rel + ': Reject remains available');
   assert.match(html, /onclick="window\.__cookieConsentDecide\(true\)"/, rel + ': Accept remains available');
   assert.match(html, rel.startsWith('en/') ? /href="\/en\/privacy\.html"/ : /href="\/privacy\.html"/, rel + ': privacy link is locale-correct');
+  if (rel !== 'vault.html') {
+    assert.match(html, /mrtCookieConsentSharedV1/, rel + ': apex/www shared consent key exists');
+    assert.match(html, /domain=\.mrtaihualin\.com/, rel + ': apex/www shared cookie domain exists');
+  }
 }
 
 function bannerScript(isEnglish) {
@@ -47,12 +51,14 @@ function bannerScript(isEnglish) {
   return scripts[0][1];
 }
 
-function createCookieDocument(sharedJar, banner, cookiesAvailable = true) {
+function createCookieDocument(cookieStore, banner, hostname, cookiesAvailable = true) {
+  cookieStore.hosts[hostname] = cookieStore.hosts[hostname] || {};
   const doc = { getElementById(id) { return id === 'cookieConsentBanner' ? banner : null; } };
   Object.defineProperty(doc, 'cookie', {
     get() {
       if (!cookiesAvailable) throw new Error('cookies unavailable');
-      return Object.entries(sharedJar).map(([key, value]) => key + '=' + value).join('; ');
+      return Object.entries({ ...cookieStore.shared, ...cookieStore.hosts[hostname] })
+        .map(([key, value]) => key + '=' + value).join('; ');
     },
     set(serialized) {
       if (!cookiesAvailable) throw new Error('cookies unavailable');
@@ -60,16 +66,19 @@ function createCookieDocument(sharedJar, banner, cookiesAvailable = true) {
       const splitAt = first.indexOf('=');
       const key = first.slice(0, splitAt);
       const value = first.slice(splitAt + 1);
-      if (/Max-Age=0/i.test(serialized)) delete sharedJar[key];
-      else sharedJar[key] = value;
+      const jar = /(?:^|;)\s*domain=\.mrtaihualin\.com(?:;|$)/i.test(serialized)
+        ? cookieStore.shared
+        : cookieStore.hosts[hostname];
+      if (/Max-Age=0/i.test(serialized)) delete jar[key];
+      else jar[key] = value;
     }
   });
   return doc;
 }
 
-function runPage({ storageValues, cookieJar, storageAvailable = true, cookiesAvailable = true }) {
+function runPage({ storageValues, cookieStore, hostname = 'mrtaihualin.com', storageAvailable = true, cookiesAvailable = true }) {
   const banner = { style: { display: 'none' } };
-  const document = createCookieDocument(cookieJar, banner, cookiesAvailable);
+  const document = createCookieDocument(cookieStore, banner, hostname, cookiesAvailable);
   const localStorage = {
     getItem(key) {
       if (!storageAvailable) throw new Error('storage unavailable');
@@ -84,7 +93,7 @@ function runPage({ storageValues, cookieJar, storageAvailable = true, cookiesAva
   const window = {
     document,
     localStorage,
-    location: { hostname: 'mrtaihualin.com', protocol: 'https:' },
+    location: { hostname, protocol: 'https:' },
     setTimeout(fn) { fn(); },
     clarity(...args) { calls.push(['clarity', ...args]); }
   };
@@ -95,33 +104,45 @@ function runPage({ storageValues, cookieJar, storageAvailable = true, cookiesAva
 
 for (const granted of [true, false]) {
   const storageValues = {};
-  const cookieJar = {};
-  const first = runPage({ storageValues, cookieJar });
+  const cookieStore = { hosts: {}, shared: {} };
+  const first = runPage({ storageValues, cookieStore });
   assert.strictEqual(first.banner.style.display, 'block', 'unset choice is shown');
   first.window.__cookieConsentDecide(granted);
   assert.strictEqual(first.banner.style.display, 'none', 'choice hides immediately');
   assert.strictEqual(storageValues.cookieConsent, granted ? 'granted' : 'denied', 'choice persists in localStorage');
-  assert.strictEqual(cookieJar.mrtCookieConsent, granted ? 'granted' : 'denied', 'choice persists in first-party fallback cookie');
-  const nextPage = runPage({ storageValues, cookieJar });
+  assert.strictEqual(cookieStore.hosts['mrtaihualin.com'].mrtCookieConsent, granted ? 'granted' : 'denied', 'choice persists in first-party fallback cookie');
+  assert.strictEqual(cookieStore.shared.mrtCookieConsentSharedV1, granted ? 'granted' : 'denied', 'choice persists in shared apex/www cookie');
+  const nextPage = runPage({ storageValues, cookieStore });
   assert.strictEqual(nextPage.banner.style.display, 'none', 'stored choice stays hidden across page/reload');
 }
 
 {
-  const cookieJar = {};
-  const first = runPage({ storageValues: {}, cookieJar, storageAvailable: false });
+  const cookieStore = { hosts: {}, shared: {} };
+  const first = runPage({ storageValues: {}, cookieStore, storageAvailable: false });
   assert.strictEqual(first.banner.style.display, 'block', 'storage-unavailable first visit is shown');
   first.window.__cookieConsentDecide(false);
   assert.strictEqual(first.banner.style.display, 'none', 'storage-unavailable rejection hides immediately');
-  assert.strictEqual(cookieJar.mrtCookieConsent, 'denied', 'cookie fallback stores rejection');
-  const nextPage = runPage({ storageValues: {}, cookieJar, storageAvailable: false });
+  assert.strictEqual(cookieStore.hosts['mrtaihualin.com'].mrtCookieConsent, 'denied', 'cookie fallback stores rejection');
+  const nextPage = runPage({ storageValues: {}, cookieStore, storageAvailable: false });
   assert.strictEqual(nextPage.banner.style.display, 'none', 'cookie fallback persists across page/reload');
 }
 
 {
-  const first = runPage({ storageValues: {}, cookieJar: {}, storageAvailable: false, cookiesAvailable: false });
+  const first = runPage({ storageValues: {}, cookieStore: { hosts: {}, shared: {} }, storageAvailable: false, cookiesAvailable: false });
   assert.strictEqual(first.banner.style.display, 'block', 'complete storage failure fails closed by asking');
   first.window.__cookieConsentDecide(true);
   assert.strictEqual(first.banner.style.display, 'none', 'complete storage failure still hides for the current page');
+}
+
+for (const granted of [true, false]) {
+  const cookieStore = { hosts: {}, shared: {} };
+  const apexStorage = {};
+  const apex = runPage({ storageValues: apexStorage, cookieStore, hostname: 'mrtaihualin.com' });
+  apex.window.__cookieConsentDecide(granted);
+  const wwwStorage = {};
+  const www = runPage({ storageValues: wwwStorage, cookieStore, hostname: 'www.mrtaihualin.com' });
+  assert.strictEqual(www.banner.style.display, 'none', 'apex choice suppresses banner on www');
+  assert.strictEqual(wwwStorage.cookieConsent, granted ? 'granted' : 'denied', 'shared choice syncs into www localStorage');
 }
 
 console.log('✅ Cookie consent compact/persistence passed: ' + htmlFiles.length + ' public HTML pages');

@@ -1,5 +1,11 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-09-11 — Final Go Desktop cookie consent host unification (`SOURCE_PASS / PRODUCTION_UNCHANGED`)
+
+- Final Go Desktop review from GitLab `main` merge `6f60b49` passed the responsive keyboard matrix at all nine Desktop, phone and iPad sizes, plus the shared Mobile Landscape 12-state browser matrix, the five controlled-beta Desktop contracts and all 53 shared Phase 1 game-system contracts. No keyboard, game or Product presentation was changed.
+- Fixed the one remaining source failure: consent was previously remembered separately by `mrtaihualin.com` and `www.mrtaihualin.com`. The canonical banner and Vault consent owner now retain one `granted`/`denied` choice in a versioned `.mrtaihualin.com` parent-domain cookie, while keeping host-local storage/cookie fallbacks and migrating prior valid choices. A stored choice suppresses the banner across both hosts; clearing browser/site data makes it appear again.
+- Regenerated the canonical consent runtime across 107 standard public HTML pages, updated the separate Vault consent owner and verified all 108 public pages. Added regression coverage for apex-to-www persistence, Vault parity, migration/fallback behavior and complete public-page coverage. Developer-only previews remain excluded. No analytics policy, banner appearance, Auth, Supabase, account/data, deployment or Production state changed.
+
 ## 2026-09-10 — Pin vocabulary Edge dependencies before Production
 
 - Pinned the Supabase client used by `game-content`, `tone-round` and `score-submit` to exact `2.112.3`, matching the already-pinned `practice-events` runtime. This removes dependency drift between the reviewed source, the temporary compatibility stage and any recovery redeploy; no vocabulary, tier, Auth, score or gameplay behavior changed.

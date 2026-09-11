@@ -19,6 +19,8 @@ function fixture(initial, options = {}) {
   const values = {};
   if (initial) values.cookieConsent = initial;
   const cookieJar = options.cookieJar || {};
+  const sharedJar = options.sharedJar || {};
+  const hostname = options.hostname || 'mrtaihualin.com';
   const storageAvailable = options.storageAvailable !== false;
   const inserted = [];
   const first = { parentNode: { insertBefore(node) { inserted.push(node); } } };
@@ -29,15 +31,16 @@ function fixture(initial, options = {}) {
     getElementsByTagName() { return [first]; },
   };
   Object.defineProperty(doc, 'cookie', {
-    get() { return Object.entries(cookieJar).map(([key, value]) => key + '=' + value).join('; '); },
+    get() { return Object.entries({ ...sharedJar, ...cookieJar }).map(([key, value]) => key + '=' + value).join('; '); },
     set(serialized) {
       const firstPair = String(serialized).split(';')[0];
       const splitAt = firstPair.indexOf('=');
-      cookieJar[firstPair.slice(0, splitAt)] = firstPair.slice(splitAt + 1);
+      const jar = /(?:^|;)\s*domain=\.mrtaihualin\.com(?:;|$)/i.test(serialized) ? sharedJar : cookieJar;
+      jar[firstPair.slice(0, splitAt)] = firstPair.slice(splitAt + 1);
     }
   });
   const win = {
-    location: { protocol: 'https:' },
+    location: { hostname, protocol: 'https:' },
     localStorage: {
       getItem(key) {
         if (!storageAvailable) throw new Error('storage unavailable');
@@ -49,7 +52,7 @@ function fixture(initial, options = {}) {
       },
     },
   };
-  return { win, doc, inserted, values, cookieJar, controller: gate.createController(win, doc, 'test-site') };
+  return { win, doc, inserted, values, cookieJar, sharedJar, controller: gate.createController(win, doc, 'test-site') };
 }
 
 test('Vault replaces eager Clarity loader with consent gate', () => {
@@ -96,6 +99,17 @@ test('Vault persists rejection with a first-party cookie when localStorage is un
   const nextPage = fixture(null, { storageAvailable: false, cookieJar });
   assert.strictEqual(nextPage.controller.state(), 'denied');
   assert.strictEqual(nextPage.controller.loadIfGranted(), false);
+});
+
+test('Vault shares one consent choice between apex and www', () => {
+  const sharedJar = {};
+  const apex = fixture(null, { sharedJar, hostname: 'mrtaihualin.com' });
+  assert.strictEqual(apex.controller.decide(false), false);
+  assert.strictEqual(sharedJar[gate.SHARED_COOKIE_KEY], 'denied');
+  const www = fixture(null, { sharedJar, hostname: 'www.mrtaihualin.com' });
+  assert.strictEqual(www.controller.state(), 'denied');
+  assert.strictEqual(www.values.cookieConsent, 'denied');
+  assert.strictEqual(www.controller.loadIfGranted(), false);
 });
 
 test('Vault includes accessible Accept and Reject controls', () => {
