@@ -2788,3 +2788,9 @@ node scripts/check-site.js
 - Added an isolated server-authoritative Paid SRS namespace and atomic/idempotent progression through Day `1 / 8 / 16`, then Challenge `30 / 60 / 90`. A failed Challenge item freezes as `reschedule_pending` because the exact reschedule interval is not yet a Product Decision.
 - Paid items cannot enter Login Free Review or its SRS namespace. Direct browser-role access is revoked, RLS is forced, Edge functions recheck entitlement and canonical content, and rollback fails closed if real Paid rows exist.
 - Rebased the bounded Paid Delta onto GitLab `main=d56f4e3af503d88e9a822b332645eee467e75e0f`, preserving the released Typing keyboard baseline. Verification: Paid source/server gates PASS, temporary PostgreSQL migration/RLS/full-date/concurrency/recovery suite PASS, and the complete site gate PASS across 1,084 files. Production remains separately exact-approval-gated.
+
+# 2026-09-11 — Legacy vocabulary evidence quarantine
+
+- Moved the three remaining retired legacy-evidence files out of the active repository without opening or inspecting their content. The restricted quarantine is `/Users/taihualin/Documents/Claude/Projects/04_WORKING/99_ARCHIVE/AI_READ_DENY_LEGACY_VOCABULARY_EVIDENCE_2026-09-11/`, with directory permission `700` and protected-file permission `600`.
+- Preserved the former repository paths as permanent AI-read-deny sentinels in the secret scanner and its regressions, and updated the repository/data routing notes to cover both the quarantine and Git-history copies. Current `data/approved-vocabulary-catalog.json` and `supabase/functions/game-content/index.ts` remain in place and unchanged.
+- This is a reversible source/evidence organization Delta only. It does not read or change vocabulary content, game runtime, tier entitlement, Supabase, Production, account data, Paid activation, Listening, Challenge, audio, or Final Go.
