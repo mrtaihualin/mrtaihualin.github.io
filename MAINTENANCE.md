@@ -2771,4 +2771,4 @@ node scripts/check-site.js
 
 - Changed the single reversible content runtime from `minimum-guest` to `login-free`: Guest sessions still receive the exact Guest 100 set, while an existing authenticated session can present its token to the existing entitlement-checked `game-content` path and receive the additional Login Free 100 set.
 - Preserved the isolated anonymous client and one-value Minimum Guest rollback, the parked Listening/Paid/Challenge boundaries, and the temporary global game-audio disable. No vocabulary record, database, Auth configuration, Edge Function or account data was changed.
-- Added regression evidence for the active mode, the explicit rollback mode and the distinct Guest/Login token paths. Final Go remains pending Lin's combined review.
+- Added regression evidence for the active mode, the explicit rollback mode and the distinct Guest/Login token paths. `node scripts/check-site.js` passes all checks across 1,078 files. Final Go remains pending Lin's combined review.
