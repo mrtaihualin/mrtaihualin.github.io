@@ -426,6 +426,8 @@ body.tg-touch-game-keyboard-only .mobile-kbd-input{pointer-events:none !importan
 .tk-key.tk-space{flex:4;max-width:180px;font-size:10.5px;color:#7a5510;}
 .tk-key.active,.rg-shift-key.active{background:#e8a020;color:#fff;border-color:#e8a020;}
 .rg-shift-key.need{border-color:#d85a30;box-shadow:0 0 0 2px rgba(216,90,48,.3);background:#ffe8dd;}
+/* Desktop uses one centered Shift key; touch layouts keep both existing Shift keys. */
+@media (hover:hover) and (pointer:fine){ #rg-shift-key-right{display:none !important;} }
 @media(max-width:420px){.tk-key{height:34px;}.tk-key .tk-base{font-size:13px;}}
 .retry-hint.good{color:#2e7d32;background:#e8f5e9;border-color:#a5d6a7;}
 .retry-hint.wrong3{color:#c62828;background:#ffebee;border-color:#ef9a9a;}

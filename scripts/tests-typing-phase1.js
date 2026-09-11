@@ -157,6 +157,15 @@ test('typing keyboard no longer includes the retired touch magnifier', () => {
   assert.match(source, /k\.onclick=function\(\)\{ rgVirtualPress\(code\); \}/);
 });
 
+test('Desktop shows one Shift while touch keyboard layouts keep both existing keys', () => {
+  const build = functionBlock('rgBuildKeyboard', 'rgVirtualPress');
+  assert.match(build, /rgMakeShiftKey\('left'\)/);
+  assert.match(build, /rgMakeShiftKey\('right'\)/);
+  assert.match(html, /@media \(hover:hover\) and \(pointer:fine\)\{ #rg-shift-key-right\{display:none !important;\} \}/);
+  assert.doesNotMatch(html, /(?:^|\})\s*#rg-shift-key-left\s*\{[^}]*display\s*:\s*none/m);
+  assert.doesNotMatch(html, /(?:^|\})\s*#rg-shift-key-right\s*\{[^}]*display\s*:\s*none/m);
+});
+
 test('typing menu contains only the current learning tools', () => {
   const menu = html.match(/WordMenu\.init\(\{rowId:'word-ctl-row',items:\[([\s\S]*?)\]\}\)/);
   assert.ok(menu);
