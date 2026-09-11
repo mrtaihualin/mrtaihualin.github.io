@@ -3,7 +3,7 @@
 > Content authority belongs to Lin and the Current Product/Brand sources. This file owns the source-data procedure.
 
 - `data/words-data.js` is a historical corpus and is not Current content. It is `LEGACY_CONTENT_READ_DENY`: AI must not open, search inside, parse, index, summarize, copy, derive from or run any script that loads it unless Lin explicitly orders retrieval of the old/legacy corpus for the exact task.
-- `data/history/vocabulary/` and `data/approved-vocabulary-catalog.lock.json` preserve protected legacy evidence and are also `LEGACY_CONTENT_READ_DENY`; path metadata may be inspected only to enforce the boundary.
+- The retired `data/history/vocabulary/` and `data/approved-vocabulary-catalog.lock.json` evidence is quarantined at `/Users/taihualin/Documents/Claude/Projects/04_WORKING/99_ARCHIVE/AI_READ_DENY_LEGACY_VOCABULARY_EVIDENCE_2026-09-11/`. That quarantine, its former Git-history paths, and all copies remain `LEGACY_CONTENT_READ_DENY`; path and permission metadata may be inspected only to enforce the boundary.
 - `data/adv-sentences.js` remains Lin's sentence-authoring source; this does not authorize access to the protected legacy word corpus.
 - `data/approved-vocabulary-catalog.json` is the single active Lin-approved canonical vocabulary master. Version `free-200-v1` contains exactly 200 semantic records: Guest Free 50 `初` + 50 `中`, and Login Free adds 50 `初` + 50 `中`. Paid content is not active.
 - Protected history and its former combined lock/checker are retired from default AI and CI access. Reactivation requires Lin's explicit old/legacy-corpus instruction and a separately authorized release.
