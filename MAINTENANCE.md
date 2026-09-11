@@ -2792,5 +2792,6 @@ node scripts/check-site.js
 # 2026-09-11 — Legacy vocabulary evidence quarantine
 
 - Moved the three remaining retired legacy-evidence files out of the active repository without opening or inspecting their content. The restricted quarantine is `/Users/taihualin/Documents/Claude/Projects/04_WORKING/99_ARCHIVE/AI_READ_DENY_LEGACY_VOCABULARY_EVIDENCE_2026-09-11/`, with directory permission `700` and protected-file permission `600`.
+- Tightened the existing retired source quarantine `/Users/taihualin/Documents/Claude/Projects/04_WORKING/99_ARCHIVE/AI_READ_DENY_LEGACY_735_SOURCE_2026-09-04/` from owner-readable-by-default permissions to directory `700` and protected file `600`, again without content inspection.
 - Preserved the former repository paths as permanent AI-read-deny sentinels in the secret scanner and its regressions, and updated the repository/data routing notes to cover both the quarantine and Git-history copies. Current `data/approved-vocabulary-catalog.json` and `supabase/functions/game-content/index.ts` remain in place and unchanged.
 - This is a reversible source/evidence organization Delta only. It does not read or change vocabulary content, game runtime, tier entitlement, Supabase, Production, account data, Paid activation, Listening, Challenge, audio, or Final Go.
