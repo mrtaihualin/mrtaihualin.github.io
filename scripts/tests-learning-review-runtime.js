@@ -53,8 +53,13 @@ assert.strictEqual(Review.predictedScore('word_order', { wrong_count: 1, learnin
   assert.throws(() => Review.create({ enabled: false, invoke() {} }), /FEATURE_DISABLED/);
 
   global.LOGIN_FREE_REVIEW_PUBLIC_ENTRY = true;
+  global.GAME_CONTENT_TIER = 'anon';
+  global.SITE_AUTH = { user: null };
+  assert.strictEqual(Review.runtimeEnabled(), false, 'initial anonymous tier with no user keeps Review off');
+  global.SITE_AUTH.user = { id: 'controlled-test' };
+  assert.strictEqual(Review.runtimeEnabled(), false, 'restored user cannot enable Review while content tier is still anonymous');
   global.GAME_CONTENT_TIER = 'login';
-  global.SITE_AUTH = { user: { id: 'controlled-test' } };
+  assert.strictEqual(Review.runtimeEnabled(), true, 'Review enables only after the restored session receives the Login Free tier');
   global.NetworkGuard = { request(fn) { return fn(); } };
   assert.throws(() => Review.registerRound({
     report: { round_id: 'listening-contract-check', game_type: 'listening', difficulty: '初' },
@@ -79,5 +84,5 @@ assert.strictEqual(Review.predictedScore('word_order', { wrong_count: 1, learnin
   assert.strictEqual(Review.runtimeEnabled(), false, 'Paid is outside the Login Free Review owner');
   global.GAME_CONTENT_TIER = 'guest';
   assert.strictEqual(Review.runtimeEnabled(), false, 'Guest is outside the Login Free Review owner');
-  console.log('LEARNING_REVIEW_RUNTIME_PASS 18');
+  console.log('LEARNING_REVIEW_RUNTIME_PASS 21');
 })().catch((error) => { console.error(error); process.exitCode = 1; });
