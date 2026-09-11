@@ -17,7 +17,7 @@
 </head>
 <body>
   <main>
-    <h1>Typing — คีย์บอร์ดกึ่งกลาง + แว่นขยาย · 844 × 390</h1>
+    <h1>Typing — คีย์บอร์ดกึ่งกลาง · ไม่มีแว่นขยาย · 844 × 390</h1>
     <div class="screen"><iframe id="game" title="Typing Mobile Landscape"></iframe></div>
     <output id="status">กำลังเปิดหน้า Typing…</output>
   </main>
@@ -34,19 +34,6 @@
       if (window.ResizeObserver) new ResizeObserver(fitGame).observe(screen);
       else window.addEventListener('resize', fitGame);
 
-      var wordKeys = ['มา@初'];
-      var override = '<script>(function(){var keys=' + JSON.stringify(wordKeys) + ';try{localStorage.setItem("cookieConsent","denied");localStorage.setItem("howto_tour_seen_typing","1");localStorage.setItem("howto_hint_seen_typing","1");}catch(e){}window.GameContentLoader.boot=function(srcs){var chain=new Promise(function(resolve){if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",resolve,{once:true});else resolve();}).then(function(){return fetch("data/approved-vocabulary-catalog.json",{cache:"no-store"}).then(function(res){if(!res.ok)throw new Error("canonical fixture unavailable");return res.json();}).then(function(catalog){window.WORDS_MASTER=keys.map(function(key){var record=catalog.records.find(function(row){return row.contentKey===key;});if(!record)throw new Error("canonical fixture missing: "+key);return {catalog:record};});window.ADV_SENTENCES=[];});}).then(function(){if(window.GameResume&&typeof window.GameResume.load==="function")window.GameResume.load=function(){return null;};});(srcs||[]).forEach(function(src){chain=chain.then(function(){return new Promise(function(resolve,reject){var script=document.createElement("script");script.src=src;script.onload=resolve;script.onerror=reject;document.head.appendChild(script);});});});return chain;};})();<\/script>';
-
-      function wait(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
-      function point(node) {
-        var rect = node.getBoundingClientRect();
-        return {x: rect.left + rect.width / 2, y: rect.top + rect.height / 2};
-      }
-      function pointer(win, target, type, id, at) {
-        target.dispatchEvent(new win.PointerEvent(type, {
-          bubbles: true, cancelable: true, pointerId: id, pointerType: 'touch', clientX: at.x, clientY: at.y
-        }));
-      }
       function verticalCenterDelta(doc) {
         var side = doc.querySelector('[data-gsh-ml-slot="left"]').getBoundingClientRect();
         var rows = Array.prototype.slice.call(doc.querySelectorAll('#rg-kbd > .gsh-split-kbd-row')).map(function (row) {
@@ -79,44 +66,12 @@
         }) && parseFloat(win.getComputedStyle(baseFace).fontSize) === 15 &&
           parseFloat(win.getComputedStyle(shiftFace).fontSize) === 9;
       }
-      async function verifyMagnifier(doc, win) {
-        var start = doc.querySelector('#rg-kbd .tk-key[data-code="KeyG"]');
-        var destination = doc.querySelector('#rg-kbd .tk-key[data-code="KeyK"]');
-        var all = Array.prototype.slice.call(doc.querySelectorAll('#rg-kbd .tk-key[data-code]'));
-        var original = all.map(function (key) { return key.onclick; });
-        var presses = [];
-        all.forEach(function (key) { key.onclick = function () { presses.push(key.dataset.code); }; });
-        pointer(win, start, 'pointerdown', 81, point(start));
-        await wait(380);
-        pointer(win, win, 'pointermove', 81, point(destination));
-        var magnifier = doc.querySelector('.gsh-ml-typing-magnifier:not([hidden])');
-        var fiveKeys = magnifier && magnifier.querySelectorAll('.gsh-ml-typing-magnifier-key').length === 5;
-        var followsDrag = magnifier && magnifier.querySelector('[data-selected="true"]').dataset.code === destination.dataset.code;
-        pointer(win, win, 'pointerup', 81, point(destination));
-        await wait(20);
-        var typesOnce = presses.length === 1 && presses[0] === destination.dataset.code;
-
-        var beforeCancel = presses.length;
-        pointer(win, start, 'pointerdown', 82, point(start));
-        await wait(380);
-        var center = doc.querySelector('[data-gsh-ml-slot="center"]');
-        pointer(win, win, 'pointermove', 82, point(center));
-        pointer(win, win, 'pointerup', 82, point(center));
-        await wait(20);
-        var cancelsOutside = presses.length === beforeCancel;
-        all.forEach(function (key, index) { key.onclick = original[index]; });
-
-        pointer(win, start, 'pointerdown', 83, point(start));
-        await wait(380);
-        return fiveKeys && followsDrag && typesOnce && cancelsOutside;
-      }
-
-      fetch('../../typing-game.html?review-cache=' + Date.now(), {cache: 'no-store'}).then(function (response) {
+      // Local preview injects one exact record from data/approved-vocabulary-catalog.json; this fixture never authors an answer.
+      fetch('/__preview/typing-keys.html?review-cache=' + Date.now(), {cache: 'no-store'}).then(function (response) {
         if (!response.ok) throw new Error('เปิดไฟล์ Typing ไม่สำเร็จ');
         return response.text();
       }).then(function (html) {
-        html = html.replace('<head>', '<head><base href="' + new URL('../../', location.href).href + '">');
-        html = html.replace(/game-content-client\.js\?v=\d+"><\/script>/, function (tag) { return tag + override; });
+        html = html.replace('<head>', '<head><script>try{Object.defineProperty(navigator,"maxTouchPoints",{value:5});var realMatchMedia=window.matchMedia.bind(window);window.matchMedia=function(query){return query==="(hover:hover) and (pointer:fine)"?{matches:false}:realMatchMedia(query);};}catch(e){}<\/script>');
         frame.onload = function () {
           var doc = frame.contentDocument;
           var win = frame.contentWindow;
@@ -132,9 +87,9 @@
               var centered = verticalCenterDelta(doc) <= 2;
               var sideInsets = keyboardSideInsetsReady(doc);
               var desktopFaces = desktopKeyFacesReused(doc, win);
-              var magnifierWorks = await verifyMagnifier(doc, win);
-              status.textContent = centered && sideInsets && desktopFaces && magnifierWorks
-                ? 'พร้อมตรวจ Typing — ใช้ปุ่มและตัวอักษร Desktop เดิม · เว้นขอบเล็กน้อย · ไม่มี ก เพิ่ม'
+              var noMagnifier = !doc.querySelector('.tg-touch-magnifier') && !('TG_TOUCH_MAGNIFIER_HOLD_MS' in win);
+              status.textContent = centered && sideInsets && desktopFaces && noMagnifier
+                ? 'พร้อมตรวจ Typing — ใช้ปุ่มและตัวอักษร Desktop เดิม · ไม่มีแว่นขยาย · ไม่มี ก เพิ่ม'
                 : 'ตรวจ Typing ไม่ผ่าน';
               return;
             }

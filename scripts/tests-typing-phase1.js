@@ -63,7 +63,7 @@ test('continuous typing zero score keeps accepting input without reveal/finish',
 });
 
 test('guide mode toggles in place and refreshes the current score', () => {
-  const block = functionBlock('tgChooseGuideMode', 'rgToggleWebKbd');
+  const block = functionBlock('tgChooseGuideMode', 'rgShiftKeys');
   assert.match(block, /setGuideMode\(!!on\)/);
   assert.match(block, /tgUpdateScoreBar\(\)/);
   assert.doesNotMatch(block, /initGame\s*\(/);
@@ -98,12 +98,17 @@ test('mobile software keyboard closes outside active Typing input states', () =>
   assert.match(functionBlock('endRound', 'tgAttachLoginSummary'), /tgCloseMobileKeyboard\(\)/);
 });
 
-test('mobile landscape Typing uses only its equivalent in-game keyboard', () => {
+test('Phone landscape uses the game keyboard while iPad stays native unless Hint is on', () => {
   const start = source.indexOf('function tgLandscapeUsesGameKeyboardOnly(');
   const end = source.indexOf('// ── โหมดไกด์ไลน์', start);
   const policy = source.slice(start, end);
   assert.ok(start >= 0 && end > start);
   assert.match(source, /TG_LANDSCAPE_KBD_QUERY='\(orientation: landscape\) and \(max-width: 1024px\) and \(max-height: 600px\)'/);
+  assert.match(source, /function tgIsTabletTouchDevice\(\)/);
+  assert.match(source, /shortSide>=600/);
+  assert.match(policy, /!tgIsTabletTouchDevice\(\)/);
+  assert.match(policy, /function tgTouchUsesGameKeyboardOnly\(\)/);
+  assert.match(policy, /!!guideMode\|\|tgLandscapeUsesGameKeyboardOnly\(\)/);
   assert.match(policy, /navigator\.maxTouchPoints/);
   assert.match(policy, /rgIsTouchDevice\(\)/);
   assert.match(policy, /document\.activeElement===mi\)mi\.blur\(\)/);
@@ -111,11 +116,63 @@ test('mobile landscape Typing uses only its equivalent in-game keyboard', () => 
   assert.match(policy, /setAttribute\('inputmode','none'\)/);
   assert.match(policy, /mi\.readOnly=false/);
   assert.match(policy, /setAttribute\('inputmode','text'\)/);
-  assert.match(source, /if\(tgLandscapeUsesGameKeyboardOnly\(\)\)\{ mi\.blur\(\); return; \}/);
-  assert.match(source, /RG_MOBILE_KBD_USED && rgIsTouchDevice\(\) && !tgLandscapeUsesGameKeyboardOnly\(\)/);
+  assert.match(source, /if\(tgTouchUsesGameKeyboardOnly\(\)\)\{ mi\.blur\(\); return; \}/);
+  assert.match(source, /RG_MOBILE_KBD_USED && rgIsTouchDevice\(\) && !tgTouchUsesGameKeyboardOnly\(\)/);
   assert.match(html, /body\.tg-landscape-game-keyboard-only \.tkbd\{display:flex !important/);
-  assert.match(html, /orientation:landscape[\s\S]{0,300}pointer:coarse[\s\S]{0,220}\.mobile-kbd-input\{pointer-events:none !important;\}/);
+  assert.match(html, /body\.tg-touch-game-keyboard-only \.mobile-kbd-input\{pointer-events:none !important;\}/);
+  assert.doesNotMatch(html, /orientation:landscape[\s\S]{0,300}pointer:coarse[\s\S]{0,220}\.mobile-kbd-input\{pointer-events:none !important;\}/);
   assert.match(html, /id="rg-kbd"/);
+});
+
+test('keyboard policy distinguishes Phone, iPad default and iPad Hint at runtime', () => {
+  const blocks = [
+    functionBlock('tgIsTabletTouchDevice', 'tgLandscapeUsesGameKeyboardOnly'),
+    functionBlock('tgLandscapeUsesGameKeyboardOnly', 'tgTouchUsesGameKeyboardOnly'),
+    functionBlock('tgTouchUsesGameKeyboardOnly', 'tgSyncLandscapeKeyboardPolicy'),
+  ].join('\n');
+  const policyContext = {
+    Math,
+    navigator: { maxTouchPoints: 5 },
+    screen: { width: 768, height: 1024 },
+    window: { innerWidth: 1024, innerHeight: 768, matchMedia: () => ({ matches: true }) },
+    rgIsTouchDevice: () => true,
+    TG_LANDSCAPE_KBD_QUERY: '(landscape)',
+    guideMode: false,
+  };
+  vm.createContext(policyContext);
+  vm.runInContext(blocks, policyContext);
+  assert.strictEqual(policyContext.tgIsTabletTouchDevice(), true);
+  assert.strictEqual(policyContext.tgLandscapeUsesGameKeyboardOnly(), false);
+  assert.strictEqual(policyContext.tgTouchUsesGameKeyboardOnly(), false);
+  policyContext.guideMode = true;
+  assert.strictEqual(policyContext.tgTouchUsesGameKeyboardOnly(), true);
+  policyContext.guideMode = false;
+  policyContext.screen = { width: 390, height: 844 };
+  assert.strictEqual(policyContext.tgLandscapeUsesGameKeyboardOnly(), true);
+});
+
+test('typing keyboard no longer includes the retired touch magnifier', () => {
+  assert.doesNotMatch(source, /TG_TOUCH_MAGNIFIER|tgTouchMagnifier|tgBindTouchMagnifier/);
+  assert.doesNotMatch(html, /tg-touch-magnifier|tg-touch-selected/);
+  assert.match(source, /k\.onclick=function\(\)\{ rgVirtualPress\(code\); \}/);
+});
+
+test('typing menu contains only the current learning tools', () => {
+  const menu = html.match(/WordMenu\.init\(\{rowId:'word-ctl-row',items:\[([\s\S]*?)\]\}\)/);
+  assert.ok(menu);
+  const ids = Array.from(menu[1].matchAll(/\{id:'([^']+)'/g), (match) => match[1]);
+  assert.deepStrictEqual(ids, [
+    'rg-sound-toggle', 'rg-pron-toggle', 'rg-en-toggle', 'zh-toggle-slot',
+    'rg-vault-btn-slot', 'guide-toggle', 'font-toggle-slot', 'rg-particle-toggle',
+  ]);
+});
+
+test('a shown Hint remains zero-score evidence when the word is skipped', () => {
+  const skip = functionBlock('skipWord', 'next');
+  const highlight = functionBlock('rgTypeHighlightNextKey', 'rgTypeFlashWrong');
+  assert.match(skip, /guide:!!wordUsedGuide/);
+  assert.match(highlight, /wordUsedGuide=true/);
+  assert.match(highlight, /roundHadGuide=true/);
 });
 
 test('free-text inputs without an equivalent in-game keyboard remain native', () => {
@@ -157,7 +214,7 @@ test('Typing counter follows active syllables including High continuous segments
 });
 
 test('Typing loads the rebuilt crash-safe bundle with a fresh cache key', () => {
-  assert.match(html, /typing-game-app\.min\.js\?v=47/);
+  assert.match(html, /typing-game-app\.min\.js\?v=48/);
 });
 
 test('玩法 explains both locked typing rules', () => {

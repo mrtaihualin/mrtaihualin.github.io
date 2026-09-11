@@ -272,7 +272,11 @@ assert.match(read('js/games/word-order-app.min.js'), /word-order report answer/)
 ].forEach((relative) => {
   const fixture = read(relative);
   assert.match(fixture, /approved-vocabulary-catalog\.json/, relative + ' must use the current canonical fixture');
-  assert.match(fixture, /return \{catalog:record\}/, relative + ' must pass the canonical bundle to the real game adapter');
+  if (relative === 'scripts/browser-tests/mobile-landscape-typing-review.html') {
+    assert.match(fixture, /\/__preview\/typing-keys\.html/, relative + ' must use the isolated canonical preview adapter');
+  } else {
+    assert.match(fixture, /return \{catalog:record\}/, relative + ' must pass the canonical bundle to the real game adapter');
+  }
   assert.doesNotMatch(fixture, /var\s+(?:words|fixture)\s*=\s*\[\{\s*(?:word|th):/, relative + ' must not inject a hand-written vocabulary authority');
 });
 

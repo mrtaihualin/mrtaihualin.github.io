@@ -1065,7 +1065,7 @@ function skipWord(){
   try{ if(typeof gtag==='function') gtag('event','typing_game_skip_click',{category:'game', word:(typeof WORD!=='undefined'&&WORD)?WORD.th:''}); }catch(e){}
   curWordIsKnownCheck=false;
   tgCloseMobileKeyboard();
-  rgLogWord({skipped:true,wrong:0,attempts:[],userAnswer:'',pts:0});
+  rgLogWord({skipped:true,guide:!!wordUsedGuide,wrong:0,attempts:[],userAnswer:'',pts:0});
   nextWord();
 }
 function next(){
@@ -1788,17 +1788,32 @@ var RG_MOBILE_KBD_USED=false;
 // Mobile Landscape has an equivalent in-game Thai keyboard, so the native keyboard must stay closed.
 // Portrait keeps the existing native-keyboard path; free-text inputs in other games are not touched.
 var TG_LANDSCAPE_KBD_QUERY='(orientation: landscape) and (max-width: 1024px) and (max-height: 600px)';
+function tgIsTabletTouchDevice(){
+  try{
+    var touch=(navigator.maxTouchPoints||0)>0||rgIsTouchDevice();
+    var shortSide=Math.min(screen.width||window.innerWidth,screen.height||window.innerHeight);
+    return touch&&shortSide>=600;
+  }catch(e){return false;}
+}
 function tgLandscapeUsesGameKeyboardOnly(){
   try{
     var touch=(navigator.maxTouchPoints||0)>0||rgIsTouchDevice();
-    return touch&&window.matchMedia(TG_LANDSCAPE_KBD_QUERY).matches;
+    return touch&&!tgIsTabletTouchDevice()&&window.matchMedia(TG_LANDSCAPE_KBD_QUERY).matches;
+  }catch(e){return false;}
+}
+function tgTouchUsesGameKeyboardOnly(){
+  try{
+    var touch=(navigator.maxTouchPoints||0)>0||rgIsTouchDevice();
+    return touch&&(!!guideMode||tgLandscapeUsesGameKeyboardOnly());
   }catch(e){return false;}
 }
 function tgSyncLandscapeKeyboardPolicy(){
-  var gameOnly=tgLandscapeUsesGameKeyboardOnly();
+  var landscapeOnly=tgLandscapeUsesGameKeyboardOnly();
+  var gameOnly=tgTouchUsesGameKeyboardOnly();
   try{
     var mi=document.getElementById('rg-mobile-input');
-    document.body.classList.toggle('tg-landscape-game-keyboard-only',gameOnly);
+    document.body.classList.toggle('tg-landscape-game-keyboard-only',landscapeOnly);
+    document.body.classList.toggle('tg-touch-game-keyboard-only',gameOnly);
     if(!mi)return gameOnly;
     if(gameOnly){
       if(document.activeElement===mi)mi.blur();
@@ -1825,12 +1840,6 @@ function setGuideMode(on){
   // Lin 2026-07-19: ปุ่มวงเดียว กดสลับ — 有提示 โชว์ 💡 · 無提示 โชว์ 🔥
   var gt=document.getElementById('guide-toggle');
   if(gt){ gt.textContent=guideMode?'💡':'🔥'; gt.title=guideMode?'有提示（練習）':'無提示（挑戰）'; }
-  try{
-    document.body.classList.remove('tg-kbd-open'); // สลับโหมดทีไร รีเซ็ตกลับ default เสมอ
-    // Lin 2026-07-19: ปุ่มคีย์บอร์ดบนจอเป็นปุ่มอิสระ ไม่ผูกกับโหมด 有/無提示 อีกต่อไป — โชว์ตลอด กดเปิด/ปิดเองได้ทุกโหมด · แค่รีเซ็ตสถานะปุ่มตอนสลับโหมด
-    var wkb=document.getElementById('rg-webkbd-toggle');
-    if(wkb){ wkb.textContent='⌨️'; wkb.className='word-ctl-btn'; wkb.removeAttribute('data-playing'); wkb.title='開啟螢幕鍵盤'; }
-  }catch(e){}
   ['tg-guide-note'].forEach(function(id){
     var note=document.getElementById(id);
     if(!note)return;
@@ -1856,21 +1865,13 @@ function tgChooseGuideMode(on){
   return true;
 }
 
-// 無提示(挑戰)模式用: ผู้เล่นกดเองเพื่อเปิด/ปิดคีย์บอร์ดในเกม (ปกติซ่อนไว้ ให้พิมพ์ด้วยคีย์บอร์ดจริงล้วนๆ) — Lin 2026-07-12
-function rgToggleWebKbd(){
-  var open=document.body.classList.toggle('tg-kbd-open');
-  try{ if(typeof gtag==='function') gtag('event', open?'typing_game_keyboard_open':'typing_game_keyboard_close', {category:'game'}); }catch(e){}
-  var b=document.getElementById('rg-webkbd-toggle');
-  // Lin 2026-07-19: เหลือแค่ไอคอน ⌨️ ไม่มีตัวหนังสือ — โชว์สถานะเปิด/ปิดด้วยสีปุ่มแบบเดียวกับปุ่มไข่/ข้าวปั้น (data-playing)
-  if(b){ if(open){b.setAttribute('data-playing','1');}else{b.removeAttribute('data-playing');} b.title=open?'關閉螢幕鍵盤':'開啟螢幕鍵盤'; }
-}
 // Lin 2026-07-12: คีย์บอร์ดเครื่องขึ้น (โฟกัสช่อง input จริง) → ซ่อนหัวเว็บไม่ให้กินพื้นที่ · ปิดคีย์บอร์ด (blur) → คืนกลับ
 (function(){
   try{
     var mi=document.getElementById('rg-mobile-input');
     if(!mi)return;
     mi.addEventListener('focus',function(){
-      if(tgLandscapeUsesGameKeyboardOnly()){ mi.blur(); return; }
+      if(tgTouchUsesGameKeyboardOnly()){ mi.blur(); return; }
       RG_MOBILE_KBD_USED=true;
       document.body.classList.add('tg-kbd-typing');
     });
@@ -1994,6 +1995,7 @@ function rgTypeHighlightNextKey(){
   shiftKeys.forEach(function(key){key.classList.toggle('need',!!info.shift);});
   // กฎ MASTER (อุดรูรั่ว): "เห็นคำใบ้ = คำนี้ไม่ได้แต้ม" — ล็อกทันทีที่ไฮไลต์คีย์ถัดไป (ไม่ใช่รอพิมพ์ครบ)
   wordUsedGuide=true;
+  roundHadGuide=true;
 }
 function rgTypeFlashWrong(){
   var el=document.getElementById('rg-type-target');
@@ -2273,7 +2275,7 @@ document.addEventListener('keydown',function(e){
     // ขึ้นคำ/พยางค์ใหม่แล้วคีย์บอร์ดเครื่องไม่เด้งกลับมาเอง ต้องแตะกล่องคำเองใหม่ทุกครั้ง ดูเหมือน "พิมพ์ไม่ได้"
     // แก้: ถ้าเคยใช้คีย์บอร์ดมือถือมาก่อน (RG_MOBILE_KBD_USED) + เป็นจอสัมผัส → ดึงโฟกัสกลับให้อัตโนมัติ (Lin 2026-07-16: โหมดมีคำใบ้ก็ใช้คีย์บอร์ดเครื่องได้แล้ว เลยเอาเงื่อนไขกัน guideMode ออก)
     try{
-      if(RG_MOBILE_KBD_USED && rgIsTouchDevice() && !tgLandscapeUsesGameKeyboardOnly()){
+      if(RG_MOBILE_KBD_USED && rgIsTouchDevice() && !tgTouchUsesGameKeyboardOnly()){
         var _mi=document.getElementById('rg-mobile-input');
         if(_mi)_mi.focus();
       }
@@ -2351,11 +2353,6 @@ function rgMobileInputReset(){ // เรียกตอน "จุดจบธ�
 rgBuildKeyboard();
 rgApplyTypeModeUI();
 // (rgHookBonusOpts()/ตัวดักโฟกัสปุ่มวรรณยุกต์ ถูกลบแล้ว — เอา猜聲調ออก 2026-07-30)
-try{
-  rgNoFocusSteal(document.getElementById('rg-webkbd-toggle')); // Lin 2026-07-18: กดปุ่มเปิด/ปิดคีย์บอร์ดในเกม แล้วคีย์บอร์ดเครื่องต้องไม่หุบ
-  // The inline tool row owns its existing controls; capture click above closes
-  // the native mobile keyboard before a learning tool acts.
-}catch(e){}
 
 // ════════════════════════════════════════════
 // เลือกพยางค์เองได้อิสระ (คำหลายพยางค์) — Lin 2026-07-02

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="th"><meta charset="utf-8"><title>Typing keyboard responsive review</title>
+<style>body{font:14px system-ui;background:#eee8df;color:#49350d}iframe{display:block;border:1px solid #c9b27e;margin-top:12px}pre{white-space:pre-wrap}button,select{font:inherit}</style>
+<h1>ตรวจคีย์บอร์ด Typing — ขนาดจอจำลอง / ข้อมูลทดสอบ</h1>
+<select id="size" aria-label="ขนาดจอ"></select><button id="all">ตรวจทุกขนาด</button><pre id="result">กำลังเตรียม</pre>
+<iframe id="game" title="Typing keyboard test"></iframe>
+<script>
+(function(){
+  'use strict';
+  var sizes=[['Desktop',1440,900],['Desktop portrait',900,1440],['Phone portrait',390,844],['Phone landscape',844,390],['Small phone',320,568],['iPad portrait',768,1024],['iPad landscape',1024,768],['iPad Pro portrait',1024,1366],['iPad Pro landscape',1366,1024]];
+  var select=document.getElementById('size'),frame=document.getElementById('game'),result=document.getElementById('result');
+  sizes.forEach(function(s,i){var o=document.createElement('option');o.value=i;o.textContent=s.join(' · ');select.appendChild(o);});
+  var sourcePromise=fetch('/__preview/typing-keys.html',{cache:'no-store'}).then(function(r){if(!r.ok)throw Error('เปิดข้อมูลทดสอบไม่สำเร็จ');return r.text();}).then(function(html){
+    return html.replace('<head>','<head><script>try{Object.defineProperty(navigator,"maxTouchPoints",{value:5});var realMatchMedia=window.matchMedia.bind(window);window.matchMedia=function(query){return query==="(hover:hover) and (pointer:fine)"?{matches:false}:realMatchMedia(query);};}catch(e){}<\/script>');
+  });
+  function wait(ms){return new Promise(function(r){setTimeout(r,ms);});}
+  function visible(el,win){return !!el&&el.getClientRects().length>0&&win.getComputedStyle(el).visibility!=='hidden';}
+  async function check(i){
+    var s=sizes[i];frame.style.width=s[1]+'px';frame.style.height=s[2]+'px';frame.srcdoc=await sourcePromise;
+    var doc,win;for(var n=0;n<100;n++){await wait(100);doc=frame.contentDocument;win=frame.contentWindow;if(doc&&doc.documentElement&&doc.documentElement.classList.contains('gc-ready')&&doc.querySelectorAll('#rg-kbd .tk-key[data-code]').length===47)break;}
+    await wait(250);var toggle=doc.getElementById('guide-toggle'),kbd=doc.getElementById('rg-kbd');
+    if(!visible(kbd,win)){if(!visible(toggle,win)||toggle.disabled)throw Error(s[0]+': missing Hint control');toggle.click();}
+    var keys=Array.from(doc.querySelectorAll('#rg-kbd .tk-key[data-code]'));
+    if(keys.length!==47||!keys.every(function(k){return visible(k,win)&&k.textContent.trim();}))throw Error(s[0]+': missing key faces');
+    if(!Array.from(kbd.querySelectorAll('.comb-base')).every(function(base){return win.getComputedStyle(base).display==='none';}))throw Error(s[0]+': transparent bases can hide combining marks');
+    if(keys.some(function(k){var r=k.getBoundingClientRect();return r.left<0||r.right>s[1]+1||r.width<1||r.height<1;}))throw Error(s[0]+': keys clipped horizontally');
+    var shift=doc.querySelector('#rg-kbd .rg-shift-key');shift.click();if(!kbd.classList.contains('shift-on'))throw Error(s[0]+': shift unavailable');shift.click();
+    return 'PASS '+s[0]+' '+s[1]+'×'+s[2]+' — 47 key faces and Shift in Hint mode';
+  }
+  async function run(indices){document.getElementById('all').disabled=true;select.disabled=true;var rows=[];try{for(var i of indices){result.textContent=rows.join('\n')+'\nกำลังตรวจ '+sizes[i][0];rows.push(await check(i));}result.textContent=rows.join('\n');document.title='PASS — Typing keyboard '+rows.length+' sizes';}catch(e){result.textContent=rows.join('\n')+'\nFAIL '+e.message;document.title='FAIL — Typing keyboard';}finally{select.disabled=false;document.getElementById('all').disabled=false;}}
+  var initialIndex=new URLSearchParams(location.search).get('portrait')==='1'?2:0;
+  select.value=initialIndex;
+  select.onchange=function(){run([Number(select.value)]);};document.getElementById('all').onclick=function(){run(sizes.map(function(_,i){return i;}));};run([initialIndex]);
+})();
+</script></html>

@@ -470,43 +470,11 @@
     page.win.RG_TYPE.target = '\uffff'.repeat(100);
     page.win.RG_TYPE.pos = 0;
     var badBefore = page.win.badC;
-
-    var magnifierKey = characterKeys[20];
-    var magnifierKeyRect = rect(magnifierKey);
-    var pointerX = (magnifierKeyRect.left + magnifierKeyRect.right) / 2;
-    var pointerY = (magnifierKeyRect.top + magnifierKeyRect.bottom) / 2;
-    magnifierKey.dispatchEvent(new page.win.PointerEvent('pointerdown', {
-      bubbles: true, cancelable: true, pointerId: 41, pointerType: 'touch', clientX: pointerX, clientY: pointerY
-    }));
-    await wait(380);
-    var magnifier = page.doc.querySelector('.gsh-ml-typing-magnifier:not([hidden])');
-    assert(!!magnifier, 'Typing long press opens the magnifier after about 350ms');
-    assert(magnifier.querySelectorAll('.gsh-ml-typing-magnifier-key').length === 5, 'Typing magnifier shows five real keyboard keys');
-    assert(magnifier.querySelectorAll('[data-selected="true"]').length === 1, 'Typing magnifier makes the selected centre key largest');
-    page.win.dispatchEvent(new page.win.PointerEvent('pointerup', {
-      bubbles: true, cancelable: true, pointerId: 41, pointerType: 'touch', clientX: pointerX, clientY: pointerY
-    }));
-    await wait(30);
-    assert(page.win.badC === badBefore + 1, 'Typing magnifier types exactly once when released on a key');
-
-    var cancelBefore = page.win.badC;
-    magnifierKey.dispatchEvent(new page.win.PointerEvent('pointerdown', {
-      bubbles: true, cancelable: true, pointerId: 42, pointerType: 'touch', clientX: pointerX, clientY: pointerY
-    }));
-    await wait(380);
-    var outsideX = (center.left + center.right) / 2;
-    var outsideY = (center.top + center.bottom) / 2;
-    page.win.dispatchEvent(new page.win.PointerEvent('pointermove', {
-      bubbles: true, cancelable: true, pointerId: 42, pointerType: 'touch', clientX: outsideX, clientY: outsideY
-    }));
-    page.win.dispatchEvent(new page.win.PointerEvent('pointerup', {
-      bubbles: true, cancelable: true, pointerId: 42, pointerType: 'touch', clientX: outsideX, clientY: outsideY
-    }));
-    await wait(30);
-    assert(page.win.badC === cancelBefore, 'Typing magnifier cancels when released outside the keyboard');
+    assert(!page.doc.querySelector('.tg-touch-magnifier'), 'Typing contains no retired touch magnifier');
+    assert(!characterKeys.some(function (key) { return key.classList.contains('tg-touch-selected'); }), 'Typing leaves the real keyboard buttons unchanged');
 
     characterKeys.forEach(function (key) { key.click(); });
-    assert(page.win.badC === badBefore + 48, 'All 47 Typing character/symbol buttons execute their real click handler');
+    assert(page.win.badC === badBefore + 47, 'All 47 Typing character/symbol buttons execute their real click handler');
 
     var shifts = Array.prototype.slice.call(page.doc.querySelectorAll('#rg-kbd .rg-shift-key'));
     shifts[0].click();
