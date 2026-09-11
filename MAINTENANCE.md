@@ -2766,3 +2766,9 @@ node scripts/check-site.js
 - Removed the stale external weekly-audit instruction that could reopen the denied legacy corpus or recreate the old tone calculator comparison. Current audit instructions verify direct canonical transport and fail-closed behavior only.
 - Lego remains a separate sentence-builder/content system and does not consume or sit between the Current vocabulary catalog and its game consumers; no Lego vocabulary migration or Product-content decision was inferred in this cleanup.
 - Verification: Current Free 200, canonical cutover, network recovery, exact identity, Resume, Practice Events, score security and no-second-judge checks pass; all five minified game bundles were rebuilt; the complete site gate passes across 1,078 files. Three independent AI audits—static cleanliness, five-game dataflow and adversarial malformed-payload reproduction—agree on PASS with no blocker. This is a source-only Delta. No database migration, Edge deployment or website release was performed.
+
+# 2026-09-11 — Login Free content-tier activation
+
+- Changed the single reversible content runtime from `minimum-guest` to `login-free`: Guest sessions still receive the exact Guest 100 set, while an existing authenticated session can present its token to the existing entitlement-checked `game-content` path and receive the additional Login Free 100 set.
+- Preserved the isolated anonymous client and one-value Minimum Guest rollback, the parked Listening/Paid/Challenge boundaries, and the temporary global game-audio disable. No vocabulary record, database, Auth configuration, Edge Function or account data was changed.
+- Added regression evidence for the active mode, the explicit rollback mode and the distinct Guest/Login token paths. Final Go remains pending Lin's combined review.
