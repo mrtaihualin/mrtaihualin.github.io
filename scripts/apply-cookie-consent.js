@@ -26,6 +26,7 @@ const EXCLUDE_DIR_NAMES = new Set([
   'เลิกใช้แล้ว_ห้ามรัน',
   '.git',
   '_dev', // gitignore ล็อกไว้แล้ว + มีไฟล์ backup เก่าที่ไม่ได้ deploy จริง ไม่ต้องแตะ
+  'dev', // developer-only previews are not public routes
   '_แผนงาน',
   '_บทความ-เตรียมเขียน',
   'scripts',
@@ -72,20 +73,43 @@ function walk(dir, out) {
 }
 
 function buildConsentPreferenceHelpers(indent = '  ') {
-  return `${indent}window.__cookieConsentRead = window.__cookieConsentRead || function() {
-${indent}  var value = null;
-${indent}  try { value = window.localStorage.getItem('cookieConsent'); } catch (_) {}
-${indent}  if (value === 'granted' || value === 'denied') return value;
+  return `${indent}window.__cookieConsentSharedCookie = 'mrtCookieConsentSharedV1';
+${indent}window.__cookieConsentSiteHost = function() {
+${indent}  var hostname = window.location && String(window.location.hostname || '').toLowerCase();
+${indent}  return hostname === 'mrtaihualin.com' || hostname === 'www.mrtaihualin.com';
+${indent}};
+${indent}window.__cookieConsentCookieValue = function(name) {
 ${indent}  try {
-${indent}    var match = document.cookie.match(/(?:^|;\\s*)mrtCookieConsent=(granted|denied)(?:;|$)/);
+${indent}    var match = document.cookie.match(new RegExp('(?:^|;\\\\s*)' + name + '=(granted|denied)(?:;|$)'));
 ${indent}    return match ? match[1] : null;
 ${indent}  } catch (_) { return null; }
 ${indent}};
 ${indent}window.__cookieConsentWrite = window.__cookieConsentWrite || function(value) {
 ${indent}  try { window.localStorage.setItem('cookieConsent', value); } catch (_) {}
 ${indent}  try {
-${indent}    document.cookie = 'mrtCookieConsent=' + value + ';Max-Age=31536000;path=/;SameSite=Lax' + (window.location.protocol === 'https:' ? ';Secure' : '');
+${indent}    var secure = window.location.protocol === 'https:' ? ';Secure' : '';
+${indent}    document.cookie = 'mrtCookieConsent=' + value + ';Max-Age=31536000;path=/;SameSite=Lax' + secure;
+${indent}    if (window.__cookieConsentSiteHost()) {
+${indent}      document.cookie = window.__cookieConsentSharedCookie + '=' + value + ';Max-Age=31536000;path=/;domain=.mrtaihualin.com;SameSite=Lax' + secure;
+${indent}    }
 ${indent}  } catch (_) {}
+${indent}};
+${indent}window.__cookieConsentRead = window.__cookieConsentRead || function() {
+${indent}  var value = null;
+${indent}  if (window.__cookieConsentSiteHost()) {
+${indent}    value = window.__cookieConsentCookieValue(window.__cookieConsentSharedCookie);
+${indent}    if (value === 'granted' || value === 'denied') {
+${indent}      try { window.localStorage.setItem('cookieConsent', value); } catch (_) {}
+${indent}      return value;
+${indent}    }
+${indent}  }
+${indent}  try { value = window.localStorage.getItem('cookieConsent'); } catch (_) {}
+${indent}  if (value !== 'granted' && value !== 'denied') value = window.__cookieConsentCookieValue('mrtCookieConsent');
+${indent}  if (value === 'granted' || value === 'denied') {
+${indent}    window.__cookieConsentWrite(value);
+${indent}    return value;
+${indent}  }
+${indent}  return null;
 ${indent}};`;
 }
 
