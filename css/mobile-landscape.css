@@ -456,12 +456,6 @@
   }
   body.gsh-ml-active #gsh-ml-stage .gsh-split-thai-keyboard .tk-base { font-size: 15px; }
   body.gsh-ml-active #gsh-ml-stage .gsh-split-thai-keyboard .tk-shift { font-size: 9px; }
-  body[data-gsh-game="typing"].gsh-ml-active #gsh-ml-stage #rg-kbd .comb-base {
-    display: none;
-  }
-  body[data-gsh-game="typing"].gsh-ml-active #gsh-ml-stage #rg-kbd .comb-disp::before {
-    content: '\200B';
-  }
   body[data-gsh-game="typing"].gsh-ml-active #gsh-ml-stage #rg-kbd.shift-on .tk-key .tk-shift {
     font-size: 15px;
     color: #3a2a0a;
