@@ -43,11 +43,11 @@
 - Restored the original direct `RG_BASE_MAP` / `RG_SHIFT_MAP` labels for all 47 exact Kedmanee keys. Standalone combining labels now receive only a scoped nonzero-width box so their own glyph cannot be clipped; no hidden consonant, zero-width-space, transparent face, removed key or broad `nth-child` rule remains in the keyboard path.
 - Lin's final Shift rule is isolated from the character renderer: Phone Landscape `844×390` alone shows both synchronized one-shot Shift controls; Desktop, Phone Portrait, Small Phone and every iPad orientation show one. Static regressions still lock the exact 47-key inventory hash and direct renderer; browser raster checks confirm all 94 normal/Shift faces paint pixels in Standard and Modern fonts across all nine sizes. No character map, character label, keyboard input handler, Production, Supabase, Auth, account or data behavior changed.
 
-## 2026-09-11 — Learning Progress / Vocabulary entrance separation (`SOURCE_PASS / LOCAL_PREVIEW_PASS / HUMAN_PENDING / PRODUCTION_UNCHANGED`)
+## 2026-09-11 — Learning Progress / Vocabulary entrance separation (`SOURCE_PASS / LOCAL_PREVIEW_PASS / HUMAN_PASS / PRODUCTION_UNCHANGED`)
 
 - Renamed the `/my-progress` page title, heading and Guest introduction from `學習中心` to `學習進度`, while preserving the URL, Login/Guest boundary, five-skill Progress/SRS reads, direct practice actions and account-switch behavior.
 - Removed the `我的內容`, `我的單詞` and `我的句子` sections and links from the Progress runtime. The separate `泰語單字庫` page, personal word/sentence clients, storage behavior and direct deep links remain unchanged; the six-game switcher now uses the same `泰語單字庫` label as the account menu and Game Hub.
-- Focused Learning IA `34/34`, shared-game `53/53`, Mobile Landscape `23/23`, Personal Content `62/62`, Personal Search `10/10` and the complete `1,085`-file site gate PASS. Local Desktop `1280×720` and Mobile Portrait `390×844` previews have zero horizontal overflow. Merge, deployment, Production, Supabase/database, Auth and account/data mutation remain unchanged pending Lin Human visual PASS.
+- Focused Learning IA `34/34`, shared-game `53/53`, Mobile Landscape `23/23`, Personal Content `62/62`, Personal Search `10/10` and the complete `1,085`-file site gate PASS. Local Desktop `1280×720` and Mobile Portrait `390×844` previews have zero horizontal overflow; Lin gave Human visual PASS on the exact local candidate `14ac968`. Merge, deployment, Production, Supabase/database, Auth and account/data mutation remain unchanged.
 
 ## 2026-09-11 — Final Go Desktop cookie consent host unification (`SOURCE_PASS / PRODUCTION_UNCHANGED`)
 
