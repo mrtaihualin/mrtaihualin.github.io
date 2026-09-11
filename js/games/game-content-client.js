@@ -57,6 +57,24 @@
     });
   }
 
+  function exactWrittenSegments(record) {
+    if (!record || !Array.isArray(record.syllables) || !record.syllables.length) return null;
+    if (Array.isArray(record.spellingSyllables)) {
+      if (record.spellingSyllables.length !== record.syllables.length ||
+          !record.spellingSyllables.every(function (syllable) { return syllable && isExactNonblank(syllable.th); }) ||
+          record.spellingSyllables.map(function (syllable) { return syllable.th; }).join('') !== record.word) return null;
+      return record.spellingSyllables;
+    }
+    // The Paid 189 queue predates spellingSyllables, but spellingTH already contains
+    // Lin's exact reviewed written-syllable boundaries. Copy those explicit segments;
+    // never infer a boundary from Thai spelling or pronunciation.
+    if (Object.prototype.hasOwnProperty.call(record, 'spellingSyllables') || !isExactNonblank(record.spellingTH)) return null;
+    var parts = record.spellingTH.split('-');
+    if (parts.length !== record.syllables.length ||
+        parts.some(function (part) { return !isExactNonblank(part); }) || parts.join('') !== record.word) return null;
+    return parts.map(function (th) { return { th: th }; });
+  }
+
   function requireCatalogBundle(bundle) {
     var record = bundle && bundle.catalog;
     if (!record || typeof record !== 'object' || Array.isArray(record)) {
@@ -66,15 +84,14 @@
         !hasRequiredStrings(record, REQUIRED_CATALOG_STRING_FIELDS) ||
         !Array.isArray(record.approvalRefs) || !record.approvalRefs.length ||
         !record.approvalRefs.every(isExactNonblank) ||
-        !Array.isArray(record.syllables) || !record.syllables.length || !Array.isArray(record.spellingSyllables)) {
+        !Array.isArray(record.syllables) || !record.syllables.length) {
       throw new Error('game-content: catalog authority incomplete (' + (record.contentKey || record.word || 'unknown') + ')');
     }
-    if (record.spellingSyllables.length !== record.syllables.length ||
-        !record.spellingSyllables.every(function (syllable) { return syllable && isExactNonblank(syllable.th); }) ||
-        record.spellingSyllables.map(function (syllable) { return syllable.th; }).join('') !== record.word) {
+    var writtenSegments = exactWrittenSegments(record);
+    if (!writtenSegments) {
       throw new Error('game-content: reviewed display segmentation missing (' + record.contentKey + ')');
     }
-    return record;
+    return { record: record, writtenSegments: writtenSegments };
   }
 
   function projectSyllable(record, display, contentKey, index) {
@@ -104,9 +121,10 @@
   }
 
   function projectWord(bundle) {
-    var record = requireCatalogBundle(bundle);
+    var checked = requireCatalogBundle(bundle);
+    var record = checked.record;
     var syllables = record.syllables.map(function (syllable, index) {
-      return projectSyllable(syllable, record.spellingSyllables[index], record.contentKey, index);
+      return projectSyllable(syllable, checked.writtenSegments[index], record.contentKey, index);
     });
     return {
       contentKey: record.contentKey,
