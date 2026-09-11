@@ -33,6 +33,11 @@ const user2 = '00000000-0000-4000-8000-000000000002';
 const day = '2026-08-27';
 const round = '10000000-0000-4000-8000-000000000001';
 const rollbackPath = path.join(root, 'supabase/recovery/phase1-learning-review/rollback-empty-schema.sql');
+const allowedGames = ['tone', 'reading', 'listening', 'typing', 'wordorder'];
+const reviewGames = String(process.env.PHASE1_REVIEW_GAME_SCOPE || allowedGames.join(','))
+  .split(',').map((value) => value.trim()).filter(Boolean);
+assert.ok(reviewGames.length && reviewGames.every((game) => allowedGames.includes(game)), 'invalid Review game scope');
+assert.equal(new Set(reviewGames).size, reviewGames.length, 'duplicate Review game scope');
 
 function uuid(n) {
   return `20000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
@@ -40,6 +45,12 @@ function uuid(n) {
 
 function hash(char) {
   return String(char).repeat(64);
+}
+
+function addDays(value, days) {
+  const date = new Date(value + 'T00:00:00Z');
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
 }
 
 function call({ op, user = user1, requestHash = hash('a'), game = 'tone', level = 1,
@@ -126,6 +137,56 @@ try {
   assert.equal(psql('select count(*) from public.phase1_learning_review_states;'), '0');
   console.log('Exact content_ref fail-closed: PASS');
 
+  let matrixItem = 100;
+  let matrixOperation = 100;
+  function createMatrixItem(label) {
+    const key = `matrix-${label}@初`;
+    const id = `31000000-0000-4000-8000-${String(matrixItem++).padStart(12, '0')}`;
+    psql(`insert into public.learning_items(item_id,content_source,content_key) values ('${id}','game_words','${key}');`);
+    return key;
+  }
+  function matrixRpc(args) {
+    const n = matrixOperation++;
+    return rpc({ op: uuid(n), requestHash: hash((n % 16).toString(16)), ...args });
+  }
+
+  for (const [score, target] of [[0, 'retry_end_round'], [3, 'retry_end_round'], [4, 'weak_4d'], [9, 'weak_4d'], [10, 'srs']]) {
+    const result = matrixRpc({ key: createMatrixItem(`normal-${score}`), score });
+    assert.equal(result.to_state, target);
+    if (target === 'weak_4d') assert.equal(result.due_on, addDays(day, 4));
+  }
+
+  for (const [score, target] of [[0, 'review_needed'], [3, 'review_needed'], [4, 'review_needed'], [9, 'review_needed'], [10, 'next_day_check']]) {
+    const key = createMatrixItem(`retry-${score}`);
+    const first = matrixRpc({ key, score: 0 });
+    const result = matrixRpc({ key, score, expected: 'retry_end_round', token: first.state_token });
+    assert.equal(result.to_state, target);
+    assert.equal(result.due_on, addDays(day, 1));
+    assert.equal(result.review_attempts_used, 0);
+  }
+
+  for (const score of [0, 3, 4, 9, 10]) {
+    const key = createMatrixItem(`review-${score}`);
+    const first = matrixRpc({ key, score: 0 });
+    const queued = matrixRpc({ key, score: 0, expected: 'retry_end_round', token: first.state_token });
+    const result = matrixRpc({
+      key, score, expected: 'review_needed', token: queued.state_token, occurredOn: addDays(day, 1),
+    });
+    assert.equal(result.to_state, score === 10 ? 'srs' : 'weak_4d');
+    if (score !== 10) assert.equal(result.due_on, addDays(day, 5));
+  }
+
+  for (const [score, target] of [[0, 'retry_end_round'], [3, 'retry_end_round'], [4, 'weak_4d'], [9, 'weak_4d'], [10, 'srs']]) {
+    const key = createMatrixItem(`weak-${score}`);
+    const first = matrixRpc({ key, score: 4 });
+    const result = matrixRpc({
+      key, score, expected: 'weak_4d', token: first.state_token, occurredOn: addDays(day, 4),
+    });
+    assert.equal(result.to_state, target);
+    if (target === 'weak_4d') assert.equal(result.due_on, addDays(day, 8));
+  }
+  console.log('Complete Normal/Retry/Review/Weak score-band matrix: PASS');
+
   const first = rpc({ op: uuid(3), key: 'weak@初', score: 7, requestHash: hash('b') });
   assert.equal(first.to_state, 'weak_4d');
   assert.equal(first.due_on, '2026-08-31');
@@ -168,13 +229,13 @@ try {
     'เขา@初#noun-mountain:30000000-0000-4000-8000-000000000009');
   console.log('Canonical Free200 sense identity: PASS');
 
-  for (const [index, game] of ['tone', 'reading', 'listening', 'typing', 'wordorder'].entries()) {
+  for (const [index, game] of reviewGames.entries()) {
     const result = rpc({ op: uuid(20 + index), key: 'shared@初', score: 4,
       requestHash: hash(String(5 + index)), game, verifier: `edge:${game}:v1` });
     assert.equal(result.to_state, 'weak_4d');
   }
-  assert.equal(psql("select count(distinct game) from public.phase1_learning_review_states where item_id='30000000-0000-4000-8000-000000000005';"), '5');
-  console.log('Five-game state isolation: PASS');
+  assert.equal(psql("select count(distinct game) from public.phase1_learning_review_states where item_id='30000000-0000-4000-8000-000000000005';"), String(reviewGames.length));
+  console.log(`${reviewGames.length}-game state isolation: PASS`);
 
   const race = rpc({ op: uuid(30), key: 'race@初', score: 4, requestHash: hash('a') });
   const calls = [

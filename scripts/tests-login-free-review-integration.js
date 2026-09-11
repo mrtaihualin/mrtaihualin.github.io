@@ -28,7 +28,11 @@ assert.match(runtime, /learning-review/);
 assert.match(runtime, /quotaTotal: total/);
 assert.match(runtime, /selectedReview\.concat\(tail\)/);
 assert.match(runtime, /state === 'next_day_check' \|\| state === 'review_needed'/);
-assert.match(runtime, /context\.pending = context\.pending\.then/);
+assert.match(runtime, /context\.pending = context\.pending\.catch\(function \(\) \{\}\)\.then/);
+assert.match(runtime, /function settle\(reportOrId\)/);
+assert.match(runtime, /function advance\(reportOrId, callback\)/);
+assert.match(runtime, /CONTENT_REF_IDENTITY_MISMATCH/);
+assert.doesNotMatch(runtime, /predictedScore\(context\.game, item\) <= 3\) scheduleRetry/);
 assert.doesNotMatch(runtime, /getSession\(|access_token|refresh_token|service_role/i);
 
 pages.forEach(page => {
@@ -42,6 +46,9 @@ Object.entries(games).forEach(([game, source]) => {
   assert.match(source, /LearningReview\.matchQueue/, game + ' maps stable Review refs');
   assert.match(source, /LearningReview\.allocateRuntime/, game + ' uses cumulative Review allocation');
   assert.match(source, /LearningReview\.registerRound/, game + ' registers atomic result routing');
+});
+['tone', 'reading', 'typing', 'word_order'].forEach(game => {
+  assert.match(games[game], /LearningReview\.advance/, game + ' waits for the acknowledged Review commit before advancing');
 });
 
 assert.match(edge, /auth\.getUser\(\)/);
