@@ -56,7 +56,7 @@
       }
       function keyFacesRender(doc, win) {
         var faces = Array.prototype.slice.call(doc.querySelectorAll('#rg-kbd .tk-key[data-code] .tk-base, #rg-kbd .tk-key[data-code] .tk-shift'));
-        var labels = Array.prototype.slice.call(doc.querySelectorAll('#rg-kbd .comb-disp'));
+        var keys = Array.prototype.slice.call(doc.querySelectorAll('#rg-kbd .tk-key[data-code]'));
         var sample = doc.querySelector('#rg-kbd .tk-key[data-code="KeyG"]');
         var baseFace = sample && sample.querySelector('.tk-base');
         var shiftFace = sample && sample.querySelector('.tk-shift');
@@ -66,30 +66,29 @@
           return {text: face.textContent, display: style.display, visibility: style.visibility,
             opacity: style.opacity, fontSize: parseFloat(style.fontSize), width: rect.width, height: rect.height};
         });
-        var labelAudit = labels.map(function (label) {
-          var base = label.querySelector('.comb-base');
-          var style = base && win.getComputedStyle(base);
-          var rect = label.getBoundingClientRect();
-          return {text: label.textContent, display: style && style.display, color: style && style.color,
-            width: rect.width, height: rect.height};
+        var inventory = keys.map(function (key) {
+          return [key.dataset.code, key.querySelector('.tk-base').textContent, key.querySelector('.tk-shift').textContent];
+        });
+        var expected = Object.keys(win.RG_BASE_MAP).map(function (code) {
+          return [code, win.RG_BASE_MAP[code], win.RG_SHIFT_MAP[code]];
         });
         var baseFont = parseFloat(win.getComputedStyle(baseFace).fontSize);
         var shiftFont = parseFloat(win.getComputedStyle(shiftFace).fontSize);
-        win.__typingFaceAudit = {faces: faceAudit, labels: labelAudit, baseFont: baseFont, shiftFont: shiftFont};
+        win.__typingFaceAudit = {faces: faceAudit, inventory: inventory, baseFont: baseFont, shiftFont: shiftFont};
         return faces.length === 94 && faceAudit.every(function (item) {
           return item.text.trim().length > 0 && item.display !== 'none' && item.visibility !== 'hidden' &&
             parseFloat(item.opacity) > 0 && item.fontSize > 0 && item.width > 0 && item.height > 0;
-        }) && labels.length > 0 && labelAudit.every(function (item) {
-          return item.text.trim().length > 1 && item.display !== 'none' &&
-            item.color === 'rgba(0, 0, 0, 0)' && item.width > 0 && item.height > 0;
-        });
+        }) && faces.every(function (face) {
+          return face.childElementCount === 0 && face.childNodes.length === 1 && face.firstChild.nodeType === 3;
+        }) && JSON.stringify(inventory) === JSON.stringify(expected) && !doc.querySelector('#rg-kbd .comb-disp,#rg-kbd .comb-base');
       }
       // Local preview injects one exact record from data/approved-vocabulary-catalog.json; this fixture never authors an answer.
       fetch('/__preview/typing-keys.html?review-cache=' + Date.now(), {cache: 'no-store'}).then(function (response) {
         if (!response.ok) throw new Error('เปิดไฟล์ Typing ไม่สำเร็จ');
         return response.text();
       }).then(function (html) {
-        html = html.replace('<head>', '<head><script>try{Object.defineProperty(navigator,"maxTouchPoints",{value:5});var realMatchMedia=window.matchMedia.bind(window);window.matchMedia=function(query){return query==="(hover:hover) and (pointer:fine)"?{matches:false}:realMatchMedia(query);};}catch(e){}<\/script>');
+        html = html.replace('<head>', '<head><script>try{localStorage.clear();sessionStorage.clear();Object.defineProperty(navigator,"maxTouchPoints",{value:5});Object.defineProperty(screen,"width",{value:844});Object.defineProperty(screen,"height",{value:390});var realMatchMedia=window.matchMedia.bind(window);window.matchMedia=function(query){if(query==="(hover:hover) and (pointer:fine)")return{matches:false};if(query==="(orientation: landscape) and (max-width: 1024px) and (max-height: 600px)")return{matches:true,addEventListener:function(){},removeEventListener:function(){}};return realMatchMedia(query);};}catch(e){}<\/script>');
+        html = html.replace('</head>', '<style>#rg-shift-key-right{display:flex !important}</style></head>');
         frame.onload = function () {
           var doc = frame.contentDocument;
           var win = frame.contentWindow;
@@ -106,16 +105,11 @@
               var sideInsets = keyboardSideInsetsReady(doc);
               var desktopFaces = keyFacesRender(doc, win);
               var noMagnifier = !doc.querySelector('.tg-touch-magnifier') && !('TG_TOUCH_MAGNIFIER_HOLD_MS' in win);
-              var faceAudit = win.__typingFaceAudit || {labels: []};
-              var badLabels = faceAudit.labels.filter(function (item) {
-                return item.text.trim().length <= 1 || item.display === 'none' ||
-                  item.color !== 'rgba(0, 0, 0, 0)' || item.width <= 0 || item.height <= 0;
-              });
+              var faceAudit = win.__typingFaceAudit || {baseFont: 0, shiftFont: 0};
               status.textContent = centered && sideInsets && desktopFaces && noMagnifier
-                ? 'พร้อมตรวจ Typing — ปุ่มทุกปุ่มมีหน้าตัวอักษร · ไม่มีแว่นขยาย · ไม่มี ก เพิ่ม'
+                ? 'พร้อมตรวจ Typing — 47 ปุ่มใช้ direct labels ครบ · ไม่มีแว่นขยาย · ไม่มี hidden-base workaround'
                 : 'ตรวจ Typing ไม่ผ่าน — กึ่งกลาง=' + centered + ' · ขอบข้าง=' + sideInsets +
                   ' · หน้าปุ่ม=' + desktopFaces + ' · ไม่มีแว่นขยาย=' + noMagnifier +
-                  ' · labelเสีย=' + JSON.stringify(badLabels.slice(0, 3)) +
                   ' · ขนาดหลัก/Shift=' + faceAudit.baseFont + '/' + faceAudit.shiftFont;
               return;
             }

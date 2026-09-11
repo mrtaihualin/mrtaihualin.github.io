@@ -1901,7 +1901,6 @@ function rgSyncShiftKeys(){
   if(box)box.classList.toggle('shift-on',RG_TYPE.shiftOn);
   rgShiftKeys().forEach(function(key){ key.classList.toggle('active',RG_TYPE.shiftOn); });
 }
-function rgKeyboardLabelHTML(value){ return dispHTML(value||''); }
 function rgMakeShiftKey(side){
   var key=document.createElement('div');
   key.className='tk-key tk-wide rg-shift-key';key.id='rg-shift-key-'+side;key.textContent='⇧ Shift';
@@ -1928,7 +1927,9 @@ function rgBuildKeyboard(){
       var k=document.createElement('div');
       k.className='tk-key';k.dataset.code=code;
       var sh=RG_SHIFT_MAP[code]||'';var un=RG_BASE_MAP[code]||'';
-      k.innerHTML='<span class="tk-shift">'+rgKeyboardLabelHTML(sh)+'</span><span class="tk-base">'+rgKeyboardLabelHTML(un)+'</span>';
+      k.innerHTML='<span class="tk-shift">'+sh+'</span><span class="tk-base">'+un+'</span>';
+      if(isCombining(sh))k.querySelector('.tk-shift').classList.add('tk-combining-label');
+      if(isCombining(un))k.querySelector('.tk-base').classList.add('tk-combining-label');
       k.onclick=function(){ rgVirtualPress(code); };
       // Lin 2026-07-15 (audit): ให้กดด้วยคีย์บอร์ด/โปรแกรมอ่านหน้าจอได้
       k.setAttribute('role','button');

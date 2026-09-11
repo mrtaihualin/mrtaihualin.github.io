@@ -2,6 +2,7 @@
 'use strict';
 
 const assert = require('assert');
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -157,6 +158,40 @@ test('typing keyboard no longer includes the retired touch magnifier', () => {
   assert.match(source, /k\.onclick=function\(\)\{ rgVirtualPress\(code\); \}/);
 });
 
+test('keyboard keeps the exact 47-row baseline inventory and direct-label renderer', () => {
+  const mapStart = source.indexOf('var RG_BASE_MAP=');
+  const mapEnd = source.indexOf('var RG_REVERSE=', mapStart);
+  const mapContext = {};
+  assert.ok(mapStart >= 0 && mapEnd > mapStart);
+  vm.createContext(mapContext);
+  vm.runInContext(source.slice(mapStart, mapEnd), mapContext);
+  const inventory = Object.keys(mapContext.RG_BASE_MAP).map((code) => [
+    code,
+    mapContext.RG_BASE_MAP[code],
+    mapContext.RG_SHIFT_MAP[code],
+  ]);
+  assert.strictEqual(inventory.length, 47);
+  assert.strictEqual(
+    crypto.createHash('sha256').update(JSON.stringify(inventory)).digest('hex'),
+    '9f1ff4c25a95161691d33791e387ea2c61b16f2453041835bfd21df2ff5fbfe8'
+  );
+  const build = functionBlock('rgBuildKeyboard', 'rgVirtualPress');
+  assert.match(build, /'<span class="tk-shift">'\+sh\+'<\/span><span class="tk-base">'\+un\+'<\/span>'/);
+  assert.match(build, /if\(isCombining\(sh\)\)k\.querySelector\('\.tk-shift'\)\.classList\.add\('tk-combining-label'\)/);
+  assert.match(build, /if\(isCombining\(un\)\)k\.querySelector\('\.tk-base'\)\.classList\.add\('tk-combining-label'\)/);
+  assert.match(html, /#rg-kbd \.tk-combining-label\{display:inline-block;min-width:1em;text-align:center;\}/);
+  assert.doesNotMatch(build, /rgKeyboardLabelHTML|dispHTML|comb-base|comb-disp/);
+  assert.doesNotMatch(source, /function rgKeyboardLabelHTML\(/);
+});
+
+test('Desktop shows one Shift while touch layouts retain both synchronized Shift nodes', () => {
+  const build = functionBlock('rgBuildKeyboard', 'rgVirtualPress');
+  assert.match(build, /rgMakeShiftKey\('left'\)/);
+  assert.match(build, /rgMakeShiftKey\('right'\)/);
+  assert.match(html, /@media \(hover:hover\) and \(pointer:fine\)\{ #rg-shift-key-right\{display:none !important;\} \}/);
+  assert.doesNotMatch(html, /nth-child[^{}]*\{[^}]*display\s*:\s*none/i);
+});
+
 test('typing menu contains only the current learning tools', () => {
   const menu = html.match(/WordMenu\.init\(\{rowId:'word-ctl-row',items:\[([\s\S]*?)\]\}\)/);
   assert.ok(menu);
@@ -214,7 +249,7 @@ test('Typing counter follows active syllables including High continuous segments
 });
 
 test('Typing loads the rebuilt crash-safe bundle with a fresh cache key', () => {
-  assert.match(html, /typing-game-app\.min\.js\?v=49/);
+  assert.match(html, /typing-game-app\.min\.js\?v=50/);
 });
 
 test('玩法 explains both locked typing rules', () => {
