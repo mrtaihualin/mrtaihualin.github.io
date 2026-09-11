@@ -60,6 +60,23 @@ const hasExactStringBoundaries = (value) => {
   if (value && typeof value === 'object') return Object.values(value).every(hasExactStringBoundaries);
   return true;
 };
+const exactWrittenSegments = (record) => {
+  if (!record || !Array.isArray(record.syllables) || !record.syllables.length) return null;
+  if (Array.isArray(record.spellingSyllables)) {
+    if (record.spellingSyllables.length !== record.syllables.length ||
+        !record.spellingSyllables.every((syllable) => syllable && isExactNonblank(syllable.th)) ||
+        record.spellingSyllables.map((syllable) => syllable.th).join('') !== record.word) return null;
+    return record.spellingSyllables;
+  }
+  // The Paid 189 queue predates spellingSyllables, but spellingTH already stores Lin's
+  // exact reviewed written-syllable boundaries. Project those explicit segments only;
+  // never infer a boundary from Thai spelling or pronunciation.
+  if (Object.prototype.hasOwnProperty.call(record, 'spellingSyllables') || !isExactNonblank(record.spellingTH)) return null;
+  const parts = record.spellingTH.split('-');
+  if (parts.length !== record.syllables.length || parts.some((part) => !isExactNonblank(part)) ||
+      parts.join('') !== record.word) return null;
+  return parts.map((th) => ({ th }));
+};
 
 // โดเมนจริงของเว็บ (ตรงกับ allowedHosts ใน line-login/index.ts) — www เผื่อไว้แม้ CNAME ปัจจุบันไม่ใช้
 const ALLOWED_ORIGINS = [
@@ -186,12 +203,10 @@ serve(async (req) => {
           !REQUIRED_CATALOG_STRING_FIELDS.every((field) => isExactNonblank(record[field])) ||
           !Array.isArray(record.approvalRefs) || !record.approvalRefs.length ||
           !record.approvalRefs.every(isExactNonblank) ||
-          !Array.isArray(record.syllables) || !record.syllables.length || !Array.isArray(record.spellingSyllables)) {
+          !Array.isArray(record.syllables) || !record.syllables.length) {
         throw new Error('catalog_authority_incomplete:' + (record.contentKey || record.word || 'unknown'));
       }
-      if (record.spellingSyllables.length !== record.syllables.length ||
-          !record.spellingSyllables.every((syllable) => syllable && isExactNonblank(syllable.th)) ||
-          record.spellingSyllables.map((syllable) => syllable.th).join('') !== record.word) {
+      if (!exactWrittenSegments(record)) {
         throw new Error('catalog_display_segmentation_incomplete:' + record.contentKey);
       }
       record.syllables.forEach((syllable, index) => {

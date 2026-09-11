@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import vm from 'node:vm';
 import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
@@ -19,19 +20,46 @@ assert.match(content, /requestBody\?\.paid_beta === true/);
 assert.match(content, /entitlement', 'owner_all_access'/);
 assert.match(content, /wordStatuses = paidTone \? \['queued'\] : \['active'\]/);
 assert.match(content, /paidSrsState: paidTone \? paidSrsState : undefined/);
+assert.match(content, /const exactWrittenSegments = \(record\) =>/);
+assert.match(content, /record\.spellingTH\.split\('-'\)/);
 assert.match(round, /phase2_paid_srs_commit/);
 assert.match(round, /paidContent[\s\S]+owner_all_access/);
 assert.match(score, /row\?\.status !== 'active'/);
 assert.match(review, /root\.GAME_CONTENT_TIER !== 'paid'/);
 assert.match(loader, /paid-beta=1/);
+assert.match(loader, /function exactWrittenSegments\(record\)/);
 assert.match(tone, /tf_paid_srs_v1/);
 assert.match(tone, /Paid progress is server-authoritative/);
 assert.match(tone, /paidUnavailable\s*=\s*n === '3' && !!window\.PAID_SRS_PRIVATE_BETA/);
 assert.match(tone, /window\.PAID_SRS_PRIVATE_BETA && Number\(level\) === 3/);
 assert.match(tone, /if \(_paidRecord\.reschedulePending\) _paidRecord\.mastered = true/);
-assert.match(page, /game-content-client\.js\?v=17/);
-assert.match(page, /learning-review\.js\?v=2/);
-assert.match(page, /tone-finder-game\.min\.js\?v=84/);
+assert.match(page, /game-content-client\.js\?v=18/);
+assert.match(page, /learning-review\.js\?v=3/);
+assert.match(page, /tone-finder-game\.min\.js\?v=85/);
+
+const browser = { window: {} };
+vm.runInNewContext(loader, browser, { filename: 'game-content-client.js' });
+const syllable = (roman, toneNumber) => ({
+  roman, lead: 'ไม่มี', consonant: 'ก', cluster: 'ไม่มี', vowel: 'อะ', writtenFinal: 'ไม่มี',
+  toneMark: 'ไม่มี', toneNumber, toneName: 'สามัญ', liveDead: '活音', consonantReadDifference: 'ไม่มี',
+  finalReadDifference: 'ไม่มี', silent: 'ไม่มี',
+});
+const paidCatalog = {
+  contentKey: 'fixture@初', reviewSet: 'fixture', word: 'ขอบคุณ', spellingTH: 'ขอบ-คุณ',
+  readingTH: 'ขอบ-คุณ', roman: 'khop-khun', zhTW: '謝謝', level: '初', type: 'กริยา',
+  category: 'ไม่มี', audioStatus: 'ยังไม่เช็ก', approvalRefs: ['LIN-FIXTURE'],
+  syllables: [syllable('khop', 2), syllable('khun', 1)],
+};
+const projectedPaid = browser.window.buildWordListForToneFinder([{ catalog: paidCatalog }]);
+assert.deepEqual(Array.from(projectedPaid[0].syls, (part) => part.th), ['ขอบ', 'คุณ']);
+assert.equal(Object.prototype.hasOwnProperty.call(paidCatalog, 'spellingSyllables'), false,
+  'projection must not mutate the canonical Paid record');
+assert.throws(() => browser.window.buildWordListForToneFinder([{ catalog: { ...paidCatalog, spellingTH: 'ขอบคุณ' } }]),
+  /reviewed display segmentation missing/);
+assert.throws(() => browser.window.buildWordListForToneFinder([{
+  catalog: { ...paidCatalog, spellingSyllables: null },
+}]), /reviewed display segmentation missing/);
+console.log('Paid legacy-record explicit spellingTH projection: PASS');
 console.log('Private-beta source and server gates: PASS');
 
 const migration = path.join(root, 'supabase/migrations/20260911120000_paid_srs_lin_private_beta_tone.sql');
