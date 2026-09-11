@@ -23,11 +23,24 @@ var pages = ['tone-finder.html', 'reading-game.html', 'listening-game.html', 'ty
 pages.forEach(function (file) {
   var html = read(file);
   check(html.indexOf('js/core/minimum-guest-launch.js?v=24') !== -1, file + ' fetches the current Login Free launch gate');
+  check(html.indexOf('js/core/supabase-config.js?v=11') !== -1, file + ' fetches the Login Free content-tier config');
   check(html.indexOf('js/games/tone-server.js?v=6') !== -1, file + ' loads the authenticated SRS transport');
   check(html.indexOf('game-account.js?v=6') !== -1, file + ' activates the server-authoritative Free account facade');
   check(html.indexOf('practice-events.js?v=3') !== -1, file + ' activates durable Login Free reporting');
   check(html.indexOf('games-challenge-app.js') === -1, file + ' does not activate Challenge runtime');
 });
+[
+  'games.html', 'lego.html', 'my-progress.html', 'vault.html', 'leaderboard.html',
+  'reading-board.html', 'listening-board.html', 'typing-board.html', 'word-order-board.html',
+  'index.html', 'line-callback.html'
+].forEach(function (file) {
+  check(read(file).indexOf('js/core/supabase-config.js?v=11') !== -1, file + ' rejects the retired Guest-only config cache key');
+});
+check(read('classroom/index.html').indexOf('../js/core/supabase-config.js?v=11') !== -1 &&
+  read('classroom/pay.html').indexOf('../js/core/supabase-config.js?v=11') !== -1,
+  'Classroom surfaces use the same current config cache key');
+check(read('js/core/login-surface.js').indexOf('js/core/supabase-config.js?v=11') !== -1,
+  'dynamically loaded account surfaces use the current config cache key');
 check(read('lego.html').indexOf('tone-server.js') === -1, 'Lego receives no SRS runtime');
 check(read('js/core/minimum-guest-launch.js').indexOf('login-surface.js?v=15') !== -1, 'SRS pages fetch the account-aware Login surface');
 check(read('js/core/login-surface.js').indexOf('reading-auth.js?v=34') !== -1, 'Login surface fetches the account-aware auth client');
