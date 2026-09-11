@@ -209,6 +209,10 @@ for (const fixture of fixtures) {
 {
   const runtime = runtimeFor(fixtures[0]);
   assert.equal(runtime.context.LearningReview.runtimeEnabled(), true);
+  assert.throws(() => runtime.context.LearningReview.registerRound({
+    report: { round_id: 'listening-contract-check', game_type: 'listening', difficulty: '初' },
+    game: 'listening', level: 1, idOf: item => item.id, contentRefOf: item => item.ref,
+  }), /INVALID_GAME/, 'Listening is rejected before it can enter the Review contract');
   runtime.context.GAME_CONTENT_TIER = 'paid';
   assert.equal(runtime.context.LearningReview.runtimeEnabled(), false, 'Paid never enters the Free Review owner');
   runtime.context.GAME_CONTENT_TIER = 'login';

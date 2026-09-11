@@ -14,13 +14,12 @@ const gate = read('js/core/minimum-guest-launch.js');
 const games = {
   tone: read('js/games/tone-finder-game.js'),
   reading: read('js/games/reading-game-app.js'),
-  listening: read('js/games/listening-game-app.js'),
   typing: read('js/games/typing-game-app.js'),
   word_order: read('js/games/word-order-app.js')
 };
-const pages = ['tone-finder.html', 'reading-game.html', 'listening-game.html', 'typing-game.html', 'word-order.html'];
+const pages = ['tone-finder.html', 'reading-game.html', 'typing-game.html', 'word-order.html'];
 
-assert.match(gate, /LOGIN_FREE_REVIEW_PUBLIC_ENTRY\s*=\s*true/);
+assert.match(gate, /LOGIN_FREE_REVIEW_PUBLIC_ENTRY\s*=\s*loginFreeLearningGame/);
 assert.doesNotMatch(gate, /PAID.*PUBLIC_ENTRY\s*=\s*true/i);
 assert.match(report, /gsh:item-complete/);
 assert.match(runtime, /LOGIN_FREE_REVIEW_PUBLIC_ENTRY === true/);
@@ -37,10 +36,11 @@ assert.doesNotMatch(runtime, /getSession\(|access_token|refresh_token|service_ro
 
 pages.forEach(page => {
   const html = read(page);
-  assert.match(html, /js\/games\/learning-review\.js/);
+  assert.match(html, /js\/games\/learning-review\.js\?v=4/);
   assert.match(html, /js\/core\/auth-widget\.js/);
   assert.match(html, /js\/games\/reading-auth\.js/);
 });
+assert.doesNotMatch(read('listening-game.html'), /js\/games\/(?:learning-review|tone-server)\.js/);
 Object.entries(games).forEach(([game, source]) => {
   assert.match(source, /LearningReview\.prime/, game + ' primes the Review queue');
   assert.match(source, /LearningReview\.matchQueue/, game + ' maps stable Review refs');
@@ -66,5 +66,7 @@ assert.doesNotMatch(edge, /state_token:\s*row\.state_token/);
 assert.match(edge, /content_ref: \{ source: ref\.content_source, key: ref\.content_key \}/);
 assert.match(edge, /item\.wrong == null \? Number\(item\.wrong_count/);
 assert.match(edge, /item\.mode \|\| item\.linguistic\?\.answer_mode/);
+assert.match(edge, /new Set\(\['tone', 'reading', 'typing', 'word_order'\]\)/);
+assert.doesNotMatch(edge, /new Set\(\[[^\]]*'listening'/);
 
-console.log('LOGIN_FREE_REVIEW_INTEGRATION_PASS 5_GAMES');
+console.log('LOGIN_FREE_REVIEW_INTEGRATION_PASS 4_GAMES');

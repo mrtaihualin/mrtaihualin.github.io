@@ -340,8 +340,8 @@ test('Tone SRS resets on logout and discards the late authenticated response', a
   assert.strictEqual(h.context.__tfSrsSyncPromise, null);
 });
 
-test('Five games expose Login Free with owner-safe account runtimes while Paid and Lego account runtime remain parked', async () => {
-  const corePages = ['tone-finder.html', 'listening-game.html', 'typing-game.html', 'word-order.html'];
+test('Four games expose Login Free learning runtimes while Listening, Paid and Lego remain outside', async () => {
+  const corePages = ['tone-finder.html', 'typing-game.html', 'word-order.html'];
   for (const page of corePages) {
     const html = read(page);
     assert.match(html, /phase1-canonical-state\.js\?v=2/, page + ' canonical runtime active');
@@ -354,6 +354,7 @@ test('Five games expose Login Free with owner-safe account runtimes while Paid a
   assert.match(reading, /phase1-canonical-state\.js\?v=2/, 'reading canonical runtime active');
   assert.match(reading, /game-account\.js\?v=6/, 'reading GameAccount runtime active');
   assert.match(reading, /reading-auth\.js\?v=34/, 'reading Login Free account runtime');
+  assert.doesNotMatch(read('listening-game.html'), /(?:tone-server|learning-review)\.js/, 'Listening learning loop stays absent');
   assert.match(read('js/games/reading-auth.js'), /API\.user = publicLoginOnly \? null : loginUser/);
   for (const page of ['my-progress.html', 'vault.html']) {
     assert.match(read(page), /phase1-canonical-state\.js\?v=2/, page + ' canonical cache');

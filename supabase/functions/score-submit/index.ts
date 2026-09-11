@@ -12,7 +12,7 @@ const LOGIN_FREE_REVIEW_ACTIONS_ENABLED = true;
 const REVIEW_STAGING_PROJECT_REF = 'xufxvwcelbovzsxywawg';
 const REVIEW_STAGING_TEST_SCOPE = 'srs-sandbox-day0';
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const REVIEW_GAMES = new Set(['tone', 'reading', 'listening', 'typing', 'word_order']);
+const REVIEW_GAMES = new Set(['tone', 'reading', 'typing', 'word_order']);
 
 const ALLOWED_ORIGINS = [
   'https://mrtaihualin.com',

@@ -17,7 +17,7 @@
   function normalizeGame(value) {
     var game = String(value || '').toLowerCase().replace(/-/g, '_');
     if (game === 'wordorder') game = 'word_order';
-    if (['tone', 'reading', 'listening', 'typing', 'word_order'].indexOf(game) < 0) fail('INVALID_GAME');
+    if (['tone', 'reading', 'typing', 'word_order'].indexOf(game) < 0) fail('INVALID_GAME');
     return game;
   }
   function normalizeLevel(value) {
@@ -123,7 +123,7 @@
   function runtimeEnabled() {
     // Paid Review is a later private-beta tranche. Prevent the active Free owner
     // from claiming Paid items or writing them into the Free SRS namespace.
-    return !!(root && root.GAME_CONTENT_TIER !== 'paid' &&
+    return !!(root && root.GAME_CONTENT_TIER === 'login' &&
       root.LOGIN_FREE_REVIEW_PUBLIC_ENTRY === true && currentUser());
   }
   function ownerScope() { return String(root && root.SITE_AUTH && root.SITE_AUTH.learningOwnerEpoch || 0); }
@@ -255,14 +255,6 @@
       var units = item.linguistic && item.linguistic.syls && item.linguistic.syls.length || 1;
       var quota = Math.min(4 + Math.max(0, units - 4), 9), wrong = Math.max(0, Number(item.wrong_count) || 0);
       return wrong >= quota ? 0 : Math.round(10 - (10 / quota) * wrong);
-    }
-    if (game === 'listening') {
-      if (!item.is_correct) return 0;
-      var listens = Math.max(1, Number(item.listen_count) || 1);
-      var mode = item.linguistic && item.linguistic.answer_mode;
-      if (mode === 'mc') return listens <= 2 ? 5 : ({ 3: 3, 4: 2, 5: 1 }[listens] || 0);
-      var words = String(item.question || '').trim().split(/\s+/).filter(Boolean).length || 1;
-      return words >= 3 ? (listens <= 3 ? 10 : ({ 4: 7, 5: 4, 6: 1 }[listens] || 0)) : (listens <= 2 ? 10 : ({ 3: 7, 4: 4, 5: 1 }[listens] || 0));
     }
     if (game === 'word_order') {
       var hints = item.learning_evidence && Number(item.learning_evidence.hintCount) || 0;

@@ -178,7 +178,7 @@ Deno.serve(async (req: Request) => {
   if (!word || word.trim() !== word || !contentKey || contentKey.trim() !== contentKey || ![1, 2, 3].includes(level)) {
     return json({ error: "bad content identity/level" }, 400);
   }
-  if (!["tone", "reading", "listening", "typing", "wordorder"].includes(game)) return json({ error: "bad game" }, 400);
+  if (!["tone", "reading", "typing", "wordorder"].includes(game)) return json({ error: "bad game" }, 400);
   if (game === "tone" && level === 3) return json({ error: "catalog_authority_incomplete" }, 503);
   if ((game === "wordorder" || level === 3) && contentKey !== word) return json({ error: "bad content_key" }, 400);
   const levelCode = ({ 1: "初", 2: "中", 3: "高" } as Record<number, string>)[level];

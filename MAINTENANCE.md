@@ -2821,3 +2821,10 @@ node scripts/check-site.js
 - The server and protected-content client now accept that older record shape only when `spellingSyllables` is absent and the explicit `spellingTH` boundaries pass all exact count, nonblank and joined-word checks. An invalid present field, missing boundary, count mismatch or changed word still fails closed. The canonical record is never mutated and no Thai boundary, answer or language value is inferred.
 - Added executable projection and rejection regressions, advanced only the Tone page's protected-content cache key to `v18`, and kept Guest/Login Free behavior unchanged.
 - Verification: the Paid source/PostgreSQL/RLS/date/concurrency/recovery suite passes, the exact Production queue preflight passes `189/189` for explicit reviewed boundaries, and the complete site gate passes across 1,084 files. Production remains on the verified rollback baseline; no database, Edge Function, Cloudflare, Auth or real-user state was changed.
+
+# 2026-09-11 — Login Free four-game learning-loop boundary
+
+- Scoped Retry End Round, Review Needed/`WEAK_4D` and SRS to authenticated `login` content on exactly Tone, Reading, Typing and Word Order. Guest and Paid fail closed even when an account object is present.
+- Removed the SRS transport and Review runtime from the Listening page, removed Listening from both browser and Edge allow-lists, and retained the existing server-acknowledged, idempotent recovery boundary before next question or end round.
+- Advanced the four approved pages to `learning-review.js?v=4` and added regressions for extensionless/`.html` routes, Guest/Paid isolation, Listening exclusion, server acknowledgement, retry recovery and owner switching.
+- Verification: focused four-game contract, SRS, Review, account-boundary, save/retry, backend-transaction and Listening-exclusion suites pass; `node scripts/check-site.js` passes across 1,086 files. This is a source-only release candidate; no Git remote, Cloudflare, Supabase, Auth, account data or Production state was changed.

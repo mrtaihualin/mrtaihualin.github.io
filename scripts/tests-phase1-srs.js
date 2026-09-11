@@ -56,7 +56,8 @@ check('Edge กัน concurrent duplicate ด้วย transactional owner lock
   /v_state\.stage is distinct from p_expected_stage/.test(atomicSql) && /'race_retry'/.test(atomicSql));
 check('Edge กัน retry หลัง Mastered', /if \(rec\.mastered\) return reject\('already_mastered'/.test(edge));
 check('คะแนนต่ำกว่า 10 ของ item ใหม่ไม่สร้าง SRS row', /if \(!hadSrsRecord\) return reject\('below_entry_score'/.test(edge));
-check('Edge รองรับ Listening เป็น skill แยก', /"reading", "listening", "typing"/.test(edge));
+check('Edge รองรับเฉพาะ SRS 4 เกมและไม่รวม Listening',
+  /\["tone", "reading", "typing", "wordorder"\]\.includes\(game\)/.test(edge) && !/"listening"/.test(edge));
 
 const sources = [
   'js/games/tone-finder-game.js', 'js/games/reading-game-app.js',

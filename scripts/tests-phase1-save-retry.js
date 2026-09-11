@@ -88,7 +88,7 @@ test('personal vault saves and deletes use bounded owner-safe online retry', () 
   assert.match(sentenceVault, /if \(!ownerIsCurrent\(owner\)\) return;[\s\S]{0,180}delete _saveInFlight\[th\]/);
 });
 test('Login Core exposes idempotent SRS and Review transaction clients', () => {
-  ['tone-finder.html','listening-game.html','typing-game.html','word-order.html'].forEach((page) => {
+  ['tone-finder.html','typing-game.html','word-order.html'].forEach((page) => {
     const html = read(page);
     assert.match(html, /tone-server\.js\?v=6/);
     assert.match(html, /network-guard\.js\?v=1/);
@@ -103,6 +103,7 @@ test('Login Core exposes idempotent SRS and Review transaction clients', () => {
   assert.match(reading, /reading-auth\.js\?v=34/);
   assert.match(readingAuth, /if \(publicLoginOnly\) return null;/);
   assert.match(readingAuth, /API\.srsUser = publicLoginSrs \? loginUser : API\.user/);
+  assert.doesNotMatch(read('listening-game.html'), /(?:tone-server|learning-review)\.js/);
 });
 
 if (!process.exitCode) console.log('\n✅ Phase 1 API/Edge/save/retry safety passed (' + passed + ' checks)');

@@ -42,7 +42,6 @@ assert.match(GameFlowSource, /quotaTotal/);
 assert.strictEqual(Review.predictedScore('tone', { learning_evidence: { componentWrongCounts: [0, 4] }, wrong_count: 0 }), 5);
 assert.strictEqual(Review.predictedScore('reading', { learning_evidence: { firstCheckSyllableWrongCounts: [3] } }), 1);
 assert.strictEqual(Review.predictedScore('typing', { wrong_count: 4, linguistic: { syls: [{}] } }), 0);
-assert.strictEqual(Review.predictedScore('listening', { is_correct: true, listen_count: 3, linguistic: { answer_mode: 'mc' } }), 3);
 assert.strictEqual(Review.predictedScore('word_order', { wrong_count: 1, learning_evidence: { hintCount: 2 } }), 3);
 
 (async () => {
@@ -54,8 +53,13 @@ assert.strictEqual(Review.predictedScore('word_order', { wrong_count: 1, learnin
   assert.throws(() => Review.create({ enabled: false, invoke() {} }), /FEATURE_DISABLED/);
 
   global.LOGIN_FREE_REVIEW_PUBLIC_ENTRY = true;
+  global.GAME_CONTENT_TIER = 'login';
   global.SITE_AUTH = { user: { id: 'controlled-test' } };
   global.NetworkGuard = { request(fn) { return fn(); } };
+  assert.throws(() => Review.registerRound({
+    report: { round_id: 'listening-contract-check', game_type: 'listening', difficulty: '初' },
+    game: 'listening', level: 1, idOf: x => x.id, contentRefOf: x => x.ref
+  }), /INVALID_GAME/, 'Listening is outside the Review contract');
   const runtimeCalls = [];
   global.getSupabaseClient = () => ({ functions: { invoke(name, options) {
     runtimeCalls.push(options.body);
@@ -70,5 +74,10 @@ assert.strictEqual(Review.predictedScore('word_order', { wrong_count: 1, learnin
   await Review.processItem(report, { key: original.ref.key, content_ref: original.ref, learning_evidence: { firstCheckSyllableWrongCounts: [3] }, wrong_count: 3 });
   assert.strictEqual(retryItems.length, 1, 'due Weak+4 gets the one same-round retry');
   assert.deepStrictEqual(runtimeCalls.map(x => x.action), ['review_queue', 'review_commit']);
-  console.log('LEARNING_REVIEW_RUNTIME_PASS 15');
+  assert.strictEqual(Review.runtimeEnabled(), true, 'Login Free authenticated owner enables Review');
+  global.GAME_CONTENT_TIER = 'paid';
+  assert.strictEqual(Review.runtimeEnabled(), false, 'Paid is outside the Login Free Review owner');
+  global.GAME_CONTENT_TIER = 'guest';
+  assert.strictEqual(Review.runtimeEnabled(), false, 'Guest is outside the Login Free Review owner');
+  console.log('LEARNING_REVIEW_RUNTIME_PASS 18');
 })().catch((error) => { console.error(error); process.exitCode = 1; });
