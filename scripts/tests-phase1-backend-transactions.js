@@ -121,14 +121,14 @@ test('Login Core exposes the five-game SRS and Review transaction clients', () =
     const html = read(page);
     assert.match(html, /tone-server\.js\?v=6/, page);
     assert.match(html, /reading-auth\.js\?v=34/, page);
-    assert.match(html, /learning-review\.js\?v=1/, page);
+    assert.match(html, /learning-review\.js\?v=\d+/, page);
     assert.match(html, /game-account\.js\?v=6/, page);
     assert.match(html, /practice-events\.js\?v=3/, page);
   }
   const reading = read('reading-game.html');
   assert.match(reading, /tone-server\.js\?v=6/);
   assert.match(reading, /reading-auth\.js\?v=34/);
-  assert.match(reading, /learning-review\.js\?v=1/);
+  assert.match(reading, /learning-review\.js\?v=\d+/);
   assert.match(read('js/games/reading-auth.js'), /if \(publicLoginOnly\) return null;/);
   assert.match(read('js/games/reading-auth.js'), /API\.srsUser = publicLoginSrs \? loginUser : API\.user/);
   const lego = read('lego.html');

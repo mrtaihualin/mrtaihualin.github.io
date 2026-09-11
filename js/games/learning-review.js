@@ -121,7 +121,10 @@
     } catch (e) { return null; }
   }
   function runtimeEnabled() {
-    return !!(root && root.LOGIN_FREE_REVIEW_PUBLIC_ENTRY === true && currentUser());
+    // Paid Review is a later private-beta tranche. Prevent the active Free owner
+    // from claiming Paid items or writing them into the Free SRS namespace.
+    return !!(root && root.GAME_CONTENT_TIER !== 'paid' &&
+      root.LOGIN_FREE_REVIEW_PUBLIC_ENTRY === true && currentUser());
   }
   function ownerScope() { return String(root && root.SITE_AUTH && root.SITE_AUTH.learningOwnerEpoch || 0); }
   function runtimeKey(game, level) { return ownerScope() + ':' + normalizeGame(game) + ':' + normalizeLevel(level); }

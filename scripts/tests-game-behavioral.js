@@ -165,10 +165,11 @@ GAME_PAGES.forEach((page) => {
     }
 
     // tier ต้องมาจาก auth.getUser() ของ JWT ใน Authorization header เท่านั้น ห้ามอ่าน body.tier/isLoggedIn
-    const tierFromAuth = /const tier\s*=\s*user\s*\?\s*'login'\s*:\s*'anon'/.test(fn);
+    const tierFromAuth = /const tier\s*=\s*paidTone\s*\?\s*'paid'\s*:\s*\(user\s*\?\s*'login'\s*:\s*'anon'\)/.test(fn) &&
+      /requestBody\?\.paid_beta === true[\s\S]+owner_all_access/.test(fn);
     const readsBodyForTier = /req\.json\(\)/.test(fn) && /body\.(tier|isLoggedIn)/.test(fn);
-    if (!tierFromAuth) fail('C: game-content/index.ts', 'ไม่พบ "tier = user ? login : anon" จาก auth.getUser() ตรงๆ — ตรวจว่า logic เปลี่ยนไปหรือไม่');
-    else ok('C: game-content/index.ts ตัดสิน tier จาก auth.getUser() ของ JWT เท่านั้น');
+    if (!tierFromAuth) fail('C: game-content/index.ts', 'tier ต้องมาจาก auth.getUser() และ Paid ต้องผ่าน owner entitlement');
+    else ok('C: game-content/index.ts ตัดสิน Guest/Login จาก auth และ Paid จาก owner entitlement');
     if (readsBodyForTier) fail('C: game-content/index.ts', 'พบการอ่าน body.tier/isLoggedIn — เสี่ยงเปิดช่องให้ client ปลอม tier');
     else ok('C: game-content/index.ts ไม่อ่าน tier/isLoggedIn จาก body ที่ client ส่งมา (กันปลอม tier)');
     if (!/if \(rl\.error\) return json\(\{ error: 'rate_limit_unavailable/.test(fn)) fail('C: game-content/index.ts', 'rate-limit error ยังไม่ fail-closed');
@@ -177,8 +178,8 @@ GAME_PAGES.forEach((page) => {
     if (!retryHelper) fail('C: game-content/index.ts', 'ไม่มี bounded retry สำหรับ transient service-role 401');
     else ok('C: game-content retry เฉพาะ transient 401 แบบ bounded และยัง fail-closed');
     const retriedReads = (fn.match(/readWithTransientAuthRetry\(\(\) => admin\.from\(/g) || []).length;
-    if (retriedReads !== 4) fail('C: game-content/index.ts', 'protected content reads ต้องใช้ bounded retry ครบ 4 จุด');
-    else ok('C: game-content protected content reads ใช้ bounded retry ครบ 4 จุด');
+    if (retriedReads !== 6) fail('C: game-content/index.ts', 'protected content/entitlement/state reads ต้องใช้ bounded retry ครบ 6 จุด');
+    else ok('C: game-content protected content/entitlement/state reads ใช้ bounded retryครบ 6 จุด');
     if (!/Promise\.all\(\[\s*admin\.rpc\('game_content_rl_check'/.test(fn)) fail('C: game-content/index.ts', 'rate-limit RPC ต้องไม่ถูก retry จนนับซ้ำ');
     else ok('C: game-content rate-limit RPC ไม่ถูก retry ซ้ำ');
     if (!/if \(!words\.length \|\| !sentences\.length\)/.test(fn)) fail('C: game-content/index.ts', 'ไม่บล็อก required dataset ที่ว่าง');

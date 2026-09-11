@@ -99,6 +99,24 @@ function resolveRound(input) {
   return ok('reset', false, false, TF_SRS.resetOnFail(rec), account);
 }
 
+function paidOutcome(input: any) {
+  const opts = input.opts || {};
+  if (opts.knownCheck) return { ok: false, reason: 'known_check_disabled' };
+  if (opts.spellingGame) return { ok: true, outcome: opts.spellingClean === true ? 'clean' : 'fail' };
+  const approved = input.approvedToneNumbers;
+  if (!Array.isArray(approved) || !approved.length || approved.some(function (tone) {
+    return !Number.isInteger(tone) || tone < 1 || tone > 5;
+  })) return { ok: false, reason: 'catalog_authority_incomplete' };
+  let clean = false;
+  if (approved.length === 1) clean = normalizeGuess(input.initialGuess) === approved[0];
+  else {
+    const guesses = Array.isArray(input.guesses) ? input.guesses : [];
+    if (guesses.length !== approved.length) return { ok: false, reason: 'bad_guesses_len' };
+    clean = approved.every(function (tone, index) { return normalizeGuess(guesses[index]) === tone; });
+  }
+  return { ok: true, outcome: clean ? 'clean' : 'fail' };
+}
+
 function stableJson(value: unknown): string {
   if (Array.isArray(value)) return '[' + value.map(stableJson).join(',') + ']';
   if (value && typeof value === 'object') {
@@ -138,6 +156,17 @@ Deno.serve(async (req: Request) => {
 
   let body: any;
   try { body = await req.json(); } catch (_) { return json({ error: "bad json" }, 400); }
+  if (body?.action === 'paid_state') {
+    const entitlement = await admin.from('phase1_product_entitlements').select('entitlement')
+      .eq('user_id', user.id).eq('entitlement', 'owner_all_access').limit(2);
+    if (entitlement.error) return json({ error: 'entitlement_unavailable' }, 503);
+    if (!entitlement.data || entitlement.data.length !== 1) return json({ error: 'feature_disabled' }, 404);
+    const state = await admin.from('phase2_paid_srs_states')
+      .select('game,level,content_key,phase,next_checkpoint,due_on,mastered,active_challenge,ever_failed,reschedule_pending')
+      .eq('user_id', user.id).eq('game', 'tone');
+    if (state.error) return json({ error: 'paid_srs_state_unavailable' }, 503);
+    return json({ ok: true, tier: 'paid', items: state.data || [] });
+  }
   const suppliedOperationId = String(body.round_id || "").toLowerCase();
   const legacyCompatibility = !suppliedOperationId;
   if (suppliedOperationId && !UUID_V4.test(suppliedOperationId)) return json({ error: "invalid_round_id" }, 400);
@@ -182,14 +211,26 @@ Deno.serve(async (req: Request) => {
   if (rlOk !== true) return json({ error: "rate_limited" }, 429);
 
   let approvedToneNumbers: number[] | null = null;
+  let paidPrivateBeta = false;
   const vocabularyRound = game !== "wordorder" && level !== 3;
   if (vocabularyRound) {
-    const authority = await admin.from("game_words").select("content_key,word,level,canonical_record")
-      .eq("status", "active").eq("level", levelCode).in("access_tier", ["guest", "login"])
+    const authority = await admin.from("game_words").select("content_key,word,level,status,access_tier,canonical_record")
+      .eq("level", levelCode)
       .eq("content_key", contentKey).limit(2);
     if (authority.error) return json({ error: "catalog_authority_unavailable" }, 503);
     if (!authority.data || authority.data.length !== 1) return json({ error: "catalog_authority_ambiguous" }, 503);
     const row = authority.data[0];
+    const freeContent = row.status === 'active' && ['guest', 'login'].includes(row.access_tier);
+    const paidContent = row.status === 'queued' && row.access_tier === 'paid';
+    if (!freeContent && !paidContent) return json({ error: 'catalog_authority_ambiguous' }, 503);
+    if (paidContent) {
+      if (game !== 'tone') return json({ error: 'feature_disabled' }, 404);
+      const entitlement = await admin.from('phase1_product_entitlements').select('entitlement')
+        .eq('user_id', user.id).eq('entitlement', 'owner_all_access').limit(2);
+      if (entitlement.error) return json({ error: 'entitlement_unavailable' }, 503);
+      if (!entitlement.data || entitlement.data.length !== 1) return json({ error: 'feature_disabled' }, 404);
+      paidPrivateBeta = true;
+    }
     const catalog = row.canonical_record;
     if (!catalog || catalog.contentKey !== row.content_key || catalog.word !== row.word || catalog.level !== row.level ||
         catalog.contentKey !== contentKey || catalog.word !== word || catalog.level !== levelCode ||
@@ -202,6 +243,23 @@ Deno.serve(async (req: Request) => {
         return json({ error: "catalog_authority_incomplete" }, 503);
       }
     }
+  }
+
+  if (paidPrivateBeta) {
+    const evaluated = paidOutcome({ initialGuess: body.initialGuess, guesses: body.guesses,
+      approvedToneNumbers, opts: { knownCheck: !!body.knownCheck, spellingGame, spellingClean: !!body.clean } });
+    if (!evaluated.ok) return json({ ok: false, reason: evaluated.reason, tier: 'paid', stars: 0, totalStars: 0 }, 400);
+    const committed = await admin.rpc('phase2_paid_srs_commit', {
+      p_operation_id: operationId, p_user_id: user.id, p_request_hash: requestHash,
+      p_game: game, p_level: level, p_content_key: contentKey,
+      p_outcome: evaluated.outcome, p_occurred_on: TF_SRS.twDate(Date.now())
+    });
+    if (committed.error) return json({ error: 'paid_srs_write_unavailable' }, 503);
+    const result = committed.data;
+    if (!result || typeof result !== 'object') return json({ error: 'paid_srs_write_unavailable' }, 503);
+    if (result.ok !== true && result.reason === 'replay_conflict') return json({ error: 'replay_conflict' }, 409);
+    return json(Object.assign({}, result, { roundId: operationId, stars: 0, totalStars: 0,
+      compatibility: legacyCompatibility ? 'legacy-no-id' : 'explicit-id' }));
   }
 
   const srsRead = await admin.from("tone_srs_state").select("stage, due_date, ever_failed, mastered")

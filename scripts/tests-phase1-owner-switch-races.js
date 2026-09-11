@@ -348,7 +348,7 @@ test('Five games expose Login Free with owner-safe account runtimes while Paid a
     assert.match(html, /game-account\.js\?v=6/, page + ' GameAccount runtime active');
     assert.match(html, /reading-auth\.js\?v=34/, page + ' Login Free account runtime');
     assert.match(html, /practice-events\.js\?v=3/, page + ' durable report runtime');
-    assert.match(html, /learning-review\.js\?v=1/, page + ' Review runtime');
+    assert.match(html, /learning-review\.js\?v=\d+/, page + ' Review runtime');
   }
   const reading = read('reading-game.html');
   assert.match(reading, /phase1-canonical-state\.js\?v=2/, 'reading canonical runtime active');
@@ -362,7 +362,7 @@ test('Five games expose Login Free with owner-safe account runtimes while Paid a
     assert.match(read(page), /reading-auth\.js\?v=34/, page + ' reading-auth cache');
   }
   assert.doesNotMatch(read('lego.html'), /game-account\.js/);
-  assert.match(read('tone-finder.html'), /tone-finder-game\.min\.js\?v=83/);
+  assert.match(read('tone-finder.html'), /tone-finder-game\.min\.js\?v=84/);
   assert.match(read('reading-game.html'), /reading-game-app\.min\.js\?v=53/);
   assert.match(read('typing-game.html'), /typing-game-app\.min\.js\?v=48/);
   assert.match(read('word-order.html'), /word-order-app\.min\.js\?v=38/);

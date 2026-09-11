@@ -414,6 +414,7 @@ var TF_SRS = {
 
   // นี่คือรอบตัดสิน Day 7 ก่อน mastered ไหม — stage 2 คือรอบที่ 3 (0-based)
   isFinalCheck: function (rec) {
+    if (window.PAID_SRS_PRIVATE_BETA) return !!rec && !rec.mastered && rec.stage >= 3;
     return !!rec && rec.stage === (this.cfg.CLEAN_ROUNDS_TO_MASTER - 1);
   },
 
@@ -451,8 +452,9 @@ var TF_SRS = {
 
 // ── localStorage: state SRS ต่อคำ (แยกจาก game-account.js เพราะผูกกับเกมเสียงเท่านั้น) ──
 var TF_SRS_KEY = 'tf_srs_v1';
-function tfLoadSrs() { if(!tfSrsLoggedIn())return {};try { return JSON.parse(localStorage.getItem(TF_SRS_KEY) || '{}') || {}; } catch (e) { return {}; } }
-function tfSaveSrs(o) { if(!tfSrsLoggedIn())return;try { localStorage.setItem(TF_SRS_KEY, JSON.stringify(o)); } catch (e) {} }
+function tfSrsStorageKey(){return window.PAID_SRS_PRIVATE_BETA?'tf_paid_srs_v1':TF_SRS_KEY;}
+function tfLoadSrs() { if(!tfSrsLoggedIn())return {};try { return JSON.parse(localStorage.getItem(tfSrsStorageKey()) || '{}') || {}; } catch (e) { return {}; } }
+function tfSaveSrs(o) { if(!tfSrsLoggedIn())return;try { localStorage.setItem(tfSrsStorageKey(), JSON.stringify(o)); } catch (e) {} }
 function tfStateWord(entryOrWord) {
   if (entryOrWord && typeof entryOrWord === 'object') {
     return tfWordContentKey(entryOrWord);
@@ -529,6 +531,9 @@ function tfSyncSrsFromServer() {
   if (__tfSrsSyncPromise) return __tfSrsSyncPromise;
   __tfSrsSyncPromise = (function () {
     try {
+      // The Lin-only Paid snapshot is returned atomically with protected content
+      // before this game script boots. Never merge Free rows into its isolated key.
+      if (window.PAID_SRS_PRIVATE_BETA) { window.__tfSrsSyncedOnce = true; return Promise.resolve(true); }
       // ต้อง "ล็อกอินจริง" (มี JWT) เท่านั้น — แค่ให้อีเมล (lead) ไม่มีแถวบนเซิร์ฟเวอร์อยู่แล้ว
       if (!(window.READING_AUTH && READING_AUTH.srsUser)) return Promise.resolve(false);
       var sb = window.getSupabaseClient ? window.getSupabaseClient() : null;
@@ -1518,14 +1523,28 @@ function tfProcessSrsOnWordCommit(entry, mistakes, firstTry, forced) {
       } else {
         _sv.initialGuess = (session.curWordGuesses && session.curWordGuesses[0] != null) ? session.curWordGuesses[0] : session.initialGuess;
       }
-      TONE_SERVER.finishRound(_sv).then(function (r) {
+      var _serverRound = TONE_SERVER.finishRound(_sv);
+      _serverRound.then(function (r) {
         try {
+          if (window.PAID_SRS_PRIVATE_BETA && r && r.newSrsRecord) {
+            var _paidRecord = Object.assign({}, r.newSrsRecord);
+            // The reschedule interval after a failed Challenge is still a pending
+            // Product decision. Freeze that item locally as well as on the server.
+            if (_paidRecord.reschedulePending) _paidRecord.mastered = true;
+            tfSetSrsRecord(entry, _sv.level, _paidRecord);
+          }
           if (r && r.ok) {
             // เซิร์ฟเวอร์ยืนยัน → ตัวเลขดาว "จริง" = r.totalStars (ซิงก์ลงมาโชว์ตอน sync ถัดไป)
             if (r.justMastered && r.stars > 0 && window.console) console.log('[P4] ⭐ server award', r.stars, '→ total', r.totalStars);
           } else if (r && window.console) { console.log('[P4] server not-ok:', r.reason); }
         } catch (e) {}
       });
+      // Paid progress is server-authoritative. Do not run the optimistic Free
+      // cadence or write the Free local key while the private beta is active.
+      if (window.PAID_SRS_PRIVATE_BETA) {
+        if (session) { session.curWordIsKnownCheck = false; session.curWordIsFinalSrsCheck = false; }
+        return;
+      }
     }
   } catch (e) {}
 
@@ -2440,7 +2459,12 @@ function tfRenderTopBanners() {
 function tfSyncLevelTabs() {
   ['1','2','3'].forEach(function(n){
     var b = document.getElementById('tf-ltab-'+n);
-    if (b) b.classList.toggle('active', String(selectedLevel) === n);
+    if (!b) return;
+    var paidUnavailable = n === '3' && !!window.PAID_SRS_PRIVATE_BETA;
+    b.hidden = paidUnavailable;
+    b.disabled = paidUnavailable;
+    b.setAttribute('aria-hidden', paidUnavailable ? 'true' : 'false');
+    b.classList.toggle('active', !paidUnavailable && String(selectedLevel) === n);
   });
 }
 
@@ -3327,6 +3351,11 @@ var TF = {
     });
   },
   selectLevel: function(level) {
+    if (window.PAID_SRS_PRIVATE_BETA && Number(level) === 3) {
+      selectedLevel = 1;
+      tfToast('付費測試目前先開放初級與中級');
+      level = 1;
+    }
     selectedLevel = level;
     selectedCategory = 'ทั้งหมด';
     randomEntry = null; session = null;
@@ -4029,7 +4058,7 @@ if (__tfAutoPlanLevel !== 1 && __tfAutoPlanLevel !== 2 && __tfAutoPlanLevel !== 
 // E3 (2026-08-10): อ่าน resume ที่ค้างไว้ "ก่อน" TF.selectLevel(1) เสมอ — เพราะ selectLevel(1) จะเรียก
 // startSetSession() ซึ่ง save resume ของ session ใหม่ทับ localStorage ทันที ถ้าไปอ่านทีหลังจะเจอแต่ของใหม่ ไม่เจอของเก่า
 if (!__tfAutoPlanLevel) {
-  try { __tfResumeSnapshot = (window.GameResume && GameResume.load('tone-finder')) || null; } catch (e) { __tfResumeSnapshot = null; }
+  try { __tfResumeSnapshot = window.PAID_SRS_PRIVATE_BETA ? null : ((window.GameResume && GameResume.load('tone-finder')) || null); } catch (e) { __tfResumeSnapshot = null; }
 }
 TF.selectLevel(__tfAutoPlanLevel || 1);
 setTimeout(tfRenderExtBar, 0);

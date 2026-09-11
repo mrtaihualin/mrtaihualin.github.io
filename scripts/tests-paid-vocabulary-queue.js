@@ -63,7 +63,8 @@ assert.doesNotMatch(migration, /insert into public\.learning_items/i);
 assert.doesNotMatch(migration, /delete\s+from\s+public\.game_words/i);
 assert.doesNotMatch(migration, /^\+/m);
 assert.match(migration, /revoke all on table public\.game_words from public,anon,authenticated/);
-assert.match(edge, /\.eq\('status', 'active'\)/);
-assert.doesNotMatch(edge, /access_tier[^\n]*paid/i);
+assert.match(edge, /wordStatuses = paidTone \? \['queued'\] : \['active'\]/);
+assert.match(edge, /wordTiers = paidTone \? \['paid'\]/);
+assert.match(edge, /requestBody\?\.paid_beta === true[\s\S]+owner_all_access/);
 
 console.log('✅ Paid vocabulary queue 189 is central, protected and runtime-inactive');

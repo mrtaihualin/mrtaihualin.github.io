@@ -40,6 +40,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.112.3';
 const CAPS = {
   anon:  { '初': 50,  '中': 50,  sentences: 20 },
   login: { '初': 100, '中': 100, sentences: 40 },
+  paid:  { '初': 183, '中': 6, sentences: 40 },
 };
 const GAME_SURFACES = new Set(['tone', 'reading', 'typing', 'word_order', 'listening']);
 const REQUIRED_CATALOG_STRING_FIELDS = [
@@ -121,11 +122,22 @@ serve(async (req) => {
     const authHeader = req.headers.get('Authorization') || '';
     const userClient = createClient(SUPABASE_URL, ANON_KEY, { global: { headers: { Authorization: authHeader } } });
     const { data: userData } = await userClient.auth.getUser();
-    const user = userData?.user || null;
-    const tier = user ? 'login' : 'anon';
-    const caps = CAPS[tier];
-
     const admin = createClient(SUPABASE_URL, SERVICE_KEY); // service_role — ข้าม RLS ได้ ใช้อ่านตารางล็อกเท่านั้น
+    const user = userData?.user || null;
+    // First private-beta tranche: only the already-established owner entitlement may
+    // receive queued Paid vocabulary, and only on Tone. Every other surface keeps the
+    // current Guest/Login contract unchanged.
+    let paidTone = false;
+    if (user && requestedGame === 'tone' && requestBody?.paid_beta === true) {
+      const entitlement = await readWithTransientAuthRetry(() => admin.from('phase1_product_entitlements')
+        .select('entitlement').eq('user_id', user.id).eq('entitlement', 'owner_all_access').limit(2));
+      if (entitlement.error) return json({ error: 'entitlement_unavailable' }, 503, origin);
+      paidTone = entitlement.data?.length === 1;
+    }
+    const tier = paidTone ? 'paid' : (user ? 'login' : 'anon');
+    const caps = CAPS[tier];
+    const wordStatuses = paidTone ? ['queued'] : ['active'];
+    const wordTiers = paidTone ? ['paid'] : (tier === 'login' ? ['guest', 'login'] : ['guest']);
 
     // ── rate limit เกราะเสริมแบบ fail-closed — ถ้าด่านตรวจล่ม ห้ามปล่อยข้อมูลออก ──
     // คนล็อกอิน → คีย์ตาม user id (ปลอมไม่ได้) · คนไม่ล็อกอิน → คีย์ตาม IP (x-forwarded-for)
@@ -144,13 +156,13 @@ serve(async (req) => {
       admin.rpc('game_content_rl_check', { p_key: rlKey, p_limit: 60, p_window: 60 }),
       readWithTransientAuthRetry(() => admin.from('game_words')
         .select('catalog:canonical_record')
-        .eq('level', '初').eq('status', 'active')
-        .in('access_tier', tier === 'login' ? ['guest', 'login'] : ['guest'])
+        .eq('level', '初').in('status', wordStatuses)
+        .in('access_tier', wordTiers)
         .order('rank', { ascending: true }).limit(caps['初'])),
       readWithTransientAuthRetry(() => admin.from('game_words')
         .select('catalog:canonical_record')
-        .eq('level', '中').eq('status', 'active')
-        .in('access_tier', tier === 'login' ? ['guest', 'login'] : ['guest'])
+        .eq('level', '中').in('status', wordStatuses)
+        .in('access_tier', wordTiers)
         .order('rank', { ascending: true }).limit(caps['中'])),
       readWithTransientAuthRetry(() => admin.from('game_sentences')
         .select('th,zh,reading_th,wc,polite_f,words')
@@ -250,7 +262,17 @@ serve(async (req) => {
       sentences: sent.data.length >= caps.sentences,
     };
 
-    return json({ tier, game: requestedGame || null, words, sentences, audioAvailable, capped }, 200, origin);
+    let paidSrsState = [];
+    if (paidTone) {
+      const state = await readWithTransientAuthRetry(() => admin.from('phase2_paid_srs_states')
+        .select('game,level,content_key,phase,next_checkpoint,due_on,mastered,active_challenge,ever_failed,reschedule_pending')
+        .eq('user_id', user.id).eq('game', 'tone'));
+      if (state.error) return json({ error: 'paid_srs_state_unavailable' }, 503, origin);
+      paidSrsState = state.data || [];
+    }
+
+    return json({ tier, game: requestedGame || null, words, sentences, audioAvailable, capped,
+      paidSrsState: paidTone ? paidSrsState : undefined }, 200, origin);
   } catch (e) {
     return json({ error: String((e && e.message) || e) }, 500, origin);
   }
