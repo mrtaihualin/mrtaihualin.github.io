@@ -712,12 +712,10 @@ body .gsh-shell.tf-page { padding-top:8px; }
   body[data-gsh-game] .gsh-learning-tools > #tf-guide-toggle,
   body[data-gsh-game] .gsh-learning-tools > #rg-guide-toggle,
   body[data-gsh-game] .gsh-learning-tools > #guide-toggle { order:6; }
-  body[data-gsh-game] .gsh-learning-tools > #rg-webkbd-toggle { order:7; }
   body[data-gsh-game] .gsh-learning-tools > #tf-particle-toggle,
-  body[data-gsh-game] .gsh-learning-tools > #rg-particle-toggle { order:8; }
+  body[data-gsh-game] .gsh-learning-tools > #rg-particle-toggle { order:7; }
   body[data-gsh-game] .gsh-learning-tools > #tf-vault-btn-slot,
-  body[data-gsh-game] .gsh-learning-tools > #rg-vault-btn-slot { order:9; }
-  body[data-gsh-game="typing"] .gsh-learning-tools > #rg-webkbd-toggle { display:none !important; }
+  body[data-gsh-game] .gsh-learning-tools > #rg-vault-btn-slot { order:8; }
   body[data-gsh-game] .gsh-desktop-hint-off[data-visible="true"] { display:inline-flex !important; }
 }
 

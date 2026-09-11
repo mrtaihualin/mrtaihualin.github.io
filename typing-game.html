@@ -100,7 +100,7 @@ if (document.fonts && document.fonts.load) {
 }
 </script>
 <link rel="stylesheet" href="css/shared.css?v=38">
-<link rel="stylesheet" href="css/mobile-landscape.css?v=74">
+<link rel="stylesheet" href="css/mobile-landscape.css?v=75">
 <script src="js/games/thai-keyboard.js?v=2"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="js/core/supabase-config.js?v=11"></script>
@@ -128,7 +128,7 @@ if (document.fonts && document.fonts.load) {
 html:not(.gc-ready) [onclick*="check("],html:not(.gc-ready) [onclick*="next("],
 html:not(.gc-ready) [onclick*="skipWord("],html:not(.gc-ready) [onclick*="restart("],
 html:not(.gc-ready) [onclick*="setLevel("],html:not(.gc-ready) [onclick*="rgDownloadReport("],
-html:not(.gc-ready) [onclick*="rgToggleWebKbd("],html:not(.gc-ready) [onclick*="setGuideMode("],
+html:not(.gc-ready) [onclick*="setGuideMode("],
 html:not(.gc-ready) [onclick*="setRgEnMode("],html:not(.gc-ready) [onclick*="setRgPronMode("],
 html:not(.gc-ready) [onclick*="tgToggleParticleMode("],html:not(.gc-ready) [onclick*="trackBookCTA("],
 html:not(.gc-ready) [onclick*="trackToneLink("],html:not(.gc-ready) [onclick*="openBadge("],
@@ -377,8 +377,8 @@ body.tg-kbd-typing{padding-top:0 !important;}
 /* มือถือ + 有提示(引導)模式: ปิดปุ่มเรียกคีย์บอร์ดจริงของเครื่อง บังคับใช้คีย์บอร์ดในเกมอย่างเดียว (เห็นตัวที่ต้องกดชัดเจน) — Lin 2026-07-07 */
 @media not all and (hover:hover) and (pointer:fine){ body.tg-guide-hint #rg-mobile-kbd-btn{display:none !important;} }
 .tkbd{display:flex;flex-direction:column;gap:4px;width:100%;max-width:520px;}
-/* 無提示(挑戰)模式: ซ่อนคีย์บอร์ดบนจอเป็นค่าเริ่มต้น ให้พิมพ์ด้วยคีย์บอร์ดจริง(เครื่อง/มือถือ)ล้วนๆ ท้าทายความจำ — 有提示 ยังบังคับโชว์คีย์บอร์ดในเกมเป็นไกด์เหมือนเดิม — ผู้เล่นกดปุ่ม "⌨️ 開啟螢幕鍵盤" เปิดเองได้ถ้าต้องการ (.tg-kbd-open) — ใช้กฎเดียวกันทั้งคอมและมือถือ — Lin 2026-07-12 */
-body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
+/* 無提示(挑戰)模式: ซ่อนคีย์บอร์ดในเกมและใช้คีย์บอร์ดของอุปกรณ์; 有提示 แสดงคีย์บอร์ดในเกมอัตโนมัติ */
+body:not(.tg-guide-hint) .tkbd{display:none !important;}
 @media (orientation:landscape) and (max-width:1024px) and (max-height:600px){
   body.tg-landscape-game-keyboard-only .tkbd{display:flex !important;gap:2px;}
   body.tg-landscape-game-keyboard-only #rg-mobile-kbd-btn{display:none !important;}
@@ -390,11 +390,7 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
   body.tg-landscape-game-keyboard-only .tkbd.shift-on .tk-key .tk-shift{font-size:12px;}
   body.tg-landscape-game-keyboard-only .tkbd.shift-on .tk-key .tk-base{font-size:7px;}
 }
-@media (orientation:landscape) and (max-width:1024px) and (max-height:600px) and (hover:none) and (pointer:coarse){
-  .tkbd{display:flex !important;gap:2px;}
-  #rg-mobile-kbd-btn{display:none !important;}
-  .mobile-kbd-input{pointer-events:none !important;}
-}
+body.tg-touch-game-keyboard-only .mobile-kbd-input{pointer-events:none !important;}
 .tk-row{display:flex;gap:3px;justify-content:center;}
 .tk-key{flex:1;max-width:38px;min-width:20px;height:40px;border:1.5px solid #d4b87a;border-radius:6px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'Sarabun',sans-serif;cursor:pointer;user-select:none;transition:all .1s;overflow:hidden;}
 .tk-key:active{transform:scale(.92);background:#fff3d8;}
@@ -407,6 +403,7 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
 .tk-key.tk-space{flex:4;max-width:180px;font-size:10.5px;color:#7a5510;}
 .tk-key.active,.rg-shift-key.active{background:#e8a020;color:#fff;border-color:#e8a020;}
 .rg-shift-key.need{border-color:#d85a30;box-shadow:0 0 0 2px rgba(216,90,48,.3);background:#ffe8dd;}
+#rg-kbd .comb-base{display:none;}
 @media(max-width:420px){.tk-key{height:34px;}.tk-key .tk-base{font-size:13px;}}
 .retry-hint.good{color:#2e7d32;background:#e8f5e9;border-color:#a5d6a7;}
 .retry-hint.wrong3{color:#c62828;background:#ffebee;border-color:#ef9a9a;}
@@ -490,7 +487,7 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
     <p style="font-size:14px;color:#444;line-height:1.7;margin:12px 0 8px;">泰文打字不只是記鍵盤！照著正確順序一個字一個字打，慢慢熟悉泰文字母的位置和拼字方式 ⌨️</p>
 
     <ul style="font-size:14px;color:#444;line-height:1.7;margin:0 0 12px;padding-left:20px;">
-      <li>照畫面上的字，用泰文鍵盤一個字一個字打出來，電腦鍵盤、手機鍵盤、螢幕鍵盤都可以</li>
+      <li>照畫面上的字，用泰文鍵盤一個字一個字打出來；電腦使用實體鍵盤，手機和平板使用裝置鍵盤，有提示時畫面會顯示遊戲鍵盤</li>
       <li>照畫面順序由左到右打，打對自動跳下一步，不用按確認鍵</li>
       <li>💡有提示會亮下一個該按的鍵／🔥無提示全靠自己記；作答中可以隨時切換，但本題只要開過提示就不計分</li>
     </ul>
@@ -516,7 +513,7 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
       <p style="margin:0 0 4px;"><strong>高級</strong>：整句話，練習連續打字＋整句理解。一輪固定 10 題，三個等級都一樣。</p>
 
       <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">⌨️ 怎麼打字</div>
-      <p style="margin:0 0 4px;">照畫面上寫的順序、由左到右打就對了。泰文有些母音寫在子音前面（เ, แ, โ, ใ, ไ），這種字第一鍵反而是母音——照螢幕順序打不會錯。多音節字，音節之間自動接續，不用按鍵切換。電腦實體鍵盤跟手機鍵盤都能打，或按 ⌨️ 開螢幕鍵盤用滑鼠／觸控輸入。打對自動跳下一步，不用按確認鍵。</p>
+      <p style="margin:0 0 4px;">照畫面上寫的順序、由左到右打就對了。泰文有些母音寫在子音前面（เ, แ, โ, ใ, ไ），這種字第一鍵反而是母音——照螢幕順序打不會錯。多音節字，音節之間自動接續，不用按鍵切換。電腦使用實體鍵盤，手機和平板使用裝置鍵盤；有提示時可直接按遊戲鍵盤。打對自動跳下一步，不用按確認鍵。</p>
 
       <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🔥💡 兩種模式</div>
       <p style="margin:0 0 4px;"><strong>💡 有提示（練習模式）</strong>：鍵盤亮下一個該按的鍵，不計分、不算星星、不算複習進度，適合剛學或想穩基礎時用。作答中可以隨時開關；本題只要開過一次提示就固定不計分，最新狀態會帶到下一題。</p>
@@ -536,7 +533,7 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
       <p style="margin:0 0 4px;">不想做這題時可按「跳過」直接進入下一題；不算答對或答錯、不加減分，也不影響連擊或複習進度。是否已記住由複習系統依實際作答決定。</p>
 
       <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🧰 好用小工具</div>
-      <p style="margin:0 0 4px;">題目上方的工具列可直接使用：🔊發音（AI 語音）・🐣／🥚讀音顯示（切換注音式泰語讀音）・🍙／🌾翻譯顯示（🍙顯示中文翻譯，🌾隱藏翻譯）・🔖加入單字庫（收藏這個字，之後可在別處複習）・💡／🔥提示模式切換・⌨️螢幕鍵盤開關・🙏禮貌詞（只在高級句子出現，切換句尾要不要打ครับ／ค่ะ／คะ）。</p>
+      <p style="margin:0 0 4px;">題目上方的工具列可直接使用：🔊發音（AI 語音）・🐣／🥚讀音顯示（切換注音式泰語讀音）・🍙／🌾翻譯顯示（🍙顯示中文翻譯，🌾隱藏翻譯）・🔖加入單字庫（收藏這個字，之後可在別處複習）・💡／🔥提示模式切換・🙏禮貌詞（只在高級句子出現，切換句尾要不要打ครับ／ค่ะ／คะ）。</p>
 
       <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🏆 星星、稻米勳章、連續天數</div>
       <p style="margin:0 0 4px;">星星不是答對一題就有，是這個字經過複習、真的「精通」了才拿到一顆（跟其他遊戲共用）。星星累積解鎖稻米勳章：茉莉香米（10顆）→ 糯米（20顆）→ 紫米（40顆）→ 香黑米（60顆）→ 紅米（100顆）。每天練習累積連續天數，斷一天有「護盾」保護連續紀錄不歸零（次數有限）。每週換一次每週挑戰，完成有額外獎勵。</p>
@@ -622,14 +619,12 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
         <span id="rg-vault-btn-slot"></span>
         <!-- ปุ่มวงเดียว กดสลับ 有提示/無提示 · สีเหมือนปุ่มไข่/ข้าวปั้น (Lin 2026-07-19) -->
         <button id="guide-toggle" class="word-ctl-btn" type="button" onclick="var _v=!guideMode;if(tgChooseGuideMode(_v)){try{gtag('event','typing_game_guide_mode_toggle',{category:'game',mode:(_v?'hint':'challenge')})}catch(e){}}"></button>
-        <!-- ปุ่มเปิด/ปิดคีย์บอร์ดบนจอ — เป็นปุ่มอิสระ ไม่ผูกกับโหมด 無提示 (Lin 2026-07-19) -->
-        <button type="button" id="rg-webkbd-toggle" class="word-ctl-btn" onclick="rgToggleWebKbd()" title="開啟螢幕鍵盤">⌨️</button>
         <span id="font-toggle-slot"></span>
         <!-- Lin 2026-08-01: ปุ่มครับ/ค่ะ/คะ ท้ายประโยค高級 — ยังพิมพ์ได้จริง (ต่างจากเกมอ่าน) แต่ไม่นับคะแนนถ้าผิด โผล่เฉพาะตอนเล่น高級句子เท่านั้น -->
         <button id="rg-particle-toggle" class="word-ctl-btn" type="button" onclick="tgToggleParticleMode()" style="display:none;">🙏</button>
       </div>
       <!-- เครื่องมือทั้งหมดอยู่ในแถวใต้คำ โดยใช้ปุ่มเดิม/ช่องเสียบเดิมและตรรกะเดิม -->
-      <!-- Lin 2026-07-30 (แก้รอบ 2): เรียงลำดับกลางทุกเกม: 發音 → 讀音 → 英文讀音 → 翻譯 → 單字庫 → 提示 → 字體 → 螢幕鍵盤 (เกมไหนไม่มีปุ่มไหนก็เลื่อนขึ้น) -->
+      <!-- Lin 2026-07-30 (แก้รอบ 2): เรียงลำดับกลางทุกเกม: 發音 → 讀音 → 英文讀音 → 翻譯 → 單字庫 → 提示 → 字體 (เกมไหนไม่มีปุ่มไหนก็เลื่อนขึ้น) -->
       <script>document.addEventListener('DOMContentLoaded',function(){WordMenu.init({rowId:'word-ctl-row',items:[
         {id:'rg-sound-toggle',    label:'發音',     state:'none'},
         {id:'rg-pron-toggle',     label:'讀音',     state:'pron'},
@@ -638,7 +633,6 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
         {id:'rg-vault-btn-slot',  label:'單字庫',   state:'vault'},
         {id:'guide-toggle',       label:'提示',     state:'guide'},
         {id:'font-toggle-slot',   label:'字體',     state:'font'},
-        {id:'rg-webkbd-toggle',   label:'螢幕鍵盤', state:'kbd'},
         {id:'rg-particle-toggle', label:'禮貌詞',   state:'particle'}
       ]});});</script>
       <div id="word-golden-badge" style="display:none;font-size:12px;color:#C8973A;font-weight:800;margin-top:2px;"><img src="assets/icons/golden-grain-plain.svg" alt="" style="width:14px;height:14px;vertical-align:-2px;margin-right:2px;">黃金字 ×2</div>
@@ -766,7 +760,7 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
 (function(){
   // P6-28 (2026-08-08): ปิดปุ่มเกม (ดู CSS ต้นไฟล์) จนกว่า GameContentLoader.boot() จะโหลดสคริปต์เกมสำเร็จจริง
   var GC_SEL = '[onclick*="check("],[onclick*="next("],[onclick*="skipWord("],[onclick*="restart("],'
-    + '[onclick*="setLevel("],[onclick*="rgDownloadReport("],[onclick*="rgToggleWebKbd("],[onclick*="setGuideMode("],'
+    + '[onclick*="setLevel("],[onclick*="rgDownloadReport("],[onclick*="setGuideMode("],'
     + '[onclick*="setRgEnMode("],[onclick*="setRgPronMode("],[onclick*="tgToggleParticleMode("],[onclick*="trackBookCTA("],'
     + '[onclick*="trackToneLink("],[onclick*="openBadge("],[onclick*="openStar("]';
   function gcGate(){
@@ -789,7 +783,7 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/typing-game-app.min.js?v=47'], {game:'typing'}).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/typing-game-app.min.js?v=48'], {game:'typing'}).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 </div><!-- /.v3-page -->
@@ -797,7 +791,7 @@ body:not(.tg-guide-hint):not(.tg-kbd-open) .tkbd{display:none !important;}
 <script src="js/core/shared.min.js?v=50"></script>
 <script src="js/games/practice-events.js?v=3"></script>
 <script src="js/games/game-flow.js?v=13"></script>
-<script src="js/core/mobile-landscape.js?v=41"></script>
+<script src="js/core/mobile-landscape.js?v=42"></script>
 
 <!-- ── Game Switcher (fixed pill) ── -->
 <style>
@@ -822,7 +816,7 @@ function dismissHowtoHint(id){
 var GT_TOUR_STEPS=[
   {sel:'#wth',        title:'這裡是要打的字', text:'畫面會顯示要打的泰文音節，照著這個打就對了。'},
   {sel:'#rg-type-wrap',title:'點這裡開始打字', text:'點一下這個框，鍵盤就會跳出來，開始打字。'},
-  {sel:'#word-ctl-row', title:'學習工具都在這裡', text:'直接使用這排工具：發音、讀音、翻譯、收藏單字、提示切換、螢幕鍵盤開關，以及高級句子的🙏禮貌詞。'},
+  {sel:'#word-ctl-row', title:'學習工具都在這裡', text:'直接使用這排工具：發音、讀音、翻譯、收藏單字、提示切換，以及高級句子的🙏禮貌詞。'},
   {sel:'#rg-howto-btn',title:'忘記怎麼玩？', text:'隨時點這裡 📖，可以再看一次完整的玩法說明。'}
 ];
 var gtTourIdx=0;

@@ -23,15 +23,6 @@
   var listeningKeyboardLayout = null;
   var listeningKeyboardInput = null;
   var listeningKeyboardRenderedShifted = null;
-  var typingMagnifier = null;
-  var typingMagnifierKeyboard = null;
-  var typingMagnifierHoldTimer = null;
-  var typingMagnifierPointerId = null;
-  var typingMagnifierKey = null;
-  var typingMagnifierPoint = null;
-  var typingMagnifierActive = false;
-  var typingMagnifierSuppressClick = false;
-  var typingMagnifierDispatchingClick = false;
   var inputPolicies = new Map();
   var controlPolicies = new Map();
   var activeResultRoot = null;
@@ -504,11 +495,6 @@
         labeledNode('#font-toggle-slot', '字體', '🅰️'),
         labeledNode('#rg-particle-toggle', '禮貌詞', '🙏')
       ];
-      var keyboardToggle = q('#rg-webkbd-toggle');
-      if (keyboardToggle) {
-        keyboardToggle.setAttribute('data-gsh-ml-keyboard-toggle', 'disabled');
-        setControlDisabled(keyboardToggle, true);
-      }
     } else if (game === 'word-order') {
       tools = [
         labeledNode('#wo-howto-btn', '玩法', '📖'),
@@ -919,188 +905,6 @@
     listeningKeyboardRenderedShifted = null;
   }
 
-  function typingCharacterKeys(keyboard, row) {
-    return qa('.tk-key[data-code]', row || keyboard);
-  }
-
-  function typingKeyFace(keyboard, key) {
-    var shifted = keyboard.classList.contains('shift-on');
-    return q(shifted ? '.tk-shift' : '.tk-base', key);
-  }
-
-  function typingMagnifierNeighbors(keyboard, selected) {
-    var rows = qa(':scope > .tk-row', keyboard).map(function (row) {
-      return typingCharacterKeys(keyboard, row);
-    }).filter(function (keys) { return keys.length; });
-    var rowIndex = -1;
-    var keyIndex = -1;
-    rows.some(function (keys, index) {
-      var found = keys.indexOf(selected);
-      if (found < 0) return false;
-      rowIndex = index;
-      keyIndex = found;
-      return true;
-    });
-    if (rowIndex < 0) return null;
-    var row = rows[rowIndex];
-    var previousRow = rows[(rowIndex - 1 + rows.length) % rows.length];
-    var nextRow = rows[(rowIndex + 1) % rows.length];
-    function proportionalKey(keys) {
-      var ratio = row.length > 1 ? keyIndex / (row.length - 1) : 0;
-      return keys[Math.round(ratio * (keys.length - 1))];
-    }
-    return {
-      center: selected,
-      left: row[(keyIndex - 1 + row.length) % row.length],
-      right: row[(keyIndex + 1) % row.length],
-      above: proportionalKey(previousRow),
-      below: proportionalKey(nextRow)
-    };
-  }
-
-  function ensureTypingMagnifier() {
-    if (typingMagnifier && typingMagnifier.isConnected) return typingMagnifier;
-    typingMagnifier = document.createElement('div');
-    typingMagnifier.className = 'gsh-ml-typing-magnifier';
-    typingMagnifier.setAttribute('aria-hidden', 'true');
-    typingMagnifier.hidden = true;
-    (stage || document.body).appendChild(typingMagnifier);
-    return typingMagnifier;
-  }
-
-  function positionTypingMagnifier(point) {
-    if (!typingMagnifier || !point) return;
-    var diameter = typingMagnifier.offsetWidth || 156;
-    var inset = 8;
-    var left = Math.max(inset, Math.min(window.innerWidth - diameter - inset, point.x - diameter / 2));
-    var top = Math.max(inset, Math.min(window.innerHeight - diameter - inset, point.y - diameter - 18));
-    typingMagnifier.style.left = left + 'px';
-    typingMagnifier.style.top = top + 'px';
-  }
-
-  function renderTypingMagnifier(keyboard, selected, point) {
-    var neighbors = typingMagnifierNeighbors(keyboard, selected);
-    if (!neighbors) return;
-    var magnifier = ensureTypingMagnifier();
-    magnifier.innerHTML = '';
-    ['above', 'left', 'center', 'right', 'below'].forEach(function (position) {
-      var sourceKey = neighbors[position];
-      var face = document.createElement('span');
-      face.className = 'gsh-ml-typing-magnifier-key gsh-ml-typing-magnifier-key--' + position;
-      face.dataset.code = sourceKey.dataset.code || '';
-      var sourceFace = typingKeyFace(keyboard, sourceKey);
-      face.innerHTML = sourceFace ? sourceFace.innerHTML : '';
-      if (position === 'center') face.setAttribute('data-selected', 'true');
-      magnifier.appendChild(face);
-    });
-    magnifier.hidden = false;
-    positionTypingMagnifier(point);
-  }
-
-  function typingKeyAtPoint(keyboard, point) {
-    if (!point) return null;
-    var target = document.elementFromPoint(point.x, point.y);
-    var key = target && target.closest ? target.closest('.tk-key[data-code]') : null;
-    return key && keyboard.contains(key) ? key : null;
-  }
-
-  function clearTypingMagnifierGesture(keepClickSuppression) {
-    if (typingMagnifierHoldTimer) window.clearTimeout(typingMagnifierHoldTimer);
-    typingMagnifierHoldTimer = null;
-    typingMagnifierPointerId = null;
-    typingMagnifierKey = null;
-    typingMagnifierPoint = null;
-    typingMagnifierActive = false;
-    if (typingMagnifier) typingMagnifier.hidden = true;
-    if (!keepClickSuppression) typingMagnifierSuppressClick = false;
-  }
-
-  function typingMagnifierPointerDown(event) {
-    if (!active || document.body.getAttribute('data-gsh-game') !== 'typing') return;
-    if (event.pointerType === 'mouse' && event.button !== 0) return;
-    var keyboard = typingMagnifierKeyboard;
-    var key = event.target && event.target.closest ? event.target.closest('.tk-key[data-code]') : null;
-    if (!keyboard || !key || !keyboard.contains(key)) return;
-    clearTypingMagnifierGesture(false);
-    typingMagnifierPointerId = event.pointerId;
-    typingMagnifierKey = key;
-    typingMagnifierPoint = { x: event.clientX, y: event.clientY };
-    typingMagnifierHoldTimer = window.setTimeout(function () {
-      if (typingMagnifierPointerId === null || !typingMagnifierKey) return;
-      typingMagnifierActive = true;
-      typingMagnifierSuppressClick = true;
-      renderTypingMagnifier(keyboard, typingMagnifierKey, typingMagnifierPoint);
-    }, 350);
-  }
-
-  function typingMagnifierPointerMove(event) {
-    if (typingMagnifierPointerId === null || event.pointerId !== typingMagnifierPointerId) return;
-    var keyboard = typingMagnifierKeyboard;
-    typingMagnifierPoint = { x: event.clientX, y: event.clientY };
-    var key = keyboard && typingKeyAtPoint(keyboard, typingMagnifierPoint);
-    if (key) typingMagnifierKey = key;
-    if (!typingMagnifierActive) return;
-    if (event.cancelable) event.preventDefault();
-    if (key) renderTypingMagnifier(keyboard, key, typingMagnifierPoint);
-    else if (typingMagnifier) typingMagnifier.hidden = true;
-  }
-
-  function typingMagnifierPointerUp(event) {
-    if (typingMagnifierPointerId === null || event.pointerId !== typingMagnifierPointerId) return;
-    var keyboard = typingMagnifierKeyboard;
-    var point = { x: event.clientX, y: event.clientY };
-    var selected = keyboard && typingKeyAtPoint(keyboard, point);
-    var shouldType = typingMagnifierActive && selected;
-    var keepClickSuppression = typingMagnifierActive;
-    if (keepClickSuppression && event.cancelable) event.preventDefault();
-    clearTypingMagnifierGesture(keepClickSuppression);
-    if (shouldType) {
-      typingMagnifierDispatchingClick = true;
-      selected.click();
-      typingMagnifierDispatchingClick = false;
-    }
-    if (keepClickSuppression) {
-      window.setTimeout(function () { typingMagnifierSuppressClick = false; }, 0);
-    }
-  }
-
-  function typingMagnifierPointerCancel(event) {
-    if (typingMagnifierPointerId === null || event.pointerId !== typingMagnifierPointerId) return;
-    clearTypingMagnifierGesture(false);
-  }
-
-  function typingMagnifierClick(event) {
-    if (!typingMagnifierSuppressClick || typingMagnifierDispatchingClick) return;
-    if (!event.target.closest('.tk-key[data-code]')) return;
-    event.preventDefault();
-    event.stopImmediatePropagation();
-  }
-
-  function bindTypingMagnifier(keyboard) {
-    if (!keyboard || typingMagnifierKeyboard === keyboard) return;
-    unbindTypingMagnifier();
-    typingMagnifierKeyboard = keyboard;
-    keyboard.addEventListener('pointerdown', typingMagnifierPointerDown, true);
-    keyboard.addEventListener('click', typingMagnifierClick, true);
-    window.addEventListener('pointermove', typingMagnifierPointerMove, true);
-    window.addEventListener('pointerup', typingMagnifierPointerUp, true);
-    window.addEventListener('pointercancel', typingMagnifierPointerCancel, true);
-  }
-
-  function unbindTypingMagnifier() {
-    clearTypingMagnifierGesture(false);
-    if (typingMagnifierKeyboard) {
-      typingMagnifierKeyboard.removeEventListener('pointerdown', typingMagnifierPointerDown, true);
-      typingMagnifierKeyboard.removeEventListener('click', typingMagnifierClick, true);
-    }
-    window.removeEventListener('pointermove', typingMagnifierPointerMove, true);
-    window.removeEventListener('pointerup', typingMagnifierPointerUp, true);
-    window.removeEventListener('pointercancel', typingMagnifierPointerCancel, true);
-    typingMagnifierKeyboard = null;
-    if (typingMagnifier) typingMagnifier.remove();
-    typingMagnifier = null;
-  }
-
   function splitTypingKeyboard(keyboard) {
     if (!keyboard) return false;
     var changed = false;
@@ -1124,13 +928,11 @@
       row.append(left, right);
       changed = true;
     });
-    bindTypingMagnifier(keyboard);
     return changed;
   }
 
   function restoreTypingKeyboard() {
     var keyboard = q('#rg-kbd');
-    unbindTypingMagnifier();
     if (!keyboard) return;
     qa(':scope > .tk-row', keyboard).forEach(function (row) {
       var halves = qa(':scope > .gsh-split-kbd-half', row);
@@ -1654,8 +1456,6 @@
       panel.style.removeProperty('right');
       panel.style.removeProperty('bottom');
     });
-    var keyboardToggle = q('[data-gsh-ml-keyboard-toggle]');
-    if (keyboardToggle) keyboardToggle.removeAttribute('data-gsh-ml-keyboard-toggle');
     clearListeningKeyboard();
     restoreTypingKeyboard();
     restoreToneSummaryLayout();
@@ -1682,7 +1482,11 @@
     document.dispatchEvent(new CustomEvent('gsh:mobile-landscape-change', { detail: { active: false } }));
   }
 
-  function handleMedia() { if (media.matches) activate(); else deactivate(); }
+  function typingTabletKeepsPortraitLayout() {
+    return !!(document.body && document.body.getAttribute('data-gsh-game') === 'typing' &&
+      typeof window.tgIsTabletTouchDevice === 'function' && window.tgIsTabletTouchDevice());
+  }
+  function handleMedia() { if (media.matches && !typingTabletKeepsPortraitLayout()) activate(); else deactivate(); }
   function destroy() {
     var lifecycle = resolveExclusiveView(document.body.getAttribute('data-gsh-game') || '');
     var detailRoot = activeResultDetailRoot || lifecycle.detail;
