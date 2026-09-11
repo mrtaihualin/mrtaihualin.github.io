@@ -80,7 +80,7 @@ test('Reading counter follows active syllables without changing the round queue'
 });
 
 test('Reading loads the rebuilt crash-safe bundle with a fresh cache key', () => {
-  assert.match(html, /reading-game-app\.min\.js\?v=53/);
+  assert.match(html, /reading-game-app\.min\.js\?v=54/);
 });
 
 test('Reading keeps scattered choices collision-safe and tone boxes proportional', () => {

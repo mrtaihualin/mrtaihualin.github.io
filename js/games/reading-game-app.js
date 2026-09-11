@@ -1391,6 +1391,13 @@ function next(){
 }
 
 function nextWord(){
+  if(window.LearningReview&&LearningReview.advance&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()){
+    LearningReview.advance(roundReport,rgAdvanceToNextWord);
+    return;
+  }
+  rgAdvanceToNextWord();
+}
+function rgAdvanceToNextWord(){
   cur++;
   if(cur>=roundQueue.length){endRound();return;}
   loadWord();

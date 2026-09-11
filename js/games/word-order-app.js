@@ -1090,7 +1090,6 @@
       woServerFinish(s.th, false); // Phase 4: ตาย/ล้มเหลว = รีเซ็ตฝั่งเซิร์ฟเวอร์ด้วย
     }
     woLogSentence({failed:true, pts:0, srsDue:(woLoggedIn() && !practiceMode) ? ((srsRecords[srsKey] && srsRecords[srsKey].dueDate) || '') : ''});
-    woSaveResume(true);
     curSentenceIsKnownCheck = false;
     curCombo = 0;
     woSentenceRevealed = true; woRenderParticleLine(); // Lin 2026-08-01: เฉลยคำตอบแล้ว (แม้เรียงแพ้) ก็ถือว่าเห็นประโยคสมบูรณ์ → โชว์บรรทัดครับ/ค่ะ/คะ ได้
@@ -1136,7 +1135,6 @@
         var _wobK=document.getElementById('wo-bank'); if(_wobK)_wobK.style.display='none'; // Lin 2026-07-12: เหมือนจุดอื่น กันช่องว่างเปล่าๆ
         Array.prototype.forEach.call(document.querySelectorAll('#wo-slots .wo-slot'), function(el){ el.classList.add('correct'); });
         woLogSentence({mastered:!!passedClean, pts:0, srsDue:passedClean?'已精通':((srsRecords[srsKey] && srsRecords[srsKey].dueDate) || '')});
-        woSaveResume(true);
         woSentenceRevealed = true; woRenderParticleLine(); // Lin 2026-08-01: เรียงถูก (ด่านพิสูจน์已記得) → โชว์บรรทัดครับ/ค่ะ/คะ ได้
         return;
       }
@@ -1230,7 +1228,6 @@
         el.classList.add('correct');
       });
       woLogSentence({guide:!!hintUsedThisSentence, pts:pts, srsDue:(woLoggedIn() && !practiceMode) ? ((srsRecords[srsKey] && srsRecords[srsKey].dueDate) || '') : ''});
-      woSaveResume(true);
       try{ if(window.gtag) gtag('event','word_order_correct',{category:'game',sentence:s.th, first_try: !attemptedWrongThisSentence}); }catch(e){}
       try{ if(window.gtag) gtag('event','game_correct',{category:'game',game:'word_order'}); }catch(e){}
     } else {
@@ -1316,7 +1313,6 @@
     lastSubmittedAnswer = '';
     submittedAttempts = [];
     woLogSentence({skipped:true,wrong:0,attempts:[],userAnswer:'',pts:0});
-    woSaveResume(true);
     window.woNext();
   };
 
@@ -1336,13 +1332,22 @@
   };
 
   window.woNext = function(){
+    if(window.LearningReview&&LearningReview.advance&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()){
+      LearningReview.advance(roundReport,woAdvanceToNextSentence);
+      return;
+    }
+    woAdvanceToNextSentence();
+  };
+
+  function woAdvanceToNextSentence(){
+    woSaveResume(true);
     if (idx < SET.length - 1) {
       idx++;
       loadSentence();
     } else {
       finish();
     }
-  };
+  }
 
   document.addEventListener('keydown', function(event){
     if(event.key!=='Enter'||event.defaultPrevented||event.repeat||event.isComposing)return;

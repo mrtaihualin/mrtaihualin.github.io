@@ -86,13 +86,16 @@
 
   function item(input) {
     input = input || {};
+    var ref = contentRef(input.content_ref);
+    if (ref && input.key !== undefined && input.key !== ref.key) throw new Error('CONTENT_REF_IDENTITY_MISMATCH');
     var attempts = Array.isArray(input.attempts) ? input.attempts.map(attempt) : [];
     var words = input.words && Array.isArray(input.words) ? input.words.map(function (word) {
       return { th: String(word && word.th || ''), zh: String(word && word.zh || '') };
     }) : [];
     var row = {
       item_id: input.item_id || null,
-      content_ref: contentRef(input.content_ref),
+      key: ref ? ref.key : null,
+      content_ref: ref,
       content_version: input.content_version || null,
       ordinal: Math.max(1, number(input.ordinal, 1)),
       question: String(input.question || ''),
@@ -150,6 +153,8 @@
 
   function addItem(report, input) {
     if (!report || !Array.isArray(report.items)) throw new Error('invalid round report');
+    var gameType = String(report.game_type || '').toLowerCase().replace(/-/g, '_');
+    if (gameType !== 'lego' && (!input || input.content_ref == null)) throw new Error('CONTENT_REF_REQUIRED');
     var row = item(input);
     row.ordinal = report.items.length + 1;
     report.items.push(row);
@@ -249,6 +254,7 @@
     if (!report || !Array.isArray(report.items)) errors.push('items required');
     if (report && Array.isArray(report.items)) report.items.forEach(function (row, index) {
       if (!row.content_ref || !row.content_ref.key) errors.push('content_ref required at item ' + index);
+      if (!row.key || row.key !== row.content_ref.key) errors.push('content_ref identity mismatch at item ' + index);
       if (!Array.isArray(row.attempts)) errors.push('attempts required at item ' + index);
     });
     scanForbidden(report, '', errors);

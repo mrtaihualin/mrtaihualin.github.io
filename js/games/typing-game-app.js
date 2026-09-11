@@ -1075,6 +1075,13 @@ function next(){
 }
 
 function nextWord(){
+  if(window.LearningReview&&LearningReview.advance&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()){
+    LearningReview.advance(roundReport,tgAdvanceToNextWord);
+    return;
+  }
+  tgAdvanceToNextWord();
+}
+function tgAdvanceToNextWord(){
   cur++;
   if(cur>=roundQueue.length){endRound();return;}
   tgSaveResume(); // Phase E3: บันทึกจุดที่กำลังจะไปต่อ (คำถัดไปยังไม่เริ่มพิมพ์เลย = จุดปลอดภัยที่สุดที่จะ resume กลับมา)

@@ -699,7 +699,7 @@ test('mobile resume uses one compact shared-copy line and three horizontal actio
 
 test('all five games keep one current-round DTO identity with the Login Free canonical summary', () => {
   for (const g of games) {
-    const reportVersion = 5;
+    const reportVersion = g.id === 'listening' ? 5 : 6;
     assert.match(g.htmlText, new RegExp(`js/games/round-report\\.js\\?v=${reportVersion}`), `${g.id}: missing Round Report DTO loader`);
     assert.match(g.htmlText, /js\/score\/learning-summary\.js\?v=1/, `${g.id}: Login Free summary runtime must be active`);
     assert.match(g.appText, /RoundReport\.(?:create|restore)/, `${g.id}: round identity is not wired`);
@@ -713,7 +713,7 @@ test('all six games use the shared A4 browser Print structure and daily Result a
   const roundReport = fs.readFileSync(path.join(root, 'js/games/round-report.js'), 'utf8');
   const gameFlow = fs.readFileSync(path.join(root, 'js/games/game-flow.js'), 'utf8');
   for (const g of games) {
-    const reportVersion = 5;
+    const reportVersion = g.id === 'listening' ? 5 : 6;
     assert.match(g.htmlText, new RegExp(`js/games/round-report\\.js\\?v=${reportVersion}`), `${g.id}: must load shared print renderer`);
     assert.match(g.htmlText, /js\/games\/game-flow\.js\?v=13/, `${g.id}: must load current countdown-free Result runtime`);
     assert.match(g.appText, /RoundReport\.openPrint/, `${g.id}: print action must use the shared renderer`);
@@ -874,7 +874,7 @@ test('Tone active-question guidance permanently locks that question to zero', ()
   assert.match(toneMin, /聲調選擇錯誤/, 'Tone: deployed minified bundle must charge a wrong initial tone answer');
   assert.match(toneMin, /查看已審核答案/, 'Tone: deployed minified bundle must include the direct reviewed-answer gate');
   assert.match(toneMin, /pageshow/, 'Tone: deployed minified bundle must include the page-return guard');
-  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=84/, 'Tone: page must request the rebuilt shared-framework runtime version');
+  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=85/, 'Tone: page must request the rebuilt shared-framework runtime version');
 });
 
 test('Tone mobile touch surfaces keep Desktop gameplay free of keyboard-only copy', () => {

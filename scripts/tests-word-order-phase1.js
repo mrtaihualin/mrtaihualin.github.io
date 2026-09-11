@@ -92,7 +92,8 @@ test('resume advances past an already-counted sentence, including legacy snapsho
   assert.match(app, /completedCurrent:\s*!!completedCurrent/);
   assert.match(app, /if \(woResumeCompletedCurrent\(state, savedSentence&&savedSentence\.th\)\) idx\+\+/);
   assert.match(app, /if \(idx >= SET\.length\) \{ finish\(\); return; \}/);
-  assert.strictEqual((app.match(/woSaveResume\(true\)/g) || []).length, 4);
+  assert.strictEqual((app.match(/woSaveResume\(true\)/g) || []).length, 1);
+  assert.match(app, /function woAdvanceToNextSentence\(\)\{\s*woSaveResume\(true\);/, 'completed resume evidence is written only after the learning commit is acknowledged');
 });
 
 console.log(`\n${passed} Phase 1 Word Order tests passed.`);

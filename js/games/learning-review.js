@@ -212,9 +212,10 @@
     });
     var context = {
       roundId: String(options.report.round_id), game: game, level: level,
+      ownerId: String(currentUser() && currentUser().id || ''), ownerEpoch: ownerScope(),
       srs: srs, due: due, original: original, retried: Object.create(null),
       groupSize: options.groupSizeByRef || Object.create(null), groupBuffers: Object.create(null),
-      pending: Promise.resolve(),
+      pending: Promise.resolve(), jobs: [], advancePending: false,
       retry: typeof options.retry === 'function' ? options.retry : function () {},
     };
     (options.alreadyRetried || []).forEach(function (item) { context.retried[keyOfRef(contentRefOf(item))] = true; });
@@ -224,7 +225,10 @@
   }
   function contextFor(reportOrId) {
     var id = typeof reportOrId === 'string' ? reportOrId : reportOrId && reportOrId.round_id;
-    return id ? rounds[String(id)] || null : null;
+    var context = id ? rounds[String(id)] || null : null;
+    var user = currentUser();
+    if (!context || !user || context.ownerId !== String(user.id || '') || context.ownerEpoch !== ownerScope()) return null;
+    return context;
   }
   function owns(reportOrId, ref) {
     var context = contextFor(reportOrId);
@@ -281,10 +285,40 @@
     var state = context.due[keyOfRef(item.content_ref)];
     return state !== 'next_day_check' && state !== 'review_needed' && predictedScore(context.game, item) <= 3;
   }
+  function assertItemIdentity(item) {
+    var refKey = keyOfRef(item && item.content_ref);
+    if (!item || !item.content_ref || typeof item.key !== 'string' || item.key !== item.content_ref.key) fail('CONTENT_REF_IDENTITY_MISMATCH');
+    return refKey;
+  }
+  function runJob(context, job) {
+    job.status = 'pending'; job.error = null;
+    return runtimeClient().commit({
+      game: context.game, level: context.level, roundId: context.roundId,
+      operationId: job.operationId, item: job.item,
+    }).then(function (result) {
+      var user = currentUser();
+      if (!user || context.ownerId !== String(user.id || '') || context.ownerEpoch !== ownerScope()) fail('LEARNING_OWNER_CHANGED');
+      job.status = 'committed'; job.result = result;
+      if (result.to_state === 'retry_end_round') scheduleRetry(context, job.refKey);
+      return result;
+    }).catch(function (error) {
+      job.status = 'failed'; job.error = error;
+      throw error;
+    });
+  }
+  function emitSaveError(context, error) {
+    try {
+      if (root && root.dispatchEvent && root.CustomEvent) {
+        root.dispatchEvent(new root.CustomEvent('gsh:learning-save-error', {
+          detail: { round_id: context.roundId, game: context.game, code: String(error && (error.code || error.message) || 'REVIEW_COMMIT_UNAVAILABLE') },
+        }));
+      }
+    } catch (_) {}
+  }
   function processItem(report, item) {
     var context = contextFor(report);
     if (!context || !runtimeEnabled()) return Promise.resolve({ ok: false, reason: 'not_owned' });
-    var refKey = keyOfRef(item && item.content_ref);
+    var refKey = assertItemIdentity(item);
     if (!refKey || context.srs[refKey]) return Promise.resolve({ ok: false, reason: 'srs_owner' });
     var groupSize = Math.max(1, Math.floor(Number(context.groupSize[refKey]) || 1));
     if (groupSize > 1) {
@@ -303,29 +337,73 @@
         },
       });
     }
-    if (predictedScore(context.game, item) <= 3) scheduleRetry(context, refKey);
-    context.pending = context.pending.then(function () {
-      return runtimeClient().commit({
-        game: context.game, level: context.level, roundId: context.roundId,
-        operationId: uuid(), item: item,
-      }).then(function (result) {
-        if (result.to_state === 'retry_end_round') scheduleRetry(context, refKey);
-        return result;
-      }).catch(function () { return { ok: false, reason: 'commit_failed' }; });
-    });
+    var job = { operationId: uuid(), item: item, refKey: refKey, status: 'queued', error: null, result: null };
+    context.jobs.push(job);
+    context.pending = context.pending.catch(function () {}).then(function () { return runJob(context, job); });
     return context.pending;
+  }
+  function settle(reportOrId) {
+    var context = contextFor(reportOrId);
+    if (!context || !runtimeEnabled()) return Promise.resolve([]);
+    return context.pending.catch(function () {}).then(function () {
+      var failed = context.jobs.filter(function (job) { return job.status === 'failed'; });
+      var retryChain = Promise.resolve();
+      failed.forEach(function (job) {
+        retryChain = retryChain.then(function () { return runJob(context, job); });
+      });
+      return retryChain.then(function () {
+        var unresolved = context.jobs.filter(function (job) { return job.status !== 'committed'; });
+        if (unresolved.length) throw unresolved[0].error || new Error('REVIEW_COMMIT_UNAVAILABLE');
+        return context.jobs.map(function (job) { return job.result; });
+      });
+    });
+  }
+  function removeRecovery() {
+    try { var old = root.document && root.document.getElementById('gsh-learning-save-recovery'); if (old) old.remove(); } catch (_) {}
+  }
+  function showRecovery(context, retry) {
+    if (!root.document || !root.document.body) return false;
+    removeRecovery();
+    var box = root.document.createElement('div'); box.id = 'gsh-learning-save-recovery';
+    box.style.cssText = 'position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:10020;max-width:420px;width:calc(100% - 32px);padding:14px 16px;border:2px solid #b83227;border-radius:14px;background:#fff;color:#5a1b17;box-shadow:0 8px 28px rgba(0,0,0,.22);font:700 14px/1.5 "Noto Sans TC",sans-serif;';
+    var message = root.document.createElement('div'); message.textContent = '學習進度尚未儲存，本輪已安全暫停。'; box.appendChild(message);
+    var button = root.document.createElement('button'); button.type = 'button'; button.textContent = '重試儲存';
+    button.style.cssText = 'margin-top:10px;border:0;border-radius:999px;background:#b83227;color:#fff;padding:8px 16px;font:700 14px inherit;cursor:pointer;';
+    button.onclick = function () { button.disabled = true; button.textContent = '儲存中…'; retry(); };
+    box.appendChild(button); root.document.body.appendChild(box); return true;
+  }
+  function advance(reportOrId, callback) {
+    var context = contextFor(reportOrId);
+    if (!context || !runtimeEnabled()) { callback(); return Promise.resolve(true); }
+    if (context.advancePending) return context.advancePending;
+    function attempt() {
+      context.advancePending = settle(reportOrId).then(function () {
+        context.advancePending = false; removeRecovery(); callback(); return true;
+      }).catch(function (error) {
+        context.advancePending = false; emitSaveError(context, error);
+        if (!showRecovery(context, attempt)) throw error;
+        return false;
+      });
+      return context.advancePending;
+    }
+    return attempt();
   }
 
   function installEvents() {
     if (!root || !root.addEventListener) return;
     root.addEventListener('gsh:item-complete', function (event) {
       var detail = event && event.detail || {};
-      if (detail.report && detail.item) processItem(detail.report, detail.item);
-      else if (detail.report && detail.report.item) processItem(detail.report, detail.report.item);
+      var pending = null;
+      if (detail.report && detail.item) pending = processItem(detail.report, detail.item);
+      else if (detail.report && detail.report.item) pending = processItem(detail.report, detail.report.item);
+      if (pending && typeof pending.catch === 'function') pending.catch(function (error) {
+        var context = contextFor(detail.report);
+        if (context) emitSaveError(context, error);
+      });
     });
     try {
       if (root.SITE_AUTH && root.SITE_AUTH.onChange) root.SITE_AUTH.onChange(function (user) {
-        if (!user) { queues = Object.create(null); rounds = Object.create(null); latestRound = Object.create(null); }
+        queues = Object.create(null); rounds = Object.create(null); latestRound = Object.create(null);
       });
     } catch (e) {}
   }
@@ -347,6 +425,8 @@
     predictedScore: predictedScore,
     shouldRetry: shouldRetry,
     processItem: processItem,
+    settle: settle,
+    advance: advance,
     runtimeEnabled: runtimeEnabled,
   };
 });

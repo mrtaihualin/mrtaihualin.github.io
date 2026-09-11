@@ -1468,6 +1468,14 @@ function tfCommitWordAndAdvance(opts) {
   // ── สเปก 2026-07-03 ข้อ 3+4: อัปเดต SRS ต่อคำ/ประโยค + แจกดาวเงินตอน mastered ──
   // ทำงานเฉพาะตอนล็อกอิน (ข้อ 0) · หน่วย SRS = ทั้งคำ/ประโยค ไม่ใช่รายพยางค์ → ใช้ entry.word ทั้งก้อน
   try { if (!entry.isParticle && tfSrsLoggedIn()) tfProcessSrsOnWordCommit(entry, mistakes, firstTry, !!opts.forced); } catch (e) {}
+  if(window.LearningReview&&LearningReview.advance&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()){
+    LearningReview.advance(roundReport,tfAdvanceCommittedWord);
+    return;
+  }
+  tfAdvanceCommittedWord();
+}
+
+function tfAdvanceCommittedWord() {
   session.index++;
   tfResetWordScoring();
   session.initialGuess = undefined;
@@ -3526,14 +3534,11 @@ var TF = {
         words: (_skipSentence && advSentenceCtx.words) ? advSentenceCtx.words.map(function(w){return {th:w.th||'',zh:w.zh||''};}) : []
       });
     }
-    session.index++;
-    tfResetWordScoring();
-    session.initialGuess = undefined;
-    session.finalAnswer = undefined;
-    session.currentWordGolden = false;
-    tfSaveResumeState();
-    if (session.index >= session.words.length) tfGoToSummary();
-    else tfSetupNextWord();
+    if(window.LearningReview&&LearningReview.advance&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()){
+      LearningReview.advance(roundReport,tfAdvanceCommittedWord);
+      return;
+    }
+    tfAdvanceCommittedWord();
   },
   // 高級：เริ่มเล่นประโยคเต็ม 1 ประโยค — words[] ของประโยคกลายเป็น session เดียว (Lin 2026-07-03)
   // ใช้ startSetSession เดิมทุกอย่าง (คำทอง/คอมโบ/โบนัสจบชุด) แค่ส่ง entry object ตรงๆ ไม่ query WORD_LIST + ห้ามสลับลำดับคำ
