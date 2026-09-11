@@ -1,6 +1,6 @@
-// progress.js — Phase 1 `學習中心` (Guest Free + Login Free)
+// progress.js — Phase 1 `學習進度` (Guest Free + Login Free)
 // Guest: account introduction only; never shows fake zero learning history.
-// Login Free: one 學習進度 section (Progress/SRS/Review/Mastered) + 我的內容.
+// Login Free: Progress/SRS/Review/Mastered only; personal content stays in 泰語單字庫.
 // No 下一步, overall %, readiness formula, or paid runtime in Phase 1.
 (function () {
   'use strict';
@@ -57,7 +57,6 @@
       '.pg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}',
       '.pg-skill{border:1px solid rgba(200,151,58,.28)}.pg-skill-head{display:flex;gap:9px;align-items:center;font-weight:900;color:#5C4410}.pg-skill-icon{font-size:22px}',
       '.pg-status{font-size:13px;color:#765f32;line-height:1.7;margin-top:12px}.pg-muted{color:#9a895e}.pg-srs{margin-top:8px;padding-top:8px;border-top:1px solid #F0E6CE;font-size:12px;color:#765f32}.pg-srs-line+.pg-srs-line{margin-top:4px}',
-      '.pg-content-card{display:flex;flex-direction:column;min-height:138px}.pg-content-card h3{margin:0 0 8px;color:#5C4410;font-size:16px}.pg-content-card p{margin:0;color:#765f32;line-height:1.7;font-size:13px;flex:1}.pg-content-card .pg-btn{align-self:flex-start;margin-top:14px}',
       '.pg-warning{background:#FFF6E5;border:1px solid #EAC36B;color:#765113;border-radius:12px;padding:11px 14px;font-size:12.5px;line-height:1.6;margin:0 0 14px}',
       '.pg-chart{margin-top:12px}.pg-chart canvas{max-height:230px}',
       '@media(max-width:560px){.pg-benefits{grid-template-columns:1fr}.pg-panel{padding:18px}.pg-grid{grid-template-columns:1fr}.pg-actions .pg-btn{width:100%;box-sizing:border-box}}'
@@ -106,13 +105,11 @@
     root.innerHTML = '<div class="pg-panel pg-message">' +
       '<div class="pg-message-icon">👋</div>' +
       '<div style="font-size:12px;font-weight:900;color:#8B6310;letter-spacing:1px;margin-bottom:6px">訪客 Guest</div>' +
-      '<h2>登入後使用「學習中心」</h2>' +
+      '<h2>登入後使用「學習進度」</h2>' +
       '<p>你現在仍可免費玩遊戲。登入前的練習不會被當成帳號學習紀錄；成功登入後才開始記錄。</p>' +
       '<ul class="pg-benefits">' +
         '<li><b>學習進度</b> — 清楚掌握每項技能進度</li>' +
         '<li><b>SRS 複習</b> — 自動提醒該複習的內容</li>' +
-        '<li><b>我的單詞</b> — 收藏想記住的單詞</li>' +
-        '<li><b>我的句子</b> — 保存實用泰語句子</li>' +
         '<li><b>跨裝置同步</b> — 手機、電腦接著學</li>' +
       '</ul>' +
       '<div id="pg-email-turnstile" style="max-width:320px;margin:14px auto 0"></div>' +
@@ -264,13 +261,9 @@
         '<div class="pg-section-help"><div class="pg-section-help-line"><b>SRS</b>：間隔重複學習系統，依照你的練習結果顯示目前階段</div>' +
         '<div class="pg-section-help-line"><b>Review</b>：已到複習日期、現在需要複習的項目。</div></div>' +
         '<div class="pg-grid">' + skills + '</div></section>' +
-      '<section class="pg-section"><h3 class="pg-section-title">我的內容</h3><div class="pg-grid">' +
-        '<article class="pg-panel pg-content-card"><h3>🔖 我的單詞</h3><p>查看此帳號儲存的單詞，並回到支援的遊戲練習。</p><a class="pg-btn pg-btn-secondary" href="vault.html#words">查看我的單詞</a></article>' +
-        '<article class="pg-panel pg-content-card"><h3>📝 我的句子</h3><p>查看此帳號儲存的句子，並回到語序遊戲練習。</p><a class="pg-btn pg-btn-secondary" href="vault.html#sentences">查看我的句子</a></article>' +
-      '</div></section>' +
       '<section class="pg-section pg-panel"><p style="margin:0;color:#765f32;line-height:1.7">想知道自己的泰語實戰準備度？升級方案即可查看。</p>' +
         '<button class="pg-btn pg-btn-secondary" style="margin-top:12px" type="button" disabled title="付費方案尚未在 Phase 1 開放">查看升級方案</button></section>' +
-      '<div class="pg-actions" style="margin-top:28px"><a class="pg-btn pg-btn-primary" href="games.html">繼續免費練習</a><a class="pg-btn pg-btn-secondary" href="vault.html">我的內容</a></div>';
+      '<div class="pg-actions" style="margin-top:28px"><a class="pg-btn pg-btn-primary" href="games.html">繼續免費練習</a></div>';
     renderHeaderUser();
   }
   function renderLogin() {

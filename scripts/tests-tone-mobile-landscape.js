@@ -42,7 +42,7 @@ test('all pages bind the shared landscape system and the four in-scope games sha
     assert.match(html, /css\/mobile-landscape\.css\?v=77/, `${file}: wrong shared Landscape CSS version`);
     const controllerVersion = fourGame ? 42 : paused ? 26 : 27;
     assert.match(html, new RegExp(`js/core/mobile-landscape\\.js\\?v=${controllerVersion}`), `${file}: wrong scoped controller version`);
-    assert.match(html, /js\/games\/game-switcher\.js\?v=8/, `${file}: missing fixed six-game navigation`);
+    assert.match(html, /js\/games\/game-switcher\.js\?v=9/, `${file}: missing fixed six-game navigation`);
   }
   assert.doesNotMatch(read('tone-finder.html'), /tone-mobile-landscape\.(?:css|js)/);
 });
@@ -116,7 +116,7 @@ test('approved menus, hints and six-game navigation are exact', () => {
   assert.match(stage, /game === 'word-order'[\s\S]{0,1300}'玩法'[\s\S]{0,220}'讀音'[\s\S]{0,220}'英文讀音'[\s\S]{0,220}'逐字翻譯'[\s\S]{0,220}'單字庫'[\s\S]{0,220}'字體'[\s\S]{0,220}'禮貌詞'/);
   assert.match(stage, /quickAction\('#tf-guide-toggle', '提示'\)[\s\S]{0,220}quickAction\('#rg-guide-toggle', '提示'\)[\s\S]{0,220}quickAction\('#guide-toggle', '提示'\)[\s\S]{0,220}quickAction\('#wo-hint-btn', '提示 \(-2\)'\)/);
   assert.match(switcher, /var tabs = CORE6_TABS\.concat\(\[VAULT_TAB\]\)/);
-  assert.match(switcher, /label: '🔖 我的單字庫'/);
+  assert.match(switcher, /label: '🔖 泰語單字庫'/);
 });
 
 test('polite-particle controls never synthesize language-answer records', () => {
