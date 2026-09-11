@@ -83,6 +83,9 @@ function reviewCallerAllowed(user: any, url: string) {
 }
 
 function vocabularyScoreRow(row: any) {
+  if (row?.status !== 'active' || !['guest', 'login'].includes(row?.access_tier)) {
+    throw Object.assign(new Error('content_not_entitled'), { code: 'content_not_entitled' });
+  }
   const record = row?.canonical_record;
   if (!record || !record.contentKey || !record.word || !record.level || !Array.isArray(record.syllables) || !record.syllables.length) {
     throw Object.assign(new Error('content_validation_unavailable'), { code: 'content_validation_unavailable' });
@@ -104,7 +107,7 @@ async function reviewCanonical(admin: any, game: string, level: number, item: an
   let result;
   if (ref.source === 'game_words') {
     result = await admin.from('game_words')
-      .select('canonical_record')
+      .select('canonical_record,status,access_tier')
       .eq('content_key', String(ref.key)).limit(2);
   } else {
     result = await admin.from('game_sentences')

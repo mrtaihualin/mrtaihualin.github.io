@@ -109,8 +109,9 @@ assert.throws(
   );
 });
 
-assert.match(edge, /\.eq\('status', 'active'\)/);
-assert.match(edge, /\.in\('access_tier', tier === 'login' \? \['guest', 'login'\] : \['guest'\]\)/);
+assert.match(edge, /wordStatuses = paidTone \? \['queued'\] : \['active'\]/);
+assert.match(edge, /wordTiers = paidTone \? \['paid'\] : \(tier === 'login' \? \['guest', 'login'\] : \['guest'\]\)/);
+assert.match(edge, /requestBody\?\.paid_beta === true[\s\S]+owner_all_access/);
 assert.match(edge, /select\('catalog:canonical_record'\)/);
 assert.doesNotMatch(edge, /runtimeSpelling|spellingParts|\.map\(toWord\)|computeTone|getInitClass|getVowelType/);
 

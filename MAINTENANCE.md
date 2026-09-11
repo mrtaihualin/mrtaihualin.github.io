@@ -2781,3 +2781,10 @@ node scripts/check-site.js
 - iPad Portrait and Landscape keep the native iPad keyboard by default; turning Hint on closes the native input and uses the unsplit Phone-Portrait-style in-game keyboard in either orientation. Phone Landscape retains its existing split keyboard.
 - Preserved scoring, SRS, Auth, canonical vocabulary, temporary game-audio disable, and all non-Typing game behavior. The shared Landscape runtime continues to own layout only.
 - Verification: Typing policy/removal tests pass `21/21`; Mobile Landscape source checks pass; the real-source browser review confirms the Tools menu has no screen-keyboard toggle, the keyboard remains usable with no magnifier owner or rendered magnifier, and nine responsive sizes preserve all 47 key faces and Shift without horizontal key clipping. The complete site gate passes across 1,079 files. This is a source and isolated LAN-preview Delta only; merge, deployment and Production remain pending separate authorization.
+
+# 2026-09-11 — Lin-only Paid Tone SRS private-beta candidate
+
+- Added a query-gated Paid Tone entry that returns only the exact queued Paid 189 (`初 183 / 中 6`) to the single existing `owner_all_access` account; all other accounts and ordinary URLs keep their current Guest/Login Free content.
+- Added an isolated server-authoritative Paid SRS namespace and atomic/idempotent progression through Day `1 / 8 / 16`, then Challenge `30 / 60 / 90`. A failed Challenge item freezes as `reschedule_pending` because the exact reschedule interval is not yet a Product Decision.
+- Paid items cannot enter Login Free Review or its SRS namespace. Direct browser-role access is revoked, RLS is forced, Edge functions recheck entitlement and canonical content, and rollback fails closed if real Paid rows exist.
+- Rebased the bounded Paid Delta onto GitLab `main=d56f4e3af503d88e9a822b332645eee467e75e0f`, preserving the released Typing keyboard baseline. Verification: Paid source/server gates PASS, temporary PostgreSQL migration/RLS/full-date/concurrency/recovery suite PASS, and the complete site gate PASS across 1,084 files. Production remains separately exact-approval-gated.

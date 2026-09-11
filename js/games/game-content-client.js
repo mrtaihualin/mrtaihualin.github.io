@@ -246,6 +246,10 @@
   }
 
   var GAME_SURFACES = { tone: true, reading: true, typing: true, word_order: true, listening: true };
+  function paidBetaRequested(game) {
+    if (game !== 'tone' || !global.location) return false;
+    return /(?:^|[?&])paid-beta=1(?:&|$)/.test(String(global.location.search || ''));
+  }
   function fetchGameContent(game) {
     var cfg = currentConfig();
     if (game != null && !GAME_SURFACES[game]) return Promise.reject(new Error('game-content: invalid game surface'));
@@ -256,10 +260,12 @@
     if (!global.NetworkGuard || typeof global.NetworkGuard.request !== 'function') {
       return Promise.reject(new Error('NETWORK_GUARD_UNAVAILABLE'));
     }
+    var requestBody = game ? { game: game, contract: 'canonical-v1' } : { contract: 'canonical-v1' };
+    if (paidBetaRequested(game)) requestBody.paid_beta = true;
     return global.NetworkGuard.request(fetch, cfg.url + '/functions/v1/game-content', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', apikey: cfg.anonKey, Authorization: 'Bearer ' + token },
-      body: JSON.stringify(game ? { game: game, contract: 'canonical-v1' } : { contract: 'canonical-v1' })
+      body: JSON.stringify(requestBody)
     }, 15000).then(function (res) {
       if (!res.ok) throw new Error('game-content HTTP ' + res.status);
       return res.json();
@@ -472,6 +478,29 @@
 
       var game = options && options.game;
       return whenDeferredConfigReady().then(function () { return fetchGameContent(game); }).then(function (data) {
+        global.GAME_CONTENT_TIER = data.tier || 'anon';
+        global.PAID_SRS_PRIVATE_BETA = data.tier === 'paid';
+        if (global.PAID_SRS_PRIVATE_BETA) {
+          if (!Array.isArray(data.paidSrsState)) throw new Error('game-content: paid SRS state contract unavailable');
+          var paidState = {};
+          data.paidSrsState.forEach(function (row) {
+            if (!row || row.game !== 'tone' || (row.level !== 1 && row.level !== 2) ||
+                typeof row.content_key !== 'string' || !row.content_key) return;
+            var stage = ({ '0': 0, '1': 1, '8': 2, '16': 3, '30': 4, '60': 5, '90': 6 })[String(row.next_checkpoint)];
+            if (row.phase === 'complete') stage = 7;
+            paidState[row.level + '|' + row.content_key] = {
+              stage: stage == null ? 0 : stage,
+              dueDate: row.due_on || '', dueAt: 0,
+              everFailed: !!row.ever_failed,
+              mastered: row.phase === 'complete' || !!row.reschedule_pending,
+              phase: row.phase,
+              activeChallenge: !!row.active_challenge,
+              nextCheckpoint: row.next_checkpoint,
+              reschedulePending: !!row.reschedule_pending
+            };
+          });
+          try { global.localStorage.setItem('tf_paid_srs_v1', JSON.stringify(paidState)); } catch (_) {}
+        }
         fireCapHitEvents(data);
         if (global.WordAudio && typeof global.WordAudio.setAvailability === 'function') {
           global.WordAudio.setAvailability(data.audioAvailable);

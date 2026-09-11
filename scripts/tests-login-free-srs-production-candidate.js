@@ -45,7 +45,7 @@ check(read('lego.html').indexOf('tone-server.js') === -1, 'Lego receives no SRS 
 check(read('js/core/minimum-guest-launch.js').indexOf('login-surface.js?v=15') !== -1, 'SRS pages fetch the account-aware Login surface');
 check(read('js/core/login-surface.js').indexOf('reading-auth.js?v=34') !== -1, 'Login surface fetches the account-aware auth client');
 check(read('reading-game.html').indexOf('reading-auth.js?v=34') !== -1, 'Reading direct provider flow fetches the account-aware auth client');
-check(read('tone-finder.html').indexOf('tone-finder-game.min.js?v=83') !== -1, 'Tone fetches the current game runtime');
+check(read('tone-finder.html').indexOf('tone-finder-game.min.js?v=84') !== -1, 'Tone fetches the current game runtime');
 check(read('reading-game.html').indexOf('reading-game-app.min.js?v=53') !== -1, 'Reading fetches the current game runtime');
 check(read('typing-game.html').indexOf('typing-game-app.min.js?v=48') !== -1, 'Typing fetches the current game runtime');
 check(read('word-order.html').indexOf('word-order-app.min.js?v=38') !== -1, 'Word Order fetches the current game runtime');

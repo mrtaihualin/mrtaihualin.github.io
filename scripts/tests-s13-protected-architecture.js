@@ -33,7 +33,7 @@ check('content client ส่ง availability ให้ protected audio ก่อ
 const contentEdge = read('supabase/functions/game-content/index.ts');
 check('game-content คืน audio availability เฉพาะ entitled response', /entitledTexts/.test(contentEdge) && /audioAvailable/.test(contentEdge));
 check('game-content response ไม่คืน private audio storage metadata',
-  /return json\(\{ tier, game: requestedGame \|\| null, words, sentences, audioAvailable, capped \}/.test(contentEdge) &&
+  /return json\(\{ tier, game: requestedGame \|\| null, words, sentences, audioAvailable, capped,/.test(contentEdge) &&
   !/\b(?:storage_path|audio_key|bucket_name)\s*:/i.test(contentEdge));
 check('quota เดิมคง 50\/100 และ 20\/40', /anon:\s*\{ '初': 50,\s*'中': 50,\s*sentences: 20 \}/.test(contentEdge) && /login:\s*\{ '初': 100,\s*'中': 100,\s*sentences: 40 \}/.test(contentEdge));
 
