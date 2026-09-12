@@ -260,9 +260,10 @@ test('Typing exposes 47 character keys and two synchronized one-shot Shift contr
   assert.match(typingApp, /if\(RG_TYPE\.shiftOn\)[\s\S]{0,100}RG_TYPE\.shiftOn=false;[\s\S]{0,100}rgSyncShiftKeys\(\)/);
   assert.doesNotMatch(typingApp, /spaceKey=document\.createElement|backKey=document\.createElement/);
   assert.match(typingApp, /KeyB:'ฺ'/);
-  assert.match(typingApp, /rgKeyboardLabelHTML\(sh\)[\s\S]{0,100}rgKeyboardLabelHTML\(un\)/);
+  assert.match(typingApp, /'<span class="tk-shift">'\+sh\+'<\/span><span class="tk-base">'\+un\+'<\/span>'/);
+  assert.doesNotMatch(typingApp, /function rgKeyboardLabelHTML\(/);
   assert.match(read('typing-game.html'), /\.tkbd\.shift-on \.tk-key \.tk-shift[^{]*\{font-size:15px/);
-  assert.match(read('typing-game.html'), /typing-game-app\.min\.js\?v=49/);
+  assert.match(read('typing-game.html'), /typing-game-app\.min\.js\?v=50/);
   assert.match(css, /data-gsh-game="typing"[\s\S]{0,180}#rg-kbd[^}]+max-width: none !important/);
   assert.match(css, /#rg-kbd \.gsh-split-kbd-row[^}]+grid-template-columns: minmax\(0, 30fr\) minmax\(0, 40fr\) minmax\(0, 30fr\) !important/);
   assert.match(css, /#rg-kbd \.gsh-split-kbd-half[^}]+padding-inline: clamp\(3px, \.8dvh, 5px\)/);
@@ -359,7 +360,8 @@ test('local Landscape review pages load current game assets from the site root',
   assert.match(toneReview, /game-content-client\.js\?v=13/);
   assert.match(readingReview, /game-content-client\.js\?v=13/);
   assert.match(typingReview, /fetch\('\/__preview\/typing-keys\.html/);
-  assert.match(typingReview, /Object\.defineProperty\(navigator,"maxTouchPoints",\{value:5\}\)/);
+  assert.match(typingReview, /Object\.defineProperty\(navigator,"maxTouchPoints",\{value:5,configurable:true\}\)/);
+  assert.match(typingReview, /body\.classList\.add\('tg-landscape-game-keyboard-only'\)/);
   assert.match(wordOrderReview, /game-content-client\.js\?v=12/);
   assert.match(toneReview, /new URL\('\.\.\/\.\.\/', location\.href\)\.href/);
   assert.match(readingReview, /new URL\('\.\.\/\.\.\/', location\.href\)\.href/);
@@ -371,7 +373,8 @@ test('local Landscape review pages load current game assets from the site root',
   assert.match(typingReview, /function verticalCenterDelta\(doc\)/);
   assert.match(typingReview, /function keyFacesRender\(doc, win\)/);
   assert.match(typingReview, /faces\.length === 94[\s\S]{0,360}item\.visibility !== 'hidden'/);
-  assert.match(typingReview, /item\.display !== 'none'[\s\S]{0,160}item\.color === 'rgba\(0, 0, 0, 0\)'/);
+  assert.match(typingReview, /item\.display !== 'none'[\s\S]{0,180}item\.width > 0[\s\S]{0,180}face\.childElementCount === 0/);
+  assert.match(typingReview, /!doc\.querySelector\('#rg-kbd \.comb-disp,#rg-kbd \.comb-base'\)/);
   assert.match(typingReview, /var noMagnifier = !doc\.querySelector\('\.tg-touch-magnifier'\)/);
   assert.doesNotMatch(typingReview, /verifyMagnifier|destination\.dataset\.code/);
   assert.match(sharedJs, /gameOwnsTranslationControl = !!document\.getElementById\('wo-zh-toggle'\)/);
