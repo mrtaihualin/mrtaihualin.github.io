@@ -7,7 +7,7 @@
 <script>
 (function(){
   'use strict';
-  var sizes=[['Desktop',1440,900,true],['Desktop portrait',900,1440,true],['Phone portrait',390,844,false],['Phone landscape',844,390,false],['Small phone',320,568,false],['iPad portrait',768,1024,false],['iPad landscape',1024,768,false],['iPad Pro portrait',1024,1366,false],['iPad Pro landscape',1366,1024,false]];
+  var sizes=[['Desktop',1440,900,true,1],['Desktop portrait',900,1440,true,1],['Phone portrait',390,844,false,1],['Phone landscape',844,390,false,2],['Small phone',320,568,false,1],['iPad portrait',768,1024,false,1],['iPad landscape',1024,768,false,1],['iPad Pro portrait',1024,1366,false,1],['iPad Pro landscape',1366,1024,false,1]];
   var select=document.getElementById('size'),frame=document.getElementById('game'),result=document.getElementById('result');
   sizes.forEach(function(s,i){var o=document.createElement('option');o.value=i;o.textContent=s.join(' · ');select.appendChild(o);});
   var sourcePromise=fetch('/__preview/typing-keys.html',{cache:'no-store'}).then(function(r){if(!r.ok)throw Error('เปิดข้อมูลทดสอบไม่สำเร็จ');return r.text();});
@@ -45,9 +45,8 @@
     return structural&&JSON.stringify(actualInventory)===JSON.stringify(expectedInventory)&&ink.length===94&&ink.every(function(count){return count>0;});
   }
   async function check(i){
-    var s=sizes[i],pointerFine=s[3],html=await sourcePromise,bootstrap='<script>try{localStorage.clear();sessionStorage.clear();Object.defineProperty(navigator,"maxTouchPoints",{value:'+(pointerFine?0:5)+'});var realMatchMedia=window.matchMedia.bind(window);window.matchMedia=function(query){return query==="(hover:hover) and (pointer:fine)"?{matches:'+(pointerFine?'true':'false')+'}:realMatchMedia(query);};}catch(e){}<\/script>';
+    var s=sizes[i],pointerFine=s[3],expectedShifts=s[4],html=await sourcePromise,bootstrap='<script>try{localStorage.clear();sessionStorage.clear();}catch(e){}try{Object.defineProperty(navigator,"maxTouchPoints",{value:'+(pointerFine?0:5)+',configurable:true});}catch(e){}try{if(!window.screen)Object.defineProperty(window,"screen",{value:{},configurable:true});Object.defineProperty(window.screen,"width",{value:'+s[1]+',configurable:true});Object.defineProperty(window.screen,"height",{value:'+s[2]+',configurable:true});}catch(e){}try{var realMatchMedia=window.matchMedia.bind(window);window.matchMedia=function(query){return query==="(hover:hover) and (pointer:fine)"?{matches:'+(pointerFine?'true':'false')+'}:realMatchMedia(query);};}catch(e){}<\/script>';
     html=html.replace('<head>','<head>'+bootstrap);
-    if(!pointerFine)html=html.replace('</head>','<style>#rg-shift-key-right{display:flex !important}</style></head>');
     frame.style.width=s[1]+'px';frame.style.height=s[2]+'px';frame.srcdoc=html;
     var doc,win;for(var n=0;n<100;n++){await wait(100);doc=frame.contentDocument;win=frame.contentWindow;if(doc&&doc.documentElement&&doc.documentElement.classList.contains('gc-ready')&&doc.querySelectorAll('#rg-kbd .tk-key[data-code]').length===47&&typeof win.tgChooseGuideMode==='function')break;}
     await wait(250);await doc.fonts.ready;var kbd=doc.getElementById('rg-kbd');
@@ -57,12 +56,14 @@
       await wait(100);
       if(!visible(kbd,win))throw Error(s[0]+': cannot enter Hint mode');
     }
+    // srcdoc has no physical-device screen in the review browser; apply the already unit-tested Phone Landscape policy class for its CSS check.
+    if(expectedShifts===2)doc.body.classList.add('tg-landscape-game-keyboard-only');
     var expectedInventory=Object.keys(win.RG_BASE_MAP).map(function(code){return [code,win.RG_BASE_MAP[code],win.RG_SHIFT_MAP[code]];});
     if(await sha256(JSON.stringify(expectedInventory),win)!=='9f1ff4c25a95161691d33791e387ea2c61b16f2453041835bfd21df2ff5fbfe8')throw Error(s[0]+': baseline inventory hash changed');
     var keys=Array.from(doc.querySelectorAll('#rg-kbd .tk-key[data-code]'));
     if(keys.length!==47||!keys.every(function(k){return visible(k,win)&&k.textContent.trim();}))throw Error(s[0]+': missing key faces');
     var shiftKeys=Array.from(doc.querySelectorAll('#rg-kbd .rg-shift-key')),visibleShifts=shiftKeys.filter(function(key){return visible(key,win);});
-    if(shiftKeys.length!==2||visibleShifts.length!==(pointerFine?1:2))throw Error(s[0]+': wrong visible Shift count');
+    if(shiftKeys.length!==2||visibleShifts.length!==expectedShifts)throw Error(s[0]+': wrong visible Shift count');
     if(keys.some(function(k){var r=k.getBoundingClientRect();return r.left<0||r.right>s[1]+1||r.width<1||r.height<1;}))throw Error(s[0]+': keys clipped horizontally');
     if(!await allFacesRender(kbd,win,expectedInventory))throw Error(s[0]+': Standard normal face has no painted pixels');
     visibleShifts[0].click();
@@ -77,7 +78,7 @@
     if(!kbd.classList.contains('shift-on')||!await allFacesRender(kbd,win,expectedInventory))throw Error(s[0]+': Modern Shift face has no painted pixels');
     visibleShifts[0].click();
     win.rgToggleFont();
-    return 'PASS '+s[0]+' '+s[1]+'×'+s[2]+' — 47 exact keys, 94 faces paint pixels in both Shift/font states, visible Shift='+(pointerFine?1:2);
+    return 'PASS '+s[0]+' '+s[1]+'×'+s[2]+' — 47 exact keys, 94 faces paint pixels in both Shift/font states, visible Shift='+expectedShifts;
   }
   async function run(indices){document.getElementById('all').disabled=true;select.disabled=true;var rows=[];try{for(var i of indices){result.textContent=rows.join('\n')+'\nกำลังตรวจ '+sizes[i][0];rows.push(await check(i));}result.textContent=rows.join('\n');document.title='PASS — Typing keyboard '+rows.length+' sizes';}catch(e){result.textContent=rows.join('\n')+'\nFAIL '+e.message;document.title='FAIL — Typing keyboard';}finally{select.disabled=false;document.getElementById('all').disabled=false;}}
   var initialIndex=new URLSearchParams(location.search).get('portrait')==='1'?2:0;

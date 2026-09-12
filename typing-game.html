@@ -404,6 +404,7 @@ body.tg-kbd-typing{padding-top:0 !important;}
 body:not(.tg-guide-hint) .tkbd{display:none !important;}
 @media (orientation:landscape) and (max-width:1024px) and (max-height:600px){
   body.tg-landscape-game-keyboard-only .tkbd{display:flex !important;gap:2px;}
+  body.tg-landscape-game-keyboard-only #rg-shift-key-right{display:flex !important;}
   body.tg-landscape-game-keyboard-only #rg-mobile-kbd-btn{display:none !important;}
   body.tg-landscape-game-keyboard-only .mobile-kbd-input{pointer-events:none !important;}
   body.tg-landscape-game-keyboard-only .tk-row{gap:2px;}
@@ -428,8 +429,8 @@ body.tg-touch-game-keyboard-only .mobile-kbd-input{pointer-events:none !importan
 .tk-key.tk-space{flex:4;max-width:180px;font-size:10.5px;color:#7a5510;}
 .tk-key.active,.rg-shift-key.active{background:#e8a020;color:#fff;border-color:#e8a020;}
 .rg-shift-key.need{border-color:#d85a30;box-shadow:0 0 0 2px rgba(216,90,48,.3);background:#ffe8dd;}
-/* Desktop keeps one visible Shift; touch layouts retain both synchronized Shift controls. */
-@media (hover:hover) and (pointer:fine){ #rg-shift-key-right{display:none !important;} }
+/* One visible Shift everywhere; only the phone-landscape game-keyboard mode restores the second Shift above. */
+#rg-shift-key-right{display:none !important;}
 @media(max-width:420px){.tk-key{height:34px;}.tk-key .tk-base{font-size:13px;}}
 .retry-hint.good{color:#2e7d32;background:#e8f5e9;border-color:#a5d6a7;}
 .retry-hint.wrong3{color:#c62828;background:#ffebee;border-color:#ef9a9a;}

@@ -87,13 +87,13 @@
         if (!response.ok) throw new Error('เปิดไฟล์ Typing ไม่สำเร็จ');
         return response.text();
       }).then(function (html) {
-        html = html.replace('<head>', '<head><script>try{localStorage.clear();sessionStorage.clear();Object.defineProperty(navigator,"maxTouchPoints",{value:5});Object.defineProperty(screen,"width",{value:844});Object.defineProperty(screen,"height",{value:390});var realMatchMedia=window.matchMedia.bind(window);window.matchMedia=function(query){if(query==="(hover:hover) and (pointer:fine)")return{matches:false};if(query==="(orientation: landscape) and (max-width: 1024px) and (max-height: 600px)")return{matches:true,addEventListener:function(){},removeEventListener:function(){}};return realMatchMedia(query);};}catch(e){}<\/script>');
-        html = html.replace('</head>', '<style>#rg-shift-key-right{display:flex !important}</style></head>');
+        html = html.replace('<head>', '<head><script>try{localStorage.clear();sessionStorage.clear();}catch(e){}try{Object.defineProperty(navigator,"maxTouchPoints",{value:5,configurable:true});}catch(e){}try{Object.defineProperty(screen,"width",{value:844,configurable:true});Object.defineProperty(screen,"height",{value:390,configurable:true});}catch(e){}try{var realMatchMedia=window.matchMedia.bind(window);window.matchMedia=function(query){if(query==="(hover:hover) and (pointer:fine)")return{matches:false};if(query==="(orientation: landscape) and (max-width: 1024px) and (max-height: 600px)")return{matches:true,addEventListener:function(){},removeEventListener:function(){}};return realMatchMedia(query);};}catch(e){}<\/script>');
         frame.onload = function () {
           var doc = frame.contentDocument;
           var win = frame.contentWindow;
           var started = Date.now();
           (async function ready() {
+            if (doc.body) doc.body.classList.add('tg-landscape-game-keyboard-only');
             var tour = doc.querySelector('#gt-tour-card .gt-skip');
             if (tour && getComputedStyle(tour).display !== 'none') tour.click();
             var readyNow = doc.documentElement.classList.contains('gc-ready') &&
@@ -104,12 +104,15 @@
               var centered = verticalCenterDelta(doc) <= 2;
               var sideInsets = keyboardSideInsetsReady(doc);
               var desktopFaces = keyFacesRender(doc, win);
+              var visibleShifts = Array.from(doc.querySelectorAll('#rg-kbd .rg-shift-key')).filter(function (key) {
+                return key.getClientRects().length > 0 && win.getComputedStyle(key).visibility !== 'hidden';
+              }).length;
               var noMagnifier = !doc.querySelector('.tg-touch-magnifier') && !('TG_TOUCH_MAGNIFIER_HOLD_MS' in win);
               var faceAudit = win.__typingFaceAudit || {baseFont: 0, shiftFont: 0};
-              status.textContent = centered && sideInsets && desktopFaces && noMagnifier
-                ? 'พร้อมตรวจ Typing — 47 ปุ่มใช้ direct labels ครบ · ไม่มีแว่นขยาย · ไม่มี hidden-base workaround'
+              status.textContent = centered && sideInsets && desktopFaces && visibleShifts === 2 && noMagnifier
+                ? 'พร้อมตรวจ Typing — 47 ปุ่มใช้ direct labels ครบ · Shift 2 ปุ่ม · ไม่มีแว่นขยาย · ไม่มี hidden-base workaround'
                 : 'ตรวจ Typing ไม่ผ่าน — กึ่งกลาง=' + centered + ' · ขอบข้าง=' + sideInsets +
-                  ' · หน้าปุ่ม=' + desktopFaces + ' · ไม่มีแว่นขยาย=' + noMagnifier +
+                  ' · หน้าปุ่ม=' + desktopFaces + ' · Shift=' + visibleShifts + ' · ไม่มีแว่นขยาย=' + noMagnifier +
                   ' · ขนาดหลัก/Shift=' + faceAudit.baseFont + '/' + faceAudit.shiftFont;
               return;
             }

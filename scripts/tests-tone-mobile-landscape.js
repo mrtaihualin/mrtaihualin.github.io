@@ -360,7 +360,8 @@ test('local Landscape review pages load current game assets from the site root',
   assert.match(toneReview, /game-content-client\.js\?v=13/);
   assert.match(readingReview, /game-content-client\.js\?v=13/);
   assert.match(typingReview, /fetch\('\/__preview\/typing-keys\.html/);
-  assert.match(typingReview, /Object\.defineProperty\(navigator,"maxTouchPoints",\{value:5\}\)/);
+  assert.match(typingReview, /Object\.defineProperty\(navigator,"maxTouchPoints",\{value:5,configurable:true\}\)/);
+  assert.match(typingReview, /body\.classList\.add\('tg-landscape-game-keyboard-only'\)/);
   assert.match(wordOrderReview, /game-content-client\.js\?v=12/);
   assert.match(toneReview, /new URL\('\.\.\/\.\.\/', location\.href\)\.href/);
   assert.match(readingReview, /new URL\('\.\.\/\.\.\/', location\.href\)\.href/);

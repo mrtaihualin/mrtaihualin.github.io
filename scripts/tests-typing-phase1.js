@@ -184,11 +184,12 @@ test('keyboard keeps the exact 47-row baseline inventory and direct-label render
   assert.doesNotMatch(source, /function rgKeyboardLabelHTML\(/);
 });
 
-test('Desktop shows one Shift while touch layouts retain both synchronized Shift nodes', () => {
+test('Only Phone landscape shows two Shift controls while every other layout shows one', () => {
   const build = functionBlock('rgBuildKeyboard', 'rgVirtualPress');
   assert.match(build, /rgMakeShiftKey\('left'\)/);
   assert.match(build, /rgMakeShiftKey\('right'\)/);
-  assert.match(html, /@media \(hover:hover\) and \(pointer:fine\)\{ #rg-shift-key-right\{display:none !important;\} \}/);
+  assert.match(html, /#rg-shift-key-right\{display:none !important;\}/);
+  assert.match(html, /@media \(orientation:landscape\) and \(max-width:1024px\) and \(max-height:600px\)\{[\s\S]*?body\.tg-landscape-game-keyboard-only #rg-shift-key-right\{display:flex !important;\}/);
   assert.doesNotMatch(html, /nth-child[^{}]*\{[^}]*display\s*:\s*none/i);
 });
 
