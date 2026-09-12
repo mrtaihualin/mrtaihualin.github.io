@@ -667,7 +667,9 @@ function rgSyncSrsFromServer(force){
     .catch(function(){ if(!rgSrsOwnerCurrent(_uid,_ownerEpoch,_requestId))return false; window.__rgSrsSyncedOnce=true; return false; });
   return __rgSrsSyncPromise;
 }
-// ทริกเกอร์: ล็อกอินครั้งแรกของหน้า → ซิงก์แล้ว rebuild รอบให้ใช้ SRS ที่ตามมาข้ามเครื่อง (ครอบเคสรีเฟรช/เครื่องใหม่) · ล็อกอินซ้ำ → ซิงก์เฉยๆ
+// ทริกเกอร์: ล็อกอินครั้งแรกของหน้า → ซิงก์ SRS เท่านั้น; bootstrap ท้ายไฟล์เป็น owner เดียว
+// ที่มีสิทธิ์สร้าง/กู้รอบ การ init ซ้ำหลัง canonical Resume ถูกกู้แล้วจะสุ่มรอบใหม่และเขียนทับ
+// queue/round_id เดิมทันที ส่วนล็อกอินซ้ำยังคงซิงก์เฉยๆ เหมือนเดิม
 // ⚠️ ต้องลงทะเบียน "หลัง DOM พร้อม" เพราะสคริปต์เกม (inline) รันก่อนสคริปต์ defer (auth-widget) → ตอน parse ยังไม่มี SITE_AUTH
 function rgWireSrsSync(){
   try{
@@ -675,8 +677,7 @@ function rgWireSrsSync(){
       SITE_AUTH.onChange(function(u){
         rgResetAccountStateAtBoundary();
         if(!u) return;
-        var ownerId=String(u.id),ownerEpoch=Number(SITE_AUTH.learningOwnerEpoch)||0;
-        if(!window.__rgSrsSyncedOnce){ rgSyncSrsFromServer(true).then(function(){ if(!rgSrsOwnerCurrent(ownerId,ownerEpoch))return; try{ initGame(); }catch(e){} }); }
+        if(!window.__rgSrsSyncedOnce){ rgSyncSrsFromServer(true); }
         else { __rgSrsSyncPromise=null; rgSyncSrsFromServer(true); }
       });
     }
@@ -686,7 +687,7 @@ function rgWireSrsSync(){
     _rgT++;
     try{
       if(window.__rgSrsSyncedOnce){ clearInterval(_rgIv); return; }
-      if(rgLoggedIn()){ var ownerId=String(READING_AUTH.srsUser.id),ownerEpoch=Number(SITE_AUTH&&SITE_AUTH.learningOwnerEpoch)||0; rgSyncSrsFromServer(true).then(function(){ if(!rgSrsOwnerCurrent(ownerId,ownerEpoch))return; try{ initGame(); }catch(e){} }); }
+      if(rgLoggedIn()){ rgSyncSrsFromServer(true); }
     }catch(e){}
     if(_rgT>=24) clearInterval(_rgIv);
   }, 500);
@@ -2135,7 +2136,14 @@ try{
 loadSave();
 // E3: Guest เห็นตัวเลือก Resume; Login Free กลับรอบเดิมอัตโนมัติเพื่อรักษา Retry/round_id เดิม
 var _rgLoginFreeResume=window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled();
-if((_autoPlanReadingLevel&&!_rgLoginFreeResume)||!rgTryLoadResumeBanner()){ rgPrimeReview().then(initGame); }
+if((_autoPlanReadingLevel&&!_rgLoginFreeResume)||!rgTryLoadResumeBanner()){
+  // Fresh Login Free rounds wait briefly for the current account's SRS snapshot, but
+  // SRS hydration must never call initGame() again after this single bootstrap.
+  var _rgInitialSrsReady=rgLoggedIn()
+    ? Promise.race([rgSyncSrsFromServer(true),new Promise(function(resolve){setTimeout(resolve,1500);})])
+    : Promise.resolve();
+  Promise.all([rgPrimeReview(),_rgInitialSrsReady]).then(initGame);
+}
 try { rgRenderGameBar(); } catch(e){}
 
 // ── GA: ปุ่ม/องค์ประกอบที่สร้างโดยโมดูลกลาง (word-audio.js/shared.js) — ผูก listener แยกต่างหาก ไม่แก้ไฟล์โมดูลกลาง ──

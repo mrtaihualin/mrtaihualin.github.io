@@ -45,17 +45,17 @@ const tiered = [
   },
   {
     page: 'reading-game.html', game: 'reading', app: 'js/games/reading-game-app.js',
-    boot: /GameContentLoader\.boot\(\['js\/games\/reading-game-app\.min\.js\?v=56'\], \{game:'reading'\}\)/,
+    boot: /GameContentLoader\.boot\(\['js\/games\/reading-game-app\.min\.js\?v=57'\], \{game:'reading'\}\)/,
     resume: /GameResume\.save\(RG_RESUME_ID/,
   },
   {
     page: 'typing-game.html', game: 'typing', app: 'js/games/typing-game-app.js',
-    boot: /GameContentLoader\.boot\(\['js\/games\/typing-game-app\.min\.js\?v=51'\], \{game:'typing'\}\)/,
+    boot: /GameContentLoader\.boot\(\['js\/games\/typing-game-app\.min\.js\?v=54'\], \{game:'typing'\}\)/,
     resume: /GameResume\.save\('typing-game'/,
   },
   {
     page: 'word-order.html', game: 'word_order', app: 'js/games/word-order-app.js',
-    boot: /GameContentLoader\.boot\(\['js\/games\/word-order-app\.min\.js\?v=40'\], \{game:'word_order'\}\)/,
+    boot: /GameContentLoader\.boot\(\['js\/games\/word-order-app\.min\.js\?v=41'\], \{game:'word_order'\}\)/,
     resume: /GameResume\.save\('word-order'/,
   },
 ];

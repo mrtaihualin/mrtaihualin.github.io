@@ -119,7 +119,7 @@ check('Typing keeps its preference while a pending Login Free round resumes firs
   assert.match(source,/StudyPlan\.preferredLevel\('typing'\)/);
   assert.match(source,/_autoPlanTypingLevel\|\|localStorage\.getItem\('tg_level'\)/);
   assert.match(source,/if\(!_autoPlanTypingLevel\|\|_tgLoginFreeResume\)\{try\{ _tgResumeHandled=tgTryResume\(\)/);
-  assert.match(source,/if\(!_tgResumeHandled\)tgPrimeReview\(\)\.then\(initGame\)/);
+  assert.match(source,/if\(!_tgResumeHandled\)[\s\S]*Promise\.all\(\[_tgInitialReviewReady,_tgInitialSrsReady\]\)[\s\S]*\.then\(_tgInitialGo,_tgInitialGo\)/);
 });
 
 check('Search and Time Plan quota backends remain separate',()=>{

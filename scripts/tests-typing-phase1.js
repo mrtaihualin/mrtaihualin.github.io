@@ -346,7 +346,38 @@ test('Typing counter follows active syllables including High continuous segments
 });
 
 test('Typing loads the rebuilt crash-safe bundle with a fresh cache key', () => {
-  assert.match(html, /typing-game-app\.min\.js\?v=51/);
+  assert.match(html, /typing-game-app\.min\.js\?v=56/);
+});
+
+test('Typing treats the shared-profile legacy stat row as optional', () => {
+  assert.doesNotMatch(source, /document\.getElementById\('rg-stat-row'\)\.style/);
+  const resume = functionBlock('tgResumeContinue', 'tgResumeRestartSame');
+  assert.match(resume, /var _statRow=document\.getElementById\('rg-stat-row'\); if\(_statRow\)_statRow\.style\.display='flex'/);
+});
+
+test('Typing resolves SRS ownership before a recovered Review round becomes interactive', () => {
+  const prepare = functionBlock('tgPrepareRestoredReview', 'tgSaveResume');
+  assert.match(prepare, /Promise\.all\(\[reviewReady,srsReady\]\)\.then\(finish,finish\)/);
+  const resume = functionBlock('tgResumeContinue', 'tgResumeRestartSame');
+  assert.match(resume, /tgPrepareRestoredReview\(function\(\)\{[\s\S]*loadWord\(\)/);
+});
+
+test('Typing keeps a recovered queue when its legacy report snapshot is malformed', () => {
+  const restore = functionBlock('tgRestoreRoundReport', 'tgSaveResume');
+  const created = { fresh: true };
+  const context = {
+    curLevel: '初',
+    window: { RoundReport: true },
+    RoundReport: {
+      restore() { throw new Error('legacy snapshot'); },
+      create(defaults) { assert.strictEqual(defaults.game_type, 'typing'); return created; },
+    },
+  };
+  vm.createContext(context);
+  vm.runInContext(restore, context);
+  assert.strictEqual(vm.runInContext('tgRestoreRoundReport({legacy:true})', context), created);
+  const resume = functionBlock('tgResumeContinue', 'tgResumeRestartSame');
+  assert.match(resume, /roundReport=tgRestoreRoundReport\(saved\.report\)/);
 });
 
 test('玩法 explains both locked typing rules', () => {
