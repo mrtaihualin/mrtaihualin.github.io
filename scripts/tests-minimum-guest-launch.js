@@ -140,8 +140,10 @@ ok(read('reading-game.html').indexOf('reading-auth.js') !== -1,
   'Reading remains the direct provider-flow owner while other pages reuse it through the shared Login controller');
 
 var contentClient = read('js/games/game-content-client.js');
-ok(contentClient.indexOf('minimumGuest ? cfg.anonKey') !== -1 && contentClient.indexOf('readAccessTokenGuess(cfg.url) || cfg.anonKey') !== -1,
-  'protected game content keeps separate Guest and Login Free token paths');
+ok(contentClient.indexOf('if (minimumGuest) return Promise.resolve(cfg.anonKey)') !== -1 &&
+  contentClient.indexOf("LOGIN_FREE_LEARNING_GAMES = { tone: true, reading: true, typing: true, word_order: true }") !== -1 &&
+  contentClient.indexOf('client.auth.getSession()') !== -1,
+  'protected game content waits for OAuth session only on the four Login Free learning games');
 ok(!/登入解鎖|rg-login-btn|openLogin/.test(contentClient), 'content cap exposes no Login CTA');
 
 var audioClient = read('js/games/protected-word-audio.js');

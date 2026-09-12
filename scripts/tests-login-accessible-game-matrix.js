@@ -45,7 +45,7 @@ const tiered = [
   },
   {
     page: 'reading-game.html', game: 'reading', app: 'js/games/reading-game-app.js',
-    boot: /GameContentLoader\.boot\(\['js\/games\/reading-game-app\.min\.js\?v=54'\], \{game:'reading'\}\)/,
+    boot: /GameContentLoader\.boot\(\['js\/games\/reading-game-app\.min\.js\?v=55'\], \{game:'reading'\}\)/,
     resume: /GameResume\.save\(RG_RESUME_ID/,
   },
   {
@@ -67,7 +67,7 @@ for (const item of tiered) {
   assert.match(html, /js\/core\/minimum-guest-launch\.js\?v=24/, item.page + ': launch gate');
   assert.match(html, /js\/core\/auth-widget\.js\?v=23/, item.page + ': auth restoration owner');
   assert.match(html, /js\/games\/game-content-client\.js\?v=\d+/, item.page + ': tiered content/error owner');
-  assert.match(html, /js\/games\/learning-review\.js\?v=5/, item.page + ': Review owner');
+  assert.match(html, /js\/games\/learning-review\.js\?v=6/, item.page + ': Review owner');
   assert.match(html, /js\/games\/tone-server\.js\?v=6/, item.page + ': SRS owner');
   assert.match(html, item.boot, item.page + ': production bundle boot');
   assert.match(html, /class="gsh-resume-banner"/, item.page + ': nonblank resume recovery surface');

@@ -83,10 +83,18 @@ assert.strictEqual(Review.predictedScore('word_order', { wrong_count: 1, learnin
   } });
   assert.strictEqual(retryItems.length, 1, 'due Weak+4 gets the one same-round retry');
   assert.deepStrictEqual(runtimeCalls.map(x => x.action), ['review_queue', 'review_commit']);
+  const callsBeforeSkip = runtimeCalls.length;
+  const skipped = await Review.handleItemComplete({ detail: {
+    game_type: report.game_type,
+    round_id: report.round_id,
+    item: { key: original.ref.key, content_ref: original.ref, is_skipped: true, skip_reason: 'user_skip' }
+  } });
+  assert.deepStrictEqual(skipped, { ok: true, skipped: true }, 'neutral Skip is acknowledged locally');
+  assert.strictEqual(runtimeCalls.length, callsBeforeSkip, 'neutral Skip never reaches the Review transport');
   assert.strictEqual(Review.runtimeEnabled(), true, 'Login Free authenticated owner enables Review');
   global.GAME_CONTENT_TIER = 'paid';
   assert.strictEqual(Review.runtimeEnabled(), false, 'Paid is outside the Login Free Review owner');
   global.GAME_CONTENT_TIER = 'guest';
   assert.strictEqual(Review.runtimeEnabled(), false, 'Guest is outside the Login Free Review owner');
-  console.log('LEARNING_REVIEW_RUNTIME_PASS 21');
+  console.log('LEARNING_REVIEW_RUNTIME_PASS 23');
 })().catch((error) => { console.error(error); process.exitCode = 1; });

@@ -175,6 +175,26 @@ for (const fixture of fixtures) {
   assert.equal(runtime.commitBodies[0].item.key, fixture.key, fixture.game + ' sends the canonical key to score-submit');
 }
 
+for (const fixture of fixtures) {
+  const runtime = runtimeFor(fixture);
+  const row = runtime.context.RoundReport.addItem(runtime.report, {
+    content_ref: { source: fixture.source, key: fixture.key },
+    question: fixture.key,
+    is_correct: false,
+    is_skipped: true,
+    skip_reason: 'user_skip',
+    item_score: 0,
+    wrong_count: 0,
+  });
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(row.is_skipped, true, fixture.game + ' preserves neutral Skip evidence');
+  assert.equal(runtime.commitBodies.length, 0, fixture.game + ' neutral Skip never enters Review transport');
+  assert.equal(runtime.retryItems.length, 0, fixture.game + ' neutral Skip never schedules Retry');
+  let advanced = 0;
+  assert.equal(await runtime.context.LearningReview.advance(runtime.report, () => { advanced += 1; }), true);
+  assert.equal(advanced, 1, fixture.game + ' neutral Skip does not pause the round');
+}
+
 {
   const fixture = fixtures[0];
   const runtime = runtimeFor(fixture);

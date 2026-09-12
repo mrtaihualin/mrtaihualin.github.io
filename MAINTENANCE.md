@@ -1,5 +1,11 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-09-12 — Login Free real-account canary repairs (`SOURCE_PASS / CANARY_PARTIAL / PREVIEW_REFRESH_BLOCKED / PRODUCTION_STATIC_UNCHANGED`)
+
+- Repaired three failures found through real-account play on the isolated Cloudflare Preview: the four approved Login Free games now wait for the restored OAuth session before protected content loads; Reading preserves the reviewed catalog authority on its live syllable object; and a neutral Skip is acknowledged locally without creating a Retry, Review or SRS commit. Listening remains excluded, while Guest and Paid do not enter the Login Free owner.
+- Tone real-account evidence reached the same-round Retry and then `review_needed`; Typing reached `retry_end_round`. Reading and Word Order still require a refreshed Preview retest, and natural-day `WEAK_4D`/SRS verification remains pending. This Delta therefore does not claim 100% completion.
+- Focused four-game, Reading, neutral-Skip, owner-boundary and launch checks pass, and the complete 1,087-file site gate passes. The refreshed 379-file Cloudflare package is locally byte-manifested, but Wrangler OAuth cannot yet return its authorization code across the sandbox boundary; no refreshed Preview or main Production static deployment was made by this Delta.
+
 ## 2026-09-12 — Login Free Review item-event repair (`SOURCE_PASS / CANARY_RETEST_PENDING / PRODUCTION_STATIC_UNCHANGED`)
 
 - Repaired the shared Login Free Review listener used by Tone, Reading, Typing and Word Order. The game reporter emits `gsh:item-complete` with `round_id` plus `item`; the prior listener required a nonexistent embedded `report`, so a due item could appear in a played set without ever reaching the server commit. The listener now resolves the registered round from the emitted `round_id`, while retaining compatibility with the older embedded-report shape.

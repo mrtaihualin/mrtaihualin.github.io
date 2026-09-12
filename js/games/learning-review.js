@@ -310,6 +310,7 @@
   function processItem(report, item) {
     var context = contextFor(report);
     if (!context || !runtimeEnabled()) return Promise.resolve({ ok: false, reason: 'not_owned' });
+    if (item && item.is_skipped === true) return Promise.resolve({ ok: true, skipped: true });
     var refKey = assertItemIdentity(item);
     if (!refKey || context.srs[refKey]) return Promise.resolve({ ok: false, reason: 'srs_owner' });
     var groupSize = Math.max(1, Math.floor(Number(context.groupSize[refKey]) || 1));
