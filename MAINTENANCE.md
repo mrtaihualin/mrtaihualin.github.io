@@ -1,5 +1,11 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-09-12 — Login-accessible game matrix (`SOURCE_PASS / PREVIEW_PENDING / PHYSICAL_IPHONE_PENDING / PRODUCTION_UNCHANGED`)
+
+- The canonical shared game switcher exposes exactly six player destinations: Tone, Reading, Listening, Typing, Word Order and Lego. Four are Login-tiered learning games; Listening remains a visible nonblank `即將開幕` page with no game boot; Lego is a separate playable local surface with no Login content-tier transition.
+- Added a fail-closed matrix covering visible launch, authenticated-tier restoration ownership, local-device resume, explicit error recovery and the Login Free learning-loop boundary. Tone, Reading, Typing and Word Order require every check; Listening and Lego report explicit `N/A` only where the underlying Login-tiered runtime does not exist.
+- This evidence does not claim real-player completion. Isolated Preview plus physical iPhone Safari verification are still required before the Login Free Retry End Round / Review Needed / SRS task can be called 100%. No game runtime, Product behavior, Production, Supabase, Auth, account or application data changed in this Delta.
+
 ## 2026-09-11 — Typing direct-label keyboard recovery (`SOURCE_PASS / LOCAL_BROWSER_PASS / PREVIEW_PENDING / PRODUCTION_UNCHANGED`)
 
 - Git history traced the blank Thai-mark regression to the shared keyboard builder being changed from the original direct labels to the answer/slot `dispHTML` carrier-base renderer during later Mobile Landscape work. Landscape exposed the defect but orientation itself was not the cause; the shared builder affected Desktop too. Removed that keyboard-only helper path completely while retaining the shared answer/slot renderer for its separate owner.
