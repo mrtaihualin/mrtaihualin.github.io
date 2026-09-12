@@ -1,5 +1,11 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-09-11 — Typing direct-label keyboard recovery (`SOURCE_PASS / LOCAL_BROWSER_PASS / PREVIEW_PENDING / PRODUCTION_UNCHANGED`)
+
+- Git history traced the blank Thai-mark regression to the shared keyboard builder being changed from the original direct labels to the answer/slot `dispHTML` carrier-base renderer during later Mobile Landscape work. Landscape exposed the defect but orientation itself was not the cause; the shared builder affected Desktop too. Removed that keyboard-only helper path completely while retaining the shared answer/slot renderer for its separate owner.
+- Restored the original direct `RG_BASE_MAP` / `RG_SHIFT_MAP` labels for all 47 exact Kedmanee keys. Standalone combining labels now receive only a scoped nonzero-width box so their own glyph cannot be clipped; no hidden consonant, zero-width-space, transparent face, removed key or broad `nth-child` rule remains in the keyboard path.
+- Lin's final Shift rule is isolated from the character renderer: Phone Landscape `844×390` alone shows both synchronized one-shot Shift controls; Desktop, Phone Portrait, Small Phone and every iPad orientation show one. Static regressions still lock the exact 47-key inventory hash and direct renderer; browser raster checks confirm all 94 normal/Shift faces paint pixels in Standard and Modern fonts across all nine sizes. No character map, character label, keyboard input handler, Production, Supabase, Auth, account or data behavior changed.
+
 ## 2026-09-11 — Final Go Desktop cookie consent host unification (`SOURCE_PASS / PRODUCTION_UNCHANGED`)
 
 - Final Go Desktop review from GitLab `main` merge `6f60b49` passed the responsive keyboard matrix at all nine Desktop, phone and iPad sizes, plus the shared Mobile Landscape 12-state browser matrix, the five controlled-beta Desktop contracts and all 53 shared Phase 1 game-system contracts. No keyboard, game or Product presentation was changed.

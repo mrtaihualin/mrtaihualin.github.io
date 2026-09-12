@@ -404,6 +404,7 @@ body.tg-kbd-typing{padding-top:0 !important;}
 body:not(.tg-guide-hint) .tkbd{display:none !important;}
 @media (orientation:landscape) and (max-width:1024px) and (max-height:600px){
   body.tg-landscape-game-keyboard-only .tkbd{display:flex !important;gap:2px;}
+  body.tg-landscape-game-keyboard-only #rg-shift-key-right{display:flex !important;}
   body.tg-landscape-game-keyboard-only #rg-mobile-kbd-btn{display:none !important;}
   body.tg-landscape-game-keyboard-only .mobile-kbd-input{pointer-events:none !important;}
   body.tg-landscape-game-keyboard-only .tk-row{gap:2px;}
@@ -419,6 +420,8 @@ body.tg-touch-game-keyboard-only .mobile-kbd-input{pointer-events:none !importan
 .tk-key:active{transform:scale(.92);background:#fff3d8;}
 .tk-key .tk-shift{font-size:9px;color:#b89860;line-height:1;}
 .tk-key .tk-base{font-size:15px;color:#3a2a0a;font-weight:700;line-height:1.15;}
+/* Standalone Thai marks have zero advance width. Give only those direct-text labels a real box so overflow cannot clip their painted glyph. */
+#rg-kbd .tk-combining-label{display:inline-block;min-width:1em;text-align:center;}
 .tkbd.shift-on .tk-key .tk-shift{font-size:15px;color:#3a2a0a;font-weight:700;line-height:1.15;}
 .tkbd.shift-on .tk-key .tk-base{font-size:9px;color:#b89860;font-weight:400;line-height:1;}
 .tk-key.hint{border-color:#e8a020;background:#fff3d8;box-shadow:0 0 0 2px rgba(232,160,32,.35);}
@@ -426,6 +429,8 @@ body.tg-touch-game-keyboard-only .mobile-kbd-input{pointer-events:none !importan
 .tk-key.tk-space{flex:4;max-width:180px;font-size:10.5px;color:#7a5510;}
 .tk-key.active,.rg-shift-key.active{background:#e8a020;color:#fff;border-color:#e8a020;}
 .rg-shift-key.need{border-color:#d85a30;box-shadow:0 0 0 2px rgba(216,90,48,.3);background:#ffe8dd;}
+/* One visible Shift everywhere; only the phone-landscape game-keyboard mode restores the second Shift above. */
+#rg-shift-key-right{display:none !important;}
 @media(max-width:420px){.tk-key{height:34px;}.tk-key .tk-base{font-size:13px;}}
 .retry-hint.good{color:#2e7d32;background:#e8f5e9;border-color:#a5d6a7;}
 .retry-hint.wrong3{color:#c62828;background:#ffebee;border-color:#ef9a9a;}
@@ -805,7 +810,7 @@ body.tg-touch-game-keyboard-only .mobile-kbd-input{pointer-events:none !importan
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/typing-game-app.min.js?v=49'], {game:'typing'}).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/typing-game-app.min.js?v=50'], {game:'typing'}).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 </div><!-- /.v3-page -->
