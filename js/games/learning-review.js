@@ -381,18 +381,20 @@
     return attempt();
   }
 
+  function handleItemComplete(event) {
+    var detail = event && event.detail || {};
+    var reportOrId = detail.report || detail.round_id || null;
+    var item = detail.item || (detail.report && detail.report.item) || null;
+    var pending = reportOrId && item ? processItem(reportOrId, item) : null;
+    if (pending && typeof pending.catch === 'function') pending.catch(function (error) {
+      var context = contextFor(reportOrId);
+      if (context) emitSaveError(context, error);
+    });
+    return pending;
+  }
   function installEvents() {
     if (!root || !root.addEventListener) return;
-    root.addEventListener('gsh:item-complete', function (event) {
-      var detail = event && event.detail || {};
-      var pending = null;
-      if (detail.report && detail.item) pending = processItem(detail.report, detail.item);
-      else if (detail.report && detail.report.item) pending = processItem(detail.report, detail.report.item);
-      if (pending && typeof pending.catch === 'function') pending.catch(function (error) {
-        var context = contextFor(detail.report);
-        if (context) emitSaveError(context, error);
-      });
-    });
+    root.addEventListener('gsh:item-complete', handleItemComplete);
     try {
       if (root.SITE_AUTH && root.SITE_AUTH.onChange) root.SITE_AUTH.onChange(function (user) {
         queues = Object.create(null); rounds = Object.create(null); latestRound = Object.create(null);
@@ -417,6 +419,7 @@
     predictedScore: predictedScore,
     shouldRetry: shouldRetry,
     processItem: processItem,
+    handleItemComplete: handleItemComplete,
     settle: settle,
     advance: advance,
     runtimeEnabled: runtimeEnabled,

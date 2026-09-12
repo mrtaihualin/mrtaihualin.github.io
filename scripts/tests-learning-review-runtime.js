@@ -76,7 +76,11 @@ assert.strictEqual(Review.predictedScore('word_order', { wrong_count: 1, learnin
   const report = { round_id: '00000000-0000-4000-8000-000000000001', game_type: 'reading', difficulty: '初' };
   const original = { id: 1, ref: { source: 'game_words', key: 'weak@初' } };
   Review.registerRound({ report, game: 'reading', level: 1, allItems: [original], srsOwned: [], selectedReview: [original], idOf: x => x.id, contentRefOf: x => x.ref, retry: x => retryItems.push(x) });
-  await Review.processItem(report, { key: original.ref.key, content_ref: original.ref, learning_evidence: { firstCheckSyllableWrongCounts: [3] }, wrong_count: 3 });
+  await Review.handleItemComplete({ detail: {
+    game_type: report.game_type,
+    round_id: report.round_id,
+    item: { key: original.ref.key, content_ref: original.ref, learning_evidence: { firstCheckSyllableWrongCounts: [3] }, wrong_count: 3 }
+  } });
   assert.strictEqual(retryItems.length, 1, 'due Weak+4 gets the one same-round retry');
   assert.deepStrictEqual(runtimeCalls.map(x => x.action), ['review_queue', 'review_commit']);
   assert.strictEqual(Review.runtimeEnabled(), true, 'Login Free authenticated owner enables Review');

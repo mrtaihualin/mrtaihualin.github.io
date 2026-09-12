@@ -1,5 +1,11 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-09-12 — Login Free Review item-event repair (`SOURCE_PASS / CANARY_RETEST_PENDING / PRODUCTION_STATIC_UNCHANGED`)
+
+- Repaired the shared Login Free Review listener used by Tone, Reading, Typing and Word Order. The game reporter emits `gsh:item-complete` with `round_id` plus `item`; the prior listener required a nonexistent embedded `report`, so a due item could appear in a played set without ever reaching the server commit. The listener now resolves the registered round from the emitted `round_id`, while retaining compatibility with the older embedded-report shape.
+- Added regression coverage using the exact production event payload and advanced the Review runtime cache key on exactly the four in-scope pages. Listening still loads no Review runtime. The focused runtime test and the complete 1,087-file site gate pass.
+- Real-account canary testing reproduced the defect before this repair. A corrected canary upload then became unavailable because Netlify paused further production deploys after the team exhausted its current build credits; therefore the real-account end-to-end retest remains pending and this Delta does not claim 100% completion. The main `mrtaihualin.com` static site was not changed.
+
 ## 2026-09-12 — Login-accessible game matrix (`SOURCE_PASS / PREVIEW_PENDING / PHYSICAL_IPHONE_PENDING / PRODUCTION_UNCHANGED`)
 
 - The canonical shared game switcher exposes exactly six player destinations: Tone, Reading, Listening, Typing, Word Order and Lego. Four are Login-tiered learning games; Listening remains a visible nonblank `即將開幕` page with no game boot; Lego is a separate playable local surface with no Login content-tier transition.

@@ -36,7 +36,7 @@ assert.doesNotMatch(runtime, /getSession\(|access_token|refresh_token|service_ro
 
 pages.forEach(page => {
   const html = read(page);
-  assert.match(html, /js\/games\/learning-review\.js\?v=4/);
+  assert.match(html, /js\/games\/learning-review\.js\?v=5/);
   assert.match(html, /js\/core\/auth-widget\.js/);
   assert.match(html, /js\/games\/reading-auth\.js/);
 });
