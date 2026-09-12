@@ -102,7 +102,7 @@ test('all six Resume screens reuse Tone 640px geometry and exact three-action co
     const html = read(file);
     const fourGame = game === 'tone' || game === 'reading' || game === 'typing' || game === 'word-order';
     assert.match(html, /css\/mobile-landscape\.css\?v=76/, `${file}: must load its current shared Resume CSS`);
-    assert.match(html, new RegExp(`js/core/shared\\.min\\.js\\?v=${fourGame ? 50 : 47}`), `${file}: must load exact Resume copy`);
+    assert.match(html, new RegExp(`js/core/shared\\.min\\.js\\?v=${fourGame ? 51 : 47}`), `${file}: must load exact Resume copy`);
   }
   const shared = read('js/core/shared.js');
   assert.match(shared, /continueAction: '繼續上次練習'/);

@@ -82,6 +82,38 @@ test('Guest and account Resume use separate stores', () => {
   assert.match(shared, /if \(accountReady\(\)\)[\s\S]*accountRows/);
   assert.match(shared, /localStorage\.setItem\(key\(gameId\)/);
 });
+test('account Resume checkpoints its pending slice immediately and never falls back to Guest', () => {
+  const start = shared.indexOf('window.GameResume = window.GameResume || (function () {');
+  const end = shared.indexOf('// ===================================================================', start);
+  assert.ok(start >= 0 && end > start, 'GameResume source block missing');
+  const resumeSource = shared.slice(start, end);
+  const resumeValues = new Map([['gsh_resume_tone-finder', JSON.stringify({ index: 99 })]]);
+  const resumeStorage = {
+    getItem(key) { return resumeValues.has(key) ? resumeValues.get(key) : null; },
+    setItem(key, value) { resumeValues.set(key, String(value)); },
+    removeItem(key) { resumeValues.delete(key); }
+  };
+  let flushes = 0;
+  const resumeWindow = {
+    SITE_AUTH: { user: { id: 'user-a' } },
+    PHASE1_ACCOUNT_BOUNDARY: {
+      ownerKey: 'phase1_learning_owner_v1',
+      bind(owner) { resumeStorage.setItem(this.ownerKey, owner.id); }
+    },
+    PHASE1_CANONICAL: { flush() { flushes++; } }
+  };
+  vm.runInNewContext(resumeSource, { window: resumeWindow, localStorage: resumeStorage, Date, JSON }, { filename: 'shared-GameResume.js' });
+  resumeWindow.GameResume.save('tone-finder', { index: 2, total: 5, score: 10 });
+  assert.strictEqual(flushes, 1, 'account safe point must flush immediately');
+  assert.strictEqual(JSON.parse(resumeStorage.getItem('phase1_account_resume_v1'))['tone-finder'].index, 2);
+  assert.strictEqual(resumeWindow.GameResume.load('tone-finder').index, 2);
+  assert.strictEqual(JSON.parse(resumeStorage.getItem('gsh_resume_tone-finder')).index, 99, 'Guest snapshot must stay isolated');
+
+  resumeWindow.PHASE1_ACCOUNT_BOUNDARY.bind = function () { throw new Error('boundary unavailable'); };
+  assert.strictEqual(resumeWindow.GameResume.load('tone-finder'), null, 'authenticated owner must fail closed instead of loading Guest');
+  resumeWindow.GameResume.save('tone-finder', { index: 3 });
+  assert.strictEqual(JSON.parse(resumeStorage.getItem('gsh_resume_tone-finder')).index, 99, 'authenticated save must never enter Guest storage');
+});
 test('owner changes clear canonical account cache and metadata', () => {
   assert.match(auth, /'phase1_account_resume_v1', 'phase1_canonical_meta_v1'/);
 });
