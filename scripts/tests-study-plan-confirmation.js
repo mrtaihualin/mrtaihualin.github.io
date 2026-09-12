@@ -92,18 +92,19 @@ check('initial queue transitions into normal rotation instead of becoming a clos
   assert.doesNotMatch(advance,/%queue\.items\.length|skip_single|location\.href='\/games\.html'/);
 });
 
-check('Tone applies proposal preference before auto-start and suppresses old resume',()=>{
+check('Tone preserves a pending Login Free round before applying an Auto Plan preference',()=>{
   const source=read('js/games/tone-finder-game.js');
   assert.match(source,/StudyPlan\.preferredLevel\('tone'\)/);
   assert.match(source,/TF\.selectLevel\(__tfAutoPlanLevel \|\| 1\)/);
-  assert.match(source,/if \(!__tfAutoPlanLevel && __tfResumeSnapshot\)/);
+  assert.match(source,/if \(!__tfAutoPlanLevel \|\| __tfLoginFreeRuntime\)/);
+  assert.match(source,/if \(__tfLoginFreeResume\) TF\.resumeSavedSession\(\)/);
 });
 
-check('Reading applies proposal preference without overwriting remembered preference',()=>{
+check('Reading keeps its preference while a pending Login Free round resumes first',()=>{
   const source=read('js/games/reading-game-app.js');
   assert.match(source,/StudyPlan\.preferredLevel\('reading'\)/);
   assert.match(source,/_autoPlanReadingLevel\|\|localStorage\.getItem\('rg_reading_level'\)/);
-  assert.match(source,/if\(_autoPlanReadingLevel\|\|!rgTryLoadResumeBanner\(\)\)/);
+  assert.match(source,/if\(\(_autoPlanReadingLevel&&!_rgLoginFreeResume\)\|\|!rgTryLoadResumeBanner\(\)\)/);
 });
 
 check('Listening accepts only beginner/intermediate Auto Plan preferences',()=>{
@@ -113,11 +114,12 @@ check('Listening accepts only beginner/intermediate Auto Plan preferences',()=>{
   assert.match(source,/if \(!autoPlanListeningLevel\) tryShowResumeBanner\(\)/);
 });
 
-check('Typing applies proposal preference without overwriting remembered preference',()=>{
+check('Typing keeps its preference while a pending Login Free round resumes first',()=>{
   const source=read('js/games/typing-game-app.js');
   assert.match(source,/StudyPlan\.preferredLevel\('typing'\)/);
   assert.match(source,/_autoPlanTypingLevel\|\|localStorage\.getItem\('tg_level'\)/);
-  assert.match(source,/if\(!_autoPlanTypingLevel\)\{try\{ tgTryResume\(\)/);
+  assert.match(source,/if\(!_autoPlanTypingLevel\|\|_tgLoginFreeResume\)\{try\{ _tgResumeHandled=tgTryResume\(\)/);
+  assert.match(source,/if\(!_tgResumeHandled\)tgPrimeReview\(\)\.then\(initGame\)/);
 });
 
 check('Search and Time Plan quota backends remain separate',()=>{

@@ -719,13 +719,17 @@
     }catch(e){_minaToastBusy=false;}
   }
 
-  // E3 (Shared Game UI, 2026-08-10): ล็อกอินหรือไม่ก็ตาม — GameResume เป็นแค่กันเหนียวฝั่งเครื่องนี้ (localStorage)
-  //   กันปิดแท็บ/รีเฟรชกลางรอบแล้วต้องเริ่มใหม่ทั้งชุด · ไม่ใช่ระบบ resume ฝั่งเซิร์ฟเวอร์ (ยังไม่มี backend รองรับ)
+  // E3: Guest ใช้ local Resume; Login Free ใช้ canonical account Resume และต้องกลับรอบเดิมอัตโนมัติ
   var _woPendingResume = null; // {state, restoredSet} — รอผู้เล่นเลือกตอนโชว์ .gsh-resume-banner
   function hideResumeBanner(){
     var b = document.getElementById('wo-resume-banner'); if (b) b.style.display = 'none';
   }
   function showResumeBanner(state, restoredSet){
+    if(window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()){
+      _woPendingResume=null;
+      woResumeContinue(state,restoredSet);
+      return;
+    }
     _woPendingResume = { state: state, restoredSet: restoredSet };
     var b = document.getElementById('wo-resume-banner');
     if (!b) { startFreshRound(); return; } // DOM ไม่พร้อม (ไม่ควรเกิด) → กันเงียบ เริ่มรอบใหม่แทนดีกว่าค้าง

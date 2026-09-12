@@ -40,22 +40,22 @@ assert.match(contentClient, /用LINE問老師/);
 const tiered = [
   {
     page: 'tone-finder.html', game: 'tone', app: 'js/games/tone-finder-game.js',
-    boot: /GameContentLoader\.boot\(\['js\/games\/tone-finder-game\.min\.js\?v=85'\], \{game:'tone'\}\)/,
+    boot: /GameContentLoader\.boot\(\['js\/games\/tone-finder-game\.min\.js\?v=86'\], \{game:'tone'\}\)/,
     resume: /GameResume\.save\('tone-finder'/,
   },
   {
     page: 'reading-game.html', game: 'reading', app: 'js/games/reading-game-app.js',
-    boot: /GameContentLoader\.boot\(\['js\/games\/reading-game-app\.min\.js\?v=55'\], \{game:'reading'\}\)/,
+    boot: /GameContentLoader\.boot\(\['js\/games\/reading-game-app\.min\.js\?v=56'\], \{game:'reading'\}\)/,
     resume: /GameResume\.save\(RG_RESUME_ID/,
   },
   {
     page: 'typing-game.html', game: 'typing', app: 'js/games/typing-game-app.js',
-    boot: /GameContentLoader\.boot\(\['js\/games\/typing-game-app\.min\.js\?v=50'\], \{game:'typing'\}\)/,
+    boot: /GameContentLoader\.boot\(\['js\/games\/typing-game-app\.min\.js\?v=51'\], \{game:'typing'\}\)/,
     resume: /GameResume\.save\('typing-game'/,
   },
   {
     page: 'word-order.html', game: 'word_order', app: 'js/games/word-order-app.js',
-    boot: /GameContentLoader\.boot\(\['js\/games\/word-order-app\.min\.js\?v=39'\], \{game:'word_order'\}\)/,
+    boot: /GameContentLoader\.boot\(\['js\/games\/word-order-app\.min\.js\?v=40'\], \{game:'word_order'\}\)/,
     resume: /GameResume\.save\('word-order'/,
   },
 ];
@@ -67,7 +67,7 @@ for (const item of tiered) {
   assert.match(html, /js\/core\/minimum-guest-launch\.js\?v=24/, item.page + ': launch gate');
   assert.match(html, /js\/core\/auth-widget\.js\?v=23/, item.page + ': auth restoration owner');
   assert.match(html, /js\/games\/game-content-client\.js\?v=\d+/, item.page + ': tiered content/error owner');
-  assert.match(html, /js\/games\/learning-review\.js\?v=6/, item.page + ': Review owner');
+  assert.match(html, /js\/games\/learning-review\.js\?v=7/, item.page + ': Review owner');
   assert.match(html, /js\/games\/tone-server\.js\?v=6/, item.page + ': SRS owner');
   assert.match(html, item.boot, item.page + ': production bundle boot');
   assert.match(html, /class="gsh-resume-banner"/, item.page + ': nonblank resume recovery surface');

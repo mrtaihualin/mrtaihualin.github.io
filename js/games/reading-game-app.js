@@ -474,7 +474,7 @@ function doSave(){
 }
 
 // ════════════════════════════════════════════
-// E3 (2026-08-10 Shared Game UI Phase E): 訪客本機續玩 — window.GameResume (js/core/shared.js)
+// E3 (2026-08-10 Shared Game UI Phase E): Guest local Resume + Login Free canonical account Resume
 // เก็บแค่ "ระดับ + รายชื่อคำในรอบนี้ + ตำแหน่งที่ทำถึง + คะแนนสะสม" ไม่ใช่ SRS/ดาว/สถิติถาวร (พวกนั้นมี doSave()/GAME_ACCOUNT อยู่แล้ว)
 // เป็น local-only ไม่ sync เซิร์ฟเวอร์ ไม่ผูกกับบัญชีล็อกอิน — ผู้เล่นล็อกอินก็ยังใช้กลไกนี้ได้เหมือนกัน (แค่เป็นคนละระบบกับ SRS ที่ sync เซิร์ฟเวอร์)
 // ไม่แตะ granularity ระดับพยางค์/ไทล์ที่กำลังลากอยู่ — resume กลับไปที่ "จุดเริ่มคำที่ค้างไว้" เท่านั้น (ตามที่สเปกอนุญาต)
@@ -541,6 +541,10 @@ function rgTryLoadResumeBanner(){
     return false;
   }
   window.__rgPendingResume=st;
+  if(window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()){
+    rgResumeContinue();
+    return true;
+  }
   var lvName=(st.level==='中')?'中級':(st.level==='高')?'高級':'初級';
   var detail=document.getElementById('rg-resume-detail');
   if(detail)detail.textContent=GameUiCopy.resumeLine('閱讀練習',lvName,'第 '+(st.cur+1)+'/'+st.wordIds.length+' 字');
@@ -2129,8 +2133,9 @@ try{
   }
 }catch(e){}
 loadSave();
-// E3: มี "รอบที่ยังเล่นไม่จบ" ค้างอยู่จาก session ก่อน (localStorage, guest-only) → โชว์แบนเนอร์ให้เลือกก่อน ไม่งั้นเริ่มรอบใหม่ตามปกติ
-if(_autoPlanReadingLevel||!rgTryLoadResumeBanner()){ rgPrimeReview().then(initGame); }
+// E3: Guest เห็นตัวเลือก Resume; Login Free กลับรอบเดิมอัตโนมัติเพื่อรักษา Retry/round_id เดิม
+var _rgLoginFreeResume=window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled();
+if((_autoPlanReadingLevel&&!_rgLoginFreeResume)||!rgTryLoadResumeBanner()){ rgPrimeReview().then(initGame); }
 try { rgRenderGameBar(); } catch(e){}
 
 // ── GA: ปุ่ม/องค์ประกอบที่สร้างโดยโมดูลกลาง (word-audio.js/shared.js) — ผูก listener แยกต่างหาก ไม่แก้ไฟล์โมดูลกลาง ──

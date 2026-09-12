@@ -321,6 +321,21 @@
     });
   }
 
+  // A Login Free round may contain a server-bound Retry whose round_id lives in the
+  // canonical account Resume snapshot. Do not execute any of the four learning games
+  // until that snapshot has finished restoring; otherwise a fresh round can overwrite
+  // the only client copy and strand the Retry. Guest, Paid and Listening stay outside.
+  function whenLoginFreeCanonicalReady(data, game) {
+    var loginFreeRuntime = global.SUPABASE_CONFIG && global.SUPABASE_CONFIG.runtimeMode === 'login-free';
+    if (!loginFreeRuntime || !data || data.tier !== 'login' || !LOGIN_FREE_LEARNING_GAMES[game]) {
+      return Promise.resolve(data);
+    }
+    if (!global.PHASE1_CANONICAL || typeof global.PHASE1_CANONICAL.whenReady !== 'function') {
+      return Promise.reject(new Error('LOGIN_FREE_CANONICAL_UNAVAILABLE'));
+    }
+    return global.PHASE1_CANONICAL.whenReady(12000).then(function () { return data; });
+  }
+
   // Direct Vault Reading must inherit the protected word's real level before the Reading
   // bundle evaluates remembered level / Auto Plan. The override exists only during bundle
   // boot, then both local preference and StudyPlan behavior are restored.
@@ -520,7 +535,8 @@
       else document.addEventListener('DOMContentLoaded', showLoadingBanner);
 
       var game = options && options.game;
-      return whenDeferredConfigReady().then(function () { return fetchGameContent(game); }).then(function (data) {
+      return whenDeferredConfigReady().then(function () { return fetchGameContent(game); })
+        .then(function (data) { return whenLoginFreeCanonicalReady(data, game); }).then(function (data) {
         global.GAME_CONTENT_TIER = data.tier || 'anon';
         global.PAID_SRS_PRIVATE_BETA = data.tier === 'paid';
         if (global.PAID_SRS_PRIVATE_BETA) {

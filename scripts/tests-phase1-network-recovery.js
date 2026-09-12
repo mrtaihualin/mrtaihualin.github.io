@@ -119,6 +119,7 @@ function createBootHarness(options = {}) {
       globalListeners[type].push(callback);
     },
   };
+  if (options.phase1Canonical) sandbox.PHASE1_CANONICAL = options.phase1Canonical;
   sandbox.window = sandbox;
   if (options.config) sandbox.SUPABASE_CONFIG = options.config;
   vm.runInNewContext(client, sandbox, { filename: 'game-content-client.js' });
@@ -181,6 +182,7 @@ const validConfig = { url: 'https://project.supabase.co', anonKey: 'public-anon-
         tier: 'login', words: [catalogBundle()], sentences: [sentenceFixture()],
         audioAvailable: [], capped: {},
       },
+      phase1Canonical: { whenReady: () => Promise.resolve() },
     });
     let sessionReads = 0;
     harness.sandbox.getSupabaseClient = () => ({ auth: { getSession: async () => {
@@ -192,6 +194,67 @@ const validConfig = { url: 'https://project.supabase.co', anonKey: 'public-anon-
     assert.strictEqual(sessionReads, 1);
     assert.strictEqual(harness.requests[0].requestOptions.headers.Authorization, ['Bearer', 'session-fixture-value'].join(' '));
     assert.strictEqual(harness.sandbox.GAME_CONTENT_TIER, 'login');
+  });
+  await test('all four Login Free games wait for canonical Resume before app execution', async () => {
+    for (const game of ['tone', 'reading', 'typing', 'word_order']) {
+      let release;
+      let observed;
+      let readinessCalls = 0;
+      const canonicalReady = new Promise((resolve) => { release = resolve; });
+      const readinessObserved = new Promise((resolve) => { observed = resolve; });
+      const harness = createBootHarness({
+        readyState: 'complete',
+        config: { ...validConfig, runtimeMode: 'login-free' },
+        payload: {
+          tier: 'login', words: [catalogBundle()], sentences: [sentenceFixture()],
+          audioAvailable: [], capped: {},
+        },
+        phase1Canonical: { whenReady(timeoutMs) {
+          readinessCalls++;
+          assert.strictEqual(timeoutMs, 12000);
+          observed();
+          return canonicalReady;
+        } },
+      });
+      const boot = harness.sandbox.GameContentLoader.boot(['js/games/example.js'], { game });
+      await readinessObserved;
+      assert.strictEqual(readinessCalls, 1, game + ' must request canonical readiness');
+      assert.strictEqual(harness.appended.filter(el => el.tagName === 'SCRIPT').length, 0, game + ' must not execute early');
+      release();
+      await boot;
+      assert.strictEqual(harness.appended.filter(el => el.tagName === 'SCRIPT').length, 1, game + ' executes after restore');
+    }
+  });
+  await test('Guest, Paid and Listening never wait for Login Free canonical Resume', async () => {
+    for (const scenario of [
+      { game: 'tone', tier: 'anon' },
+      { game: 'tone', tier: 'paid' },
+      { game: 'listening', tier: 'login' },
+    ]) {
+      const harness = createBootHarness({
+        readyState: 'complete',
+        config: { ...validConfig, runtimeMode: 'login-free' },
+        payload: {
+          tier: scenario.tier, words: [catalogBundle()], sentences: [sentenceFixture()],
+          audioAvailable: [], capped: {}, paidSrsState: [],
+        },
+        phase1Canonical: { whenReady() { throw new Error('must remain outside canonical wait'); } },
+      });
+      await harness.sandbox.GameContentLoader.boot(['js/games/example.js'], { game: scenario.game });
+      assert.strictEqual(harness.appended.filter(el => el.tagName === 'SCRIPT').length, 1);
+    }
+  });
+  await test('Login Free fails closed if canonical Resume runtime is unavailable', async () => {
+    const harness = createBootHarness({
+      readyState: 'complete',
+      config: { ...validConfig, runtimeMode: 'login-free' },
+      payload: {
+        tier: 'login', words: [catalogBundle()], sentences: [sentenceFixture()],
+        audioAvailable: [], capped: {},
+      },
+    });
+    await assert.rejects(harness.sandbox.GameContentLoader.boot(['js/games/example.js'], { game: 'typing' }), /LOGIN_FREE_CANONICAL_UNAVAILABLE/);
+    assert.strictEqual(harness.appended.filter(el => el.tagName === 'SCRIPT').length, 0);
   });
   await test('Guest and Listening never inherit the four-game OAuth wait', async () => {
     for (const scenario of [
@@ -301,7 +364,7 @@ const validConfig = { url: 'https://project.supabase.co', anonKey: 'public-anon-
   });
   await test('Core 5 load the guard before the protected content client', async () => {
     ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html'].forEach((page) => {
-      const version = page === 'listening-game.html' ? 16 : 19;
+      const version = page === 'listening-game.html' ? 16 : 20;
       assert.match(read(page), new RegExp('network-guard\\.js\\?v=1[\\s\\S]*game-content-client\\.js\\?v=' + version));
     });
   });

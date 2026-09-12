@@ -92,9 +92,21 @@ assert.strictEqual(Review.predictedScore('word_order', { wrong_count: 1, learnin
   assert.deepStrictEqual(skipped, { ok: true, skipped: true }, 'neutral Skip is acknowledged locally');
   assert.strictEqual(runtimeCalls.length, callsBeforeSkip, 'neutral Skip never reaches the Review transport');
   assert.strictEqual(Review.runtimeEnabled(), true, 'Login Free authenticated owner enables Review');
+  const errorReport = { round_id: '00000000-0000-4000-8000-000000000002', game_type: 'typing', difficulty: '初' };
+  const errorOriginal = { id: 2, ref: { source: 'game_words', key: 'เดิน@初' } };
+  Review.registerRound({ report: errorReport, game: 'typing', level: 1, allItems: [errorOriginal], srsOwned: [], selectedReview: [], idOf: x => x.id, contentRefOf: x => x.ref });
+  global.getSupabaseClient = () => ({ functions: { invoke() {
+    const context = { status: 400, clone() { return this; }, json() { return Promise.resolve({ error: 'invalid_wrong_count' }); } };
+    return Promise.resolve({ data: null, error: { context } });
+  } } });
+  await assert.rejects(() => Review.processItem(errorReport, {
+    key: errorOriginal.ref.key, content_ref: errorOriginal.ref, wrong_count: 4,
+    item_score: 0, is_correct: false, linguistic: { syls: [{}] }
+  }), error => error.code === 'invalid_wrong_count' && error.status === 400,
+  'browser transport preserves the server review error code for safe diagnosis');
   global.GAME_CONTENT_TIER = 'paid';
   assert.strictEqual(Review.runtimeEnabled(), false, 'Paid is outside the Login Free Review owner');
   global.GAME_CONTENT_TIER = 'guest';
   assert.strictEqual(Review.runtimeEnabled(), false, 'Guest is outside the Login Free Review owner');
-  console.log('LEARNING_REVIEW_RUNTIME_PASS 23');
+  console.log('LEARNING_REVIEW_RUNTIME_PASS 24');
 })().catch((error) => { console.error(error); process.exitCode = 1; });

@@ -130,10 +130,9 @@ window.registerGameModal = window.registerGameModal || function (opts) {
 };
 
 // ═══════════════════════════════════════════════════════════
-// GameResume — shared local-device resume helper
-// เก็บ "active session ล่าสุด 1 session ต่อเกม" ไว้ใน localStorage ให้กลับมาเล่นต่อบนเครื่องเดิม
-// ⚠️ ไม่ใช่ Free-account cross-device resume; server adapter/schema ยัง BLOCKED จนได้รับอนุมัติ
-// key แยกตามเกม (gameId) กัน state ปนกัน — save ซ้ำ = แทนที่ของเก่าเสมอ (ไม่เก็บหลายรอบ ไม่ sync ข้ามเครื่อง)
+// GameResume — Guest local Resume + Login Free canonical account Resume
+// เก็บ active session ล่าสุดหนึ่ง session ต่อเกม: Guest แยก key ในเครื่อง ส่วนบัญชี Login Free
+// เก็บรวมใน phase1_account_resume_v1 และให้ PHASE1_CANONICAL sync แบบ owner-bound CAS
 // ═══════════════════════════════════════════════════════════
 window.GameResume = window.GameResume || (function () {
   function key(gameId) { return 'gsh_resume_' + gameId; }

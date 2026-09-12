@@ -1219,9 +1219,8 @@ function restart(){
 }
 
 // ════════════════════════════════════════════
-// Shared Game UI Phase E3 (2026-08-10): Guest resume (window.GameResume, js/core/shared.js)
-// Local-device resume สำหรับทั้ง guest และผู้ล็อกอิน โดยไม่อ้างว่า sync ข้ามเครื่อง
-// Cross-device ยัง BLOCKED จนกว่าจะมี canonical server adapter/schema ที่ได้รับอนุมัติ
+// Shared Game UI Phase E3 + Login Free canonical Resume (window.GameResume, js/core/shared.js)
+// Guest ใช้ local-device Resume; Login Free ใช้ account Resume ที่ canonical runtime restore ก่อนโหลดเกม
 // ระดับความละเอียดที่ทำได้: "ชุดคำเดิม + ตำแหน่งเดิม พร้อมพิมพ์พยางค์ใหม่" เท่านั้น — ไม่กู้คืนตัวที่พิมพ์ค้างกลางคำ/สถานะ IME
 // เพราะระบบคีย์บอร์ด/IME ของเกมนี้ละเอียดอ่อนมาก (ดูคอมเมนต์ยาวเรื่อง iOS compose ในไฟล์นี้) เสี่ยงเกินไปถ้าจะพยายามกู้ระดับนั้น
 // ════════════════════════════════════════════
@@ -1254,17 +1253,22 @@ function tgSaveResume(){
 }
 function tgTryResume(){
   try{
-    if(!window.GameResume)return;
+    if(!window.GameResume)return false;
     var saved=GameResume.load('typing-game');
-    if(!saved||!saved.wordIds||!saved.wordIds.length)return;
-    if(typeof saved.cur!=='number'||saved.cur>=saved.wordIds.length)return; // รอบนั้นทำจบแล้ว ไม่มีอะไรให้ต่อ
+    if(!saved||!saved.wordIds||!saved.wordIds.length)return false;
+    if(typeof saved.cur!=='number'||saved.cur>=saved.wordIds.length)return false; // รอบนั้นทำจบแล้ว ไม่มีอะไรให้ต่อ
     var banner=document.getElementById('tg-resume-banner');
     var detailEl=document.getElementById('tg-resume-detail');
-    if(!banner||!detailEl)return;
+    if(!banner||!detailEl)return false;
+    window.__tgResumeData=saved;
+    if(window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()){
+      tgResumeContinue();
+      return true;
+    }
     detailEl.textContent=GameUiCopy.resumeLine('打字練習',(saved.level||'初')+'級','第 '+(saved.cur+1)+'/'+saved.wordIds.length+' 字');
     banner.style.display='block';
-    window.__tgResumeData=saved;
-  }catch(e){}
+    return true;
+  }catch(e){return false;}
 }
 function tgResumeContinue(){
   try{
@@ -2518,8 +2522,10 @@ try{
   }
 }catch(e){}
 loadSave();
-if(!_autoPlanTypingLevel){try{ tgTryResume(); }catch(e){}} // Auto Plan selection must not be replaced by an older resume level.
-tgPrimeReview().then(initGame);
+var _tgResumeHandled=false;
+var _tgLoginFreeResume=window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled();
+if(!_autoPlanTypingLevel||_tgLoginFreeResume){try{ _tgResumeHandled=tgTryResume(); }catch(e){ _tgResumeHandled=false; }}
+if(!_tgResumeHandled)tgPrimeReview().then(initGame);
 try { rgRenderGameBar(); } catch(e){}
 
 // ── ฟ้อนต์โมเดิร์น (เหมือนเกมเสียง) ──

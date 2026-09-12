@@ -100,7 +100,7 @@ function makeStorage(seed) {
   const accountUnlink = read('supabase/functions/account-unlink/index.ts');
   const scoreSql = read('supabase/sql/2026-08-15_s29_authoritative_score_security.sql');
 
-  check('progress pull ต้องผ่าน verified owner boundary', /function pull\(fromConflict\)\s*{\s*if \(!sb \|\| !user \|\| !ownerReady\(\)\) return;/.test(progress));
+  check('progress pull ต้องผ่าน verified owner boundary', /function pull\(fromConflict\)\s*{\s*if \(!sb \|\| !user \|\| !ownerReady\(\)\) return Promise\.resolve\(false\);/.test(progress));
   check('progress push ต้องผ่าน verified owner boundary', /function push\(meta\)\s*{\s*if \(!sb \|\| !user \|\| !ownerReady\(\) \|\| !hasPending\(meta\)\) return;/.test(progress));
   check('tone Guest completion ไม่ถูกเก็บรอ Login', /if \(!API\.user\) return;/.test(readingAuth) && !/lastSession|pendingGuestScore/.test(readingAuth));
   check('tone session ป้องกัน complete event ซ้ำในรอบเดียวกัน', /submission_id: scoreSubmissionId\(\)/.test(readingAuth) && /submission_id uuid primary key/.test(scoreSql));

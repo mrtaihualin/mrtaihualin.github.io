@@ -146,9 +146,18 @@
         return sb.functions.invoke('score-submit', { body: body });
       }, 'score-submit:learning-review', {}, 12000, null).then(function (response) {
         if (response && !response.error && response.data) return response.data;
-        var error = new Error('REVIEW_REQUEST_FAILED');
-        try { error.status = response.error.context.status; } catch (e) {}
-        throw error;
+        var status = null, context = null;
+        try { context = response && response.error && response.error.context; status = context && context.status; } catch (e) {}
+        var bodyPromise = Promise.resolve(null);
+        try {
+          if (context && typeof context.clone === 'function') context = context.clone();
+          if (context && typeof context.json === 'function') bodyPromise = Promise.resolve(context.json()).catch(function () { return null; });
+        } catch (e2) {}
+        return bodyPromise.then(function (payload) {
+          var code = payload && typeof payload.error === 'string' && payload.error || 'REVIEW_REQUEST_FAILED';
+          var error = new Error(code); error.code = code; error.status = status;
+          throw error;
+        });
       }).catch(function (error) {
         if (remaining > 0) return new Promise(function (resolve) { setTimeout(resolve, 500); }).then(function () { return attempt(remaining - 1); });
         throw error;
@@ -354,10 +363,11 @@
   function removeRecovery() {
     try { var old = root.document && root.document.getElementById('gsh-learning-save-recovery'); if (old) old.remove(); } catch (_) {}
   }
-  function showRecovery(context, retry) {
+  function showRecovery(context, retry, error) {
     if (!root.document || !root.document.body) return false;
     removeRecovery();
     var box = root.document.createElement('div'); box.id = 'gsh-learning-save-recovery';
+    box.setAttribute('data-error-code', String(error && (error.code || error.message) || 'REVIEW_COMMIT_UNAVAILABLE'));
     box.style.cssText = 'position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:10020;max-width:420px;width:calc(100% - 32px);padding:14px 16px;border:2px solid #b83227;border-radius:14px;background:#fff;color:#5a1b17;box-shadow:0 8px 28px rgba(0,0,0,.22);font:700 14px/1.5 "Noto Sans TC",sans-serif;';
     var message = root.document.createElement('div'); message.textContent = '學習進度尚未儲存，本輪已安全暫停。'; box.appendChild(message);
     var button = root.document.createElement('button'); button.type = 'button'; button.textContent = '重試儲存';
@@ -374,7 +384,7 @@
         context.advancePending = false; removeRecovery(); callback(); return true;
       }).catch(function (error) {
         context.advancePending = false; emitSaveError(context, error);
-        if (!showRecovery(context, attempt)) throw error;
+        if (!showRecovery(context, attempt, error)) throw error;
         return false;
       });
       return context.advancePending;

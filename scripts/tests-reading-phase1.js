@@ -86,7 +86,7 @@ test('Reading keeps reviewed syllable authority through the live answer object',
 });
 
 test('Reading loads the rebuilt crash-safe bundle with a fresh cache key', () => {
-  assert.match(html, /reading-game-app\.min\.js\?v=55/);
+  assert.match(html, /reading-game-app\.min\.js\?v=56/);
 });
 
 test('Reading keeps scattered choices collision-safe and tone boxes proportional', () => {

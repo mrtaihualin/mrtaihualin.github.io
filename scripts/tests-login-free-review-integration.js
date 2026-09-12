@@ -36,10 +36,16 @@ assert.doesNotMatch(runtime, /getSession\(|access_token|refresh_token|service_ro
 
 pages.forEach(page => {
   const html = read(page);
-  assert.match(html, /js\/games\/learning-review\.js\?v=6/);
+  assert.match(html, /js\/games\/learning-review\.js\?v=7/);
   assert.match(html, /js\/core\/auth-widget\.js/);
   assert.match(html, /js\/games\/reading-auth\.js/);
 });
+assert.match(read('js/score/phase1-canonical-state.js'), /whenReady:\s*whenReady/);
+assert.match(read('js/games/game-content-client.js'), /whenLoginFreeCanonicalReady\(data, game\)/);
+assert.match(games.typing, /_tgResumeHandled=tgTryResume\(\)[\s\S]*if\(!_tgResumeHandled\)tgPrimeReview\(\)\.then\(initGame\)/);
+assert.match(games.reading, /_rgLoginFreeResume[\s\S]*!rgTryLoadResumeBanner\(\)/);
+assert.match(games.word_order, /LearningReview\.runtimeEnabled\(\)[\s\S]*woResumeContinue\(state,restoredSet\)/);
+assert.match(games.tone, /__tfLoginFreeResume[\s\S]*TF\.resumeSavedSession\(\)/);
 assert.doesNotMatch(read('listening-game.html'), /js\/games\/(?:learning-review|tone-server)\.js/);
 Object.entries(games).forEach(([game, source]) => {
   assert.match(source, /LearningReview\.prime/, game + ' primes the Review queue');

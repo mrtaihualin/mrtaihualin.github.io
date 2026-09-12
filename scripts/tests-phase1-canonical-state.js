@@ -45,6 +45,11 @@ test('account cache registry includes SRS, progress and cross-device Resume', ()
   ['tf_srs_v1','rgv3_save','wo_srs_v1','tf_badges_v1','tf_streak_v1','phase1_account_resume_v1']
     .forEach((key) => assert.ok(keys.includes(key), 'missing ' + key));
 });
+test('canonical runtime exposes an initial-pull readiness gate for game boot', () => {
+  assert.strictEqual(typeof api.whenReady, 'function');
+  assert.match(source, /settleReady\(context\.ownerId\)/);
+  assert.match(source, /ACCOUNT_STATE_TIMEOUT/);
+});
 test('stable hashing ignores object key order', () => {
   assert.strictEqual(api._test.stable({ b: 2, a: 1 }), api._test.stable({ a: 1, b: 2 }));
 });
@@ -82,14 +87,14 @@ test('owner changes clear canonical account cache and metadata', () => {
 });
 test('Login Free games activate canonical persistence while personal source stays preserved', () => {
   ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html']
-    .forEach((page) => assert.match(read(page), /phase1-canonical-state\.js\?v=2/, page));
-  ['my-progress.html','vault.html'].forEach((page) => assert.match(read(page), /phase1-canonical-state\.js\?v=2/, page));
+    .forEach((page) => assert.match(read(page), /phase1-canonical-state\.js\?v=3/, page));
+  ['my-progress.html','vault.html'].forEach((page) => assert.match(read(page), /phase1-canonical-state\.js\?v=3/, page));
 });
 test('Learning Center and Vault bootstrap NetworkGuard before canonical sync', () => {
   ['my-progress.html','vault.html'].forEach((page) => {
     const html = read(page);
     const guardIndex = html.indexOf('js/core/network-guard.js?v=1');
-    const canonicalIndex = html.indexOf('js/score/phase1-canonical-state.js?v=2');
+    const canonicalIndex = html.indexOf('js/score/phase1-canonical-state.js?v=3');
     assert.ok(guardIndex >= 0, page + ' missing NetworkGuard');
     assert.ok(canonicalIndex >= 0, page + ' missing canonical runtime');
     assert.ok(guardIndex < canonicalIndex, page + ' must load NetworkGuard before canonical runtime');

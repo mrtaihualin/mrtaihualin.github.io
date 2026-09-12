@@ -33,9 +33,9 @@ assert.match(tone, /Paid progress is server-authoritative/);
 assert.match(tone, /paidUnavailable\s*=\s*n === '3' && !!window\.PAID_SRS_PRIVATE_BETA/);
 assert.match(tone, /window\.PAID_SRS_PRIVATE_BETA && Number\(level\) === 3/);
 assert.match(tone, /if \(_paidRecord\.reschedulePending\) _paidRecord\.mastered = true/);
-assert.match(page, /game-content-client\.js\?v=19/);
-assert.match(page, /learning-review\.js\?v=6/);
-assert.match(page, /tone-finder-game\.min\.js\?v=85/);
+assert.match(page, /game-content-client\.js\?v=20/);
+assert.match(page, /learning-review\.js\?v=7/);
+assert.match(page, /tone-finder-game\.min\.js\?v=86/);
 
 const browser = { window: {} };
 vm.runInNewContext(loader, browser, { filename: 'game-content-client.js' });
