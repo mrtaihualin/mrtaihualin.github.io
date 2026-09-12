@@ -340,32 +340,33 @@ test('Tone SRS resets on logout and discards the late authenticated response', a
   assert.strictEqual(h.context.__tfSrsSyncPromise, null);
 });
 
-test('Five games expose Login Free with owner-safe account runtimes while Paid and Lego account runtime remain parked', async () => {
-  const corePages = ['tone-finder.html', 'listening-game.html', 'typing-game.html', 'word-order.html'];
+test('Four games expose Login Free learning runtimes while Listening, Paid and Lego remain outside', async () => {
+  const corePages = ['tone-finder.html', 'typing-game.html', 'word-order.html'];
   for (const page of corePages) {
     const html = read(page);
-    assert.match(html, /phase1-canonical-state\.js\?v=2/, page + ' canonical runtime active');
+    assert.match(html, /phase1-canonical-state\.js\?v=3/, page + ' canonical runtime active');
     assert.match(html, /game-account\.js\?v=6/, page + ' GameAccount runtime active');
     assert.match(html, /reading-auth\.js\?v=34/, page + ' Login Free account runtime');
     assert.match(html, /practice-events\.js\?v=3/, page + ' durable report runtime');
     assert.match(html, /learning-review\.js\?v=\d+/, page + ' Review runtime');
   }
   const reading = read('reading-game.html');
-  assert.match(reading, /phase1-canonical-state\.js\?v=2/, 'reading canonical runtime active');
+  assert.match(reading, /phase1-canonical-state\.js\?v=3/, 'reading canonical runtime active');
   assert.match(reading, /game-account\.js\?v=6/, 'reading GameAccount runtime active');
   assert.match(reading, /reading-auth\.js\?v=34/, 'reading Login Free account runtime');
+  assert.doesNotMatch(read('listening-game.html'), /(?:tone-server|learning-review)\.js/, 'Listening learning loop stays absent');
   assert.match(read('js/games/reading-auth.js'), /API\.user = publicLoginOnly \? null : loginUser/);
   for (const page of ['my-progress.html', 'vault.html']) {
-    assert.match(read(page), /phase1-canonical-state\.js\?v=2/, page + ' canonical cache');
+    assert.match(read(page), /phase1-canonical-state\.js\?v=3/, page + ' canonical cache');
   }
   for (const page of ['vault.html']) {
     assert.match(read(page), /reading-auth\.js\?v=34/, page + ' reading-auth cache');
   }
   assert.doesNotMatch(read('lego.html'), /game-account\.js/);
-  assert.match(read('tone-finder.html'), /tone-finder-game\.min\.js\?v=85/);
-  assert.match(read('reading-game.html'), /reading-game-app\.min\.js\?v=54/);
-  assert.match(read('typing-game.html'), /typing-game-app\.min\.js\?v=50/);
-  assert.match(read('word-order.html'), /word-order-app\.min\.js\?v=39/);
+  assert.match(read('tone-finder.html'), /tone-finder-game\.min\.js\?v=86/);
+  assert.match(read('reading-game.html'), /reading-game-app\.min\.js\?v=57/);
+  assert.match(read('typing-game.html'), /typing-game-app\.min\.js\?v=56/);
+  assert.match(read('word-order.html'), /word-order-app\.min\.js\?v=41/);
   assert.match(read('listening-game.html'), /Preserved paused runtime: js\/games\/listening-game-app\.js\?v=19/);
   assert.doesNotMatch(read('listening-game.html'), /GameContentLoader\.boot\(\['js\/games\/listening-game-app\.js/);
 });

@@ -474,7 +474,7 @@ function doSave(){
 }
 
 // ════════════════════════════════════════════
-// E3 (2026-08-10 Shared Game UI Phase E): 訪客本機續玩 — window.GameResume (js/core/shared.js)
+// E3 (2026-08-10 Shared Game UI Phase E): Guest local Resume + Login Free canonical account Resume
 // เก็บแค่ "ระดับ + รายชื่อคำในรอบนี้ + ตำแหน่งที่ทำถึง + คะแนนสะสม" ไม่ใช่ SRS/ดาว/สถิติถาวร (พวกนั้นมี doSave()/GAME_ACCOUNT อยู่แล้ว)
 // เป็น local-only ไม่ sync เซิร์ฟเวอร์ ไม่ผูกกับบัญชีล็อกอิน — ผู้เล่นล็อกอินก็ยังใช้กลไกนี้ได้เหมือนกัน (แค่เป็นคนละระบบกับ SRS ที่ sync เซิร์ฟเวอร์)
 // ไม่แตะ granularity ระดับพยางค์/ไทล์ที่กำลังลากอยู่ — resume กลับไปที่ "จุดเริ่มคำที่ค้างไว้" เท่านั้น (ตามที่สเปกอนุญาต)
@@ -541,6 +541,10 @@ function rgTryLoadResumeBanner(){
     return false;
   }
   window.__rgPendingResume=st;
+  if(window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()){
+    rgResumeContinue();
+    return true;
+  }
   var lvName=(st.level==='中')?'中級':(st.level==='高')?'高級':'初級';
   var detail=document.getElementById('rg-resume-detail');
   if(detail)detail.textContent=GameUiCopy.resumeLine('閱讀練習',lvName,'第 '+(st.cur+1)+'/'+st.wordIds.length+' 字');
@@ -663,7 +667,9 @@ function rgSyncSrsFromServer(force){
     .catch(function(){ if(!rgSrsOwnerCurrent(_uid,_ownerEpoch,_requestId))return false; window.__rgSrsSyncedOnce=true; return false; });
   return __rgSrsSyncPromise;
 }
-// ทริกเกอร์: ล็อกอินครั้งแรกของหน้า → ซิงก์แล้ว rebuild รอบให้ใช้ SRS ที่ตามมาข้ามเครื่อง (ครอบเคสรีเฟรช/เครื่องใหม่) · ล็อกอินซ้ำ → ซิงก์เฉยๆ
+// ทริกเกอร์: ล็อกอินครั้งแรกของหน้า → ซิงก์ SRS เท่านั้น; bootstrap ท้ายไฟล์เป็น owner เดียว
+// ที่มีสิทธิ์สร้าง/กู้รอบ การ init ซ้ำหลัง canonical Resume ถูกกู้แล้วจะสุ่มรอบใหม่และเขียนทับ
+// queue/round_id เดิมทันที ส่วนล็อกอินซ้ำยังคงซิงก์เฉยๆ เหมือนเดิม
 // ⚠️ ต้องลงทะเบียน "หลัง DOM พร้อม" เพราะสคริปต์เกม (inline) รันก่อนสคริปต์ defer (auth-widget) → ตอน parse ยังไม่มี SITE_AUTH
 function rgWireSrsSync(){
   try{
@@ -671,8 +677,7 @@ function rgWireSrsSync(){
       SITE_AUTH.onChange(function(u){
         rgResetAccountStateAtBoundary();
         if(!u) return;
-        var ownerId=String(u.id),ownerEpoch=Number(SITE_AUTH.learningOwnerEpoch)||0;
-        if(!window.__rgSrsSyncedOnce){ rgSyncSrsFromServer(true).then(function(){ if(!rgSrsOwnerCurrent(ownerId,ownerEpoch))return; try{ initGame(); }catch(e){} }); }
+        if(!window.__rgSrsSyncedOnce){ rgSyncSrsFromServer(true); }
         else { __rgSrsSyncPromise=null; rgSyncSrsFromServer(true); }
       });
     }
@@ -682,7 +687,7 @@ function rgWireSrsSync(){
     _rgT++;
     try{
       if(window.__rgSrsSyncedOnce){ clearInterval(_rgIv); return; }
-      if(rgLoggedIn()){ var ownerId=String(READING_AUTH.srsUser.id),ownerEpoch=Number(SITE_AUTH&&SITE_AUTH.learningOwnerEpoch)||0; rgSyncSrsFromServer(true).then(function(){ if(!rgSrsOwnerCurrent(ownerId,ownerEpoch))return; try{ initGame(); }catch(e){} }); }
+      if(rgLoggedIn()){ rgSyncSrsFromServer(true); }
     }catch(e){}
     if(_rgT>=24) clearInterval(_rgIv);
   }, 500);
@@ -929,7 +934,7 @@ function loadWord(){
 function loadSyl(){
   updateSyllableCounter();
   var SY=sylList[sylIdx];
-  W={th:SY.th,read:SY.read,zh:WORD.zh,en:WORD.en,cons:SY.cons,vowel:SY.vowel,tone:SY.tone,final:SY.final,lead:SY.lead,cluster:SY.cluster,tone_name:SY.tone_name,consRead:SY.consRead,finalRead:SY.finalRead,finalDisp:SY.finalDisp,silent:SY.silent}; // 2026-07-30: พ่วงฟิลด์เฉลยเสียง
+  W={th:SY.th,read:SY.read,zh:WORD.zh,en:WORD.en,cons:SY.cons,vowel:SY.vowel,tone:SY.tone,final:SY.final,lead:SY.lead,cluster:SY.cluster,tone_name:SY.tone_name,consRead:SY.consRead,finalRead:SY.finalRead,finalDisp:SY.finalDisp,silent:SY.silent,catalog:SY.catalog}; // คัดลอกเฉลยที่ตรวจแล้วเท่านั้น; ต้องรักษา catalog สำหรับหน้าคำอธิบายหลังตอบผิดครบ
   checked=false;picks=[]; // wrongCount ย้ายไปนับระดับ "ทั้งคำ" แล้ว (reset ที่ loadWord)
   comps=['cons','vowel'];
   if(reviewedPresent(W.final))comps.push('final');
@@ -2129,8 +2134,16 @@ try{
   }
 }catch(e){}
 loadSave();
-// E3: มี "รอบที่ยังเล่นไม่จบ" ค้างอยู่จาก session ก่อน (localStorage, guest-only) → โชว์แบนเนอร์ให้เลือกก่อน ไม่งั้นเริ่มรอบใหม่ตามปกติ
-if(_autoPlanReadingLevel||!rgTryLoadResumeBanner()){ rgPrimeReview().then(initGame); }
+// E3: Guest เห็นตัวเลือก Resume; Login Free กลับรอบเดิมอัตโนมัติเพื่อรักษา Retry/round_id เดิม
+var _rgLoginFreeResume=window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled();
+if((_autoPlanReadingLevel&&!_rgLoginFreeResume)||!rgTryLoadResumeBanner()){
+  // Fresh Login Free rounds wait briefly for the current account's SRS snapshot, but
+  // SRS hydration must never call initGame() again after this single bootstrap.
+  var _rgInitialSrsReady=rgLoggedIn()
+    ? Promise.race([rgSyncSrsFromServer(true),new Promise(function(resolve){setTimeout(resolve,1500);})])
+    : Promise.resolve();
+  Promise.all([rgPrimeReview(),_rgInitialSrsReady]).then(initGame);
+}
 try { rgRenderGameBar(); } catch(e){}
 
 // ── GA: ปุ่ม/องค์ประกอบที่สร้างโดยโมดูลกลาง (word-audio.js/shared.js) — ผูก listener แยกต่างหาก ไม่แก้ไฟล์โมดูลกลาง ──

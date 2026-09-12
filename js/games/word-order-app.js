@@ -136,6 +136,13 @@
     if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', function(){ try{ init(); }catch(e){} }, {once:true}); }
     else { try{ init(); }catch(e){} }
   }
+  function woInitialStartSafe(){
+    var start=function(){woReinitSafe();};
+    if(!woLoggedIn()){start();return;}
+    // Wait briefly for the account SRS snapshot before the one and only initial init().
+    // The auth/poll hydration paths below must not re-init and replace canonical Resume.
+    Promise.race([woSyncSrsFromServer(true),new Promise(function(resolve){setTimeout(resolve,1500);})]).then(start);
+  }
   // ⚠️ สำคัญ: สคริปต์เกม (inline) รัน "ก่อน" สคริปต์ defer (auth-widget/supabase-config) → ตอน parse ยังไม่มี SITE_AUTH
   //   ต้องลงทะเบียน onChange "หลัง DOM พร้อม" (ตอนนั้น defer โหลดครบแล้ว) + มี fallback ยิงซ้ำกันเหนียว
   function woWireSrsSync(){
@@ -144,8 +151,7 @@
         SITE_AUTH.onChange(function(u){
           woResetAccountStateAtBoundary();
           if(!u) return;
-          var ownerId=String(u.id),ownerEpoch=Number(SITE_AUTH.learningOwnerEpoch)||0;
-          if(!window.__woSrsSyncedOnce){ woSyncSrsFromServer(true).then(function(){ if(woSrsOwnerCurrent(ownerId,ownerEpoch))woReinitSafe(); }); }
+          if(!window.__woSrsSyncedOnce){ woSyncSrsFromServer(true); }
           else { __woSrsSyncPromise=null; woSyncSrsFromServer(true); }
         });
       }
@@ -156,7 +162,7 @@
       _woT++;
       try{
         if(window.__woSrsSyncedOnce){ clearInterval(_woIv); return; }
-        if(woLoggedIn()){ var ownerId=String(READING_AUTH.srsUser.id),ownerEpoch=Number(SITE_AUTH&&SITE_AUTH.learningOwnerEpoch)||0; woSyncSrsFromServer(true).then(function(){ if(woSrsOwnerCurrent(ownerId,ownerEpoch))woReinitSafe(); }); }
+        if(woLoggedIn()){ woSyncSrsFromServer(true); }
       }catch(e){}
       if(_woT>=24) clearInterval(_woIv);
     }, 500);
@@ -719,13 +725,17 @@
     }catch(e){_minaToastBusy=false;}
   }
 
-  // E3 (Shared Game UI, 2026-08-10): ล็อกอินหรือไม่ก็ตาม — GameResume เป็นแค่กันเหนียวฝั่งเครื่องนี้ (localStorage)
-  //   กันปิดแท็บ/รีเฟรชกลางรอบแล้วต้องเริ่มใหม่ทั้งชุด · ไม่ใช่ระบบ resume ฝั่งเซิร์ฟเวอร์ (ยังไม่มี backend รองรับ)
+  // E3: Guest ใช้ local Resume; Login Free ใช้ canonical account Resume และต้องกลับรอบเดิมอัตโนมัติ
   var _woPendingResume = null; // {state, restoredSet} — รอผู้เล่นเลือกตอนโชว์ .gsh-resume-banner
   function hideResumeBanner(){
     var b = document.getElementById('wo-resume-banner'); if (b) b.style.display = 'none';
   }
   function showResumeBanner(state, restoredSet){
+    if(window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()){
+      _woPendingResume=null;
+      woResumeContinue(state,restoredSet);
+      return;
+    }
     _woPendingResume = { state: state, restoredSet: restoredSet };
     var b = document.getElementById('wo-resume-banner');
     if (!b) { startFreshRound(); return; } // DOM ไม่พร้อม (ไม่ควรเกิด) → กันเงียบ เริ่มรอบใหม่แทนดีกว่าค้าง
@@ -1583,7 +1593,7 @@
   // ถ้า DOMContentLoaded ยิงไปแล้วก่อนที่บรรทัดนี้จะรัน (เช่น ไม่ล็อกอิน/เน็ตไว โหลดเสร็จเร็ว) listener นี้จะไม่มีวันถูกเรียก
   // เลย = init() ไม่รันเลย เกมค้างที่หน้าเปล่า (ตัวเลข 0/10 ที่เห็นเป็นค่า default ใน HTML ไม่ใช่ค่าจริงจาก JS)
   // แก้โดยใช้ woReinitSafe() (มีอยู่แล้วในไฟล์นี้ ใช้ปลอดภัยกับจังหวะแบบนี้อยู่แล้วในจุดอื่น) เช็ค document.readyState ก่อนเสมอ
-  woReinitSafe();
+  woInitialStartSafe();
 })();
 
 // ── 換現代字體（跟其他遊戲共用同一個 localStorage key，切一次全站都套用）──

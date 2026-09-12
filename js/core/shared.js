@@ -130,19 +130,26 @@ window.registerGameModal = window.registerGameModal || function (opts) {
 };
 
 // ═══════════════════════════════════════════════════════════
-// GameResume — shared local-device resume helper
-// เก็บ "active session ล่าสุด 1 session ต่อเกม" ไว้ใน localStorage ให้กลับมาเล่นต่อบนเครื่องเดิม
-// ⚠️ ไม่ใช่ Free-account cross-device resume; server adapter/schema ยัง BLOCKED จนได้รับอนุมัติ
-// key แยกตามเกม (gameId) กัน state ปนกัน — save ซ้ำ = แทนที่ของเก่าเสมอ (ไม่เก็บหลายรอบ ไม่ sync ข้ามเครื่อง)
+// GameResume — Guest local Resume + Login Free canonical account Resume
+// เก็บ active session ล่าสุดหนึ่ง session ต่อเกม: Guest แยก key ในเครื่อง ส่วนบัญชี Login Free
+// เก็บรวมใน phase1_account_resume_v1 และให้ PHASE1_CANONICAL sync แบบ owner-bound CAS
 // ═══════════════════════════════════════════════════════════
 window.GameResume = window.GameResume || (function () {
   function key(gameId) { return 'gsh_resume_' + gameId; }
   var accountKey = 'phase1_account_resume_v1';
+  function accountUser() {
+    try { return window.SITE_AUTH && window.SITE_AUTH.user || null; } catch (e) { return null; }
+  }
   function accountReady() {
     try {
-      var user = window.SITE_AUTH && window.SITE_AUTH.user;
+      var user = accountUser();
       var boundary = window.PHASE1_ACCOUNT_BOUNDARY;
-      return !!(user && boundary && localStorage.getItem(boundary.ownerKey) === String(user.id));
+      if (!user || !boundary) return false;
+      // Auth may resolve immediately before the game saves its first safe point.
+      // Bind synchronously so an authenticated round can never fall through into
+      // Guest storage while the account boundary listener is still settling.
+      if (typeof boundary.bind === 'function') boundary.bind(user);
+      return localStorage.getItem(boundary.ownerKey) === String(user.id);
     } catch (e) { return false; }
   }
   function accountRows() {
@@ -151,7 +158,14 @@ window.GameResume = window.GameResume || (function () {
   function saveAccountRows(rows) {
     try {
       localStorage.setItem(accountKey, JSON.stringify(rows));
-      if (window.PHASE1_CANONICAL) window.PHASE1_CANONICAL.schedule();
+      // Resume is a navigation-critical safe point. flush() records the pending
+      // account slice synchronously before starting its async CAS request, so an
+      // immediate page exit cannot let a later pull overwrite the newer round.
+      if (window.PHASE1_CANONICAL && typeof window.PHASE1_CANONICAL.flush === 'function') {
+        window.PHASE1_CANONICAL.flush();
+      } else if (window.PHASE1_CANONICAL && typeof window.PHASE1_CANONICAL.schedule === 'function') {
+        window.PHASE1_CANONICAL.schedule();
+      }
     } catch (e) {}
   }
   return {
@@ -164,7 +178,7 @@ window.GameResume = window.GameResume || (function () {
           var rows = accountRows();
           rows[gameId] = payload;
           saveAccountRows(rows);
-        } else {
+        } else if (!accountUser()) {
           localStorage.setItem(key(gameId), JSON.stringify(payload));
         }
       } catch (e) {}
@@ -172,6 +186,9 @@ window.GameResume = window.GameResume || (function () {
     load: function (gameId) {
       try {
         if (accountReady()) return accountRows()[gameId] || null;
+        // Fail closed while an authenticated owner boundary is unavailable;
+        // Guest progress must never be adopted by a Login Free account.
+        if (accountUser()) return null;
         var raw = localStorage.getItem(key(gameId));
         if (!raw) return null;
         return JSON.parse(raw);
@@ -183,7 +200,7 @@ window.GameResume = window.GameResume || (function () {
           var rows = accountRows();
           delete rows[gameId];
           saveAccountRows(rows);
-        } else {
+        } else if (!accountUser()) {
           localStorage.removeItem(key(gameId));
         }
       } catch (e) {}

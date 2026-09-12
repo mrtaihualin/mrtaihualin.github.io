@@ -367,6 +367,8 @@ function tgSyncSrsFromServer(force){
     .catch(function(){ if(!tgSrsOwnerCurrent(_uid,_ownerEpoch,_requestId))return false; window.__tgSrsSyncedOnce=true; return false; });
   return __tgSrsSyncPromise;
 }
+// ซิงก์ SRS เท่านั้น; bootstrap ท้ายไฟล์เป็น owner เดียวที่มีสิทธิ์สร้าง/กู้รอบ
+// ห้าม init ซ้ำหลัง canonical Resume เพราะจะสุ่มและบันทึกรอบใหม่ทับ queue/round_id เดิม
 // ⚠️ ต้องลงทะเบียน "หลัง DOM พร้อม" เพราะสคริปต์เกม (inline) รันก่อนสคริปต์ defer (auth-widget) → ตอน parse ยังไม่มี SITE_AUTH
 function tgWireSrsSync(){
   try{
@@ -374,8 +376,7 @@ function tgWireSrsSync(){
       SITE_AUTH.onChange(function(u){
         tgResetAccountStateAtBoundary();
         if(!u) return;
-        var ownerId=String(u.id),ownerEpoch=Number(SITE_AUTH.learningOwnerEpoch)||0;
-        if(!window.__tgSrsSyncedOnce){ tgSyncSrsFromServer(true).then(function(){ if(!tgSrsOwnerCurrent(ownerId,ownerEpoch))return; try{ initGame(); }catch(e){} }); }
+        if(!window.__tgSrsSyncedOnce){ tgSyncSrsFromServer(true); }
         else { __tgSrsSyncPromise=null; tgSyncSrsFromServer(true); }
       });
     }
@@ -385,7 +386,7 @@ function tgWireSrsSync(){
     _tgT++;
     try{
       if(window.__tgSrsSyncedOnce){ clearInterval(_tgIv); return; }
-      if(rgLoggedIn()){ var ownerId=String(READING_AUTH.srsUser.id),ownerEpoch=Number(SITE_AUTH&&SITE_AUTH.learningOwnerEpoch)||0; tgSyncSrsFromServer(true).then(function(){ if(!tgSrsOwnerCurrent(ownerId,ownerEpoch))return; try{ initGame(); }catch(e){} }); }
+      if(rgLoggedIn()){ tgSyncSrsFromServer(true); }
     }catch(e){}
     if(_tgT>=24) clearInterval(_tgIv);
   }, 500);
@@ -428,7 +429,9 @@ function setLevel(lv){
   var _rbLv=document.getElementById('tg-resume-banner'); if(_rbLv)_rbLv.style.display='none';
   // 高級 ย้ายเข้าเล่นด้วย pipeline เดียวกับ 初/中 แล้ว (เลิกใช้ระบบ adv-game เก่า) — Lin 2026-07-05
   document.getElementById('bars-wrap').style.display='flex';
-  document.getElementById('rg-stat-row').style.display='flex';
+  // The shared signed-in profile owns this optional legacy row and may replace it.
+  // Its absence must never abort level changes or canonical round recovery.
+  var _statRow=document.getElementById('rg-stat-row'); if(_statRow)_statRow.style.display='flex';
   document.getElementById('game').style.display='flex';
   // Lin 2026-07-13: เครื่องใหม่ที่เพิ่งล็อกอิน → รอ sync สั้นๆ (≤1.5วิ) ให้รอบแรกถูกต้อง เน็ตล่ม/ช้าไปต่อทันที ไม่ค้าง
   if(rgLoggedIn() && !window.__tgSrsSyncedOnce){
@@ -639,7 +642,7 @@ function loadWord(){
 function loadSyl(){
   updateSyllableCounter();
   var SY=sylList[sylIdx];
-  W={th:SY.th,read:SY.read,zh:WORD.zh,en:SY.en,cons:SY.cons,vowel:SY.vowel,tone:SY.tone,final:SY.final,lead:SY.lead,cluster:SY.cluster,tone_name:SY.tone_name,consRead:SY.consRead,finalRead:SY.finalRead,finalDisp:SY.finalDisp,silent:SY.silent}; // คัดลอกเฉลยที่ตรวจแล้วเท่านั้น
+  W={th:SY.th,read:SY.read,zh:WORD.zh,en:SY.en,cons:SY.cons,vowel:SY.vowel,tone:SY.tone,final:SY.final,lead:SY.lead,cluster:SY.cluster,tone_name:SY.tone_name,consRead:SY.consRead,finalRead:SY.finalRead,finalDisp:SY.finalDisp,silent:SY.silent,catalog:SY.catalog}; // คัดลอกเฉลยที่ตรวจแล้วเท่านั้น
   checked=false;picks=[]; // wrongCount ย้ายไปนับระดับ "ทั้งคำ" แล้ว (reset ที่ loadWord)
   comps=['cons','vowel'];
   if(reviewedPresent(W.final))comps.push('final');
@@ -1219,9 +1222,8 @@ function restart(){
 }
 
 // ════════════════════════════════════════════
-// Shared Game UI Phase E3 (2026-08-10): Guest resume (window.GameResume, js/core/shared.js)
-// Local-device resume สำหรับทั้ง guest และผู้ล็อกอิน โดยไม่อ้างว่า sync ข้ามเครื่อง
-// Cross-device ยัง BLOCKED จนกว่าจะมี canonical server adapter/schema ที่ได้รับอนุมัติ
+// Shared Game UI Phase E3 + Login Free canonical Resume (window.GameResume, js/core/shared.js)
+// Guest ใช้ local-device Resume; Login Free ใช้ account Resume ที่ canonical runtime restore ก่อนโหลดเกม
 // ระดับความละเอียดที่ทำได้: "ชุดคำเดิม + ตำแหน่งเดิม พร้อมพิมพ์พยางค์ใหม่" เท่านั้น — ไม่กู้คืนตัวที่พิมพ์ค้างกลางคำ/สถานะ IME
 // เพราะระบบคีย์บอร์ด/IME ของเกมนี้ละเอียดอ่อนมาก (ดูคอมเมนต์ยาวเรื่อง iOS compose ในไฟล์นี้) เสี่ยงเกินไปถ้าจะพยายามกู้ระดับนั้น
 // ════════════════════════════════════════════
@@ -1240,6 +1242,30 @@ function tgResolveResumeWordIds(ids,level){
   var resolved=ids.map(function(id){return tgResumeWordIndex(id,level);});
   return resolved.some(function(idx){return idx==null;})?null:resolved;
 }
+function tgRestoreRoundReport(snapshot){
+  var defaults={game_type:'typing',difficulty:curLevel,mode:'thai-keyboard'};
+  if(!window.RoundReport)return null;
+  try{
+    if(snapshot&&typeof RoundReport.restore==='function')return RoundReport.restore(snapshot,defaults);
+  }catch(e){}
+  try{
+    return typeof RoundReport.create==='function'?RoundReport.create(defaults):null;
+  }catch(e){return null;}
+}
+function tgPrepareRestoredReview(ready){
+  var srsReady=Promise.resolve(false);
+  try{if(rgLoggedIn())srsReady=tgSyncSrsFromServer(true);}catch(e){}
+  var reviewReady=Promise.resolve([]);
+  try{reviewReady=tgPrimeReview();}catch(e){}
+  var finish=function(){
+    tgRegisterRestoredReview();
+    if(typeof ready==='function')ready();
+  };
+  // A recovered question must not become interactive until both ownership sources
+  // are known. Otherwise a legacy SRS item can be registered as Review-owned and
+  // the canonical commit correctly rejects it as legacy_srs_identity_unresolved.
+  Promise.all([reviewReady,srsReady]).then(finish,finish);
+}
 function tgSaveResume(){
   try{
     if(!window.GameResume)return;
@@ -1254,17 +1280,22 @@ function tgSaveResume(){
 }
 function tgTryResume(){
   try{
-    if(!window.GameResume)return;
+    if(!window.GameResume)return false;
     var saved=GameResume.load('typing-game');
-    if(!saved||!saved.wordIds||!saved.wordIds.length)return;
-    if(typeof saved.cur!=='number'||saved.cur>=saved.wordIds.length)return; // รอบนั้นทำจบแล้ว ไม่มีอะไรให้ต่อ
+    if(!saved||!saved.wordIds||!saved.wordIds.length)return false;
+    if(typeof saved.cur!=='number'||saved.cur>=saved.wordIds.length)return false; // รอบนั้นทำจบแล้ว ไม่มีอะไรให้ต่อ
     var banner=document.getElementById('tg-resume-banner');
     var detailEl=document.getElementById('tg-resume-detail');
-    if(!banner||!detailEl)return;
+    if(!banner||!detailEl)return false;
+    window.__tgResumeData=saved;
+    if(window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()){
+      tgResumeContinue();
+      return true;
+    }
     detailEl.textContent=GameUiCopy.resumeLine('打字練習',(saved.level||'初')+'級','第 '+(saved.cur+1)+'/'+saved.wordIds.length+' 字');
     banner.style.display='block';
-    window.__tgResumeData=saved;
-  }catch(e){}
+    return true;
+  }catch(e){return false;}
 }
 function tgResumeContinue(){
   try{
@@ -1285,15 +1316,19 @@ function tgResumeContinue(){
     okC=saved.okC||0;badC=saved.badC||0;streak=saved.streak||0;maxStreak=saved.maxStreak||0;
     roundScore=saved.roundScore||0;cleanC=saved.cleanC||0;roundHadGuide=!!saved.roundHadGuide;
     roundLog=Array.isArray(saved.roundLog)?saved.roundLog:[];
-    roundReport=window.RoundReport?RoundReport.restore(saved.report,{game_type:'typing',difficulty:curLevel,mode:'thai-keyboard'}):null;
-    tgPrimeReview().then(tgRegisterRestoredReview);
-    var _mp=document.getElementById('tg-mistakes-panel'); if(_mp)_mp.style.display='none';
-    document.getElementById('end').style.display='none';
-    document.getElementById('game').style.display='flex';
-    document.getElementById('bars-wrap').style.display='flex';
-    document.getElementById('rg-stat-row').style.display='flex';
-    refreshUI();
-    loadWord();
+    // A malformed/legacy report snapshot must not strand the entire recovered queue
+    // on the HTML placeholder. Keep the exact saved words/counters and replace only
+    // the report shell when it cannot be restored.
+    roundReport=tgRestoreRoundReport(saved.report);
+    tgPrepareRestoredReview(function(){
+      var _mp=document.getElementById('tg-mistakes-panel'); if(_mp)_mp.style.display='none';
+      document.getElementById('end').style.display='none';
+      document.getElementById('game').style.display='flex';
+      document.getElementById('bars-wrap').style.display='flex';
+      var _statRow=document.getElementById('rg-stat-row'); if(_statRow)_statRow.style.display='flex';
+      refreshUI();
+      loadWord();
+    });
   }catch(e){}
 }
 function tgResumeRestartSame(){
@@ -1303,8 +1338,7 @@ function tgResumeRestartSame(){
   if(!q){tgResumeNewRound();return;}
   var banner=document.getElementById('tg-resume-banner');if(banner)banner.style.display='none';
   curLevel=saved.level||curLevel;roundQueue=q;roundTotal=q.length;cur=0;okC=0;badC=0;streak=0;maxStreak=0;roundScore=0;cleanC=0;roundHadGuide=false;roundLog=[];roundReport=window.RoundReport?RoundReport.create({game_type:'typing',difficulty:curLevel,mode:'thai-keyboard'}):null;window.__tgResumeData=null;
-  tgPrimeReview().then(tgRegisterRestoredReview);
-  document.getElementById('end').style.display='none';document.getElementById('game').style.display='flex';document.getElementById('bars-wrap').style.display='flex';document.getElementById('rg-stat-row').style.display='flex';refreshUI();tgSaveResume();loadWord();
+  tgPrepareRestoredReview(function(){document.getElementById('end').style.display='none';document.getElementById('game').style.display='flex';document.getElementById('bars-wrap').style.display='flex';var _statRow=document.getElementById('rg-stat-row');if(_statRow)_statRow.style.display='flex';refreshUI();tgSaveResume();loadWord();});
 }
 function tgResumeNewRound(){
   try{ if(typeof gtag==='function') gtag('event','typing_game_resume_restart',{category:'game'}); }catch(e){}
@@ -2216,7 +2250,7 @@ function rgContFinish(){
   sylIdx=sylList.length-1;
   updateSyllableCounter();
   var SY=sylList[sylIdx];
-  W={th:SY.th,read:SY.read,zh:WORD.zh,en:SY.en,cons:SY.cons,vowel:SY.vowel,tone:SY.tone,final:SY.final,lead:SY.lead,cluster:SY.cluster,tone_name:SY.tone_name,consRead:SY.consRead,finalRead:SY.finalRead,finalDisp:SY.finalDisp,silent:SY.silent}; // คัดลอกเฉลยที่ตรวจแล้วเท่านั้น
+  W={th:SY.th,read:SY.read,zh:WORD.zh,en:SY.en,cons:SY.cons,vowel:SY.vowel,tone:SY.tone,final:SY.final,lead:SY.lead,cluster:SY.cluster,tone_name:SY.tone_name,consRead:SY.consRead,finalRead:SY.finalRead,finalDisp:SY.finalDisp,silent:SY.silent,catalog:SY.catalog}; // คัดลอกเฉลยที่ตรวจแล้วเท่านั้น
   var sec=document.getElementById('bonus-section');
   if(sec)sec.className='bonus-section'; // ซ่อนแผงถามวรรณยุกต์ ก่อนโชว์การ์ดเฉลยท้ายคำ
   rgHideTypePanelForReveal(); // Lin 2026-07-12: คำจบแล้ว ซ่อนแป้นพิมพ์+คำใบ้ที่ค้างอยู่ (บั๊กเดิม: หัวข้อ "選一下...的聲調" ค้างโชว์ทับกล่องอธิบายจนดูเหมือนไม่มีคำอธิบาย/หน้าว่างยาว)
@@ -2518,8 +2552,28 @@ try{
   }
 }catch(e){}
 loadSave();
-if(!_autoPlanTypingLevel){try{ tgTryResume(); }catch(e){}} // Auto Plan selection must not be replaced by an older resume level.
-tgPrimeReview().then(initGame);
+var _tgResumeHandled=false;
+var _tgLoginFreeResume=window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled();
+if(!_autoPlanTypingLevel||_tgLoginFreeResume){try{ _tgResumeHandled=tgTryResume(); }catch(e){ _tgResumeHandled=false; }}
+if(!_tgResumeHandled){
+  // This is the only fresh-round bootstrap. Both optional account reads are bounded;
+  // a rejected or stalled Review/SRS request must not leave the game on HTML placeholders.
+  var _tgInitialStarted=false;
+  var _tgInitialGo=function(){
+    if(_tgInitialStarted)return;
+    _tgInitialStarted=true;
+    initGame();
+  };
+  var _tgInitialSrsReady=Promise.resolve();
+  var _tgInitialReviewReady=Promise.resolve();
+  try{if(rgLoggedIn())_tgInitialSrsReady=tgSyncSrsFromServer(true);}catch(e){}
+  try{_tgInitialReviewReady=tgPrimeReview();}catch(e){}
+  Promise.race([
+    Promise.all([_tgInitialReviewReady,_tgInitialSrsReady]),
+    new Promise(function(resolve){setTimeout(resolve,1600);})
+  ]).then(_tgInitialGo,_tgInitialGo);
+  setTimeout(_tgInitialGo,1700);
+}
 try { rgRenderGameBar(); } catch(e){}
 
 // ── ฟ้อนต์โมเดิร์น (เหมือนเกมเสียง) ──

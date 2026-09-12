@@ -79,8 +79,14 @@ test('Reading counter follows active syllables without changing the round queue'
   assert.doesNotMatch(helper, /roundQueue|roundScore|okC|badC/);
 });
 
+test('Reading keeps reviewed syllable authority through the live answer object', () => {
+  const loadSyl = block('function loadSyl()', '// ─── Render options ───');
+  assert.match(loadSyl, /catalog:SY\.catalog/);
+  assert.match(source, /renderBonusReason\(W\)/);
+});
+
 test('Reading loads the rebuilt crash-safe bundle with a fresh cache key', () => {
-  assert.match(html, /reading-game-app\.min\.js\?v=54/);
+  assert.match(html, /reading-game-app\.min\.js\?v=57/);
 });
 
 test('Reading keeps scattered choices collision-safe and tone boxes proportional', () => {

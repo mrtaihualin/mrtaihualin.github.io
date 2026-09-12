@@ -116,8 +116,8 @@ test('Lego client reuses uncertain request id and rejects stale owner completion
   assert.match(legoClient, /if\(quota\._owner&&!legoQuotaSameOwner\(quota\._owner\)\) quota=\{ok:false,reason:'owner_changed'\}/);
 });
 
-test('Login Core exposes the five-game SRS and Review transaction clients', () => {
-  for (const page of ['tone-finder.html','listening-game.html','typing-game.html','word-order.html']) {
+test('Login Core exposes the four-game SRS and Review transaction clients', () => {
+  for (const page of ['tone-finder.html','typing-game.html','word-order.html']) {
     const html = read(page);
     assert.match(html, /tone-server\.js\?v=6/, page);
     assert.match(html, /reading-auth\.js\?v=34/, page);
@@ -129,6 +129,7 @@ test('Login Core exposes the five-game SRS and Review transaction clients', () =
   assert.match(reading, /tone-server\.js\?v=6/);
   assert.match(reading, /reading-auth\.js\?v=34/);
   assert.match(reading, /learning-review\.js\?v=\d+/);
+  assert.doesNotMatch(read('listening-game.html'), /(?:tone-server|learning-review)\.js/);
   assert.match(read('js/games/reading-auth.js'), /if \(publicLoginOnly\) return null;/);
   assert.match(read('js/games/reading-auth.js'), /API\.srsUser = publicLoginSrs \? loginUser : API\.user/);
   const lego = read('lego.html');

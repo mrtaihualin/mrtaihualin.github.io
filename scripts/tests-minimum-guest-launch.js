@@ -33,7 +33,10 @@ ok(read('line-callback.html').indexOf('minimum-guest-launch.js') === -1,
 
 var gate = read('js/core/minimum-guest-launch.js');
 ok(gate.indexOf('MRT_MINIMUM_GUEST_LAUNCH = true') !== -1, 'launch flag is explicit');
-ok(gate.indexOf('LOGIN_FREE_SRS_PUBLIC_ENTRY = true') !== -1, 'Login Free SRS entry flag is explicit');
+ok(gate.indexOf('LOGIN_FREE_SRS_PUBLIC_ENTRY = loginFreeLearningGame') !== -1,
+  'Login Free SRS entry is scoped to the approved game allow-list');
+ok(gate.indexOf('LOGIN_FREE_REVIEW_PUBLIC_ENTRY = loginFreeLearningGame') !== -1,
+  'Login Free Review entry is scoped to the approved game allow-list');
 ok(gate.indexOf('LOGIN_FREE_ACCOUNT_PUBLIC_ENTRY = true') !== -1, 'Login Free account entry flag is explicit');
 ok(gate.indexOf("login-surface.js?v=15") !== -1, 'Login surface cache key activates the account-aware client');
 ok(gate.indexOf("login-surface.css?v=15") !== -1, 'Login surface stylesheet cache key activates the account-menu visual system');
@@ -70,7 +73,12 @@ function runGateAt(hash, pathname) {
     querySelectorAll: function () { return []; }
   };
   vm.runInNewContext(gate, { window: windowStub, document: documentStub });
-  return { replacedUrl: replacedUrl, parked: windowStub.MRT_PARKED_ACCOUNT_SURFACE };
+  return {
+    replacedUrl: replacedUrl,
+    parked: windowStub.MRT_PARKED_ACCOUNT_SURFACE,
+    srs: windowStub.LOGIN_FREE_SRS_PUBLIC_ENTRY,
+    review: windowStub.LOGIN_FREE_REVIEW_PUBLIC_ENTRY
+  };
 }
 
 ok(runGateAt('#access_token=redacted&refresh_token=redacted').replacedUrl === null,
@@ -79,6 +87,12 @@ ok(runGateAt('#articles').replacedUrl === null, 'normal page anchors remain unto
 ok(runGateAt('', '/my-progress.html').parked === false, 'Learning Center is active for Login Free');
 ok(runGateAt('', '/leaderboard.html').parked === false, 'per-game boards are active for Login Free');
 ok(runGateAt('', '/games-challenge.html').parked === true, 'Paid Challenge remains parked');
+['tone-finder', 'reading-game', 'typing-game', 'word-order'].forEach(function (route) {
+  ok(runGateAt('', '/' + route).srs === true && runGateAt('', '/' + route + '.html').review === true,
+    route + ' enables Retry/Review/SRS on both public URL forms');
+});
+ok(runGateAt('', '/listening-game').srs === false && runGateAt('', '/listening-game.html').review === false,
+  'Listening is excluded from Retry/Review/SRS on both public URL forms');
 
 var config = read('js/core/supabase-config.js');
 ok(config.indexOf("runtimeMode: 'login-free'") !== -1, 'Login Free is the active reversible runtime mode');
@@ -104,10 +118,12 @@ var legoHtml = read('lego.html');
 accountBundles.forEach(function (bundle) { ok(legoHtml.indexOf(bundle) === -1, 'Lego does not execute Core 5 ' + bundle); });
 ok(legoHtml.indexOf('study-plan-core.js?v=2') !== -1 && legoHtml.indexOf('study-plan.js?v=5') !== -1,
   'Lego executes the separately authorized Free Time Auto Plan');
-['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html'].forEach(function (file) {
+['tone-finder.html','reading-game.html','typing-game.html','word-order.html'].forEach(function (file) {
   ok(read(file).indexOf('tone-server.js?v=6') !== -1, file + ' executes only the approved Login Free SRS transport');
 });
 ok(read('lego.html').indexOf('tone-server.js') === -1, 'Lego keeps SRS transport parked');
+ok(read('listening-game.html').indexOf('tone-server.js') === -1 && read('listening-game.html').indexOf('learning-review.js') === -1,
+  'Listening loads neither the SRS transport nor Review runtime');
 ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html'].forEach(function (file) {
   var html = read(file);
   ok(html.indexOf('word-vault.js?v=8') !== -1 && html.indexOf('sentence-vault.js?v=4') !== -1,
@@ -124,8 +140,10 @@ ok(read('reading-game.html').indexOf('reading-auth.js') !== -1,
   'Reading remains the direct provider-flow owner while other pages reuse it through the shared Login controller');
 
 var contentClient = read('js/games/game-content-client.js');
-ok(contentClient.indexOf('minimumGuest ? cfg.anonKey') !== -1 && contentClient.indexOf('readAccessTokenGuess(cfg.url) || cfg.anonKey') !== -1,
-  'protected game content keeps separate Guest and Login Free token paths');
+ok(contentClient.indexOf('if (minimumGuest) return Promise.resolve(cfg.anonKey)') !== -1 &&
+  contentClient.indexOf("LOGIN_FREE_LEARNING_GAMES = { tone: true, reading: true, typing: true, word_order: true }") !== -1 &&
+  contentClient.indexOf('client.auth.getSession()') !== -1,
+  'protected game content waits for OAuth session only on the four Login Free learning games');
 ok(!/登入解鎖|rg-login-btn|openLogin/.test(contentClient), 'content cap exposes no Login CTA');
 
 var audioClient = read('js/games/protected-word-audio.js');

@@ -264,15 +264,38 @@
   }
 
   var GAME_SURFACES = { tone: true, reading: true, typing: true, word_order: true, listening: true };
+  var LOGIN_FREE_LEARNING_GAMES = { tone: true, reading: true, typing: true, word_order: true };
   function paidBetaRequested(game) {
     if (game !== 'tone' || !global.location) return false;
     return /(?:^|[?&])paid-beta=1(?:&|$)/.test(String(global.location.search || ''));
   }
+  function contentAccessToken(cfg, game) {
+    var minimumGuest = typeof global.isMinimumGuestOnly === 'function' && global.isMinimumGuestOnly();
+    if (minimumGuest) return Promise.resolve(cfg.anonKey);
+    var stored = readAccessTokenGuess(cfg.url);
+    if (stored) return Promise.resolve(stored);
+
+    // On an OAuth callback the shared Supabase client may still be importing the
+    // session fragment when this loader starts. Wait for that initialization on
+    // the four Login Free learning games so their first round receives the Login
+    // tier and can register Retry/Review/SRS. Guest remains the anon fallback,
+    // while Listening stays outside this learning-loop change.
+    var loginFreeRuntime = global.SUPABASE_CONFIG && global.SUPABASE_CONFIG.runtimeMode === 'login-free';
+    var client = loginFreeRuntime && LOGIN_FREE_LEARNING_GAMES[game] &&
+      typeof global.getSupabaseClient === 'function' ? global.getSupabaseClient() : null;
+    if (!client || !client.auth || typeof client.auth.getSession !== 'function') {
+      return Promise.resolve(cfg.anonKey);
+    }
+    return Promise.resolve(client.auth.getSession()).then(function (result) {
+      var session = result && result.data && result.data.session;
+      var token = session && session.access_token;
+      return typeof token === 'string' && token ? token : cfg.anonKey;
+    }).catch(function () { return cfg.anonKey; });
+  }
+
   function fetchGameContent(game) {
     var cfg = currentConfig();
     if (game != null && !GAME_SURFACES[game]) return Promise.reject(new Error('game-content: invalid game surface'));
-    var minimumGuest = typeof global.isMinimumGuestOnly === 'function' && global.isMinimumGuestOnly();
-    var token = minimumGuest ? cfg.anonKey : (readAccessTokenGuess(cfg.url) || cfg.anonKey);
     // Browser connectivity is only a hint; it can report offline while requests work.
     // Let the actual request decide, retaining the timeout and fail-closed validation.
     if (!global.NetworkGuard || typeof global.NetworkGuard.request !== 'function') {
@@ -280,11 +303,13 @@
     }
     var requestBody = game ? { game: game, contract: 'canonical-v1' } : { contract: 'canonical-v1' };
     if (paidBetaRequested(game)) requestBody.paid_beta = true;
-    return global.NetworkGuard.request(fetch, cfg.url + '/functions/v1/game-content', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', apikey: cfg.anonKey, Authorization: 'Bearer ' + token },
-      body: JSON.stringify(requestBody)
-    }, 15000).then(function (res) {
+    return contentAccessToken(cfg, game).then(function (token) {
+      return global.NetworkGuard.request(fetch, cfg.url + '/functions/v1/game-content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: cfg.anonKey, Authorization: 'Bearer ' + token },
+        body: JSON.stringify(requestBody)
+      }, 15000);
+    }).then(function (res) {
       if (!res.ok) throw new Error('game-content HTTP ' + res.status);
       return res.json();
     }).then(function (data) {
@@ -294,6 +319,21 @@
       if (!Array.isArray(data.audioAvailable)) throw new Error('game-content: audio entitlement contract unavailable');
       return data;
     });
+  }
+
+  // A Login Free round may contain a server-bound Retry whose round_id lives in the
+  // canonical account Resume snapshot. Do not execute any of the four learning games
+  // until that snapshot has finished restoring; otherwise a fresh round can overwrite
+  // the only client copy and strand the Retry. Guest, Paid and Listening stay outside.
+  function whenLoginFreeCanonicalReady(data, game) {
+    var loginFreeRuntime = global.SUPABASE_CONFIG && global.SUPABASE_CONFIG.runtimeMode === 'login-free';
+    if (!loginFreeRuntime || !data || data.tier !== 'login' || !LOGIN_FREE_LEARNING_GAMES[game]) {
+      return Promise.resolve(data);
+    }
+    if (!global.PHASE1_CANONICAL || typeof global.PHASE1_CANONICAL.whenReady !== 'function') {
+      return Promise.reject(new Error('LOGIN_FREE_CANONICAL_UNAVAILABLE'));
+    }
+    return global.PHASE1_CANONICAL.whenReady(12000).then(function () { return data; });
   }
 
   // Direct Vault Reading must inherit the protected word's real level before the Reading
@@ -495,7 +535,8 @@
       else document.addEventListener('DOMContentLoaded', showLoadingBanner);
 
       var game = options && options.game;
-      return whenDeferredConfigReady().then(function () { return fetchGameContent(game); }).then(function (data) {
+      return whenDeferredConfigReady().then(function () { return fetchGameContent(game); })
+        .then(function (data) { return whenLoginFreeCanonicalReady(data, game); }).then(function (data) {
         global.GAME_CONTENT_TIER = data.tier || 'anon';
         global.PAID_SRS_PRIVATE_BETA = data.tier === 'paid';
         if (global.PAID_SRS_PRIVATE_BETA) {

@@ -133,7 +133,11 @@ const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f
 const SB_URL = Deno.env.get("SUPABASE_URL")!;
 const SB_ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SB_SVC = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const ALLOWED_ORIGINS = ["https://mrtaihualin.com", "https://gentle-moxie-bf64ad.netlify.app"];
+const ALLOWED_ORIGINS = [
+  "https://mrtaihualin.com",
+  "https://gentle-moxie-bf64ad.netlify.app",
+  "https://mrtaihualin-preview-learning-e4ea92c.mrtaihualin.workers.dev",
+];
 
 Deno.serve(async (req: Request) => {
   const origin = req.headers.get("Origin") || "";
@@ -178,7 +182,7 @@ Deno.serve(async (req: Request) => {
   if (!word || word.trim() !== word || !contentKey || contentKey.trim() !== contentKey || ![1, 2, 3].includes(level)) {
     return json({ error: "bad content identity/level" }, 400);
   }
-  if (!["tone", "reading", "listening", "typing", "wordorder"].includes(game)) return json({ error: "bad game" }, 400);
+  if (!["tone", "reading", "typing", "wordorder"].includes(game)) return json({ error: "bad game" }, 400);
   if (game === "tone" && level === 3) return json({ error: "catalog_authority_incomplete" }, 503);
   if ((game === "wordorder" || level === 3) && contentKey !== word) return json({ error: "bad content_key" }, 400);
   const levelCode = ({ 1: "初", 2: "中", 3: "高" } as Record<number, string>)[level];

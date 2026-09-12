@@ -2489,10 +2489,10 @@ function tfFireStartOnce() {
   }
 }
 
-// ── E3 (2026-08-10): Guest-only local resume (window.GameResume ใน shared.js) ──
-// เก็บ "level + รายชื่อคำ/ประโยคที่กำลังเล่นอยู่ + ทำไปถึงข้อไหน" ไว้ให้ guest กลับมาเล่นต่อได้หลัง refresh/ปิดแท็บ
+// ── E3 (2026-08-10) + Login Free canonical Resume (window.GameResume ใน shared.js) ──
+// Guest เก็บในเครื่อง; Login Free restore รอบบัญชีจาก canonical state ก่อนเกมเริ่ม
 // ระดับความละเอียด: "เล่นชุดคำ/ประโยคเดิมซ้ำตั้งแต่ต้น" (ไม่ replay กลางพยางค์/คะแนนสะสมกลางรอบ — ดูรายละเอียดในรายงานที่ส่งให้ orchestrator)
-// ไม่เกี่ยวกับ SRS/ดาว/แบดจ์/Free-account resume ฝั่งเซิร์ฟเวอร์ใดๆ ทั้งสิ้น
+// Snapshot รวม RoundReport/round_id เพื่อให้ Retry กลับเข้ารอบเดิมโดยไม่สร้าง identity ใหม่
 function tfResumeWordId(entry) { if(selectedLevel===3){if(!entry||!entry.word)throw new Error('CATALOG_AUTHORITY_INCOMPLETE:sentence word');return entry.word;}return tfWordContentKey(entry); }
 function tfFindEntryByResumeId(id) {
   if (typeof id !== 'string' || !id || id.trim() !== id) return null;
@@ -4057,17 +4057,20 @@ function tfRenderExtBar() {
 }
 
 // Lin 2026-07-10: เข้าเกมมาให้เริ่มเล่น 初級 คำแรกทันทีเหมือนเกมอื่น (ไม่ต้องกดเลือกระดับก่อน)
-// Time Auto Plan: ระดับที่ยืนยันจาก proposal ชนะเฉพาะ active matching plan และไม่เปิด resume เก่ามาทับ
+// Time Auto Plan เลือกระดับเมื่อไม่มีรอบ Login Free ค้างอยู่; รอบบัญชีเดิมต้องจบก่อนเปลี่ยนเกม/ระดับ
 var __tfAutoPlanLevel = (window.StudyPlan && StudyPlan.preferredLevel) ? StudyPlan.preferredLevel('tone') : null;
 if (__tfAutoPlanLevel !== 1 && __tfAutoPlanLevel !== 2 && __tfAutoPlanLevel !== 3) __tfAutoPlanLevel = null;
 // E3 (2026-08-10): อ่าน resume ที่ค้างไว้ "ก่อน" TF.selectLevel(1) เสมอ — เพราะ selectLevel(1) จะเรียก
 // startSetSession() ซึ่ง save resume ของ session ใหม่ทับ localStorage ทันที ถ้าไปอ่านทีหลังจะเจอแต่ของใหม่ ไม่เจอของเก่า
-if (!__tfAutoPlanLevel) {
+var __tfLoginFreeRuntime = window.LearningReview && LearningReview.runtimeEnabled && LearningReview.runtimeEnabled();
+if (!__tfAutoPlanLevel || __tfLoginFreeRuntime) {
   try { __tfResumeSnapshot = window.PAID_SRS_PRIVATE_BETA ? null : ((window.GameResume && GameResume.load('tone-finder')) || null); } catch (e) { __tfResumeSnapshot = null; }
 }
-TF.selectLevel(__tfAutoPlanLevel || 1);
+var __tfLoginFreeResume = __tfResumeSnapshot && __tfLoginFreeRuntime;
+if (__tfLoginFreeResume) TF.resumeSavedSession();
+else TF.selectLevel(__tfAutoPlanLevel || 1);
 setTimeout(tfRenderExtBar, 0);
-if (!__tfAutoPlanLevel && __tfResumeSnapshot) { var __tfResumeCaptured = __tfResumeSnapshot; setTimeout(function () { tfShowResumeBannerIfAny(__tfResumeCaptured); }, 0); }
+if (!__tfLoginFreeResume && !__tfAutoPlanLevel && __tfResumeSnapshot) { var __tfResumeCaptured = __tfResumeSnapshot; setTimeout(function () { tfShowResumeBannerIfAny(__tfResumeCaptured); }, 0); }
 
 // Lin 2026-07-10: ซ่อนแถบ page-strip ล่างจอเฉพาะตอนเบราว์เซอร์เข้าโหมดเต็มจอจริง (Fullscreen API)
 (function () {

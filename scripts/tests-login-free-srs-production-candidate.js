@@ -12,14 +12,16 @@ function check(value, message) {
 
 var gate = read('js/core/minimum-guest-launch.js');
 var config = read('js/core/supabase-config.js');
+var contentEdge = read('supabase/functions/game-content/index.ts');
 check(/LOGIN_CORE_PUBLIC_ENTRY = true/.test(gate), 'Public Login remains enabled');
-check(/LOGIN_FREE_SRS_PUBLIC_ENTRY = true/.test(gate), 'Login Free SRS has one explicit reversible flag');
+check(/LOGIN_FREE_SRS_PUBLIC_ENTRY = loginFreeLearningGame/.test(gate), 'Login Free SRS is scoped to the approved game allow-list');
+check(/LOGIN_FREE_REVIEW_PUBLIC_ENTRY = loginFreeLearningGame/.test(gate), 'Login Free Review shares the approved game allow-list');
 check(/LOGIN_FREE_ACCOUNT_PUBLIC_ENTRY = true/.test(gate), 'Login Free account runtime has one explicit reversible flag');
 check(/MRT_MINIMUM_GUEST_LAUNCH = true/.test(gate), 'Phase 1 compatibility surface guards remain active');
 check(/games-challenge/.test(gate), 'Challenge remains parked');
 check(/runtimeMode: 'login-free'/.test(config), 'Login Free content entitlement is active');
 
-var pages = ['tone-finder.html', 'reading-game.html', 'listening-game.html', 'typing-game.html', 'word-order.html'];
+var pages = ['tone-finder.html', 'reading-game.html', 'typing-game.html', 'word-order.html'];
 pages.forEach(function (file) {
   var html = read(file);
   check(html.indexOf('js/core/minimum-guest-launch.js?v=24') !== -1, file + ' fetches the current Login Free launch gate');
@@ -45,10 +47,10 @@ check(read('lego.html').indexOf('tone-server.js') === -1, 'Lego receives no SRS 
 check(read('js/core/minimum-guest-launch.js').indexOf('login-surface.js?v=15') !== -1, 'SRS pages fetch the account-aware Login surface');
 check(read('js/core/login-surface.js').indexOf('reading-auth.js?v=34') !== -1, 'Login surface fetches the account-aware auth client');
 check(read('reading-game.html').indexOf('reading-auth.js?v=34') !== -1, 'Reading direct provider flow fetches the account-aware auth client');
-check(read('tone-finder.html').indexOf('tone-finder-game.min.js?v=85') !== -1, 'Tone fetches the current game runtime');
-check(read('reading-game.html').indexOf('reading-game-app.min.js?v=54') !== -1, 'Reading fetches the current game runtime');
-check(read('typing-game.html').indexOf('typing-game-app.min.js?v=50') !== -1, 'Typing fetches the current game runtime');
-check(read('word-order.html').indexOf('word-order-app.min.js?v=39') !== -1, 'Word Order fetches the current game runtime');
+check(read('tone-finder.html').indexOf('tone-finder-game.min.js?v=86') !== -1, 'Tone fetches the current game runtime');
+check(read('reading-game.html').indexOf('reading-game-app.min.js?v=57') !== -1, 'Reading fetches the current game runtime');
+check(read('typing-game.html').indexOf('typing-game-app.min.js?v=54') !== -1, 'Typing fetches the current game runtime');
+check(read('word-order.html').indexOf('word-order-app.min.js?v=41') !== -1, 'Word Order fetches the current game runtime');
 
 [
   ['js/games/tone-finder-game.js', /tfMinimumGuestOnly\(\) && window\.LOGIN_FREE_SRS_PUBLIC_ENTRY !== true/],
@@ -61,9 +63,9 @@ check(read('word-order.html').indexOf('word-order-app.min.js?v=39') !== -1, 'Wor
   check(/READING_AUTH && READING_AUTH\.srsUser/.test(source), entry[0] + ' uses only the dedicated authenticated SRS owner');
 });
 
-var listening = read('js/games/listening-game-app.js');
-check(/LOGIN_FREE_SRS_PUBLIC_ENTRY !== true/.test(listening), 'Listening SRS owner is flag-gated');
-check(/READING_AUTH\.srsUser/.test(listening), 'Listening uses only the dedicated authenticated SRS owner');
+var listeningPage = read('listening-game.html');
+check(listeningPage.indexOf('tone-server.js') === -1, 'Listening loads no SRS transport');
+check(listeningPage.indexOf('learning-review.js') === -1, 'Listening loads no Review runtime');
 
 var auth = read('js/games/reading-auth.js');
 check(/LOGIN_FREE_ACCOUNT_PUBLIC_ENTRY === true/.test(auth), 'General game/account user is controlled by the account entry flag');
@@ -72,7 +74,10 @@ check(/API\.srsUser = publicLoginSrs \? loginUser : API\.user/.test(auth), 'SRS 
 check(/if \(publicLoginOnly\) return null/.test(auth), 'Score persistence stays off in Login-only fallback mode');
 
 var edge = read('supabase/functions/tone-round/index.ts');
-check(/\["tone", "reading", "listening", "typing", "wordorder"\]\.includes\(game\)/.test(edge), 'Edge accepts exactly the five SRS games');
+check(/\["tone", "reading", "typing", "wordorder"\]\.includes\(game\)/.test(edge), 'Edge accepts exactly the four approved SRS games');
+check(!/\["tone", "reading", "listening"/.test(edge), 'Listening is rejected by the SRS Edge allow-list');
+check(/https:\/\/mrtaihualin-preview-learning-e4ea92c\.mrtaihualin\.workers\.dev/.test(edge), 'Edge permits the exact Login Free Cloudflare Preview origin');
+check(/https:\/\/mrtaihualin-preview-learning-e4ea92c\.mrtaihualin\.workers\.dev/.test(contentEdge), 'Content Edge permits the exact Login Free Cloudflare Preview origin');
 check(!/\[([^\]]*["']challenge["'][^\]]*)\]\.includes\(game\)/.test(edge), 'Challenge is rejected by the SRS Edge');
 check(!/VALID_GAMES\s*=\s*\[[^\]]*["']challenge["']/.test(edge), 'No hidden Challenge allow-list exists');
 check(/stars:\s*0/.test(edge) && /totalStars:\s*0/.test(edge), 'Paid/reward output remains zero');

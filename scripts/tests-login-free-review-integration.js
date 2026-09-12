@@ -14,13 +14,12 @@ const gate = read('js/core/minimum-guest-launch.js');
 const games = {
   tone: read('js/games/tone-finder-game.js'),
   reading: read('js/games/reading-game-app.js'),
-  listening: read('js/games/listening-game-app.js'),
   typing: read('js/games/typing-game-app.js'),
   word_order: read('js/games/word-order-app.js')
 };
-const pages = ['tone-finder.html', 'reading-game.html', 'listening-game.html', 'typing-game.html', 'word-order.html'];
+const pages = ['tone-finder.html', 'reading-game.html', 'typing-game.html', 'word-order.html'];
 
-assert.match(gate, /LOGIN_FREE_REVIEW_PUBLIC_ENTRY\s*=\s*true/);
+assert.match(gate, /LOGIN_FREE_REVIEW_PUBLIC_ENTRY\s*=\s*loginFreeLearningGame/);
 assert.doesNotMatch(gate, /PAID.*PUBLIC_ENTRY\s*=\s*true/i);
 assert.match(report, /gsh:item-complete/);
 assert.match(runtime, /LOGIN_FREE_REVIEW_PUBLIC_ENTRY === true/);
@@ -37,10 +36,26 @@ assert.doesNotMatch(runtime, /getSession\(|access_token|refresh_token|service_ro
 
 pages.forEach(page => {
   const html = read(page);
-  assert.match(html, /js\/games\/learning-review\.js/);
+  assert.match(html, /js\/games\/learning-review\.js\?v=7/);
   assert.match(html, /js\/core\/auth-widget\.js/);
   assert.match(html, /js\/games\/reading-auth\.js/);
 });
+assert.match(read('js/score/phase1-canonical-state.js'), /whenReady:\s*whenReady/);
+assert.match(read('js/games/game-content-client.js'), /whenLoginFreeCanonicalReady\(data, game\)/);
+assert.match(games.typing, /_tgResumeHandled=tgTryResume\(\)[\s\S]*if\(!_tgResumeHandled\)[\s\S]*_tgInitialStarted[\s\S]*Promise\.race\(/);
+assert.match(games.reading, /_rgLoginFreeResume[\s\S]*!rgTryLoadResumeBanner\(\)/);
+assert.match(games.word_order, /LearningReview\.runtimeEnabled\(\)[\s\S]*woResumeContinue\(state,restoredSet\)/);
+assert.match(games.tone, /__tfLoginFreeResume[\s\S]*TF\.resumeSavedSession\(\)/);
+const readingSync = games.reading.slice(games.reading.indexOf('function rgWireSrsSync()'), games.reading.indexOf('// ════════════════════════════════════════════\n// UTILS'));
+const typingSync = games.typing.slice(games.typing.indexOf('function tgWireSrsSync()'), games.typing.indexOf('// ════════════════════════════════════════════\n// UTILS'));
+const wordOrderSync = games.word_order.slice(games.word_order.indexOf('function woWireSrsSync()'), games.word_order.indexOf('// ── Phase 4'));
+assert.doesNotMatch(readingSync, /initGame\s*\(/, 'Reading SRS hydration must not replace canonical Resume');
+assert.doesNotMatch(typingSync, /initGame\s*\(/, 'Typing SRS hydration must not replace canonical Resume');
+assert.doesNotMatch(wordOrderSync, /woReinitSafe\s*\(/, 'Word Order SRS hydration must not replace canonical Resume');
+assert.match(games.reading, /_rgInitialSrsReady[\s\S]*Promise\.all\(\[rgPrimeReview\(\),_rgInitialSrsReady\]\)\.then\(initGame\)/);
+assert.match(games.typing, /Promise\.all\(\[_tgInitialReviewReady,_tgInitialSrsReady\]\)[\s\S]*\.then\(_tgInitialGo,_tgInitialGo\)/);
+assert.match(games.word_order, /function woInitialStartSafe\(\)[\s\S]*woInitialStartSafe\(\);/);
+assert.doesNotMatch(read('listening-game.html'), /js\/games\/(?:learning-review|tone-server)\.js/);
 Object.entries(games).forEach(([game, source]) => {
   assert.match(source, /LearningReview\.prime/, game + ' primes the Review queue');
   assert.match(source, /LearningReview\.matchQueue/, game + ' maps stable Review refs');
@@ -66,5 +81,8 @@ assert.doesNotMatch(edge, /state_token:\s*row\.state_token/);
 assert.match(edge, /content_ref: \{ source: ref\.content_source, key: ref\.content_key \}/);
 assert.match(edge, /item\.wrong == null \? Number\(item\.wrong_count/);
 assert.match(edge, /item\.mode \|\| item\.linguistic\?\.answer_mode/);
+assert.match(edge, /new Set\(\['tone', 'reading', 'typing', 'word_order'\]\)/);
+assert.doesNotMatch(edge, /new Set\(\[[^\]]*'listening'/);
+assert.match(edge, /https:\/\/mrtaihualin-preview-learning-e4ea92c\.mrtaihualin\.workers\.dev/);
 
-console.log('LOGIN_FREE_REVIEW_INTEGRATION_PASS 5_GAMES');
+console.log('LOGIN_FREE_REVIEW_INTEGRATION_PASS 4_GAMES');

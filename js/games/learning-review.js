@@ -17,7 +17,7 @@
   function normalizeGame(value) {
     var game = String(value || '').toLowerCase().replace(/-/g, '_');
     if (game === 'wordorder') game = 'word_order';
-    if (['tone', 'reading', 'listening', 'typing', 'word_order'].indexOf(game) < 0) fail('INVALID_GAME');
+    if (['tone', 'reading', 'typing', 'word_order'].indexOf(game) < 0) fail('INVALID_GAME');
     return game;
   }
   function normalizeLevel(value) {
@@ -123,7 +123,7 @@
   function runtimeEnabled() {
     // Paid Review is a later private-beta tranche. Prevent the active Free owner
     // from claiming Paid items or writing them into the Free SRS namespace.
-    return !!(root && root.GAME_CONTENT_TIER !== 'paid' &&
+    return !!(root && root.GAME_CONTENT_TIER === 'login' &&
       root.LOGIN_FREE_REVIEW_PUBLIC_ENTRY === true && currentUser());
   }
   function ownerScope() { return String(root && root.SITE_AUTH && root.SITE_AUTH.learningOwnerEpoch || 0); }
@@ -146,9 +146,18 @@
         return sb.functions.invoke('score-submit', { body: body });
       }, 'score-submit:learning-review', {}, 12000, null).then(function (response) {
         if (response && !response.error && response.data) return response.data;
-        var error = new Error('REVIEW_REQUEST_FAILED');
-        try { error.status = response.error.context.status; } catch (e) {}
-        throw error;
+        var status = null, context = null;
+        try { context = response && response.error && response.error.context; status = context && context.status; } catch (e) {}
+        var bodyPromise = Promise.resolve(null);
+        try {
+          if (context && typeof context.clone === 'function') context = context.clone();
+          if (context && typeof context.json === 'function') bodyPromise = Promise.resolve(context.json()).catch(function () { return null; });
+        } catch (e2) {}
+        return bodyPromise.then(function (payload) {
+          var code = payload && typeof payload.error === 'string' && payload.error || 'REVIEW_REQUEST_FAILED';
+          var error = new Error(code); error.code = code; error.status = status;
+          throw error;
+        });
       }).catch(function (error) {
         if (remaining > 0) return new Promise(function (resolve) { setTimeout(resolve, 500); }).then(function () { return attempt(remaining - 1); });
         throw error;
@@ -256,14 +265,6 @@
       var quota = Math.min(4 + Math.max(0, units - 4), 9), wrong = Math.max(0, Number(item.wrong_count) || 0);
       return wrong >= quota ? 0 : Math.round(10 - (10 / quota) * wrong);
     }
-    if (game === 'listening') {
-      if (!item.is_correct) return 0;
-      var listens = Math.max(1, Number(item.listen_count) || 1);
-      var mode = item.linguistic && item.linguistic.answer_mode;
-      if (mode === 'mc') return listens <= 2 ? 5 : ({ 3: 3, 4: 2, 5: 1 }[listens] || 0);
-      var words = String(item.question || '').trim().split(/\s+/).filter(Boolean).length || 1;
-      return words >= 3 ? (listens <= 3 ? 10 : ({ 4: 7, 5: 4, 6: 1 }[listens] || 0)) : (listens <= 2 ? 10 : ({ 3: 7, 4: 4, 5: 1 }[listens] || 0));
-    }
     if (game === 'word_order') {
       var hints = item.learning_evidence && Number(item.learning_evidence.hintCount) || 0;
       return Math.max(0, 10 - [0, 3, 6, 9, 10][Math.min(Math.max(0, Number(item.wrong_count) || 0), 4)] - hints * 2);
@@ -318,6 +319,7 @@
   function processItem(report, item) {
     var context = contextFor(report);
     if (!context || !runtimeEnabled()) return Promise.resolve({ ok: false, reason: 'not_owned' });
+    if (item && item.is_skipped === true) return Promise.resolve({ ok: true, skipped: true });
     var refKey = assertItemIdentity(item);
     if (!refKey || context.srs[refKey]) return Promise.resolve({ ok: false, reason: 'srs_owner' });
     var groupSize = Math.max(1, Math.floor(Number(context.groupSize[refKey]) || 1));
@@ -361,10 +363,11 @@
   function removeRecovery() {
     try { var old = root.document && root.document.getElementById('gsh-learning-save-recovery'); if (old) old.remove(); } catch (_) {}
   }
-  function showRecovery(context, retry) {
+  function showRecovery(context, retry, error) {
     if (!root.document || !root.document.body) return false;
     removeRecovery();
     var box = root.document.createElement('div'); box.id = 'gsh-learning-save-recovery';
+    box.setAttribute('data-error-code', String(error && (error.code || error.message) || 'REVIEW_COMMIT_UNAVAILABLE'));
     box.style.cssText = 'position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:10020;max-width:420px;width:calc(100% - 32px);padding:14px 16px;border:2px solid #b83227;border-radius:14px;background:#fff;color:#5a1b17;box-shadow:0 8px 28px rgba(0,0,0,.22);font:700 14px/1.5 "Noto Sans TC",sans-serif;';
     var message = root.document.createElement('div'); message.textContent = '學習進度尚未儲存，本輪已安全暫停。'; box.appendChild(message);
     var button = root.document.createElement('button'); button.type = 'button'; button.textContent = '重試儲存';
@@ -381,7 +384,7 @@
         context.advancePending = false; removeRecovery(); callback(); return true;
       }).catch(function (error) {
         context.advancePending = false; emitSaveError(context, error);
-        if (!showRecovery(context, attempt)) throw error;
+        if (!showRecovery(context, attempt, error)) throw error;
         return false;
       });
       return context.advancePending;
@@ -389,18 +392,20 @@
     return attempt();
   }
 
+  function handleItemComplete(event) {
+    var detail = event && event.detail || {};
+    var reportOrId = detail.report || detail.round_id || null;
+    var item = detail.item || (detail.report && detail.report.item) || null;
+    var pending = reportOrId && item ? processItem(reportOrId, item) : null;
+    if (pending && typeof pending.catch === 'function') pending.catch(function (error) {
+      var context = contextFor(reportOrId);
+      if (context) emitSaveError(context, error);
+    });
+    return pending;
+  }
   function installEvents() {
     if (!root || !root.addEventListener) return;
-    root.addEventListener('gsh:item-complete', function (event) {
-      var detail = event && event.detail || {};
-      var pending = null;
-      if (detail.report && detail.item) pending = processItem(detail.report, detail.item);
-      else if (detail.report && detail.report.item) pending = processItem(detail.report, detail.report.item);
-      if (pending && typeof pending.catch === 'function') pending.catch(function (error) {
-        var context = contextFor(detail.report);
-        if (context) emitSaveError(context, error);
-      });
-    });
+    root.addEventListener('gsh:item-complete', handleItemComplete);
     try {
       if (root.SITE_AUTH && root.SITE_AUTH.onChange) root.SITE_AUTH.onChange(function (user) {
         queues = Object.create(null); rounds = Object.create(null); latestRound = Object.create(null);
@@ -425,6 +430,7 @@
     predictedScore: predictedScore,
     shouldRetry: shouldRetry,
     processItem: processItem,
+    handleItemComplete: handleItemComplete,
     settle: settle,
     advance: advance,
     runtimeEnabled: runtimeEnabled,

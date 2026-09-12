@@ -20,11 +20,14 @@
     }
   }
 
-  // Login Core, SRS, Review and the Phase 1 Login Free account surfaces are
-  // independently reversible. Paid and Challenge remain parked.
+  // Login Core and the Phase 1 Login Free account surfaces are independently
+  // reversible. Retry/Review/SRS are public only on the four approved games;
+  // Listening, Guest, Paid and Challenge remain outside this learning loop.
+  var path = String(window.location.pathname || '').toLowerCase();
+  var loginFreeLearningGame = /\/(?:tone-finder|reading-game|typing-game|word-order)(?:\.html)?$/.test(path);
   window.LOGIN_CORE_PUBLIC_ENTRY = true;
-  window.LOGIN_FREE_SRS_PUBLIC_ENTRY = true;
-  window.LOGIN_FREE_REVIEW_PUBLIC_ENTRY = true;
+  window.LOGIN_FREE_SRS_PUBLIC_ENTRY = loginFreeLearningGame;
+  window.LOGIN_FREE_REVIEW_PUBLIC_ENTRY = loginFreeLearningGame;
   window.LOGIN_FREE_ACCOUNT_PUBLIC_ENTRY = true;
   if (window.LOGIN_CORE_PUBLIC_ENTRY !== true) clearAuthCallbackFragment();
   // Compatibility flag retained for the already-shipped Phase 1 surface guards.
@@ -48,7 +51,6 @@
     document.head.appendChild(loginController);
   }
 
-  var path = String(window.location.pathname || '').toLowerCase();
   var parked = window.LOGIN_FREE_ACCOUNT_PUBLIC_ENTRY === true
     ? /\/(?:games-challenge|mix)\.html$/
     : /\/(?:my-progress|all-board|leaderboard|reading-board|listening-board|typing-board|word-order-board|games-challenge|mix)\.html$/;

@@ -89,6 +89,7 @@ const ALLOWED_ORIGINS = [
   'https://gentle-moxie-bf64ad.netlify.app',
   'https://mrtaihualin-release-7c823713.mrtaihualin.workers.dev',
   'https://1fd7118d-mrtaihualin-release-7c823713.mrtaihualin.workers.dev',
+  'https://mrtaihualin-preview-learning-e4ea92c.mrtaihualin.workers.dev',
 ];
 
 function corsHeaders(origin) {

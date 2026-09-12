@@ -42,6 +42,9 @@
   var requestSequence = 0;
   var boundOwnerEpoch = 0;
   var latestPullRequest = 0;
+  var readyOwnerId = '';
+  var readyError = null;
+  var readyWaiters = [];
 
   function storageGet(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
   function storageSet(key, value) { try { localStorage.setItem(key, value); return true; } catch (e) { return false; } }
@@ -162,6 +165,47 @@
   function warn(where, error) {
     try { console.warn('[phase1-canonical] ' + where + ':', error && error.message || error); } catch (e) {}
   }
+  function readinessError(code, cause) {
+    var error = cause instanceof Error ? cause : new Error(code);
+    if (!error.code) error.code = code;
+    return error;
+  }
+  function settleReady(ownerId) {
+    if (!user || String(user.id) !== String(ownerId || '')) return;
+    readyOwnerId = String(ownerId);
+    readyError = null;
+    var pending = readyWaiters.slice();
+    readyWaiters = [];
+    pending.forEach(function (waiter) {
+      if (waiter.timer) clearTimeout(waiter.timer);
+      waiter.resolve();
+    });
+  }
+  function failReady(error) {
+    readyOwnerId = '';
+    readyError = readinessError('ACCOUNT_STATE_UNAVAILABLE', error);
+    var pending = readyWaiters.slice();
+    readyWaiters = [];
+    pending.forEach(function (waiter) {
+      if (waiter.timer) clearTimeout(waiter.timer);
+      waiter.reject(readyError);
+    });
+  }
+  function whenReady(timeoutMs) {
+    if (!sb) return Promise.reject(readinessError('ACCOUNT_STATE_UNAVAILABLE'));
+    if (user && readyOwnerId === String(user.id)) return Promise.resolve();
+    if (user && readyError) return Promise.reject(readyError);
+    var waitMs = Math.max(1000, Number(timeoutMs) || 12000);
+    return new Promise(function (resolve, reject) {
+      var waiter = { resolve: resolve, reject: reject, timer: null };
+      waiter.timer = setTimeout(function () {
+        var index = readyWaiters.indexOf(waiter);
+        if (index >= 0) readyWaiters.splice(index, 1);
+        reject(readinessError('ACCOUNT_STATE_TIMEOUT'));
+      }, waitMs);
+      readyWaiters.push(waiter);
+    });
+  }
   function finishPush(error, result, sent, context, flight) {
     if (pushInFlight !== flight || !contextIsCurrent(context)) return;
     pushInFlight = null;
@@ -222,23 +266,33 @@
     pushTimer = setTimeout(flush, 800);
   }
   function pull(fromConflict) {
-    if (!sb || !user || !ownerReady()) return;
+    if (!sb || !user || !ownerReady()) return Promise.resolve(false);
     var context = ownerContext();
     latestPullRequest = context.requestId;
     var request = function () {
       return sb.from(TABLE).select('data,updated_at').eq('user_id', context.ownerId).maybeSingle();
     };
-    guarded(request, 'phase1-canonical-pull').then(function (res) {
-      if (!contextIsCurrent(context) || latestPullRequest !== context.requestId) return;
-      if (!res || res.error) { retryPending = true; warn('read failed', res && res.error); return; }
+    return guarded(request, 'phase1-canonical-pull').then(function (res) {
+      if (!contextIsCurrent(context) || latestPullRequest !== context.requestId) return false;
+      if (!res || res.error) {
+        retryPending = true;
+        warn('read failed', res && res.error);
+        failReady(res && res.error);
+        return false;
+      }
       remoteData = clone(res.data && res.data.data || {});
       var meta = applyRemote(remoteData, res.data && res.data.updated_at);
       meta = scanLocal(meta);
       if (hasPending(meta)) push(meta);
       else if (fromConflict) retryPending = false;
+      settleReady(context.ownerId);
+      return true;
     }, function (error) {
-      if (!contextIsCurrent(context) || latestPullRequest !== context.requestId) return;
-      retryPending = true; warn('read failed', error);
+      if (!contextIsCurrent(context) || latestPullRequest !== context.requestId) return false;
+      retryPending = true;
+      warn('read failed', error);
+      failReady(error);
+      return false;
     });
   }
   function resetOwnerRuntime() {
@@ -250,11 +304,14 @@
     pushAgain = false;
     retryPending = false;
     remoteData = {};
+    readyOwnerId = '';
+    readyError = null;
   }
   function bind(nextUser) {
     var next = nextUser && nextUser.id ? nextUser : null;
     var before = user && String(user.id) || '';
     var after = next && String(next.id) || '';
+    if (before && before !== after) failReady(readinessError('ACCOUNT_OWNER_CHANGED'));
     user = next;
     var nextEpoch = ownerEpoch();
     if (before !== after || boundOwnerEpoch !== nextEpoch) resetOwnerRuntime();
@@ -286,14 +343,15 @@
 
   global.PHASE1_CANONICAL = {
     init: init,
-    pull: function () { pull(false); },
+    pull: function () { return pull(false); },
+    whenReady: whenReady,
     flush: flush,
     schedule: schedule,
     resumeKey: ACCOUNT_RESUME_KEY,
     manifest: function () { return clone(MANIFEST); },
     status: function () {
       var meta = loadMeta();
-      return { owner: meta.owner || null, baseToken: meta.baseToken, pending: Object.keys(meta.pending || {}), retryPending: retryPending };
+      return { owner: meta.owner || null, baseToken: meta.baseToken, pending: Object.keys(meta.pending || {}), retryPending: retryPending, ready: !!(user && readyOwnerId === String(user.id)) };
     },
     _test: { stable: stable, emptyMeta: emptyMeta, applyRemote: applyRemote, buildWrite: buildWrite, syncKeys: SYNC_KEYS.slice() }
   };
