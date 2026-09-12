@@ -133,7 +133,11 @@ const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f
 const SB_URL = Deno.env.get("SUPABASE_URL")!;
 const SB_ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SB_SVC = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const ALLOWED_ORIGINS = ["https://mrtaihualin.com", "https://gentle-moxie-bf64ad.netlify.app"];
+const ALLOWED_ORIGINS = [
+  "https://mrtaihualin.com",
+  "https://gentle-moxie-bf64ad.netlify.app",
+  "https://mrtaihualin-preview-learning-e4ea92c.mrtaihualin.workers.dev",
+];
 
 Deno.serve(async (req: Request) => {
   const origin = req.headers.get("Origin") || "";

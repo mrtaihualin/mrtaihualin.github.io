@@ -68,5 +68,6 @@ assert.match(edge, /item\.wrong == null \? Number\(item\.wrong_count/);
 assert.match(edge, /item\.mode \|\| item\.linguistic\?\.answer_mode/);
 assert.match(edge, /new Set\(\['tone', 'reading', 'typing', 'word_order'\]\)/);
 assert.doesNotMatch(edge, /new Set\(\[[^\]]*'listening'/);
+assert.match(edge, /https:\/\/mrtaihualin-preview-learning-e4ea92c\.mrtaihualin\.workers\.dev/);
 
 console.log('LOGIN_FREE_REVIEW_INTEGRATION_PASS 4_GAMES');

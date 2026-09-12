@@ -12,6 +12,7 @@ function check(value, message) {
 
 var gate = read('js/core/minimum-guest-launch.js');
 var config = read('js/core/supabase-config.js');
+var contentEdge = read('supabase/functions/game-content/index.ts');
 check(/LOGIN_CORE_PUBLIC_ENTRY = true/.test(gate), 'Public Login remains enabled');
 check(/LOGIN_FREE_SRS_PUBLIC_ENTRY = loginFreeLearningGame/.test(gate), 'Login Free SRS is scoped to the approved game allow-list');
 check(/LOGIN_FREE_REVIEW_PUBLIC_ENTRY = loginFreeLearningGame/.test(gate), 'Login Free Review shares the approved game allow-list');
@@ -75,6 +76,8 @@ check(/if \(publicLoginOnly\) return null/.test(auth), 'Score persistence stays 
 var edge = read('supabase/functions/tone-round/index.ts');
 check(/\["tone", "reading", "typing", "wordorder"\]\.includes\(game\)/.test(edge), 'Edge accepts exactly the four approved SRS games');
 check(!/\["tone", "reading", "listening"/.test(edge), 'Listening is rejected by the SRS Edge allow-list');
+check(/https:\/\/mrtaihualin-preview-learning-e4ea92c\.mrtaihualin\.workers\.dev/.test(edge), 'Edge permits the exact Login Free Cloudflare Preview origin');
+check(/https:\/\/mrtaihualin-preview-learning-e4ea92c\.mrtaihualin\.workers\.dev/.test(contentEdge), 'Content Edge permits the exact Login Free Cloudflare Preview origin');
 check(!/\[([^\]]*["']challenge["'][^\]]*)\]\.includes\(game\)/.test(edge), 'Challenge is rejected by the SRS Edge');
 check(!/VALID_GAMES\s*=\s*\[[^\]]*["']challenge["']/.test(edge), 'No hidden Challenge allow-list exists');
 check(/stars:\s*0/.test(edge) && /totalStars:\s*0/.test(edge), 'Paid/reward output remains zero');

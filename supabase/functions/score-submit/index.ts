@@ -19,6 +19,7 @@ const ALLOWED_ORIGINS = [
   'https://www.mrtaihualin.com',
   'https://mrtaihualin.github.io',
   'https://gentle-moxie-bf64ad.netlify.app',
+  'https://mrtaihualin-preview-learning-e4ea92c.mrtaihualin.workers.dev',
 ];
 
 function cors(origin: string) {
