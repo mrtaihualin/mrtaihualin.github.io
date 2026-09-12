@@ -13,6 +13,7 @@ const html = fs.readFileSync(path.join(root, 'typing-game.html'), 'utf8');
 const listeningHtml = fs.readFileSync(path.join(root, 'listening-game.html'), 'utf8');
 const legoSource = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
 const scoreSource = fs.readFileSync(path.join(root, 'js/games/typing-score.js'), 'utf8');
+const reviewedDisplay = require(path.join(root, 'js/games/reviewed-vocabulary-display.js'));
 let passed = 0;
 
 function test(name, fn) {
@@ -61,6 +62,101 @@ test('continuous typing zero score keeps accepting input without reveal/finish',
   assert.doesNotMatch(block, /wordFailed\s*=\s*true/);
   assert.doesNotMatch(block, /rgContFinish\s*\(/);
   assert.doesNotMatch(block, /RG_TYPE\.pos\s*=\s*RG_TYPE\.target\.length/);
+});
+
+test('fully typed word reveals, shows Next, and Enter advances', () => {
+  const wAssignments = Array.from(source.matchAll(/W=\{th:SY\.th,[^\n]+?\};/g), (match) => match[0]);
+  assert.strictEqual(wAssignments.length, 2, 'Typing must have exactly two reviewed-syllable W assignments');
+  wAssignments.forEach((assignment) => assert.match(assignment, /catalog:SY\.catalog/));
+
+  function element() {
+    return {
+      className: '',
+      innerHTML: '',
+      textContent: '',
+      style: { display: '' },
+      classList: { contains() { return false; } },
+      appendChild(child) { this.innerHTML += child.textContent || child.innerHTML || '<node>'; },
+      querySelectorAll() { return []; },
+    };
+  }
+
+  const elements = {
+    'bonus-section': element(),
+    'bonus-reason': element(),
+    'retry-hint': element(),
+    'btn-skip': element(),
+    'btn-check': element(),
+    'btn-next': element(),
+    'rg-kbd': element(),
+    ok: element(),
+    bad: element(),
+  };
+  elements['btn-next'].style.display = 'none';
+  elements['btn-next'].offsetParent = {};
+
+  let advanced = 0;
+  elements['btn-next'].click = () => { advanced++; };
+  const flow = {
+    Math,
+    window: {},
+    document: {
+      getElementById: (id) => elements[id] || null,
+      createElement: () => element(),
+    },
+    buildAnswerHeader: reviewedDisplay.buildAnswerHeader,
+    buildAnswerRows: reviewedDisplay.buildAnswerRows,
+    WORD: { th: 'สอน', zh: '教', readingTH: 'สอน' },
+    SY: {
+      th: 'สอน', read: 'สอน', cons: 'ส', vowel: 'ออ', final: 'น', tone_name: 'จัตวา',
+      catalog: { consonant: 'ส', vowel: 'ออ', writtenFinal: 'น', toneName: 'จัตวา' },
+    },
+    W: null,
+    RG_TYPE: { on: true, pos: 0, wrong: 0, target: 'สอน' },
+    RG_CONT_ON: false,
+    checked: false,
+    sylList: [{}],
+    sylIdx: 0,
+    okC: 0,
+    badC: 0,
+    wordWrongTotal: 0,
+    wordHadWrong: false,
+    streak: 0,
+    renderSylStrip() {},
+    rgHideTypePanelForReveal() {},
+    finalizeWord() {},
+    updateCombo() {},
+    refreshUI() {},
+    tgSyncHintOffAction() {},
+    rgTypeRenderTarget() {},
+    rgTypeHighlightNextKey() {},
+    rgTypeFlashWrong() {},
+    rgShiftKeys() { return []; },
+    showReveal() { flow.revealText = reviewedDisplay.buildAnswerHeader(flow.W); },
+  };
+  vm.createContext(flow);
+  vm.runInContext(wAssignments[0], flow);
+  vm.runInContext([
+    functionBlock('buildRevealRules', 'renderBonusReason'),
+    functionBlock('renderBonusReason', 'tgRoundSize'),
+    functionBlock('evaluateBonus', 'tgHasDetailContent'),
+    functionBlock('setGameBtns', 'markOpts'),
+    functionBlock('rgTypeSuccessBranch', 'rgTypeFailBranch'),
+    functionBlock('rgTypeOnFullyTyped', 'rgTypeChar'),
+    functionBlock('rgTypeChar', 'rgHandleEnterKey'),
+    functionBlock('rgHandleEnterKey', 'rgTypeBackspace'),
+  ].join('\n'), flow);
+
+  Array.from('สอน').forEach((character) => flow.rgTypeChar(character));
+  assert.strictEqual(flow.checked, true);
+  assert.match(flow.revealText, /^สอน/);
+  assert.strictEqual(elements['btn-next'].style.display, '');
+  assert.strictEqual(elements['btn-next'].textContent, '下一題 →');
+
+  let prevented = false;
+  assert.strictEqual(flow.rgHandleEnterKey({ preventDefault() { prevented = true; } }), true);
+  assert.strictEqual(prevented, true);
+  assert.strictEqual(advanced, 1);
 });
 
 test('guide mode toggles in place and refreshes the current score', () => {

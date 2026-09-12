@@ -2847,3 +2847,9 @@ node scripts/check-site.js
 - Advanced the four approved pages to `learning-review.js?v=4` and added regressions for extensionless/`.html` routes, Guest/Paid isolation, Listening exclusion, server acknowledgement, retry recovery and owner switching.
 - Locked the iPhone Safari restore ordering explicitly: an anonymous tier stays disabled with no user, stays disabled when the user session restores first, and enables only after protected content confirms the `login` tier.
 - Verification: focused four-game contract, SRS, Review, account-boundary, save/retry, backend-transaction and Listening-exclusion suites pass; `node scripts/check-site.js` passes across 1,086 files. This is a source-only release candidate; no Git remote, Cloudflare, Supabase, Auth, account data or Production state was changed.
+
+# 2026-09-12 — Typing completion reviewed-catalog propagation
+
+- Preserved the reviewed syllable `catalog` when Typing creates its current-answer object in both the ordinary syllable loader and continuous-word completion path, preventing the reviewed display helper from failing before completion controls appear.
+- Added an executable regression that types `สอน` fully, verifies the reviewed reveal succeeds, confirms `下一題` is visible, and confirms Enter advances. The rebuilt runtime bundle keeps the existing keyboard renderer, 47 keys, Shift behavior, layout, Login and learning-loop logic unchanged.
+- Verification: Typing `24/24`, no-second-judge, shared-game `53/53`, locked game-flow and Login-accessible game matrix tests pass; `node scripts/check-site.js` passes across 1,087 files. This is a source-only Delta; no push, merge, deployment, Supabase, Auth, account data or Production state changed.
