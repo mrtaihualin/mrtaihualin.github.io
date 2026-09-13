@@ -89,7 +89,7 @@ const lego = read('lego.html');
 const legoApp = read('js/games/lego-game-app.js');
 assert.match(lego, /data-gsh-game="lego"/);
 assert.match(lego, /id="buildPanel"/);
-assert.match(lego, /js\/games\/lego-game-app\.js\?v=12/);
+assert.match(lego, /js\/games\/lego-game-app\.js\?v=14/);
 assert.match(lego, /id="lego-resume-banner"/);
 assert.match(lego, /id="lego-flow-error"[^>]*role="alert"/);
 assert.match(legoApp, /GameResume\.save\('lego'/);

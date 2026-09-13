@@ -1,5 +1,11 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-09-13 — Guest Resume tutorial-state migration (`SOURCE_PASS / LOCAL_BROWSER_PASS / PREVIEW_REFRESH_PENDING / PRODUCTION_UNCHANGED`)
+
+- The five active games now treat Guest gameplay state that already existed at page entry as prior use: they migrate that game's tutorial-seen marker and do not auto-open the tour. A Resume created by the current fresh round does not suppress the first-use tour, and the manual `玩法` path remains available.
+- The event-driven tour owner still waits for playable content, never overlaps Resume or manual help, and marks first use at automatic open. Browser coverage passes `48/48` lifecycle checks, including Guest-state migration on all five games at Desktop, Phone Portrait and Phone Landscape; full completion and responsive matrices pass `15/15` each, and Listening remains OFF (`4/4`).
+- Focused source tests and the complete `1,095`-file site gate pass. The existing Preview still serves the prior branch version pending an explicitly approved refreshed Preview version; no merge, Production, Supabase, Auth, account or application-data mutation occurred.
+
 ## 2026-09-13 — Reading High feedback and Typing Thai-composition layout repair (`SOURCE_PASS / LOCAL_BROWSER_PASS / HUMAN_PREVIEW_PENDING / PRODUCTION_UNCHANGED`)
 
 - The protected-content client now gives each already-reviewed sentence syllable a presentation-only catalog alias copied field-for-field from the sentence record. Reading High can therefore render its existing answer explanation without weakening the word-catalog fail-closed boundary or calculating any Thai-language value.
@@ -2900,3 +2906,10 @@ node scripts/check-site.js
 - Kept the shared authenticated account toolbar on one line and added the Traditional Chinese `＋ 更多` control only when the toolbar's actual rendered container width cannot hold every existing item. Actions move progressively into the menu and return to their original order when room becomes available; the widest layout keeps every action visible and does not show More.
 - Reused the existing action nodes and handlers instead of cloning or replacing account behavior. The shared controller preserves each action, visible focus, ARIA ownership/state, keyboard navigation, Escape focus return, outside-click close, Search interaction and safe teardown across authenticated repaint/sign-out states. Desktop, Portrait and text-zoom fitting use `ResizeObserver` plus rendered geometry rather than viewport breakpoints.
 - Targeted source tests and a real headless-browser matrix pass at `900/640/520/420/320/240px` plus `150%` text, with zero horizontal toolbar overflow, monotonic progressive movement, exact action inventory and keyboard/focus/ARIA checks. The protected browser review page is under `scripts/browser-tests/`; deployment, Production, Auth, Supabase and account data remain unchanged and separately gated.
+
+# 2026-09-13 — Five-game tutorial lifecycle and completion regression
+
+- Replaced the time-limited first-visit tutorial polling in Tone, Reading, Typing, Word Order and Lego with one event-driven lifecycle. Resume and manually opened help now block the automatic tutorial without overlap; the lifecycle retries after either surface closes and records the tutorial as seen immediately when it opens, including when the visitor exits early.
+- Kept the seen state in same-browser local storage for both Guest and Login. No authorized per-account preference-sync owner exists in the current account boundary, so this Delta does not invent cross-browser persistence or change Auth, Supabase, account data or Product policy.
+- Kept Listening explicitly non-playable by hiding its stale cloned and page-level help entry points while the existing `即將開幕` gate is active. Added exact browser regressions for the lifecycle, Listening OFF, and full Entry → correct answer → Skip/Next → Result → Replay completion across all five active games at Desktop `1440×900`, Portrait `390×844` and Landscape `844×390`.
+- Verification: lifecycle, Listening and shared-game source suites pass; the browser lifecycle and Listening gates pass; the full completion matrix passes `15/15`; the responsive matrix passes `15/15`. This is a Preview/MR candidate only; no merge, Production deployment, Auth, Supabase or real-user data mutation is included.

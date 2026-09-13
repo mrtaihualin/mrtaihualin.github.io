@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Listening OFF consistency</title>
+  <style>
+    body { margin:0; padding:16px; font:14px/1.5 system-ui,sans-serif; }
+    #status { font-weight:800; }
+    iframe { position:absolute; left:-10000px; top:0; width:844px; height:390px; border:0; }
+  </style>
+</head>
+<body>
+  <p id="status">RUNNING</p>
+  <pre id="results"></pre>
+  <iframe id="game" title="Listening OFF under test"></iframe>
+  <script>
+  (function () {
+    'use strict';
+    var frame = document.getElementById('game');
+    var status = document.getElementById('status');
+    var results = document.getElementById('results');
+    function wait(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
+    function shown(win, node) {
+      if (!node || node.hidden) return false;
+      var style = win.getComputedStyle(node);
+      return style.display !== 'none' && style.visibility !== 'hidden' && node.getClientRects().length > 0;
+    }
+    frame.onload = async function () {
+      try {
+        await wait(1200);
+        var win = frame.contentWindow;
+        var doc = frame.contentDocument;
+        var staleHelp = Array.prototype.slice.call(doc.querySelectorAll('.mrt-login-howto,#lg-howto-btn,#lg-howto-modal')).filter(function (node) {
+          return shown(win, node);
+        });
+        if (!shown(win, doc.getElementById('listening-coming-soon'))) throw new Error('coming-soon card is hidden');
+        if (shown(win, doc.getElementById('listening-live-game'))) throw new Error('parked runtime is visible');
+        if (staleHelp.length) throw new Error('stale playable help is visible: ' + staleHelp.map(function (node) { return node.id || node.className; }).join(','));
+        if (Array.prototype.some.call(doc.scripts, function (script) { return /listening-game-app\.js/.test(script.src); })) throw new Error('parked Listening runtime booted');
+        results.textContent = 'PASS coming-soon visible\nPASS playable UI hidden\nPASS 玩法 hidden on original and cloned surfaces\nPASS parked runtime not booted';
+        status.textContent = 'PASS 4/4 checks';
+        status.dataset.result = 'pass';
+        document.title = 'PASS — Listening OFF consistency';
+      } catch (error) {
+        results.textContent = 'FAIL ' + (error && error.stack ? error.stack : error);
+        status.textContent = 'FAIL';
+        status.dataset.result = 'fail';
+        document.title = 'FAIL — Listening OFF consistency';
+      }
+    };
+    frame.src = '../../listening-game.html?off-consistency=' + Date.now();
+  })();
+  </script>
+</body>
+</html>

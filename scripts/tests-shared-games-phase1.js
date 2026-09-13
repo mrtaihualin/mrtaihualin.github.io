@@ -543,7 +543,7 @@ test('Lego consumes the shared two-mode font path without a particle control', (
   const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
   const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
   assert.match(legoHtml, /shared\.min\.js\?v=47/, 'Lego keeps the unchanged shared game runtime');
-  assert.match(legoHtml, /lego-game-app\.js\?v=12/, 'Lego must load its Guest-only quota runtime');
+  assert.match(legoHtml, /lego-game-app\.js\?v=14/, 'Lego must load its Guest-only quota runtime');
   assert.match(legoApp, /window\.rgToggleFont\s*=\s*function/, 'Lego must expose the shared font adapter API');
   assert.match(legoApp, /classList\.toggle\('rg-modern-font'\)/, 'Lego must preserve the existing standard/modern modes');
   assert.match(legoApp, /localStorage\.setItem\('rg_modern_font'/, 'Lego must reuse the shared font preference');
@@ -818,7 +818,7 @@ test('Tone help layers own Escape and exit without leaking the key to page short
   assert.match(tone, /e\.stopImmediatePropagation\(\)[\s\S]{0,80}gtTourEnd\(\)/);
 });
 
-test('all five replayable help modals close on Escape and restore focus to their opener', () => {
+test('all active replayable help modals close on Escape and restore focus to their opener', () => {
   const handles = {
     tone: '__tfHowtoModalReg',
     reading: '__rgHowtoModalReg',
@@ -826,10 +826,12 @@ test('all five replayable help modals close on Escape and restore focus to their
     typing: '__tgHowtoModalReg',
     wordorder: '__woHowtoModalReg',
   };
-  for (const g of games) {
+  for (const g of games.filter((x) => x.id !== 'listening')) {
     assert.match(g.htmlText + g.appText, new RegExp(`window\\.${handles[g.id]}\\s*=\\s*window\\.registerGameModal`), `${g.id}: help modal is not registered`);
     assert.match(g.htmlText, new RegExp(`${handles[g.id]}\\)window\\.${handles[g.id]}\\.notifyOpen\\(this\\)`), `${g.id}: opener does not register focus return`);
   }
+  const listening = games.find((g) => g.id === 'listening').htmlText;
+  assert.match(listening, /body\[data-listening-availability="coming-soon"\] \.mrt-login-howto,[\s\S]{0,220}#lg-howto-modal\{display:none!important;\}/, 'Listening OFF must not expose stale playable help');
 });
 
 test('all five game pages declare mobile viewport and responsive CSS', () => {

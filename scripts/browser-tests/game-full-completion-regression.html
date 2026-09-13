@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Five-game full-completion regression</title>
+  <style>
+    body { margin:0; padding:16px; font:14px/1.5 system-ui,sans-serif; background:#f5f0e8; color:#49350d; }
+    h1 { margin:0 0 8px; font-size:20px; }
+    #status { font-weight:800; }
+    #results { white-space:pre-wrap; background:#fff; border:1px solid #d4b87a; border-radius:10px; padding:12px; }
+    iframe { position:absolute; left:-10000px; top:0; border:0; }
+  </style>
+</head>
+<body>
+  <h1>Five-game full-completion regression</h1>
+  <p id="status">RUNNING</p>
+  <pre id="results"></pre>
+  <iframe id="game" title="full game under test"></iframe>
+  <script>
+  (function () {
+    'use strict';
+    var games = [
+      {page:'tone-finder.html', game:'tone'},
+      {page:'reading-game.html', game:'reading'},
+      {page:'typing-game.html', game:'typing'},
+      {page:'word-order.html', game:'wordorder'},
+      {page:'lego.html', game:'lego'}
+    ];
+    var modes = [
+      {name:'Desktop', width:1440, height:900},
+      {name:'Portrait', width:390, height:844},
+      {name:'Landscape', width:844, height:390}
+    ];
+    var wordKeys = ['คุณ@初#pronoun-you-formal','ไป@初','เธอ@初#pronoun-you-peer','เลือก@初','ผม@初#noun-a-1','รีบ@初','นั่ง@初','หวัง@初','เรา@初#pronoun-i-we-you','เขา@初#noun-a-2','มา@初','ให้@初','อยู่@初','เดิน@初','คืน@初','จำ@初','ทำ@初','สร้าง@初','เปลี่ยน@初'];
+    var frame = document.getElementById('game');
+    var status = document.getElementById('status');
+    var results = document.getElementById('results');
+    var lines = [];
+
+    function wait(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
+    async function waitFor(check, message, timeout) {
+      var started = Date.now();
+      while (Date.now() - started < (timeout || 20000)) {
+        try { if (check()) return; } catch (ignore) {}
+        await wait(30);
+      }
+      throw new Error('timeout: ' + message);
+    }
+    function shown(win, node) {
+      if (!node || node.hidden) return false;
+      var style = win.getComputedStyle(node);
+      return style.display !== 'none' && style.visibility !== 'hidden' && node.getClientRects().length > 0;
+    }
+    function assert(value, message) { if (!value) throw new Error(message); }
+    function earlyOverride(game) {
+      return '<script>(function(){window.__fullTestErrors=[];window.addEventListener("error",function(event){var message=event.message||(event.error&&event.error.message);if(message)window.__fullTestErrors.push(String(message));},true);try{localStorage.clear();sessionStorage.clear();localStorage.setItem("cookieConsent","denied");localStorage.setItem("howto_tour_seen_' + game + '","1");localStorage.setItem("howto_hint_seen_' + game + '","1");}catch(e){}var seed=173;Math.random=function(){seed=(seed*9301+49297)%233280;return seed/233280;};})();<\/script>';
+    }
+    function contentOverride() {
+      return '<script>(function(){var keys=' + JSON.stringify(wordKeys) + ';window.GameContentLoader.boot=function(srcs){var chain=new Promise(function(resolve){if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",resolve,{once:true});else resolve();}).then(function(){return fetch("data/approved-vocabulary-catalog.json",{cache:"no-store"}).then(function(res){if(!res.ok)throw new Error("canonical fixture unavailable");return res.json();}).then(function(catalog){window.WORDS_MASTER=keys.map(function(key){var record=catalog.records.find(function(row){return row.contentKey===key;});if(!record)throw new Error("canonical fixture missing: "+key);return {catalog:record};});});}).then(function(){return new Promise(function(resolve,reject){var script=document.createElement("script");script.src=["data/adv-sentences.js","v=2"].join("?");script.onload=resolve;script.onerror=reject;document.head.appendChild(script);});}).then(function(){if(window.GameResume&&typeof window.GameResume.load==="function")window.GameResume.load=function(){return null;};});(srcs||[]).forEach(function(src){chain=chain.then(function(){return new Promise(function(resolve,reject){var script=document.createElement("script");script.src=src;script.onload=resolve;script.onerror=reject;document.head.appendChild(script);});});});return chain;};})();<\/script>';
+    }
+    function ready(config, doc) {
+      if (config.game === 'tone') return doc.querySelector('.sg-tone-grid') && doc.getElementById('tf-banner').textContent.trim();
+      if (config.game === 'reading' || config.game === 'typing') return doc.getElementById('wth').textContent.trim() !== '—' && doc.querySelector('#pool .opt');
+      if (config.game === 'wordorder') return doc.querySelector('#wo-slots > *') && doc.querySelector('#wo-bank .wo-tile');
+      return doc.querySelector('.slot[data-id="subj"]') && doc.querySelector('.slot[data-id="verb"]');
+    }
+    async function load(config, mode) {
+      frame.style.width = mode.width + 'px';
+      frame.style.height = mode.height + 'px';
+      var response = await fetch('../../' + config.page + '?full-completion=' + Date.now(), {cache:'no-store'});
+      if (!response.ok) throw new Error(config.page + ' source load failed');
+      var html = await response.text();
+      html = html.replace('<head>', '<head><base href="' + new URL('../../', location.href).href + '">' + earlyOverride(config.game));
+      html = html.replace(/game-content-client\.js\?v=\d+"><\/script>/, function (tag) { return tag + contentOverride(); });
+      await new Promise(function (resolve, reject) {
+        var timer = setTimeout(function () { reject(new Error(config.page + ' iframe load timeout')); }, 25000);
+        frame.onload = function () { clearTimeout(timer); resolve(); };
+        frame.srcdoc = html;
+      });
+      var view = {doc:frame.contentDocument, win:frame.contentWindow};
+      try { await waitFor(function () { return ready(config, view.doc); }, config.page + ' playable entry', 25000); }
+      catch (error) {
+        throw new Error(error.message + ' | runtime=' + JSON.stringify(view.win.__fullTestErrors || []));
+      }
+      var tour = view.doc.getElementById('gt-tour-card');
+      assert(!tour || !shown(view.win, tour), config.page + ' tutorial must not repeat after seen');
+      return view;
+    }
+
+    async function answerTone(view) {
+      var correct = view.win.catalogToneNumber();
+      var buttons = view.doc.querySelectorAll('.sg-tone-btn');
+      assert(correct >= 1 && correct <= 5 && buttons.length === 5, 'Tone answer controls unavailable');
+      buttons[correct - 1].click();
+      await waitFor(function () { return shown(view.win, view.doc.getElementById('tf-session-next-btn')); }, 'Tone correct answer result');
+      view.doc.getElementById('tf-session-next-btn').click();
+      await wait(50);
+    }
+    async function finishTone(view) {
+      await answerTone(view);
+      for (var count = 0; count < 12 && !view.doc.querySelector('[data-game-result-replay="v1"]'); count += 1) {
+        view.win.TF.skipCurrentWord();
+        await wait(50);
+      }
+      var replay = view.doc.querySelector('[data-game-result-replay="v1"]');
+      assert(replay && shown(view.win, replay), 'Tone Result/replay missing');
+      replay.click();
+      await waitFor(function () { return shown(view.win, view.doc.querySelector('.sg-tone-grid')); }, 'Tone replay');
+    }
+
+    function fillCorrectTiles(view) {
+      view.win.comps.forEach(function (component) {
+        var tile = view.win.optTiles.filter(function (item) { return item.val === view.win.correctVal[component]; })[0];
+        if (!tile) throw new Error('correct tile missing for ' + component);
+        var node = view.doc.querySelector('#pool .opt[data-id="' + tile.id + '"]');
+        if (!node) throw new Error('correct tile node missing for ' + component);
+        node.click();
+      });
+    }
+    async function finishPhonics(view, game) {
+      fillCorrectTiles(view);
+      var check = view.doc.getElementById('btn-check');
+      assert(check && !check.disabled, game + ' Check unavailable after answer');
+      check.click();
+      await waitFor(function () { return shown(view.win, view.doc.getElementById('btn-next')); }, game + ' correct answer Next');
+      view.doc.getElementById('btn-next').click();
+      await wait(50);
+      for (var count = 0; count < 12 && !shown(view.win, view.doc.getElementById('end')); count += 1) {
+        view.win.skipWord();
+        await wait(50);
+      }
+      assert(shown(view.win, view.doc.getElementById('end')), game + ' Result missing');
+      var replay = view.doc.querySelector('[data-game-result-replay="v1"]');
+      assert(replay && shown(view.win, replay), game + ' replay missing');
+      replay.click();
+      await waitFor(function () { return shown(view.win, view.doc.getElementById('game')); }, game + ' replay');
+    }
+
+    async function finishTyping(view) {
+      var target = view.win.RG_TYPE && view.win.RG_TYPE.target;
+      assert(target && typeof view.win.rgTypeChar === 'function', 'Typing Thai input target unavailable');
+      assert(view.win.correctVal && view.win.correctVal.vowel, 'Typing canonical vowel unavailable');
+      Array.from(target).forEach(function (character) { view.win.rgTypeChar(character); });
+      await waitFor(function () { return shown(view.win, view.doc.getElementById('btn-next')); }, 'Typing complete Thai input Next');
+      view.doc.dispatchEvent(new view.win.KeyboardEvent('keydown', {key:'Enter', code:'Enter', bubbles:true}));
+      await waitFor(function () { return !view.win.checked; }, 'Typing Enter advances to next question');
+      for (var count = 0; count < 12 && !shown(view.win, view.doc.getElementById('end')); count += 1) {
+        view.win.skipWord();
+        await wait(50);
+      }
+      assert(shown(view.win, view.doc.getElementById('end')), 'Typing Result missing');
+      var replay = view.doc.querySelector('[data-game-result-replay="v1"]');
+      assert(replay && shown(view.win, replay), 'Typing replay missing');
+      replay.click();
+      await waitFor(function () { return shown(view.win, view.doc.getElementById('game')); }, 'Typing replay');
+    }
+
+    async function finishWordOrder(view) {
+      var wordCount = view.doc.querySelectorAll('#wo-slots .wo-slot').length;
+      assert(wordCount > 1, 'Word Order answer slots unavailable');
+      for (var original = 0; original < wordCount; original += 1) {
+        var tile = view.doc.querySelector('#wo-bank .wo-tile[data-gsh-original-index="' + original + '"]');
+        assert(tile, 'Word Order canonical tile missing');
+        tile.click();
+        await wait(20);
+      }
+      await waitFor(function () { return !view.doc.getElementById('wo-next-btn').disabled; }, 'Word Order correct answer Next');
+      view.doc.getElementById('wo-next-btn').click();
+      await wait(50);
+      for (var count = 0; count < 12 && !shown(view.win, view.doc.getElementById('end')); count += 1) {
+        view.win.woSkip();
+        await wait(50);
+      }
+      assert(shown(view.win, view.doc.getElementById('end')), 'Word Order Result missing');
+      var replay = view.doc.getElementById('wo-replay-btn');
+      assert(replay && shown(view.win, replay), 'Word Order replay missing');
+      replay.click();
+      await waitFor(function () { return shown(view.win, view.doc.getElementById('game')); }, 'Word Order replay');
+    }
+
+    async function chooseLego(view, slotId) {
+      var slot = view.doc.querySelector('.slot[data-id="' + slotId + '"]');
+      assert(slot, 'Lego ' + slotId + ' slot missing');
+      slot.querySelector('.slot-btn').click();
+      await waitFor(function () {
+        var current = view.doc.querySelector('.slot[data-id="' + slotId + '"]');
+        return current && current.classList.contains('menu-open') && current.querySelector('.opt[role="button"]');
+      }, 'Lego ' + slotId + ' options');
+      view.doc.querySelector('.slot[data-id="' + slotId + '"] .opt[role="button"]').click();
+      await wait(40);
+    }
+    async function finishLego(view) {
+      await chooseLego(view, 'subj');
+      await chooseLego(view, 'verb');
+      var objectSlot = view.doc.querySelector('.slot[data-id="obj"]');
+      if (objectSlot && !objectSlot.querySelector('.slot-btn.filled')) await chooseLego(view, 'obj');
+      var locationSlot = view.doc.querySelector('.slot[data-id="advObj"]');
+      if (locationSlot && !locationSlot.querySelector('.slot-btn.filled')) await chooseLego(view, 'advObj');
+      view.win.legoCompleteSentence();
+      await waitFor(function () { return !view.doc.getElementById('lego-reveal').classList.contains('hidden'); }, 'Lego answer reveal');
+      view.win.legoEndGame();
+      await waitFor(function () { return !view.doc.getElementById('lego-result').classList.contains('hidden'); }, 'Lego Result');
+      var replay = view.doc.querySelector('#lego-result [data-game-result-replay="v1"]');
+      assert(replay && shown(view.win, replay), 'Lego replay missing');
+      replay.click();
+      await waitFor(function () { return !view.doc.getElementById('buildPanel').classList.contains('hidden'); }, 'Lego new round');
+    }
+
+    async function complete(config, mode) {
+      var view = await load(config, mode);
+      if (config.game === 'tone') await finishTone(view);
+      else if (config.game === 'reading') await finishPhonics(view, config.game);
+      else if (config.game === 'typing') await finishTyping(view);
+      else if (config.game === 'wordorder') await finishWordOrder(view);
+      else await finishLego(view);
+      assert((view.win.__fullTestErrors || []).length === 0, config.page + ' runtime errors: ' + JSON.stringify(view.win.__fullTestErrors || []));
+      lines.push('PASS ' + config.page + ' — ' + mode.name + ' — entry/answer/skip/next/Result/replay');
+      results.textContent = lines.join('\n');
+    }
+
+    (async function () {
+      try {
+        for (var gameIndex = 0; gameIndex < games.length; gameIndex += 1) {
+          for (var modeIndex = 0; modeIndex < modes.length; modeIndex += 1) {
+            await complete(games[gameIndex], modes[modeIndex]);
+          }
+        }
+        status.textContent = 'PASS 15/15 full completions';
+        status.dataset.result = 'pass';
+        document.title = 'PASS — Five-game full-completion regression';
+      } catch (error) {
+        lines.push('FAIL ' + (error && error.stack ? error.stack : error));
+        results.textContent = lines.join('\n');
+        status.textContent = 'FAIL after ' + lines.filter(function (line) { return line.indexOf('PASS ') === 0; }).length + ' completions';
+        status.dataset.result = 'fail';
+        document.title = 'FAIL — Five-game full-completion regression';
+      }
+    })();
+  })();
+  </script>
+</body>
+</html>
