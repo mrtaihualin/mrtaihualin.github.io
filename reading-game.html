@@ -834,6 +834,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 <script src="js/games/practice-events.js?v=3"></script>
 <script src="js/games/game-flow.js?v=13"></script>
 <script src="js/core/mobile-landscape.js?v=42"></script>
+<script src="js/games/game-tutorial-lifecycle.js?v=1"></script>
 
 <!-- ── Game Switcher (fixed pill) ── -->
 <style>
@@ -915,23 +916,17 @@ function gtTourStart(){
   var card=document.getElementById('gt-tour-card'); if(card) card.style.display='block';
   gtTourRender();
 }
-// รอให้โจทย์ข้อแรก + แถวเครื่องมือพร้อมก่อน ค่อยเริ่มทัวร์ — กันชี้ผิดที่/ชี้ที่ว่าง
-(function(){
-  try{
-    if(localStorage.getItem('howto_tour_seen_reading')) return;
-    var tries=0;
-    var waitReady=setInterval(function(){
-      tries++;
-      var wth=document.getElementById('wth');
-      var toolsRow=document.getElementById('word-ctl-row');
-      var ready=toolsRow && toolsRow.getAttribute('data-wm-done')==='1' && document.getElementById('rg-guide-toggle') && document.getElementById('pool') && wth && wth.textContent.trim()!=='' && wth.textContent.trim()!=='—';
-      if(ready || tries>25){
-        clearInterval(waitReady);
-        if(ready) setTimeout(gtTourStart, 500);
-      }
-    }, 300);
-  }catch(e){}
-})();
+// รอแบบ event-driven จนโจทย์พร้อม และไม่เปิดทับ Resume/玩法 ที่ผู้ใช้กำลังตัดสินใจ
+GameTutorialLifecycle.schedule({
+  seenKey:'howto_tour_seen_reading',
+  blockers:['#rg-resume-banner','#rg-howto-modal'],
+  ready:function(){
+    var wth=document.getElementById('wth');
+    var toolsRow=document.getElementById('word-ctl-row');
+    return !!(toolsRow && toolsRow.getAttribute('data-wm-done')==='1' && document.getElementById('rg-guide-toggle') && document.getElementById('pool') && wth && wth.textContent.trim()!=='' && wth.textContent.trim()!=='—');
+  },
+  start:gtTourStart
+});
 </script>
 
 <!-- P-shared-ui: ลงทะเบียนกล่อง howto/star/badge/ask-teacher กับ GamePanels กลาง (registerGameModal ใน shared.js)

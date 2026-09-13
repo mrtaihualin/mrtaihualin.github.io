@@ -819,6 +819,7 @@ body.tg-touch-game-keyboard-only .mobile-kbd-input{pointer-events:none !importan
 <script src="js/games/practice-events.js?v=3"></script>
 <script src="js/games/game-flow.js?v=13"></script>
 <script src="js/core/mobile-landscape.js?v=42"></script>
+<script src="js/games/game-tutorial-lifecycle.js?v=1"></script>
 
 <!-- ── Game Switcher (fixed pill) ── -->
 <style>
@@ -892,23 +893,17 @@ function gtTourStart(){
   var card=document.getElementById('gt-tour-card'); if(card) card.style.display='block';
   gtTourRender();
 }
-// รอให้แถวเครื่องมือกับคำ/คีย์บอร์ดพร้อมก่อน ค่อยเริ่มทัวร์ — กันชี้ผิดที่/ชี้ที่ว่าง
-(function(){
-  try{
-    if(localStorage.getItem('howto_tour_seen_typing')) return;
-    var tries=0;
-    var waitReady=setInterval(function(){
-      tries++;
-      var wth=document.getElementById('wth');
-      var toolsRow=document.getElementById('word-ctl-row');
-      var ready=toolsRow && toolsRow.getAttribute('data-wm-done')==='1' && document.getElementById('rg-kbd') && document.getElementById('rg-howto-btn') && wth && wth.textContent!=='—';
-      if(ready || tries>25){
-        clearInterval(waitReady);
-        if(ready) setTimeout(gtTourStart, 500);
-      }
-    }, 300);
-  }catch(e){}
-})();
+// รอแบบ event-driven จนโจทย์พร้อม และไม่เปิดทับ Resume/玩法 ที่ผู้ใช้กำลังตัดสินใจ
+GameTutorialLifecycle.schedule({
+  seenKey:'howto_tour_seen_typing',
+  blockers:['#tg-resume-banner','#rg-howto-modal'],
+  ready:function(){
+    var wth=document.getElementById('wth');
+    var toolsRow=document.getElementById('word-ctl-row');
+    return !!(toolsRow && toolsRow.getAttribute('data-wm-done')==='1' && document.getElementById('rg-kbd') && document.getElementById('rg-howto-btn') && wth && wth.textContent!=='—');
+  },
+  start:gtTourStart
+});
 </script>
 
 <footer>

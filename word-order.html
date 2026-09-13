@@ -533,6 +533,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 <script src="js/games/practice-events.js?v=3"></script>
 <script src="js/games/game-flow.js?v=13"></script>
 <script src="js/core/mobile-landscape.js?v=42"></script>
+<script src="js/games/game-tutorial-lifecycle.js?v=1"></script>
 
 <div id="gt-tour-overlay">
   <div id="gt-tour-spot"></div>
@@ -657,24 +658,18 @@ function gtTourStart(){
   var card=document.getElementById('gt-tour-card'); if(card) card.style.display='block';
   gtTourRender();
 }
-// รอให้ประโยคแรก + แถวเครื่องมือพร้อมก่อน ค่อยเริ่มทัวร์ — กันชี้ผิดที่/ชี้ที่ว่าง
-(function(){
-  try{
-    if(localStorage.getItem('howto_tour_seen_wordorder')) return;
-    var tries=0;
-    var waitReady=setInterval(function(){
-      tries++;
-      var slots=document.getElementById('wo-slots');
-      var bank=document.getElementById('wo-bank');
-      var toolsRow=document.getElementById('word-ctl-row');
-      var ready=toolsRow && toolsRow.getAttribute('data-wm-done')==='1' && document.getElementById('wo-hint-btn') && slots && slots.children.length>0 && bank && bank.children.length>0;
-      if(ready || tries>25){
-        clearInterval(waitReady);
-        if(ready) setTimeout(gtTourStart, 500);
-      }
-    }, 300);
-  }catch(e){}
-})();
+// รอแบบ event-driven จนโจทย์พร้อม และไม่เปิดทับ Resume/玩法 ที่ผู้ใช้กำลังตัดสินใจ
+GameTutorialLifecycle.schedule({
+  seenKey:'howto_tour_seen_wordorder',
+  blockers:['#wo-resume-banner','#wo-howto-modal'],
+  ready:function(){
+    var slots=document.getElementById('wo-slots');
+    var bank=document.getElementById('wo-bank');
+    var toolsRow=document.getElementById('word-ctl-row');
+    return !!(toolsRow && toolsRow.getAttribute('data-wm-done')==='1' && document.getElementById('wo-hint-btn') && slots && slots.children.length>0 && bank && bank.children.length>0);
+  },
+  start:gtTourStart
+});
 </script>
 
 <!-- Shared Game UI Phase B1 (2026-08-10): ลงทะเบียน modal เดิม 3 ใบกับ window.GamePanels ผ่าน registerGameModal -->

@@ -20,11 +20,11 @@
   <script>
     (function () {
       'use strict';
-      var pages = ['tone-finder.html', 'typing-game.html', 'reading-game.html', 'word-order.html'];
+      var pages = ['tone-finder.html', 'typing-game.html', 'reading-game.html', 'word-order.html', 'lego.html'];
       var modes = [
         {name:'Landscape', width:844, height:390},
         {name:'Portrait', width:390, height:844},
-        {name:'Desktop', width:1280, height:800}
+        {name:'Desktop', width:1440, height:900}
       ];
       var wordKeys = ['มา@初'];
       var sentences = [{th:'วันนี้ผมไปเรียน',zh:'今天我去上課',readingTH:'วัน-นี้-ผม-ไป-เรียน',wc:4,politeF:null,words:[
@@ -73,7 +73,7 @@
         });
         var doc = frame.contentDocument;
         var win = frame.contentWindow;
-        await waitFor(function () { return doc.documentElement.classList.contains('gc-ready'); });
+        await waitFor(function () { return page === 'lego.html' || doc.documentElement.classList.contains('gc-ready'); });
         await wait(180);
         return {doc:doc, win:win};
       }
@@ -84,7 +84,8 @@
         var login = doc.getElementById('rg-login-slot');
         var bottom = doc.getElementById('bottom-nav');
         var landscape = mode.name === 'Landscape';
-        if (!profile || !login || !bottom) throw new Error(page + ' shared strip/nav node missing');
+        var lego = page === 'lego.html';
+        if ((!profile && !lego) || !login || !bottom) throw new Error(page + ' shared strip/nav node missing');
         if (bottom.querySelectorAll('.bn-item').length !== 4) throw new Error(page + ' bottom nav is not four items');
         if (doc.documentElement.scrollWidth > mode.width + 1) throw new Error(page + ' horizontal overflow at ' + mode.name);
         if (landscape) {
@@ -93,8 +94,13 @@
           if (shown(win, bottom)) throw new Error(page + ' bottom nav visible in Landscape');
         } else {
           if (doc.body.classList.contains('gsh-ml-active')) throw new Error(page + ' Landscape runtime leaked into ' + mode.name);
-          if (!profile.contains(login)) throw new Error(page + ' account strip not restored in ' + mode.name);
-          if (!shown(win, profile)) throw new Error(page + ' account strip hidden in ' + mode.name);
+          if (lego) {
+            if (!login.closest('.rg-stat-row')) throw new Error(page + ' account strip not restored in ' + mode.name);
+            if (!shown(win, login.closest('.rg-stat-row'))) throw new Error(page + ' account strip hidden in ' + mode.name);
+          } else {
+            if (!profile.contains(login)) throw new Error(page + ' account strip not restored in ' + mode.name);
+            if (!shown(win, profile)) throw new Error(page + ' account strip hidden in ' + mode.name);
+          }
           if (mode.name === 'Portrait' && !shown(win, bottom)) throw new Error(page + ' bottom nav hidden in Portrait');
           if (mode.name === 'Desktop' && shown(win, bottom)) throw new Error(page + ' bottom nav visible on Desktop');
         }
@@ -110,7 +116,7 @@
               results.textContent = lines.join('\n');
             }
           }
-          status.textContent = 'PASS 12/12 states';
+          status.textContent = 'PASS 15/15 states';
           status.dataset.result = 'pass';
           document.title = 'PASS — FB-02 responsive regression';
         } catch (error) {

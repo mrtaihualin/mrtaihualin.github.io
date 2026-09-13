@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Game tutorial lifecycle regression</title>
+  <style>
+    body { margin:0; padding:16px; font:14px/1.5 system-ui,sans-serif; background:#f5f0e8; color:#49350d; }
+    h1 { margin:0 0 8px; font-size:20px; }
+    #status { font-weight:800; }
+    #results { white-space:pre-wrap; background:#fff; border:1px solid #d4b87a; border-radius:10px; padding:12px; }
+    iframe { position:absolute; left:-10000px; top:0; width:844px; height:390px; border:0; }
+  </style>
+</head>
+<body>
+  <h1>Game tutorial lifecycle regression</h1>
+  <p id="status">RUNNING</p>
+  <pre id="results"></pre>
+  <iframe id="game" title="game tutorial lifecycle under test"></iframe>
+  <script>
+  (function () {
+    'use strict';
+    var configs = [
+      {page:'tone-finder.html', game:'tone', resume:'#tf-resume-banner', howto:'#tf-howto-modal'},
+      {page:'typing-game.html', game:'typing', resume:'#tg-resume-banner', howto:'#rg-howto-modal'},
+      {page:'reading-game.html', game:'reading', resume:'#rg-resume-banner', howto:'#rg-howto-modal'},
+      {page:'word-order.html', game:'wordorder', resume:'#wo-resume-banner', howto:'#wo-howto-modal'},
+      {page:'lego.html', game:'lego', resume:'#lego-resume-banner', howto:'#lego-howto-modal'}
+    ];
+    var requestedGame = new URLSearchParams(location.search).get('game');
+    if (requestedGame) configs = configs.filter(function (config) { return config.game === requestedGame; });
+    var wordKeys = ['คุณ@初#pronoun-you-formal','ไป@初','เธอ@初#pronoun-you-peer','เลือก@初','ผม@初#noun-a-1','รีบ@初','นั่ง@初','หวัง@初','เสียใจ@初','เรา@初#pronoun-i-we-you','เขา@初#noun-a-2','มา@初','ให้@初','อยู่@初','เดิน@初','คืน@初','จำ@初','ทำ@初','สร้าง@初','เปลี่ยน@初'];
+    var sentences = [{th:'วันนี้ผมไปเรียน',zh:'今天我去上課',readingTH:'วัน-นี้-ผม-ไป-เรียน',wc:4,politeF:null,words:[
+      {th:'วันนี้',zh:'今天',syls:[{th:'วันนี้',en:'wan-níi'}]},
+      {th:'ผม',zh:'我',syls:[{th:'ผม',en:'phǒm'}]},
+      {th:'ไป',zh:'去',syls:[{th:'ไป',en:'pai'}]},
+      {th:'เรียน',zh:'上課',syls:[{th:'เรียน',en:'rian'}]}
+    ]}];
+    var frame = document.getElementById('game');
+    var status = document.getElementById('status');
+    var results = document.getElementById('results');
+    var lines = [];
+
+    function wait(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
+    function waitFor(check, message, timeout) {
+      var started = Date.now();
+      return new Promise(function (resolve, reject) {
+        (function poll() {
+          try { if (check()) return resolve(); } catch (ignore) {}
+          if (Date.now() - started > (timeout || 20000)) return reject(new Error('timeout: ' + message));
+          setTimeout(poll, 30);
+        })();
+      });
+    }
+    function shown(win, node) {
+      if (!node || node.hidden) return false;
+      var style = win.getComputedStyle(node);
+      return style.display !== 'none' && style.visibility !== 'hidden' && node.getClientRects().length > 0;
+    }
+    function pass(message) { lines.push('PASS ' + message); results.textContent = lines.join('\n'); }
+    function assert(value, message) { if (!value) throw new Error(message); pass(message); }
+    function gameReady(config, doc) {
+      var tools = doc.getElementById(config.game === 'tone' ? 'tf-word-ctl-row' : 'word-ctl-row');
+      if (config.game === 'tone') return tools && tools.getAttribute('data-wm-done') === '1' && doc.querySelector('.sg-tone-grid') && doc.getElementById('tf-banner').textContent.trim();
+      if (config.game === 'typing') return tools && tools.getAttribute('data-wm-done') === '1' && doc.getElementById('rg-kbd') && doc.getElementById('wth').textContent !== '—';
+      if (config.game === 'reading') return tools && tools.getAttribute('data-wm-done') === '1' && doc.getElementById('pool') && doc.getElementById('wth').textContent.trim() !== '—';
+      if (config.game === 'wordorder') return tools && tools.getAttribute('data-wm-done') === '1' && doc.querySelector('#wo-slots > *') && doc.querySelector('#wo-bank > *');
+      return doc.querySelector('.slot[data-id]') && doc.querySelector('.out-banner');
+    }
+
+    function earlyOverride(config) {
+      return '<script>(function(){window.__tutorialTestErrors=[];window.addEventListener("error",function(event){window.__tutorialTestErrors.push(String(event.message||event.error||"runtime error"));},true);try{localStorage.clear();sessionStorage.clear();localStorage.setItem("cookieConsent","denied");}catch(e){}})();<\/script>';
+    }
+    function contentOverride(delay) {
+      return '<script>(function(){var keys=' + JSON.stringify(wordKeys) + ';window.GameContentLoader.boot=function(srcs){var chain=new Promise(function(resolve){if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",resolve,{once:true});else resolve();}).then(function(){return new Promise(function(resolve){setTimeout(resolve,' + delay + ');});}).then(function(){return fetch("data/approved-vocabulary-catalog.json",{cache:"no-store"}).then(function(res){if(!res.ok)throw new Error("canonical fixture unavailable");return res.json();}).then(function(catalog){window.WORDS_MASTER=keys.map(function(key){var record=catalog.records.find(function(row){return row.contentKey===key;});if(!record)throw new Error("canonical fixture missing: "+key);return {catalog:record};});});}).then(function(){return new Promise(function(resolve,reject){var script=document.createElement("script");script.src=["data/adv-sentences.js","v=2"].join("?");script.onload=resolve;script.onerror=reject;document.head.appendChild(script);});}).then(function(){if(window.GameResume&&typeof window.GameResume.load==="function")window.GameResume.load=function(){return null;};});(srcs||[]).forEach(function(src){chain=chain.then(function(){return new Promise(function(resolve,reject){var script=document.createElement("script");script.src=src;script.onload=resolve;script.onerror=reject;document.head.appendChild(script);});});});return chain;};})();<\/script>';
+    }
+    async function load(config, delay) {
+      var response = await fetch('../../' + config.page + '?tutorial-lifecycle=' + Date.now(), {cache:'no-store'});
+      if (!response.ok) throw new Error(config.page + ' source load failed');
+      var html = await response.text();
+      html = html.replace('<head>', '<head><base href="' + new URL('../../', location.href).href + '">' + earlyOverride(config));
+      html = html.replace(/game-content-client\.js\?v=\d+"><\/script>/, function (tag) { return tag + contentOverride(delay || 0); });
+      await new Promise(function (resolve, reject) {
+        var timer = setTimeout(function () { reject(new Error(config.page + ' iframe load timeout')); }, 25000);
+        frame.onload = function () { clearTimeout(timer); resolve(); };
+        frame.srcdoc = html;
+      });
+      var doc = frame.contentDocument;
+      var win = frame.contentWindow;
+      await waitFor(function () {
+        return config.game === 'lego'
+          ? doc.querySelector('.slot[data-id]')
+          : doc.documentElement.classList.contains('gc-ready');
+      }, config.page + ' ready', 25000);
+      try {
+        await waitFor(function () { return gameReady(config, doc); }, config.page + ' first playable question', 25000);
+      } catch (error) {
+        throw new Error(error.message + ' | runtime=' + JSON.stringify(win.__tutorialTestErrors || []) + ' | words=' + (win.WORDS && win.WORDS.length) + ' | master=' + (win.WORDS_MASTER && win.WORDS_MASTER.length));
+      }
+      return {doc:doc, win:win};
+    }
+
+    async function coldLoadTone() {
+      var config = configs[0];
+      var view = await load(config, 8300);
+      await waitFor(function () { return shown(view.win, view.doc.getElementById('gt-tour-card')); }, 'Tone cold-load tour', 3000);
+      assert(view.win.localStorage.getItem('howto_tour_seen_tone') === '1', 'T1 Tone cold-load opens after the former timeout and marks seen immediately');
+      view.win.gtTourEnd();
+    }
+
+    async function resumeLifecycle(config) {
+      var view = await load(config, 0);
+      var resume = view.doc.querySelector(config.resume);
+      var tour = view.doc.getElementById('gt-tour-card');
+      if (!resume || !tour) throw new Error(config.page + ' lifecycle nodes missing');
+      resume.style.display = 'block';
+      await wait(850);
+      assert(!shown(view.win, tour), config.page + ' tour stays hidden while Resume owns the screen');
+      assert(!view.win.localStorage.getItem('howto_tour_seen_' + config.game), config.page + ' does not consume first-time tour while Resume is visible');
+      resume.style.display = 'none';
+      try {
+        await waitFor(function () { return shown(view.win, tour); }, config.page + ' tour retry', 15000);
+      } catch (error) {
+        throw new Error(error.message + ' | ready=' + gameReady(config, view.doc) + ' | resume=' + view.win.getComputedStyle(resume).display + ' | tour=' + view.win.getComputedStyle(tour).display + ' | seen=' + view.win.localStorage.getItem('howto_tour_seen_' + config.game) + ' | runtime=' + JSON.stringify(view.win.__tutorialTestErrors || []));
+      }
+      assert(view.win.localStorage.getItem('howto_tour_seen_' + config.game) === '1', config.page + ' retries after Resume and marks seen on first open');
+      view.win.gtTourEnd();
+      await wait(50);
+    }
+
+    async function legoManualHelp() {
+      var config = configs.filter(function (item) { return item.game === 'lego'; })[0];
+      var view = await load(config, 0);
+      var modal = view.doc.querySelector(config.howto);
+      var tour = view.doc.getElementById('gt-tour-card');
+      modal.style.display = 'flex';
+      await wait(850);
+      assert(!shown(view.win, tour), 'T4 Lego automatic tour does not overlap manual 玩法');
+      modal.style.display = 'none';
+      await waitFor(function () { return shown(view.win, tour); }, 'Lego tour retry after manual help', 2500);
+      assert(view.win.localStorage.getItem('howto_tour_seen_lego') === '1', 'T4 Lego tour retries once and marks seen after manual 玩法 closes');
+      view.win.gtTourEnd();
+    }
+
+    (async function () {
+      try {
+        if (!requestedGame || requestedGame === 'tone') await coldLoadTone();
+        for (var index = 0; index < configs.length; index += 1) await resumeLifecycle(configs[index]);
+        if (!requestedGame || requestedGame === 'lego') await legoManualHelp();
+        status.textContent = 'PASS ' + lines.length + '/' + lines.length + ' checks';
+        status.dataset.result = 'pass';
+        document.title = 'PASS — Game tutorial lifecycle regression';
+      } catch (error) {
+        lines.push('FAIL ' + (error && error.stack ? error.stack : error));
+        results.textContent = lines.join('\n');
+        status.textContent = 'FAIL after ' + lines.filter(function (line) { return line.indexOf('PASS ') === 0; }).length + ' checks';
+        status.dataset.result = 'fail';
+        document.title = 'FAIL — Game tutorial lifecycle regression';
+      }
+    })();
+  })();
+  </script>
+</body>
+</html>

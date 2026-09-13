@@ -1698,20 +1698,12 @@ function gtTourStart(){
   var card=document.getElementById('gt-tour-card'); if(card) card.style.display='block';
   gtTourRender();
 }
-// รอให้ baseplate พร้อมก่อน ค่อยเริ่มทัวร์ — กันชี้ผิดที่/ชี้ที่ว่าง
-(function(){
-  try{
-    if(localStorage.getItem('howto_tour_seen_lego')) return;
-    var tries=0;
-    var waitReady=setInterval(function(){
-      tries++;
-      var bp=document.getElementById('baseplate');
-      var resume=document.getElementById('lego-resume-banner');
-      var ready=resume && resume.style.display==='none' && bp && bp.children.length>0 && document.querySelector('.out-banner') && document.querySelector('button[onclick="legoCompleteSentence()"]') && document.querySelector('button[onclick="legoEndGame()"]');
-      if(ready || tries>25){
-        clearInterval(waitReady);
-        if(ready) setTimeout(gtTourStart, 500);
-      }
-    }, 300);
-  }catch(e){}
-})();
+// รอแบบ event-driven จนเกมพร้อม และไม่เปิดทับ Resume/玩法 ที่ผู้ใช้กำลังตัดสินใจ
+GameTutorialLifecycle.schedule({
+  seenKey:'howto_tour_seen_lego',
+  blockers:['#lego-resume-banner','#lego-howto-modal'],
+  ready:function(){
+    return !!(document.querySelector('.slot[data-id]') && document.querySelector('.out-banner') && document.querySelector('button[onclick="legoCompleteSentence()"]') && document.querySelector('button[onclick="legoEndGame()"]'));
+  },
+  start:gtTourStart
+});

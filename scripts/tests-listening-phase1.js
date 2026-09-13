@@ -118,7 +118,9 @@ check('reading-auth รองรับ route/game listening', /listening-game/.t
 check('Listening keeps account reporting but loads neither SRS nor Review',
   /reading-auth\.js\?v=34/.test(html) && /game-account\.js\?v=6/.test(html) && /practice-events\.js\?v=3/.test(html) &&
   !/(?:tone-server|learning-review)\.js/.test(html) && /typing-score\.js\?v=1/.test(html) && /listening-score\.js\?v=1/.test(html));
-check('Listening มี 玩法 ที่เปิดดูซ้ำได้และอธิบายกติกา 0 แยกสอง score', /id="lg-howto-modal"/.test(html) && /📖 玩法/.test(html) && /打字加分降到 0/.test(html) && /聽力分數降到 0/.test(html));
+check('Listening เก็บคำอธิบาย runtime เดิมไว้ แต่ OFF shell ซ่อน 玩法 ทุก surface',
+  /id="lg-howto-modal"/.test(html) && /打字加分降到 0/.test(html) && /聽力分數降到 0/.test(html) &&
+  /body\[data-listening-availability="coming-soon"\] \.mrt-login-howto,[\s\S]{0,220}#lg-howto-modal\{display:none!important;\}/.test(html));
 check('Edge ปฏิเสธ SRS game=listening',
   /\["tone", "reading", "typing", "wordorder"\]\.includes\(game\)/.test(edge) && !/"listening"/.test(edge));
 check('item ใหม่ต่ำกว่า 10 ไม่สร้าง SRS', /below_entry_score/.test(edge));
