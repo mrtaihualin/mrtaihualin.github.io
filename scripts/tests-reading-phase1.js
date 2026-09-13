@@ -10,6 +10,7 @@ const root = path.resolve(__dirname, '..');
 const source = fs.readFileSync(path.join(root, 'js/games/reading-game-app.js'), 'utf8');
 const gameContentClient = fs.readFileSync(path.join(root, 'js/games/game-content-client.js'), 'utf8');
 const html = fs.readFileSync(path.join(root, 'reading-game.html'), 'utf8');
+const reviewedDisplay = require(path.join(root, 'js/games/reviewed-vocabulary-display.js'));
 let passed = 0;
 
 function test(name, fn) {
@@ -24,6 +25,36 @@ function block(startText, endText) {
   assert.ok(start >= 0 && end > start, `หา block ${startText} ไม่พบ`);
   return source.slice(start, end);
 }
+
+test('High sentence syllables expose exact reviewed fields to the shared answer display', () => {
+  const browser = {
+    location: { href: 'https://example.test/reading-game.html', origin: 'https://example.test' },
+    addEventListener() {},
+  };
+  const context = { window: browser, URL, console };
+  vm.createContext(context);
+  vm.runInContext(gameContentClient, context, { filename: 'game-content-client.js' });
+  const sentence = {
+    th: 'กา', zh: 'fixture', readingTH: 'กา', wc: 1, politeF: '',
+    words: [{
+      th: 'กา', zh: 'fixture',
+      syls: [{
+        th: 'กา', en: 'gaa', cons: 'ก', vowel: 'อา', tone_name: 'สามัญ',
+        lead: '', cluster: '', final: '', tone: '', liveDead: 'เป็น',
+        consRead: '', finalRead: '', silent: ''
+      }]
+    }]
+  };
+  const projected = browser.buildSentencesForPhonicsGames([sentence])[0];
+  const syllable = projected.syls[0];
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(syllable.catalog)), {
+    roman: 'gaa', lead: '', consonant: 'ก', cluster: '', vowel: 'อา',
+    writtenFinal: '', toneMark: '', toneName: 'สามัญ', liveDead: 'เป็น',
+    consonantReadDifference: '', finalReadDifference: '', silent: ''
+  });
+  assert.match(reviewedDisplay.buildAnswerHeader(syllable), /^กา/);
+  assert.ok(reviewedDisplay.buildAnswerRows(syllable).some((row) => row.tag === '母音' && row.text === 'อา'));
+});
 
 test('attempt score and correction evidence reset for every new word', () => {
   const loadWord = block('function loadWord()', 'function loadSyl()');
