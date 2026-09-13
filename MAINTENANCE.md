@@ -1,5 +1,11 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-09-13 — Guest Resume tutorial-state migration (`SOURCE_PASS / LOCAL_BROWSER_PASS / PREVIEW_REFRESH_PENDING / PRODUCTION_UNCHANGED`)
+
+- The five active games now treat Guest gameplay state that already existed at page entry as prior use: they migrate that game's tutorial-seen marker and do not auto-open the tour. A Resume created by the current fresh round does not suppress the first-use tour, and the manual `玩法` path remains available.
+- The event-driven tour owner still waits for playable content, never overlaps Resume or manual help, and marks first use at automatic open. Browser coverage passes `48/48` lifecycle checks, including Guest-state migration on all five games at Desktop, Phone Portrait and Phone Landscape; full completion and responsive matrices pass `15/15` each, and Listening remains OFF (`4/4`).
+- Focused source tests and the complete `1,095`-file site gate pass. The existing Preview still serves the prior branch version pending an explicitly approved refreshed Preview version; no merge, Production, Supabase, Auth, account or application-data mutation occurred.
+
 ## 2026-09-13 — Reading High feedback and Typing Thai-composition layout repair (`SOURCE_PASS / LOCAL_BROWSER_PASS / HUMAN_PREVIEW_PENDING / PRODUCTION_UNCHANGED`)
 
 - The protected-content client now gives each already-reviewed sentence syllable a presentation-only catalog alias copied field-for-field from the sentence record. Reading High can therefore render its existing answer explanation without weakening the word-catalog fail-closed boundary or calculating any Thai-language value.

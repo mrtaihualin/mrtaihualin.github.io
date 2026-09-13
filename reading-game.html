@@ -834,7 +834,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 <script src="js/games/practice-events.js?v=3"></script>
 <script src="js/games/game-flow.js?v=13"></script>
 <script src="js/core/mobile-landscape.js?v=42"></script>
-<script src="js/games/game-tutorial-lifecycle.js?v=1"></script>
+<script src="js/games/game-tutorial-lifecycle.js?v=2"></script>
 
 <!-- ── Game Switcher (fixed pill) ── -->
 <style>
@@ -919,6 +919,7 @@ function gtTourStart(){
 // รอแบบ event-driven จนโจทย์พร้อม และไม่เปิดทับ Resume/玩法 ที่ผู้ใช้กำลังตัดสินใจ
 GameTutorialLifecycle.schedule({
   seenKey:'howto_tour_seen_reading',
+  hasPriorUse:function(){ try{return !!localStorage.getItem('gsh_resume_reading-game');}catch(e){return false;} },
   blockers:['#rg-resume-banner','#rg-howto-modal'],
   ready:function(){
     var wth=document.getElementById('wth');

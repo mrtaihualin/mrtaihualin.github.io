@@ -103,22 +103,62 @@ assert.match(source, /characterData:\s*true/);
   assert.strictEqual(starts, 1, 'tour retries once manual help closes');
 }
 
+{
+  const runtime = createRuntime();
+  runtime.window.localStorage.setItem('gsh_resume_game', '{"legacy":true}');
+  let starts = 0;
+  runtime.window.GameTutorialLifecycle.schedule({
+    seenKey: 'seen',
+    hasPriorUse: () => !!runtime.window.localStorage.getItem('gsh_resume_game'),
+    blockers: [],
+    ready: () => true,
+    start: () => { starts += 1; },
+  });
+  assert.strictEqual(runtime.window.localStorage.getItem('seen'), '1', 'existing Guest resume migrates tutorial state immediately');
+  runtime.flush();
+  runtime.mutate();
+  assert.strictEqual(starts, 0, 'existing Guest resume permanently suppresses automatic tutorial');
+  assert.strictEqual(runtime.pending(), 0, 'existing Guest resume leaves no delayed automatic start');
+}
+
+{
+  const runtime = createRuntime();
+  let ready = false;
+  let starts = 0;
+  runtime.window.GameTutorialLifecycle.schedule({
+    seenKey: 'seen',
+    hasPriorUse: () => !!runtime.window.localStorage.getItem('gsh_resume_game'),
+    blockers: [],
+    ready: () => ready,
+    start: () => { starts += 1; },
+  });
+  runtime.window.localStorage.setItem('gsh_resume_game', '{"current":true}');
+  ready = true;
+  runtime.mutate();
+  runtime.flush();
+  assert.strictEqual(starts, 1, 'resume written by the current fresh round does not masquerade as prior use');
+}
+
 const pages = [
-  ['tone-finder.html', 'tone', '#tf-resume-banner', '#tf-howto-modal'],
-  ['reading-game.html', 'reading', '#rg-resume-banner', '#rg-howto-modal'],
-  ['typing-game.html', 'typing', '#tg-resume-banner', '#rg-howto-modal'],
-  ['word-order.html', 'wordorder', '#wo-resume-banner', '#wo-howto-modal'],
+  ['tone-finder.html', 'tone', '#tf-resume-banner', '#tf-howto-modal', 'tone-finder'],
+  ['reading-game.html', 'reading', '#rg-resume-banner', '#rg-howto-modal', 'reading-game'],
+  ['typing-game.html', 'typing', '#tg-resume-banner', '#rg-howto-modal', 'typing-game'],
+  ['word-order.html', 'wordorder', '#wo-resume-banner', '#wo-howto-modal', 'word-order'],
 ];
-for (const [file, game, resume, howto] of pages) {
+for (const [file, game, resume, howto, resumeId] of pages) {
   const html = fs.readFileSync(path.join(root, file), 'utf8');
-  assert.match(html, /js\/games\/game-tutorial-lifecycle\.js\?v=1/);
+  assert.match(html, /js\/games\/game-tutorial-lifecycle\.js\?v=2/);
   assert.match(html, new RegExp(`seenKey:'howto_tour_seen_${game}'`));
+  assert.ok(html.includes(`localStorage.getItem('gsh_resume_${resumeId}')`));
   assert.ok(html.includes(`blockers:['${resume}','${howto}']`));
 }
 const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
 const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
-assert.match(legoHtml, /js\/games\/game-tutorial-lifecycle\.js\?v=1/);
+assert.match(legoHtml, /js\/games\/game-tutorial-lifecycle\.js\?v=2/);
+assert.match(legoHtml, /js\/games\/lego-game-app\.js\?v=14/);
+assert.ok(legoHtml.includes("window.__legoHadGuestResumeAtLoad=!!localStorage.getItem('gsh_resume_lego')"));
 assert.match(legoApp, /seenKey:'howto_tour_seen_lego'/);
+assert.ok(legoApp.includes('window.__legoHadGuestResumeAtLoad===true'));
 assert.ok(legoApp.includes("blockers:['#lego-resume-banner','#lego-howto-modal']"));
 
 const listening = fs.readFileSync(path.join(root, 'listening-game.html'), 'utf8');
@@ -126,13 +166,16 @@ assert.match(listening, /data-listening-availability="coming-soon"/);
 assert.match(listening, /body\[data-listening-availability="coming-soon"\] \.mrt-login-howto,[\s\S]{0,220}#lg-howto-modal\{display:none!important;\}/);
 
 const browserHarness = fs.readFileSync(path.join(root, 'scripts/browser-tests/game-tutorial-lifecycle.html'), 'utf8');
-assert.match(browserHarness, /width:844px; height:390px/);
-for (const [file, game, resume, howto] of pages.concat([['lego.html', 'lego', '#lego-resume-banner', '#lego-howto-modal']])) {
-  assert.ok(browserHarness.includes(`page:'${file}', game:'${game}', resume:'${resume}', howto:'${howto}'`));
+assert.match(browserHarness, /name:'Desktop', width:1440, height:900/);
+assert.match(browserHarness, /name:'Portrait', width:390, height:844/);
+assert.match(browserHarness, /name:'Landscape', width:844, height:390/);
+for (const [file, game, resume, howto, resumeId] of pages.concat([['lego.html', 'lego', '#lego-resume-banner', '#lego-howto-modal', 'lego']])) {
+  assert.ok(browserHarness.includes(`page:'${file}', game:'${game}', resume:'${resume}', howto:'${howto}', resumeId:'${resumeId}'`));
 }
 assert.match(browserHarness, /load\(config, 8300\)/);
 assert.match(browserHarness, /tour stays hidden while Resume owns the screen/);
 assert.match(browserHarness, /automatic tour does not overlap manual 玩法/);
+assert.match(browserHarness, /existing Guest Resume suppresses automatic tutorial and migrates seen state/);
 const listeningHarness = fs.readFileSync(path.join(root, 'scripts/browser-tests/listening-off-consistency.html'), 'utf8');
 assert.match(listeningHarness, /width:844px; height:390px/);
 assert.match(listeningHarness, /\.mrt-login-howto,#lg-howto-btn,#lg-howto-modal/);
@@ -143,5 +186,7 @@ assert.match(completionHarness, /name:'Desktop', width:1440, height:900/);
 assert.match(completionHarness, /name:'Portrait', width:390, height:844/);
 assert.match(completionHarness, /name:'Landscape', width:844, height:390/);
 assert.match(completionHarness, /entry\/answer\/skip\/next\/Result\/replay/);
+assert.match(completionHarness, /Typing complete Thai input Next/);
+assert.match(completionHarness, /Typing Enter advances to next question/);
 
-console.log('✅ game tutorial lifecycle passed: cold load, Resume retry, manual-help exclusion, five games, Listening OFF');
+console.log('✅ game tutorial lifecycle passed: cold load, Resume retry, Guest-state migration, manual-help exclusion, five games, Listening OFF');

@@ -2261,7 +2261,7 @@ document.addEventListener('contextmenu', function(e){
 <script src="js/games/practice-events.js?v=3"></script>
 <script src="js/games/game-flow.js?v=13"></script>
 <script src="js/core/mobile-landscape.js?v=42"></script>
-<script src="js/games/game-tutorial-lifecycle.js?v=1"></script>
+<script src="js/games/game-tutorial-lifecycle.js?v=2"></script>
 <script>
 // ── GA4 Extra Events: tone-finder.html ──────────────────────────────
 // (tone_finder_start / complete / answer_correct / answer_wrong ติดอยู่แล้วในโค้ดเกม)
@@ -2410,6 +2410,7 @@ document.addEventListener('keydown',function(e){
 // รอแบบ event-driven จนโจทย์พร้อม และไม่เปิดทับ Resume/玩法 ที่ผู้ใช้กำลังตัดสินใจ
 GameTutorialLifecycle.schedule({
   seenKey:'howto_tour_seen_tone',
+  hasPriorUse:function(){ try{return !!localStorage.getItem('gsh_resume_tone-finder');}catch(e){return false;} },
   blockers:['#tf-resume-banner','#tf-howto-modal'],
   ready:function(){
     var banner=document.getElementById('tf-banner');

@@ -137,6 +137,25 @@
       await waitFor(function () { return shown(view.win, view.doc.getElementById('game')); }, game + ' replay');
     }
 
+    async function finishTyping(view) {
+      var target = view.win.RG_TYPE && view.win.RG_TYPE.target;
+      assert(target && typeof view.win.rgTypeChar === 'function', 'Typing Thai input target unavailable');
+      assert(view.win.correctVal && view.win.correctVal.vowel, 'Typing canonical vowel unavailable');
+      Array.from(target).forEach(function (character) { view.win.rgTypeChar(character); });
+      await waitFor(function () { return shown(view.win, view.doc.getElementById('btn-next')); }, 'Typing complete Thai input Next');
+      view.doc.dispatchEvent(new view.win.KeyboardEvent('keydown', {key:'Enter', code:'Enter', bubbles:true}));
+      await waitFor(function () { return !view.win.checked; }, 'Typing Enter advances to next question');
+      for (var count = 0; count < 12 && !shown(view.win, view.doc.getElementById('end')); count += 1) {
+        view.win.skipWord();
+        await wait(50);
+      }
+      assert(shown(view.win, view.doc.getElementById('end')), 'Typing Result missing');
+      var replay = view.doc.querySelector('[data-game-result-replay="v1"]');
+      assert(replay && shown(view.win, replay), 'Typing replay missing');
+      replay.click();
+      await waitFor(function () { return shown(view.win, view.doc.getElementById('game')); }, 'Typing replay');
+    }
+
     async function finishWordOrder(view) {
       var wordCount = view.doc.querySelectorAll('#wo-slots .wo-slot').length;
       assert(wordCount > 1, 'Word Order answer slots unavailable');
@@ -191,7 +210,8 @@
     async function complete(config, mode) {
       var view = await load(config, mode);
       if (config.game === 'tone') await finishTone(view);
-      else if (config.game === 'reading' || config.game === 'typing') await finishPhonics(view, config.game);
+      else if (config.game === 'reading') await finishPhonics(view, config.game);
+      else if (config.game === 'typing') await finishTyping(view);
       else if (config.game === 'wordorder') await finishWordOrder(view);
       else await finishLego(view);
       assert((view.win.__fullTestErrors || []).length === 0, config.page + ' runtime errors: ' + JSON.stringify(view.win.__fullTestErrors || []));

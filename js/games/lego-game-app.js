@@ -1701,6 +1701,7 @@ function gtTourStart(){
 // รอแบบ event-driven จนเกมพร้อม และไม่เปิดทับ Resume/玩法 ที่ผู้ใช้กำลังตัดสินใจ
 GameTutorialLifecycle.schedule({
   seenKey:'howto_tour_seen_lego',
+  hasPriorUse:function(){ return window.__legoHadGuestResumeAtLoad===true; },
   blockers:['#lego-resume-banner','#lego-howto-modal'],
   ready:function(){
     return !!(document.querySelector('.slot[data-id]') && document.querySelector('.out-banner') && document.querySelector('button[onclick="legoCompleteSentence()"]') && document.querySelector('button[onclick="legoEndGame()"]'));

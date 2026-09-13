@@ -533,7 +533,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
 <script src="js/games/practice-events.js?v=3"></script>
 <script src="js/games/game-flow.js?v=13"></script>
 <script src="js/core/mobile-landscape.js?v=42"></script>
-<script src="js/games/game-tutorial-lifecycle.js?v=1"></script>
+<script src="js/games/game-tutorial-lifecycle.js?v=2"></script>
 
 <div id="gt-tour-overlay">
   <div id="gt-tour-spot"></div>
@@ -661,6 +661,7 @@ function gtTourStart(){
 // รอแบบ event-driven จนโจทย์พร้อม และไม่เปิดทับ Resume/玩法 ที่ผู้ใช้กำลังตัดสินใจ
 GameTutorialLifecycle.schedule({
   seenKey:'howto_tour_seen_wordorder',
+  hasPriorUse:function(){ try{return !!localStorage.getItem('gsh_resume_word-order');}catch(e){return false;} },
   blockers:['#wo-resume-banner','#wo-howto-modal'],
   ready:function(){
     var slots=document.getElementById('wo-slots');

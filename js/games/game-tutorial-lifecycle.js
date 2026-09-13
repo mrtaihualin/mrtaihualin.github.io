@@ -25,6 +25,7 @@
     var timer = null;
     var stopped = false;
     var observer = null;
+    var hadPriorUse = hasPriorUse();
 
     function clearPendingStart() {
       if (timer !== null) {
@@ -39,6 +40,18 @@
       });
     }
 
+    function hasPriorUse() {
+      if (typeof options.hasPriorUse !== 'function') return false;
+      try { return !!options.hasPriorUse(); } catch (ignore) { return false; }
+    }
+
+    function migratePriorUse() {
+      if (!hadPriorUse) return false;
+      storageMark(options.seenKey);
+      cancel();
+      return true;
+    }
+
     function cancel() {
       if (stopped) return;
       stopped = true;
@@ -51,6 +64,7 @@
 
     function startIfStillSafe() {
       timer = null;
+      if (migratePriorUse()) return;
       if (stopped || storageHas(options.seenKey) || blocked() || !options.ready()) {
         check();
         return;
@@ -62,6 +76,7 @@
 
     function check() {
       if (stopped) return;
+      if (migratePriorUse()) return;
       if (storageHas(options.seenKey)) {
         cancel();
         return;

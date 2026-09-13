@@ -9,7 +9,7 @@
     h1 { margin:0 0 8px; font-size:20px; }
     #status { font-weight:800; }
     #results { white-space:pre-wrap; background:#fff; border:1px solid #d4b87a; border-radius:10px; padding:12px; }
-    iframe { position:absolute; left:-10000px; top:0; width:844px; height:390px; border:0; }
+    iframe { position:absolute; left:-10000px; top:0; border:0; }
   </style>
 </head>
 <body>
@@ -21,11 +21,16 @@
   (function () {
     'use strict';
     var configs = [
-      {page:'tone-finder.html', game:'tone', resume:'#tf-resume-banner', howto:'#tf-howto-modal'},
-      {page:'typing-game.html', game:'typing', resume:'#tg-resume-banner', howto:'#rg-howto-modal'},
-      {page:'reading-game.html', game:'reading', resume:'#rg-resume-banner', howto:'#rg-howto-modal'},
-      {page:'word-order.html', game:'wordorder', resume:'#wo-resume-banner', howto:'#wo-howto-modal'},
-      {page:'lego.html', game:'lego', resume:'#lego-resume-banner', howto:'#lego-howto-modal'}
+      {page:'tone-finder.html', game:'tone', resume:'#tf-resume-banner', howto:'#tf-howto-modal', resumeId:'tone-finder', howtoBtn:'tf-howto-btn'},
+      {page:'typing-game.html', game:'typing', resume:'#tg-resume-banner', howto:'#rg-howto-modal', resumeId:'typing-game', howtoBtn:'rg-howto-btn'},
+      {page:'reading-game.html', game:'reading', resume:'#rg-resume-banner', howto:'#rg-howto-modal', resumeId:'reading-game', howtoBtn:'rg-howto-btn'},
+      {page:'word-order.html', game:'wordorder', resume:'#wo-resume-banner', howto:'#wo-howto-modal', resumeId:'word-order', howtoBtn:'wo-howto-btn'},
+      {page:'lego.html', game:'lego', resume:'#lego-resume-banner', howto:'#lego-howto-modal', resumeId:'lego', howtoBtn:'lego-howto-btn'}
+    ];
+    var modes = [
+      {name:'Desktop', width:1440, height:900},
+      {name:'Portrait', width:390, height:844},
+      {name:'Landscape', width:844, height:390}
     ];
     var requestedGame = new URLSearchParams(location.search).get('game');
     if (requestedGame) configs = configs.filter(function (config) { return config.game === requestedGame; });
@@ -68,17 +73,20 @@
       return doc.querySelector('.slot[data-id]') && doc.querySelector('.out-banner');
     }
 
-    function earlyOverride(config) {
-      return '<script>(function(){window.__tutorialTestErrors=[];window.addEventListener("error",function(event){window.__tutorialTestErrors.push(String(event.message||event.error||"runtime error"));},true);try{localStorage.clear();sessionStorage.clear();localStorage.setItem("cookieConsent","denied");}catch(e){}})();<\/script>';
+    function earlyOverride(config, priorUse) {
+      return '<script>(function(){window.__tutorialTestErrors=[];window.addEventListener("error",function(event){window.__tutorialTestErrors.push(String(event.message||event.error||"runtime error"));},true);try{localStorage.clear();sessionStorage.clear();localStorage.setItem("cookieConsent","denied");' + (priorUse ? 'localStorage.setItem("gsh_resume_' + config.resumeId + '","{\\"legacy\\":true}");' : '') + '}catch(e){}})();<\/script>';
     }
     function contentOverride(delay) {
       return '<script>(function(){var keys=' + JSON.stringify(wordKeys) + ';window.GameContentLoader.boot=function(srcs){var chain=new Promise(function(resolve){if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",resolve,{once:true});else resolve();}).then(function(){return new Promise(function(resolve){setTimeout(resolve,' + delay + ');});}).then(function(){return fetch("data/approved-vocabulary-catalog.json",{cache:"no-store"}).then(function(res){if(!res.ok)throw new Error("canonical fixture unavailable");return res.json();}).then(function(catalog){window.WORDS_MASTER=keys.map(function(key){var record=catalog.records.find(function(row){return row.contentKey===key;});if(!record)throw new Error("canonical fixture missing: "+key);return {catalog:record};});});}).then(function(){return new Promise(function(resolve,reject){var script=document.createElement("script");script.src=["data/adv-sentences.js","v=2"].join("?");script.onload=resolve;script.onerror=reject;document.head.appendChild(script);});}).then(function(){if(window.GameResume&&typeof window.GameResume.load==="function")window.GameResume.load=function(){return null;};});(srcs||[]).forEach(function(src){chain=chain.then(function(){return new Promise(function(resolve,reject){var script=document.createElement("script");script.src=src;script.onload=resolve;script.onerror=reject;document.head.appendChild(script);});});});return chain;};})();<\/script>';
     }
-    async function load(config, delay) {
+    async function load(config, delay, mode, priorUse) {
+      mode = mode || modes[2];
+      frame.style.width = mode.width + 'px';
+      frame.style.height = mode.height + 'px';
       var response = await fetch('../../' + config.page + '?tutorial-lifecycle=' + Date.now(), {cache:'no-store'});
       if (!response.ok) throw new Error(config.page + ' source load failed');
       var html = await response.text();
-      html = html.replace('<head>', '<head><base href="' + new URL('../../', location.href).href + '">' + earlyOverride(config));
+      html = html.replace('<head>', '<head><base href="' + new URL('../../', location.href).href + '">' + earlyOverride(config, priorUse));
       html = html.replace(/game-content-client\.js\?v=\d+"><\/script>/, function (tag) { return tag + contentOverride(delay || 0); });
       await new Promise(function (resolve, reject) {
         var timer = setTimeout(function () { reject(new Error(config.page + ' iframe load timeout')); }, 25000);
@@ -142,11 +150,29 @@
       view.win.gtTourEnd();
     }
 
+    async function priorGuestUseMigration(config, mode) {
+      var view = await load(config, 0, mode, true);
+      var tour = view.doc.getElementById('gt-tour-card');
+      var howto = view.doc.querySelector(config.howto);
+      var howtoBtn = view.doc.getElementById(config.howtoBtn);
+      await wait(850);
+      assert(!shown(view.win, tour) && view.win.localStorage.getItem('howto_tour_seen_' + config.game) === '1', config.page + ' — ' + mode.name + ' — existing Guest Resume suppresses automatic tutorial and migrates seen state');
+      assert(howtoBtn && howto, config.page + ' — ' + mode.name + ' — manual 玩法 remains available after migration');
+      howtoBtn.click();
+      await waitFor(function () { return shown(view.win, howto); }, config.page + ' manual 玩法 after migration', 2500);
+      howto.style.display = 'none';
+    }
+
     (async function () {
       try {
         if (!requestedGame || requestedGame === 'tone') await coldLoadTone();
         for (var index = 0; index < configs.length; index += 1) await resumeLifecycle(configs[index]);
         if (!requestedGame || requestedGame === 'lego') await legoManualHelp();
+        for (var configIndex = 0; configIndex < configs.length; configIndex += 1) {
+          for (var modeIndex = 0; modeIndex < modes.length; modeIndex += 1) {
+            await priorGuestUseMigration(configs[configIndex], modes[modeIndex]);
+          }
+        }
         status.textContent = 'PASS ' + lines.length + '/' + lines.length + ' checks';
         status.dataset.result = 'pass';
         document.title = 'PASS — Game tutorial lifecycle regression';
