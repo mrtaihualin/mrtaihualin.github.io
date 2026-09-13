@@ -88,6 +88,13 @@ function getSlotOrder(){
   return['cons','vowel','final','tone'];
 }
 function reviewedPresent(value){return value!==undefined&&value!==null&&value!==''&&value!=='ไม่มี';}
+function reviewedReadingAnswer(written,readDifference,field){
+  if(!reviewedPresent(written))throw new Error('CATALOG_AUTHORITY_INCOMPLETE:reading '+field+' written answer');
+  if(!reviewedPresent(readDifference))return written;
+  var parts=String(readDifference).split(' > ');
+  if(parts.length!==2||parts[0]!==written||!reviewedPresent(parts[1]))throw new Error('CATALOG_AUTHORITY_INCOMPLETE:reading '+field+' pronunciation answer');
+  return parts[1];
+}
 
 // ════════════════════════════════════════════
 // PHONETIC MAPS
@@ -984,9 +991,9 @@ function loadSyl(){
   // รอบ 1: หาคำตอบจริงของทุกช่องก่อน (correctVal) — ต้องรู้ครบก่อนถึงจะกันตัวลวงปลอมไม่ให้ไปซ้ำหน้าตากับคำตอบจริงช่องอื่นได้
   comps.forEach(function(comp){
     var ans,groups,pool2,ex=null;
-    if     (comp==='cons' ){ans=W.cons;  groups=CONS_GROUPS;  pool2=CP; ex=reviewedPresent(W.lead)?W.lead:null;}
+    if     (comp==='cons' ){ans=reviewedReadingAnswer(W.cons,W.consRead,'consonant'); groups=CONS_GROUPS; pool2=CP; ex=reviewedPresent(W.lead)?W.lead:null;}
     else if(comp==='vowel'){ans=W.vowel; groups=VOWEL_GROUPS; pool2=VP;}
-    else if(comp==='final'){ans=W.final; groups=FINAL_GROUPS; pool2=FP;}
+    else if(comp==='final'){ans=reviewedReadingAnswer(W.final,W.finalRead,'final'); groups=FINAL_GROUPS; pool2=FP;}
     else                   {ans=W.tone;  groups=[TONE_POOL];  pool2=TONE_POOL;}
     compDef[comp]={ans:ans,groups:groups,pool2:pool2,ex:ex};
     correctVal[comp]=dispOpt(comp,ans);

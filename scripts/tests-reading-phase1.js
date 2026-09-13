@@ -117,7 +117,7 @@ test('Reading keeps reviewed syllable authority through the live answer object',
 });
 
 test('Reading loads the rebuilt crash-safe bundle with a fresh cache key', () => {
-  assert.match(html, /reading-game-app\.min\.js\?v=57/);
+  assert.match(html, /reading-game-app\.min\.js\?v=58/);
 });
 
 test('Reading keeps scattered choices collision-safe and tone boxes proportional', () => {
@@ -151,6 +151,28 @@ test('every Reading syllable uses the locked consonant-vowel-final-tone slot ord
   vm.createContext(context);
   vm.runInContext(slotOrder, context);
   assert.deepStrictEqual(Array.from(context.getSlotOrder()), ['cons', 'vowel', 'final', 'tone']);
+});
+
+test('Reading correct answers use Lin-reviewed pronunciation differences only where present', () => {
+  const helper = block('function reviewedPresent(value)', '// ════════════════════════════════════════════\n// PHONETIC MAPS');
+  const context = {};
+  vm.createContext(context);
+  vm.runInContext(helper, context);
+
+  assert.strictEqual(context.reviewedReadingAnswer('ภ', 'ภ > พ', 'consonant'), 'พ');
+  assert.strictEqual(context.reviewedReadingAnswer('ศ', 'ศ > ส', 'consonant'), 'ส');
+  assert.strictEqual(context.reviewedReadingAnswer('พ', 'พ > บ', 'final'), 'บ');
+  assert.strictEqual(context.reviewedReadingAnswer('ก', 'ไม่มี', 'consonant'), 'ก');
+  assert.strictEqual(context.reviewedReadingAnswer('ม', 'ไม่มี', 'final'), 'ม');
+  assert.throws(
+    () => context.reviewedReadingAnswer('ภ', 'ศ > ส', 'consonant'),
+    /CATALOG_AUTHORITY_INCOMPLETE:reading consonant pronunciation answer/
+  );
+
+  const answerSelection = block('// รอบ 1: หาคำตอบจริงของทุกช่องก่อน', '// รอบ 2: สร้างตัวเลือกจริงจริง');
+  assert.match(answerSelection, /comp==='cons'[\s\S]*reviewedReadingAnswer\(W\.cons,W\.consRead,'consonant'\)/);
+  assert.match(answerSelection, /comp==='final'[\s\S]*reviewedReadingAnswer\(W\.final,W\.finalRead,'final'\)/);
+  assert.match(answerSelection, /comp==='vowel'\)\{ans=W\.vowel;/, 'vowel answer must remain unchanged');
 });
 
 test('Hint immediately refreshes the permanently zero word-score HUD', () => {
