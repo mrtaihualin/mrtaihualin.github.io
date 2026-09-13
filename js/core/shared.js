@@ -1260,7 +1260,7 @@ if (typeof openYTVideoModal === 'undefined') {
 // ----- [03.3] 🚀 FB Posts Modal -----
 if (typeof openFBPostModal === 'undefined') {
   var _fbDetailPostId = null;
-  var SITE_URL = 'https://mrtaihualin.com';
+  var SITE_URL = 'https://www.mrtaihualin.com';
 
   window.openFBPostModal = function() { openModal('modal-fbposts'); showFBList(); };
 
@@ -1459,11 +1459,11 @@ if (typeof openSSModal === 'undefined') {
 if (typeof openSharePopup === 'undefined') {
   // 2026-08-08: openSharePopup 新增第 3 個參數 url（選填）— 沒有傳就跟以前一樣用 SITE_URL 首頁
   //   讓文章分享用得到「這篇文章自己的網址」，同時舊的呼叫方式（只傳 title/preview）完全不受影響
-  window._shareCurrentUrl = window.SITE_URL || 'https://mrtaihualin.com';
+  window._shareCurrentUrl = window.SITE_URL || 'https://www.mrtaihualin.com';
   window._shareCurrentTitle = '';
 
   window.openSharePopup = function(title, preview, url) {
-    var articleUrl = url || window.SITE_URL || 'https://mrtaihualin.com';
+    var articleUrl = url || window.SITE_URL || 'https://www.mrtaihualin.com';
     window._shareCurrentUrl = articleUrl;
     window._shareCurrentTitle = title || '';
     var text = '我在「泰華眼裡的泰語教學」發現了一個很實用的泰語學習資源！\n\n'
@@ -1497,11 +1497,11 @@ if (typeof openSharePopup === 'undefined') {
 
   // 分享 popup 裡的 Facebook / LINE 快捷鍵 — 直接開該平台官方分享網址，帶目前分享的文章連結
   window.shareToFB = function() {
-    var u = encodeURIComponent(window._shareCurrentUrl || window.SITE_URL || 'https://mrtaihualin.com');
+    var u = encodeURIComponent(window._shareCurrentUrl || window.SITE_URL || 'https://www.mrtaihualin.com');
     window.open('https://www.facebook.com/sharer/sharer.php?u=' + u, '_blank', 'noopener');
   };
   window.shareToLine = function() {
-    var u = encodeURIComponent(window._shareCurrentUrl || window.SITE_URL || 'https://mrtaihualin.com');
+    var u = encodeURIComponent(window._shareCurrentUrl || window.SITE_URL || 'https://www.mrtaihualin.com');
     var t = encodeURIComponent(window._shareCurrentTitle || '');
     window.open('https://social-plugins.line.me/lineit/share?url=' + u + '&text=' + t, '_blank', 'noopener');
   };

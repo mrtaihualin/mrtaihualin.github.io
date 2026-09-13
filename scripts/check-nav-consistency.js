@@ -142,7 +142,7 @@ SCOPE_PAGES.forEach((file) => {
     if (annMatch || /ANN-BAND|ann-band|avail-band|annDismissed|annGoTo|annPrev|annNext/.test(text)) {
       mismatches.push({ file, kind: 'game announcement code ยังค้าง', detail: 'เกมต้องไม่มี DOM/marker/script/style hook ของ announcement' });
     }
-    const expectedSharedVersion = MOBILE_LANDSCAPE_ACTIVE_PAGES.has(file) ? 51 : 47;
+    const expectedSharedVersion = 52;
     if (!new RegExp('js/core/shared\\.min\\.js\\?v=' + expectedSharedVersion).test(text)) {
       mismatches.push({ file, kind: 'game shared runtime cache ไม่ตรง', detail: 'ต้องใช้ shared.min.js?v=' + expectedSharedVersion });
     }
@@ -153,8 +153,8 @@ SCOPE_PAGES.forEach((file) => {
     } else if (annMatch[0] !== expectedAnn) {
       mismatches.push({ file, kind: 'ann-band เนื้อหาไม่ตรง', detail: '' });
     }
-    if (file === 'vault.html' && !/js\/core\/shared\.min\.js\?v=47/.test(text)) {
-      mismatches.push({ file, kind: 'Vault shared runtime cache ไม่ตรง', detail: 'ต้องใช้ shared.min.js?v=47 เพื่อไม่คืนปุ่ม 🍚 เก่า' });
+    if (file === 'vault.html' && !/js\/core\/shared\.min\.js\?v=52/.test(text)) {
+      mismatches.push({ file, kind: 'Vault shared runtime cache ไม่ตรง', detail: 'ต้องใช้ shared.min.js?v=52 เพื่อไม่คืนปุ่ม 🍚 เก่า' });
     }
   }
 

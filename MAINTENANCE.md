@@ -1,5 +1,11 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-09-13 — WWW canonical static-source candidate (`SOURCE_PASS / PREVIEW_PENDING / PRODUCTION_UNCHANGED`)
+
+- Migrated the public canonical surface from the apex host to `www.mrtaihualin.com`: 68 canonical tags, all 66 sitemap URLs, the robots sitemap directive, structured/social metadata, hard-coded public links, shared social-share fallbacks and Classroom-generated website links now use the WWW host. Public HTML URLs and page behavior are unchanged.
+- Rebuilt only `shared.min.js`, advanced its cache binding to `v52` across the existing 76 consumers, and updated the existing navigation/version owners and regressions. The SEO/sitemap gate now blocks reintroduced apex absolute URLs on shipped non-development pages and canonical-link runtimes, and validates the robots sitemap host.
+- Cookie consent remains owned by the existing `.mrtaihualin.com` parent-domain persistence path; compact coverage passes all 108 public pages, Vault passes 8 checks, consent coverage passes 86 analytics pages plus Vault, and the complete 1,094-file site gate passes. Cloudflare redirect/traffic, DNS, Supabase/Auth/Edge configuration, accounts and application data remain unchanged; WWW origin compatibility and the apex-to-WWW redirect still require their separate exact Production gate before release.
+
 ## 2026-09-13 — Guest Resume tutorial-state migration (`SOURCE_PASS / LOCAL_BROWSER_PASS / PREVIEW_REFRESH_PENDING / PRODUCTION_UNCHANGED`)
 
 - The five active games now treat Guest gameplay state that already existed at page entry as prior use: they migrate that game's tutorial-seen marker and do not auto-open the tour. A Resume created by the current fresh round does not suppress the first-use tour, and the manual `玩法` path remains available.

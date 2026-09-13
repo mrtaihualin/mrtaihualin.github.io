@@ -132,11 +132,7 @@ PAGES.forEach(function (file) {
   next = next.replace(/data\/nav-template\.js\?v=\d+/g, 'data/nav-template.js?v=4');
   next = next.replace(
     /js\/core\/shared\.min\.js\?v=\d+/g,
-    MOBILE_LANDSCAPE_ACTIVE_PAGES.has(file)
-      ? 'js/core/shared.min.js?v=51'
-      : (GAME_PAGES.has(file) || file === 'vault.html'
-      ? 'js/core/shared.min.js?v=47'
-      : (NO_ANNOUNCEMENT_PAGES.has(file) ? 'js/core/shared.min.js?v=45' : 'js/core/shared.min.js?v=42'))
+    'js/core/shared.min.js?v=52'
   );
   next = next.replace(
     /js\/core\/minimum-guest-launch\.js\?v=\d+/g,
