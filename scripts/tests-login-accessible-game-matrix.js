@@ -64,8 +64,8 @@ for (const item of tiered) {
   const html = read(item.page);
   const app = read(item.app);
   assert.match(html, new RegExp(`data-gsh-game=["']${item.game === 'word_order' ? 'word-order' : item.game}["']`), item.page + ': visible game shell');
-  assert.match(html, /js\/core\/minimum-guest-launch\.js\?v=24/, item.page + ': launch gate');
-  assert.match(html, /js\/core\/auth-widget\.js\?v=23/, item.page + ': auth restoration owner');
+  assert.match(html, /js\/core\/minimum-guest-launch\.js\?v=25/, item.page + ': launch gate');
+  assert.match(html, /js\/core\/auth-widget\.js\?v=24/, item.page + ': auth restoration owner');
   assert.match(html, /js\/games\/game-content-client\.js\?v=\d+/, item.page + ': tiered content/error owner');
   assert.match(html, /js\/games\/learning-review\.js\?v=7/, item.page + ': Review owner');
   assert.match(html, /js\/games\/tone-server\.js\?v=6/, item.page + ': SRS owner');

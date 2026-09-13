@@ -24,7 +24,7 @@ function ok(value, message) {
 
 activePages.concat(['vault.html', 'games-challenge.html']).forEach(function (file) {
   var html = read(file);
-  var binding = 'js/core/minimum-guest-launch.js?v=24';
+  var binding = 'js/core/minimum-guest-launch.js?v=25';
   ok(html.indexOf(binding) !== -1, file + ' loads the current Login-entry launch gate');
   ok(html.indexOf(binding) < html.indexOf('</head>'), file + ' loads the launch gate in head');
 });
@@ -38,7 +38,7 @@ ok(gate.indexOf('LOGIN_FREE_SRS_PUBLIC_ENTRY = loginFreeLearningGame') !== -1,
 ok(gate.indexOf('LOGIN_FREE_REVIEW_PUBLIC_ENTRY = loginFreeLearningGame') !== -1,
   'Login Free Review entry is scoped to the approved game allow-list');
 ok(gate.indexOf('LOGIN_FREE_ACCOUNT_PUBLIC_ENTRY = true') !== -1, 'Login Free account entry flag is explicit');
-ok(gate.indexOf("login-surface.js?v=15") !== -1, 'Login surface cache key activates the account-aware client');
+ok(gate.indexOf("login-surface.js?v=16") !== -1, 'Login surface cache key activates the account-aware client');
 ok(gate.indexOf("login-surface.css?v=15") !== -1, 'Login surface stylesheet cache key activates the account-menu visual system');
 ok(gate.indexOf("repeat(5,minmax(0,1fr))") !== -1 && gate.indexOf('@media(max-width:959px)') !== -1,
   'Game Hub keeps five equal desktop destinations and a two-column compact layout');

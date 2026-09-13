@@ -1003,6 +1003,40 @@
 
   if (window.addEventListener) window.addEventListener('phase1-gamification-status', paintAccountStreaks);
 
+  var accountOverflowPromise = null;
+  function accountOverflowReady() {
+    if (window.AccountToolbarOverflow) return Promise.resolve(window.AccountToolbarOverflow);
+    if (accountOverflowPromise) return accountOverflowPromise;
+    accountOverflowPromise = new Promise(function (resolve, reject) {
+      var src = 'js/core/account-toolbar-overflow.js?v=1';
+      var script = Array.prototype.find.call(document.scripts, function (node) {
+        return String(node.src || '').indexOf('js/core/account-toolbar-overflow.js') !== -1;
+      });
+      function ready() {
+        if (window.AccountToolbarOverflow) resolve(window.AccountToolbarOverflow);
+        else reject(new Error('account toolbar overflow unavailable'));
+      }
+      if (script) {
+        script.addEventListener('load', ready, { once: true });
+        script.addEventListener('error', reject, { once: true });
+        window.setTimeout(ready, 1500);
+        return;
+      }
+      script = document.createElement('script');
+      script.src = src;
+      script.onload = ready;
+      script.onerror = reject;
+      document.head.appendChild(script);
+    }).catch(function () { return null; });
+    return accountOverflowPromise;
+  }
+
+  function destroyAccountOverflow(el) {
+    if (el && el.__mrtAccountOverflow && typeof el.__mrtAccountOverflow.destroy === 'function') {
+      el.__mrtAccountOverflow.destroy();
+    }
+  }
+
   // ── badge ต่อหน้า: แต่ละหน้าเรียก renderBadge(containerId, opts) ครั้งเดียวตอน init ──
   //    ระบบสร้าง <span id="sa-badge-<containerId>"> เป็นลูกของ container นั้น แล้วคุมแค่ตัวเอง
   //    ไม่แตะ children อื่นของ container (กันไปลบปุ่ม/element อื่นที่หน้านั้นวางไว้ในสล็อตเดียวกัน)
@@ -1022,6 +1056,7 @@
     var el = document.getElementById(badgeId);
 
     if (API.authError) {
+      destroyAccountOverflow(el);
       if (!el) { el = document.createElement('span'); el.id = badgeId; host.appendChild(el); }
       el.style.display = 'inline-flex'; el.setAttribute('role', 'status');
       el.innerHTML = '<span style="color:#78350f;background:#fff3d8;border:1px solid #C8973A;border-radius:12px;padding:7px 10px;font:700 12px Noto Sans TC,sans-serif;">登入狀態暫時無法確認，可先使用訪客模式。 <button type="button" class="sa-auth-retry" style="border:1px solid #8B6310;border-radius:999px;background:#fff;color:#8B6310;padding:4px 9px;cursor:pointer;font:inherit;">重新載入</button></span>';
@@ -1030,6 +1065,7 @@
     }
 
     if (!API.user) {
+      destroyAccountOverflow(el);
       if (el) { el.style.display = 'none'; el.innerHTML = ''; }
       return;
     }
@@ -1069,6 +1105,7 @@
       '</form>' +
       '<div class="sa-global-search-results" aria-live="polite" hidden></div>';
 
+    destroyAccountOverflow(el);
     el.style.display = anyModalOpen() ? 'none' : 'inline-flex';
     el.innerHTML =
       '<div class="sa-account-bar" role="group" aria-label="帳號選單" style="display:flex;align-items:center;gap:7px;background:#fff;' +
@@ -1093,8 +1130,10 @@
     var searchInput = el.querySelector('.sa-global-search-input');
     var searchSubmit = el.querySelector('.sa-global-search-submit');
     var searchResults = el.querySelector('.sa-global-search-results');
+    var overflowController = null;
     function setSearchOpen(open) {
       if (!searchToggle || !searchForm) return;
+      if (open && overflowController) overflowController.close(false);
       searchForm.hidden = !open;
       if (searchResults) searchResults.hidden = !open;
       searchToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
@@ -1119,6 +1158,10 @@
     if (searchInput) searchInput.onkeydown = function (event) {
       if (event.key === 'Escape') { event.preventDefault(); setSearchOpen(false); searchToggle.focus(); }
     };
+    accountOverflowReady().then(function (overflow) {
+      if (!overflow || !el.isConnected || !el.querySelector('.sa-account-bar')) return;
+      overflowController = overflow.setup(el, { closeSearch: function () { setSearchOpen(false); } });
+    });
     refreshAccountStreak();
   }
 

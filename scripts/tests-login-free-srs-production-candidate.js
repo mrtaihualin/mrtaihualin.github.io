@@ -24,7 +24,7 @@ check(/runtimeMode: 'login-free'/.test(config), 'Login Free content entitlement 
 var pages = ['tone-finder.html', 'reading-game.html', 'typing-game.html', 'word-order.html'];
 pages.forEach(function (file) {
   var html = read(file);
-  check(html.indexOf('js/core/minimum-guest-launch.js?v=24') !== -1, file + ' fetches the current Login Free launch gate');
+  check(html.indexOf('js/core/minimum-guest-launch.js?v=25') !== -1, file + ' fetches the current Login Free launch gate');
   check(html.indexOf('js/core/supabase-config.js?v=11') !== -1, file + ' fetches the Login Free content-tier config');
   check(html.indexOf('js/games/tone-server.js?v=6') !== -1, file + ' loads the authenticated SRS transport');
   check(html.indexOf('game-account.js?v=6') !== -1, file + ' activates the server-authoritative Free account facade');
@@ -44,7 +44,7 @@ check(read('classroom/index.html').indexOf('../js/core/supabase-config.js?v=11')
 check(read('js/core/login-surface.js').indexOf('js/core/supabase-config.js?v=11') !== -1,
   'dynamically loaded account surfaces use the current config cache key');
 check(read('lego.html').indexOf('tone-server.js') === -1, 'Lego receives no SRS runtime');
-check(read('js/core/minimum-guest-launch.js').indexOf('login-surface.js?v=15') !== -1, 'SRS pages fetch the account-aware Login surface');
+check(read('js/core/minimum-guest-launch.js').indexOf('login-surface.js?v=16') !== -1, 'SRS pages fetch the account-aware Login surface');
 check(read('js/core/login-surface.js').indexOf('reading-auth.js?v=34') !== -1, 'Login surface fetches the account-aware auth client');
 check(read('reading-game.html').indexOf('reading-auth.js?v=34') !== -1, 'Reading direct provider flow fetches the account-aware auth client');
 check(read('tone-finder.html').indexOf('tone-finder-game.min.js?v=86') !== -1, 'Tone fetches the current game runtime');
