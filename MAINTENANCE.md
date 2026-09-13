@@ -1,10 +1,11 @@
 # ประวัติงานดูแลเว็บ
 
-## 2026-09-13 — WWW canonical static-source candidate (`SOURCE_PASS / PREVIEW_PENDING / PRODUCTION_UNCHANGED`)
+## 2026-09-13 — WWW canonical static-source candidate (`SOURCE_PASS / PREVIEW_PASS / PRODUCTION_UNCHANGED`)
 
 - Migrated the public canonical surface from the apex host to `www.mrtaihualin.com`: 68 canonical tags, all 66 sitemap URLs, the robots sitemap directive, structured/social metadata, hard-coded public links, shared social-share fallbacks and Classroom-generated website links now use the WWW host. Public HTML URLs and page behavior are unchanged.
 - Rebuilt only `shared.min.js`, advanced its cache binding to `v52` across the existing 76 consumers, and updated the existing navigation/version owners and regressions. The SEO/sitemap gate now blocks reintroduced apex absolute URLs on shipped non-development pages and canonical-link runtimes, and validates the robots sitemap host.
 - Cookie consent remains owned by the existing `.mrtaihualin.com` parent-domain persistence path; compact coverage passes all 108 public pages, Vault passes 8 checks, consent coverage passes 86 analytics pages plus Vault, and the complete 1,094-file site gate passes. Cloudflare redirect/traffic, DNS, Supabase/Auth/Edge configuration, accounts and application data remain unchanged; WWW origin compatibility and the apex-to-WWW redirect still require their separate exact Production gate before release.
+- Draft Preview `6aa6afa4aebd836dbcd67332` on the non-Production Netlify test site serves only the 759-file public runtime package; repository docs, scripts, Supabase sources, internal task files and denied legacy content are absent. Remote HTTP checks returned `200` for the site and `404` for excluded script, Supabase and restricted-data probes, with `X-Robots-Tag: noindex`. Browser checks passed WWW canonical/`og:url`, `shared.min.js?v=52`, no horizontal overflow, and Cookie rejection persistence across reload; the Preview does not alter the Production alias.
 
 ## 2026-09-13 — Guest Resume tutorial-state migration (`SOURCE_PASS / LOCAL_BROWSER_PASS / PREVIEW_REFRESH_PENDING / PRODUCTION_UNCHANGED`)
 
