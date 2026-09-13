@@ -1,5 +1,11 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-09-13 — Reading High feedback and Typing Thai-composition layout repair (`SOURCE_PASS / LOCAL_BROWSER_PASS / HUMAN_PREVIEW_PENDING / PRODUCTION_UNCHANGED`)
+
+- The protected-content client now gives each already-reviewed sentence syllable a presentation-only catalog alias copied field-for-field from the sentence record. Reading High can therefore render its existing answer explanation without weakening the word-catalog fail-closed boundary or calculating any Thai-language value.
+- Typing at touch Phone Landscape `844×390` now uses the full center column for the Thai question and target, with a bounded compact line height/font treatment. The 47 previously affected current targets, including all 30 High sentences, no longer clip in initial or progress states; the three-column keyboard and two-Shift rule remain unchanged.
+- Focused Reading `22/22`, Typing `28/28`, network recovery `27/27`, Mobile Landscape `23/23`, no-vocabulary-judge and the complete `1,089`-file site gate pass. The local no-network browser matrix passes all current Guest/Login items in both font modes at `844×390`, plus Desktop and Phone Portrait controls. No Production, Supabase, Auth, account or application-data mutation occurred.
+
 ## 2026-09-12 — Login Free real-account canary repairs (`SOURCE_PASS / CANARY_PARTIAL / PREVIEW_REFRESH_BLOCKED / PRODUCTION_STATIC_UNCHANGED`)
 
 - Repaired three failures found through real-account play on the isolated Cloudflare Preview: the four approved Login Free games now wait for the restored OAuth session before protected content loads; Reading preserves the reviewed catalog authority on its live syllable object; and a neutral Skip is acknowledged locally without creating a Retry, Review or SRS commit. Listening remains excluded, while Guest and Paid do not enter the Login Free owner.

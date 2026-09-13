@@ -183,6 +183,29 @@
   };
 
   // เกมอ่าน/เกมพิมพ์ ต้องการ WORDS_HIGH แบบแบน (syls รวมทั้งประโยค ไม่แยกกลุ่มตามคำ)
+  function projectSentenceSyllable(syllable) {
+    var projected = {};
+    Object.keys(syllable).forEach(function (field) { projected[field] = syllable[field]; });
+    // Sentence rows predate the canonical word catalog. Keep their reviewed values exact,
+    // while exposing the same presentation-only shape used by reviewed-vocabulary-display.
+    // This is an alias only: no Thai-language rule, fallback, or inferred value is added.
+    projected.catalog = {
+      roman: syllable.en,
+      lead: syllable.lead,
+      consonant: syllable.cons,
+      cluster: syllable.cluster,
+      vowel: syllable.vowel,
+      writtenFinal: syllable.final,
+      toneMark: syllable.tone,
+      toneName: syllable.tone_name,
+      liveDead: syllable.liveDead,
+      consonantReadDifference: syllable.consRead,
+      finalReadDifference: syllable.finalRead,
+      silent: syllable.silent
+    };
+    return projected;
+  }
+
   global.buildSentencesForPhonicsGames = function (sentences) {
     return sentences.map(function (s) {
       if (!s || !hasExactStringBoundaries(s) ||
@@ -196,7 +219,7 @@
         w.syls.forEach(function (sy) {
           if (!sy || !isExactNonblank(sy.th) || !isExactNonblank(sy.en) || !isExactNonblank(sy.cons) ||
               !isExactNonblank(sy.vowel) || !isExactNonblank(sy.tone_name)) throw new Error('game-content: sentence syllable authority incomplete (' + s.th + ')');
-          flatSyls.push(sy);
+          flatSyls.push(projectSentenceSyllable(sy));
         });
       });
       var readingParts = s.readingTH.split('-');

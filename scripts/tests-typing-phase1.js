@@ -280,6 +280,13 @@ test('keyboard keeps the exact 47-row baseline inventory and direct-label render
   assert.doesNotMatch(source, /function rgKeyboardLabelHTML\(/);
 });
 
+test('Phone landscape gives long Thai prompts and targets the full center width', () => {
+  const css = fs.readFileSync(path.join(root, 'css/mobile-landscape.css'), 'utf8');
+  assert.match(css, /@media \(min-width: 800px\) and \(max-width: 900px\) and \(max-height: 430px\)/);
+  assert.match(css, /data-gsh-ml-slot="question"\] > \*[\s\S]{0,220}width: 100% !important;[\s\S]{0,80}max-width: 100% !important;/);
+  assert.match(css, /data-gsh-ml-slot="current-input"\] \.type-target[\s\S]{0,260}overflow-wrap: anywhere;/);
+});
+
 test('Only Phone landscape shows two Shift controls while every other layout shows one', () => {
   const build = functionBlock('rgBuildKeyboard', 'rgVirtualPress');
   assert.match(build, /rgMakeShiftKey\('left'\)/);

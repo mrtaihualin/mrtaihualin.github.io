@@ -495,6 +495,32 @@
     flex: 0 0 auto;
     min-height: var(--gsh-ml-control-h);
   }
+  @media (min-width: 800px) and (max-width: 900px) and (max-height: 430px) {
+    body[data-gsh-game="typing"].gsh-ml-active [data-gsh-ml-slot="question"] > *,
+    body[data-gsh-game="typing"].gsh-ml-active [data-gsh-ml-slot="current-input"] > * {
+      width: 100% !important;
+      max-width: 100% !important;
+    }
+    body[data-gsh-game="typing"].gsh-ml-active [data-gsh-ml-slot="question"] .word-th {
+      padding-block: 1px !important;
+      font-size: clamp(21px, 6dvh, 24px) !important;
+      line-height: 1.25 !important;
+    }
+    body[data-gsh-game="typing"].gsh-ml-active [data-gsh-ml-slot="question"] .gsh-copy-row {
+      margin-top: 2px !important;
+      font-size: clamp(11px, 3dvh, 13px) !important;
+      line-height: 1.25 !important;
+    }
+    body[data-gsh-game="typing"].gsh-ml-active [data-gsh-ml-slot="current-input"] .type-target {
+      width: 100% !important;
+      max-width: 100% !important;
+      min-height: var(--gsh-ml-control-h) !important;
+      padding: 4px 8px !important;
+      font-size: clamp(19px, 5.5dvh, 22px) !important;
+      line-height: 1.25 !important;
+      overflow-wrap: anywhere;
+    }
+  }
   body[data-gsh-game="typing"].gsh-ml-active [data-gsh-ml-slot="left"],
   body[data-gsh-game="typing"].gsh-ml-active [data-gsh-ml-slot="right"] {
     overflow: hidden;
