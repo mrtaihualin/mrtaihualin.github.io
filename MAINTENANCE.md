@@ -1,5 +1,12 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-09-14 — Reading reviewed-answer and Current 389 audit (`SOURCE_PASS / DATABASE_SOURCE_ONLY / PRODUCTION_UNCHANGED`)
+
+- Reading now takes consonant and final answers from each exact Lin-reviewed pronunciation-difference field, preserves the stored vowel unchanged, keeps consonant/final as separate headings, and generates unique choices only within each heading. Heading counts follow the approved 2/3/4-heading rules, tone always has two choices, absent final/tone headings stay absent, and unsupported Current data fails closed.
+- The complete safe Current set passes through the real Reading helpers: 389 records (Free 200 plus queued Paid 189), 601 syllables, exact approved vowel/final inventories, both reviewed-difference delimiters, and no unresolved answer. `อีเมล@中#noun-b-11` is the sole word-specific final exception (`ล`); `วันอาทิตย์@中#weekday` is corrected exactly to `ต > ด`; and `หมื่น@初#numeral` is corrected exactly from `อือ` to `อื`.
+- Added guarded additive migrations for the exact `วันอาทิตย์` Free row and `หมื่น` queued Paid row. They are Source-only and unapplied; no Production database, Edge, Auth, account or player data changed. The other 193 reviewed-only records still have no safe row-level Current source, so this Delta neither audits nor activates them.
+- Focused Reading, Current Free 200, Paid queue, no-second-judge, Login-accessible and owner-switch tests pass. The complete `1,098`-file site gate passes.
+
 ## 2026-09-13 — WWW canonical static-source candidate (`SOURCE_PASS / PREVIEW_PASS / PRODUCTION_UNCHANGED`)
 
 - Migrated the public canonical surface from the apex host to `www.mrtaihualin.com`: 68 canonical tags, all 66 sitemap URLs, the robots sitemap directive, structured/social metadata, hard-coded public links, shared social-share fallbacks and Classroom-generated website links now use the WWW host. Public HTML URLs and page behavior are unchanged.
@@ -2929,3 +2936,9 @@ node scripts/check-site.js
 - Kept the seen state in same-browser local storage for both Guest and Login. No authorized per-account preference-sync owner exists in the current account boundary, so this Delta does not invent cross-browser persistence or change Auth, Supabase, account data or Product policy.
 - Kept Listening explicitly non-playable by hiding its stale cloned and page-level help entry points while the existing `即將開幕` gate is active. Added exact browser regressions for the lifecycle, Listening OFF, and full Entry → correct answer → Skip/Next → Result → Replay completion across all five active games at Desktop `1440×900`, Portrait `390×844` and Landscape `844×390`.
 - Verification: lifecycle, Listening and shared-game source suites pass; the browser lifecycle and Listening gates pass; the full completion matrix passes `15/15`; the responsive matrix passes `15/15`. This is a Preview/MR candidate only; no merge, Production deployment, Auth, Supabase or real-user data mutation is included.
+
+# 2026-09-14 — Reading answers use reviewed pronunciation fields
+
+- Changed only the Reading game's real consonant and final answers: when the canonical syllable has Lin-reviewed `consonantReadDifference` or `finalReadDifference`, the answer now uses the reviewed pronunciation side; `ไม่มี` keeps the written value. A mismatched difference fails closed instead of being inferred. Vowels, distractor pools/algorithm, other games and vocabulary records remain unchanged.
+- A read-only `canonical-v1` Production check confirms `ภาพ` in `คุณภาพ` resolves to consonant `พ` and final `บ`, `ศัพท์` in `โทรศัพท์` resolves to consonant `ส` and final `บ`, while unchanged `ค` remains `ค`.
+- Verification: Reading `23/23`, no-second-judge, Login-accessible and owner-switch regressions pass; the rebuilt Reading bundle is bound at cache key `v58`; `node scripts/check-site.js` passes across all `1,095` repository files in the task worktree. This is a source/MR candidate only; no merge, deployment, Supabase mutation, Auth or real-user data change is included.

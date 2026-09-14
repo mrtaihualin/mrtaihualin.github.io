@@ -9,7 +9,7 @@ const path = require('path');
 const root = path.resolve(__dirname, '..');
 const catalogPath = path.join(root, 'data/approved-vocabulary-catalog.json');
 const edgePath = path.join(root, 'supabase/functions/game-content/index.ts');
-const EXPECTED_CATALOG_SHA256 = 'e8d16b678d0af654197ecddff433d5e777dbddf9f50ed9438e4515bdb8bcbf2c';
+const EXPECTED_CATALOG_SHA256 = '98a81f936b522838593a6da3fa8861c270fa81211e8dbc4c10f94dfd122c2787';
 const EXPECTED_REVIEW_SET_COUNTS = Object.freeze({
   'pronouns-i-you-he': 5,
   'verbs-225-final-notes': 90,
