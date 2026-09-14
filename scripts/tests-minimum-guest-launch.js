@@ -185,8 +185,8 @@ ok(gameFlow.indexOf('LOGIN_FREE_ACCOUNT_PUBLIC_ENTRY === true') !== -1,
   'durable report submission is enabled only for the Login Free account entry');
 
 var progressHtml = read('my-progress.html');
-ok(progressHtml.indexOf('data-mrt-parked-runtime') === -1 && progressHtml.indexOf('js/score/progress.js?v=12') !== -1,
-  'Learning Center runtime is active');
+ok(progressHtml.indexOf('data-mrt-parked-runtime') === -1 && progressHtml.indexOf('js/score/progress.js?v=13') !== -1,
+  'Learning Progress runtime is active');
 ['leaderboard.html','reading-board.html','listening-board.html','typing-board.html','word-order-board.html'].forEach(function (file) {
   var html = read(file);
   ok(html.indexOf('data-mrt-parked-runtime') === -1 && html.indexOf('nickname-safety.js?v=1') !== -1,

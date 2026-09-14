@@ -15,7 +15,7 @@
   var CORE6_TABS = CORE5_TABS.concat([
     { id: 'lego',           href: 'lego.html',            label: '🧱 造句練習室', selfFrom: 'lego' }
   ]);
-  var VAULT_TAB = { id: 'vault', href: 'vault.html', label: '🔖 我的單字庫', activeLabel: '🔖 我的單字庫' };
+  var VAULT_TAB = { id: 'vault', href: 'vault.html', label: '🔖 泰語單字庫', activeLabel: '🔖 泰語單字庫' };
 
   function render(container) {
     container.setAttribute('role', 'menu');
