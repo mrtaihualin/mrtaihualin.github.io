@@ -40,7 +40,7 @@ assert.match(contentClient, /用LINE問老師/);
 const tiered = [
   {
     page: 'tone-finder.html', game: 'tone', app: 'js/games/tone-finder-game.js',
-    boot: /GameContentLoader\.boot\(\['js\/games\/tone-finder-game\.min\.js\?v=86'\], \{game:'tone'\}\)/,
+    boot: /GameContentLoader\.boot\(\['js\/games\/tone-finder-game\.min\.js\?v=87'\], \{game:'tone'\}\)/,
     resume: /GameResume\.save\('tone-finder'/,
   },
   {
@@ -50,12 +50,12 @@ const tiered = [
   },
   {
     page: 'typing-game.html', game: 'typing', app: 'js/games/typing-game-app.js',
-    boot: /GameContentLoader\.boot\(\['js\/games\/typing-game-app\.min\.js\?v=56'\], \{game:'typing'\}\)/,
+    boot: /GameContentLoader\.boot\(\['js\/games\/typing-game-app\.min\.js\?v=58'\], \{game:'typing'\}\)/,
     resume: /GameResume\.save\('typing-game'/,
   },
   {
     page: 'word-order.html', game: 'word_order', app: 'js/games/word-order-app.js',
-    boot: /GameContentLoader\.boot\(\['js\/games\/word-order-app\.min\.js\?v=41'\], \{game:'word_order'\}\)/,
+    boot: /GameContentLoader\.boot\(\['js\/games\/word-order-app\.min\.js\?v=43'\], \{game:'word_order'\}\)/,
     resume: /GameResume\.save\('word-order'/,
   },
 ];

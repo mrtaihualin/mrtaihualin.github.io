@@ -132,7 +132,7 @@ gtag("config","G-DKVQE30982");window.GA_CATEGORY="game";</script>
 <script defer src="js/games/tone-server.js?v=6"></script><!-- Login Free SRS owner; Paid/Challenge remain parked -->
 <script src="js/core/network-guard.js?v=1"></script>
 <script src="js/games/learning-review.js?v=7"></script><!-- Login Free Review owner -->
-<script src="js/games/game-content-client.js?v=21"></script>
+<script src="js/games/game-content-client.js?v=22"></script>
 <script src="js/games/protected-word-audio.js?v=4"></script><!-- Core 5: isolated Guest audio client + temporary global game-audio switch -->
 <script src="js/games/word-menu.js?v=10"></script><!-- เครื่องมือช่วยเรียนแบบแถวตรง -->
 <style>
@@ -176,6 +176,7 @@ html:not(.gc-ready) [onclick*="openStar("]{
 .wo-slot.empty{border-style:dashed;background:transparent;}
 .wo-slot.filled:hover{border-color:#d85a30;background:#fff3e0;}
 .wo-slot.correct{border-color:#4caf50;background:#e8f5e9;color:#2e7d32;cursor:default;}
+.wo-particle-slot{pointer-events:none;}
 .wo-slot.wrong{border-color:#f44336;background:#fdecea;animation:woshake .35s;}
 @keyframes woshake{0%,100%{transform:translateX(0);}25%{transform:translateX(-6px);}75%{transform:translateX(6px);}}
 
@@ -444,9 +445,9 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
   <div id="wo-golden-badge" style="display:none;width:100%;text-align:center;font-size:12px;color:#C8973A;font-weight:800;margin-bottom:4px;"><img src="assets/icons/golden-grain-plain.svg" alt="" style="width:14px;height:14px;vertical-align:-2px;margin-right:2px;">黃金句 ×2</div>
   <div id="wo-hint-warn" class="wo-hint-warn" style="display:none;">💡 再用一次提示分數就會歸零囉～這句之後會再複習到，別擔心 🌱</div>
 
+  <!-- Lin 2026-09-14: หลังเฉลย ระบบเติมช่องครับ/ค่ะ/คะ ต่อท้ายภายในแถวนี้เอง
+       หน้าตาเหมือนช่องคำที่เรียงถูก แต่ไม่อยู่ในกองคำและไม่ต้องลาก -->
   <div class="wo-slots" id="wo-slots"></div>
-  <!-- Lin 2026-08-01: บรรทัดครับ/ค่ะ/คะ ต่อท้ายประโยค — ไม่ใช่คำที่ต้องลากเรียงเลย โผล่เฉพาะ "หลังเรียงถูก/เฉลยแล้ว" เท่านั้น ซ่อนไว้ก่อนตอนกำลังเรียง -->
-  <div id="wo-particle-line" style="display:none;text-align:center;font-family:'Sarabun',sans-serif;font-weight:700;color:#5a3e10;font-size:17px;margin:-4px 0 8px;"></div>
 
   <!-- Lin 2026-07-25: ปุ่ม 發音 (🔊) + 翻譯 (🍙/🌾) ย้ายมาอยู่ "ใต้คำที่เฉลย" แทนเมนูมุมขวาล่าง — โชว์เฉพาะตอนเฉลยแล้ว (กันสปอยล์)
        Lin 2026-07-30: เพิ่มปุ่ม 🔖 เซฟทั้งประโยคเข้า 單字庫 (คลังรวม 30 ช่องเดียวกับคำ) ตรงเฉลยนี้ด้วย -->
@@ -577,7 +578,7 @@ body.rg-modern-font .btn { font-family:'Noto Sans Thai','Sarabun',sans-serif !im
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/word-order-app.min.js?v=41'], {game:'word_order'}).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/word-order-app.min.js?v=43'], {game:'word_order'}).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 

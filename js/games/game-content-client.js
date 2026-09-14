@@ -183,12 +183,30 @@
   };
 
   // เกมอ่าน/เกมพิมพ์ ต้องการ WORDS_HIGH แบบแบน (syls รวมทั้งประโยค ไม่แยกกลุ่มตามคำ)
+  // Encoding of the existing reviewed tone name, not a Thai-language calculation.
+  var SENTENCE_TONE_NUMBERS = { 'สามัญ': 1, 'เอก': 2, 'โท': 3, 'ตรี': 4, 'จัตวา': 5 };
+  function sentenceReadingDifference(written, reading) {
+    if (!reading || reading === 'ไม่มี' || /[>→]/.test(reading)) return reading;
+    if (!isExactNonblank(written) || written === 'ไม่มี') throw new Error('game-content: sentence written difference missing');
+    // Legacy sentences supply each side separately. Encode the same reviewed pair;
+    // never infer a pronunciation or look up a different word's catalog record.
+    return written + ' > ' + reading;
+  }
   function projectSentenceSyllable(syllable) {
+    var toneNumber = SENTENCE_TONE_NUMBERS[syllable.tone_name];
+    if (!Number.isInteger(toneNumber) ||
+        (syllable.toneNumber != null && syllable.toneNumber !== toneNumber)) {
+      throw new Error('game-content: sentence tone authority incomplete');
+    }
     var projected = {};
     Object.keys(syllable).forEach(function (field) { projected[field] = syllable[field]; });
+    projected.toneNumber = toneNumber;
+    projected.consRead = sentenceReadingDifference(syllable.cons, syllable.consRead);
+    projected.finalRead = sentenceReadingDifference(syllable.final, syllable.finalRead);
     // Sentence rows predate the canonical word catalog. Keep their reviewed values exact,
     // while exposing the same presentation-only shape used by reviewed-vocabulary-display.
-    // This is an alias only: no Thai-language rule, fallback, or inferred value is added.
+    // Text stays exact; tone names and separately stored reading pairs are encoded
+    // in the common answer format consumed by both gameplay and detailed display.
     projected.catalog = {
       roman: syllable.en,
       lead: syllable.lead,
@@ -198,9 +216,10 @@
       writtenFinal: syllable.final,
       toneMark: syllable.tone,
       toneName: syllable.tone_name,
+      toneNumber: toneNumber,
       liveDead: syllable.liveDead,
-      consonantReadDifference: syllable.consRead,
-      finalReadDifference: syllable.finalRead,
+      consonantReadDifference: projected.consRead,
+      finalReadDifference: projected.finalRead,
       silent: syllable.silent
     };
     return projected;
@@ -228,6 +247,25 @@
       var en = flatSyls.map(function (sy) { return sy.en; }).join('-');
       var wordMeanings = s.words.map(function (w) { return { th: w.th, zh: w.zh }; });
       return { th: s.th, zh: s.zh, en: en, readingTH: s.readingTH, level: '高', syls: flatSyls, words: wordMeanings, politeF: s.politeF };
+    });
+  };
+
+  // Tone consumes grouped words, but must use the same projected syllables as Reading
+  // and Typing. Keep the server sentence and its word meanings untouched.
+  global.buildSentenceWordsForToneFinder = function (sentence) {
+    var flat = global.buildSentencesForPhonicsGames([sentence])[0];
+    var readings = sentence.readingTH.split('-');
+    var offset = 0;
+    return sentence.words.map(function (word) {
+      var end = offset + word.syls.length;
+      var syls = flat.syls.slice(offset, end);
+      var reading = readings.slice(offset, end).join('-');
+      offset = end;
+      return {
+        word: word.th, readingTH: reading,
+        readingEN: syls.map(function (sy) { return sy.en; }).join('-'),
+        zh: word.zh, level: 3, category: '高級句子', syls: syls
+      };
     });
   };
 
