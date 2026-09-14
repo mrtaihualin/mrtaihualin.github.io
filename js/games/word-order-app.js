@@ -335,12 +335,16 @@
   var woSentenceRevealed = false; // true เมื่อเรียงถูก/ตายแล้วเฉลย — ใช้คุมว่าจะโชว์บรรทัดครับ/ค่ะ/คะ ไหม
   function woShowParticleFor(s){
     if (!s) return null;
-    if (woParticleMode === 'f' && s.politeF) return s.politeF;
+    if (woParticleMode === 'm') return 'ครับ';
+    if (woParticleMode === 'f') return s.politeF || 'ครับ';
     return null;
   }
-  // ห้ามต่อคำหรือพยางค์จำลองเข้าชุดคำตอบ ถ้าคลังกลางไม่ได้ส่งระเบียนนั้นมา
+  // คำสุภาพเป็น display tail เท่านั้น: ไม่แก้ s.words และไม่เข้าเงื่อนไขเรียงคำ
   function woBuildPlayableSentence(s){
-    return s;
+    if (!s) return s;
+    var playable = Object.assign({}, s);
+    playable.activeParticle = woShowParticleFor(s);
+    return playable;
   }
   function woSentenceText(s){ return s && s.activeParticle ? s.th + s.activeParticle : (s ? s.th : ''); }
   function woSyncParticleBtn(){
@@ -353,8 +357,10 @@
   function woRenderParticleLine(){
     var el = document.getElementById('wo-particle-line');
     if (!el) return;
-    el.style.display = 'none';
-    el.textContent = '';
+    var s = curSentence();
+    var particle = woSentenceRevealed && s ? s.activeParticle : null;
+    el.style.display = particle ? '' : 'none';
+    el.textContent = particle || '';
   }
   window.woToggleParticleMode = function(){
     woParticleMode = (woParticleMode === 'off') ? 'm' : (woParticleMode === 'm' ? 'f' : 'off');
@@ -445,7 +451,7 @@
       // กันประโยคยาวไม่มีเว้นวรรค (เขียนไทยจริงไม่เว้นวรรคระหว่างคำ) ตกขอบหน้ากระดาษ/ถูกตัดกลางคำ — Lin 2026-07-31
       var wordsArr = s.words.map(function(w){return w.th;});
       var wordGlosses = s.words.map(function(w){return {th:w.th, zh:w.zh||''};});
-      var base = {th:s.th, wordsArr:wordsArr, wordGlosses:wordGlosses, zh:s.zh||'', userAnswer:lastSubmittedAnswer||'', correctAnswer:s.th, wrong:(typeof wrongCount!=='undefined'?wrongCount:0), attempts:submittedAttempts.slice(), learningEvidence:{hintCount:hintCountThisSentence}, failed:false, guide:hintCountThisSentence>0, pts:0, srsDue:'', mastered:false};
+      var base = {th:s.th, wordsArr:wordsArr, wordGlosses:wordGlosses, zh:s.zh||'', userAnswer:lastSubmittedAnswer||'', correctAnswer:wordsArr.join(' '), wrong:(typeof wrongCount!=='undefined'?wrongCount:0), attempts:submittedAttempts.slice(), learningEvidence:{hintCount:hintCountThisSentence}, failed:false, guide:hintCountThisSentence>0, pts:0, srsDue:'', mastered:false};
       for (var k in o) { if (Object.prototype.hasOwnProperty.call(o,k)) base[k] = o[k]; }
       roundLog.push(base);
       if(roundReport&&window.RoundReport)RoundReport.addItem(roundReport,{content_ref:{source:'game_sentences',key:base.th},question:base.th,meaning:base.zh,attempts:base.attempts,user_answer:base.userAnswer,correct_answer:base.correctAnswer,is_correct:!base.skipped&&!base.failed&&!base.guide&&base.wrong===0,is_skipped:!!base.skipped,skip_reason:base.skipped?'user_skip':null,wrong_count:base.wrong,item_score:base.pts,hint_used:!!base.guide,learning_evidence:base.learningEvidence,words:wordGlosses||[],srs_state:base.srsDue||null,mastered_state:!!base.mastered});
@@ -1110,8 +1116,6 @@
     var s = curSentence();
     lastSubmittedAnswer = answer.map(function(i){return s.words&&s.words[i]?s.words[i].th:'';}).filter(Boolean).join(' ');
     var isCorrect = answer.every(function(v, i){ return v === i; });
-    var particleIndex = s.activeParticle ? s.words.length - 1 : -1;
-    var particleOnlyWrong = !isCorrect && particleIndex >= 0 && answer.filter(function(v){ return v !== particleIndex; }).every(function(v, i){ return v === i; });
     submittedAttempts.push({answer:lastSubmittedAnswer,is_correct:isCorrect});
     var banner = document.getElementById('wo-banner');
     var srsKey = woSrsKey(s.th);
@@ -1241,12 +1245,6 @@
       try{ if(window.gtag) gtag('event','word_order_correct',{category:'game',sentence:s.th, first_try: !attemptedWrongThisSentence}); }catch(e){}
       try{ if(window.gtag) gtag('event','game_correct',{category:'game',game:'word_order'}); }catch(e){}
     } else {
-      if (particleOnlyWrong) {
-        banner.className = 'result-banner no show gsh-feedback-slot';
-        banner.textContent = '🙏 禮貌詞也要放在正確位置，再試一次（不扣分）';
-        updateCheckButton();
-        return;
-      }
       attemptedWrongThisSentence = true;
       var deduct = WRONG_DEDUCT[Math.min(wrongCount, 3)];
       wrongCount++;                       // กฎ MASTER: นับผิดรวมทั้งประโยค (ไม่แยกคำ)
@@ -1297,12 +1295,9 @@
     // 在正確位置放上下一個正確的詞塊
     answer.push(correctPrefixLen);
     used[correctPrefixLen] = true;
-    var particleHint = !!(s.words[correctPrefixLen] && s.words[correctPrefixLen].isParticle);
-    if (!particleHint) {
-      hintUsedThisSentence = true;
-      hintCountThisSentence++;
-      life -= HINT_DEDUCT; // ข้อ3.6: 提示หักครั้งละ2 พูลเดียวกับผิด ไม่จำกัดจำนวนครั้ง
-    }
+    hintUsedThisSentence = true;
+    hintCountThisSentence++;
+    life -= HINT_DEDUCT; // ข้อ3.6: 提示หักครั้งละ2 พูลเดียวกับผิด ไม่จำกัดจำนวนครั้ง
     renderSlots(s);
     renderBank();
     updatePowerBar(s);

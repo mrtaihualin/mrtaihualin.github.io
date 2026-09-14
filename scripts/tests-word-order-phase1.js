@@ -9,6 +9,7 @@ const vm = require('vm');
 const root = path.resolve(__dirname, '..');
 const app = fs.readFileSync(path.join(root, 'js/games/word-order-app.js'), 'utf8');
 const html = fs.readFileSync(path.join(root, 'word-order.html'), 'utf8');
+const sentenceSource = fs.readFileSync(path.join(root, 'data/adv-sentences.js'), 'utf8');
 let passed = 0;
 
 function test(name, fn) {
@@ -28,12 +29,69 @@ test('answer is validated only against the prescribed target order', () => {
   const check = block('function checkAnswer()', 'function popScore(');
   assert.match(check, /answer\.every\(function\(v, i\)\{ return v === i; \}\)/);
   assert.match(check, /submittedAttempts\.push\(\{answer:lastSubmittedAnswer,is_correct:isCorrect\}\)/);
+  assert.doesNotMatch(check, /particleIndex|particleOnlyWrong/);
 });
 
 test('report reuses canonical sentence words and submitted order', () => {
   assert.match(app, /words:wordGlosses\|\|\[\]/);
   assert.match(app, /attempts:submittedAttempts\.slice\(\)/);
+  assert.match(app, /correctAnswer:wordsArr\.join\(' '\)/);
+  assert.match(app, /content_ref:\{source:'game_sentences',key:base\.th\},question:base\.th/);
+  assert.doesNotMatch(app, /correctAnswer:s\.th/);
   assert.doesNotMatch(app, /parseGrammar/);
+  assert.match(app, /woLogSentence\(\{failed:true/);
+  assert.match(app, /woLogSentence\(\{guide:!!hintUsedThisSentence/);
+  assert.match(app, /woLogSentence\(\{skipped:true/);
+});
+
+test('all 30 current reports use reviewed word chunks with spaces without changing sentence identity', () => {
+  const catalogContext = { window: {} };
+  vm.createContext(catalogContext);
+  vm.runInContext(sentenceSource, catalogContext, { filename: 'adv-sentences.js' });
+  const sentences = catalogContext.window.ADV_SENTENCES_FULL;
+  assert.strictEqual(sentences.length, 30);
+  sentences.forEach((sentence) => {
+    const chunks = sentence.words.map((word) => word.th);
+    assert.strictEqual(chunks.join(''), sentence.th);
+    assert.strictEqual(chunks.join(' ').replace(/ /g, ''), sentence.th);
+    assert.strictEqual(chunks.join(' ').split(' ').length, sentence.words.length);
+  });
+});
+
+test('polite mode is a revealed display tail and never an ordering tile', () => {
+  const helpers = block('function woShowParticleFor(s)', 'function woSentenceText(s)');
+  const render = block('function woRenderParticleLine()', 'window.woToggleParticleMode');
+  const sentence = { th: 'คุณไปไหนมา', politeF: 'คะ', words: [{ th: 'คุณ' }, { th: 'ไปไหนมา' }] };
+  const elements = { 'wo-particle-line': { style: { display: '' }, textContent: '' } };
+  const context = {
+    woParticleMode: 'off',
+    woSentenceRevealed: false,
+    activeSentence: null,
+    curSentence() { return context.activeSentence; },
+    document: { getElementById(id) { return elements[id] || null; } },
+  };
+  vm.createContext(context);
+  vm.runInContext(helpers + render, context);
+
+  context.activeSentence = context.woBuildPlayableSentence(sentence);
+  assert.strictEqual(context.activeSentence.activeParticle, null);
+  assert.strictEqual(context.activeSentence.words.length, 2);
+  context.woParticleMode = 'm';
+  context.activeSentence = context.woBuildPlayableSentence(sentence);
+  assert.strictEqual(context.activeSentence.activeParticle, 'ครับ');
+  assert.strictEqual(context.activeSentence.words.length, 2);
+  assert.strictEqual(sentence.activeParticle, undefined);
+  context.woSentenceRevealed = true;
+  context.woRenderParticleLine();
+  assert.strictEqual(elements['wo-particle-line'].textContent, 'ครับ');
+  assert.strictEqual(elements['wo-particle-line'].style.display, '');
+  context.woParticleMode = 'f';
+  context.activeSentence = context.woBuildPlayableSentence(sentence);
+  assert.strictEqual(context.activeSentence.activeParticle, 'คะ');
+  assert.strictEqual(context.activeSentence.words.length, 2);
+  context.activeSentence = context.woBuildPlayableSentence({ th: 'ผมไปบ้าน', politeF: null, words: [{ th: 'ผม' }, { th: 'ไปบ้าน' }] });
+  assert.strictEqual(context.activeSentence.activeParticle, 'ครับ');
+  assert.doesNotMatch(app, /particleSyl|words:\s*s\.words\.concat/);
 });
 
 test('a wrong order remains playable and gives correction feedback', () => {
@@ -41,6 +99,14 @@ test('a wrong order remains playable and gives correction feedback', () => {
   assert.match(check, /attemptedWrongThisSentence = true/);
   assert.match(check, /點一下格子裡的詞塊，再排排看/);
   assert.match(check, /if \(life <= 0\)[\s\S]*else \{/);
+});
+
+test('Hint always applies to a canonical sentence word and keeps the locked deduction', () => {
+  const hint = block('window.woHint = function()', 'window.woSkip = function()');
+  assert.match(hint, /hintUsedThisSentence = true/);
+  assert.match(hint, /hintCountThisSentence\+\+/);
+  assert.match(hint, /life -= HINT_DEDUCT/);
+  assert.doesNotMatch(hint, /isParticle|particleHint/);
 });
 
 test('Phase 1 SRS entry/checkpoint requires unassisted base 10/10', () => {

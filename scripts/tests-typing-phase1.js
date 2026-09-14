@@ -49,6 +49,29 @@ test('score reaches zero at quota and stays zero after more errors', () => {
   }
 });
 
+test('High polite mode requires the approved particle text without changing score units', () => {
+  const particle = functionBlock('tgShowParticleFor', 'tgScoreSylCount');
+  const scoreUnits = functionBlock('tgScoreSylCount', 'tgSyncParticleBtn');
+  const load = functionBlock('loadWord', 'loadSyl');
+  const particleContext = { tgParticleMode: 'off' };
+  vm.createContext(particleContext);
+  vm.runInContext(particle, particleContext);
+
+  const femaleSentence = { politeF: 'คะ' };
+  const maleSentence = { politeF: null };
+  assert.strictEqual(particleContext.tgShowParticleFor(femaleSentence), null);
+  particleContext.tgParticleMode = 'm';
+  assert.strictEqual(particleContext.tgShowParticleFor(femaleSentence), 'ครับ');
+  particleContext.tgParticleMode = 'f';
+  assert.strictEqual(particleContext.tgShowParticleFor(femaleSentence), 'คะ');
+  assert.strictEqual(particleContext.tgShowParticleFor(maleSentence), 'ครับ');
+
+  assert.match(load, /sylList=sylList\.concat\(\[\{th:_tgParticle,isParticle:true\}\]\)/);
+  assert.match(load, /WORD\.th\+\(_tgParticle\|\|''\)/);
+  assert.match(scoreUnits, /isParticle[\s\S]*sylList\.length-1/);
+  assert.match(source, /if\(!\(sylList\[RG_CONT_SEG\]&&sylList\[RG_CONT_SEG\]\.isParticle\)\)wordWrongTotal\+\+/);
+});
+
 test('single-syllable zero score keeps accepting input without reveal/fail', () => {
   const block = functionBlock('rgTypeChar', 'rgHandleEnterKey');
   assert.match(block, /本題分數已是 0，還是要繼續打到正確為止/);
@@ -353,7 +376,7 @@ test('Typing counter follows active syllables including High continuous segments
 });
 
 test('Typing loads the rebuilt crash-safe bundle with a fresh cache key', () => {
-  assert.match(html, /typing-game-app\.min\.js\?v=56/);
+  assert.match(html, /typing-game-app\.min\.js\?v=57/);
 });
 
 test('Typing treats the shared-profile legacy stat row as optional', () => {

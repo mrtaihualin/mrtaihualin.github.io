@@ -42,6 +42,7 @@ const origin = 'https://answer-review.test';
       });
       await context.addInitScript(() => {
         localStorage.setItem('cookieConsent', 'denied');
+        localStorage.setItem('games_particle_mode', 'off');
         ['tone', 'reading', 'typing', 'wordorder'].forEach((game) => {
           localStorage.setItem('howto_tour_seen_' + game, '1');
           localStorage.setItem('howto_hint_seen_' + game, '1');
@@ -95,10 +96,72 @@ const origin = 'https://answer-review.test';
               count++;
             });
             WORD = original;
+            if (name === 'typing-game') {
+              const sentenceIndex = WORDS.findIndex((word) => word.level === '高' && word.politeF === 'คะ');
+              if (sentenceIndex < 0) throw Error('Typing polite fixture missing');
+              roundQueue = [sentenceIndex]; cur = 0; tgParticleMode = 'off'; loadWord();
+              if (sylList.some((syllable) => syllable.isParticle) || RG_TYPE.target !== WORD.th) throw Error('Typing OFF particle leak');
+              tgToggleParticleMode();
+              if (tgParticleMode !== 'm' || !sylList[sylList.length - 1].isParticle ||
+                  sylList[sylList.length - 1].th !== 'ครับ' || RG_TYPE.target !== WORD.th + 'ครับ') throw Error('Typing male target missing');
+              const scoreBeforeParticleError = tgCurWordScore();
+              RG_CONT_SEG = sylList.length - 1;
+              RG_TYPE.pos = WORD.th.length;
+              rgContChar('x');
+              if (tgCurWordScore() !== scoreBeforeParticleError || wordWrongTotal !== 0) throw Error('Typing particle changed score');
+              Array.from('ครับ').forEach((character) => rgContChar(character));
+              if (!checked) throw Error('Typing did not require the full male particle');
+              tgParticleMode = 'f'; loadWord();
+              if (!sylList[sylList.length - 1].isParticle || sylList[sylList.length - 1].th !== 'คะ' ||
+                  RG_TYPE.target !== WORD.th + 'คะ') throw Error('Typing female target missing');
+              count += 4;
+            }
           } else {
-            // Word Order retains its prescribed sentence/gloss source, not phonics details.
-            if (!document.querySelector('#wo-bank .wo-tile')) throw Error('Word Order not playable');
-            count = 1; // Entry smoke only; full sentence/answer source coverage is in Node tests.
+            // Word Order keeps particles outside the tile answer and reports reviewed chunks with spaces.
+            const itemLog = [];
+            const originalAddItem = RoundReport.addItem;
+            RoundReport.addItem = function(report, item) { itemLog.push(item); return originalAddItem.call(this, report, item); };
+            const orderedTiles = () => Array.from(document.querySelectorAll('#wo-bank .wo-tile')).sort((a, b) =>
+              Number(a.dataset.gshOriginalIndex) - Number(b.dataset.gshOriginalIndex));
+            const answerFacts = () => {
+              const chunks = orderedTiles().map((tile) => tile.querySelector('.wo-word-th').textContent);
+              return { chunks, sentence: chunks.join(''), spaced: chunks.join(' ') };
+            };
+            const place = (tiles) => tiles.forEach((tile) => tile.click());
+            const assertReport = (item, facts, label) => {
+              if (!item || item.question !== facts.sentence || item.content_ref.key !== facts.sentence ||
+                  item.correct_answer !== facts.spaced) throw Error('Word Order ' + label + ' report mismatch');
+            };
+
+            if (!orderedTiles().length || document.getElementById('wo-particle-line').textContent) throw Error('Word Order OFF state mismatch');
+            const originalTileCount = orderedTiles().length;
+            woToggleParticleMode();
+            let facts = answerFacts();
+            if (orderedTiles().length !== originalTileCount) throw Error('Word Order male particle became a tile');
+            place(orderedTiles()); woCheck();
+            if (document.getElementById('wo-particle-line').textContent !== 'ครับ') throw Error('Word Order male display tail missing');
+            assertReport(itemLog[itemLog.length - 1], facts, 'correct');
+
+            woToggleParticleMode();
+            facts = answerFacts();
+            const sentence = ADV_SENTENCES.find((candidate) => candidate.th === facts.sentence);
+            const expectedFemale = sentence.politeF || 'ครับ';
+            if (orderedTiles().length !== originalTileCount) throw Error('Word Order female particle became a tile');
+            place(orderedTiles()); woCheck();
+            if (document.getElementById('wo-particle-line').textContent !== expectedFemale) throw Error('Word Order female display tail missing: expected=' + expectedFemale + ' actual=' + document.getElementById('wo-particle-line').textContent);
+
+            woNext();
+            facts = answerFacts();
+            woSkip();
+            assertReport(itemLog[itemLog.length - 1], facts, 'skip');
+
+            facts = answerFacts();
+            const wrongTiles = orderedTiles();
+            if (wrongTiles.length > 1) [wrongTiles[0], wrongTiles[1]] = [wrongTiles[1], wrongTiles[0]];
+            place(wrongTiles);
+            for (let attempt = 0; attempt < 4; attempt++) woCheck();
+            assertReport(itemLog[itemLog.length - 1], facts, 'failed');
+            count = 5;
           }
           return { count, overflow: document.documentElement.scrollWidth > innerWidth };
         }, name);

@@ -50,12 +50,12 @@ const tiered = [
   },
   {
     page: 'typing-game.html', game: 'typing', app: 'js/games/typing-game-app.js',
-    boot: /GameContentLoader\.boot\(\['js\/games\/typing-game-app\.min\.js\?v=56'\], \{game:'typing'\}\)/,
+    boot: /GameContentLoader\.boot\(\['js\/games\/typing-game-app\.min\.js\?v=57'\], \{game:'typing'\}\)/,
     resume: /GameResume\.save\('typing-game'/,
   },
   {
     page: 'word-order.html', game: 'word_order', app: 'js/games/word-order-app.js',
-    boot: /GameContentLoader\.boot\(\['js\/games\/word-order-app\.min\.js\?v=41'\], \{game:'word_order'\}\)/,
+    boot: /GameContentLoader\.boot\(\['js\/games\/word-order-app\.min\.js\?v=42'\], \{game:'word_order'\}\)/,
     resume: /GameResume\.save\('word-order'/,
   },
 ];

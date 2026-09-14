@@ -20,6 +20,8 @@ const sentences = fixture.window.ADV_SENTENCES;
 const catalog = JSON.parse(read('data/approved-vocabulary-catalog.json')).records;
 const tones = ['สามัญ', 'เอก', 'โท', 'ตรี', 'จัตวา'];
 const toneSource = read('js/games/tone-finder-game.js');
+const sentenceMigration = read('supabase/migrations/20260914073500_correct_food_sentence_final_reading.sql');
+const sentenceRollback = read('supabase/sql/2026-09-14_food_sentence_final_reading_ROLLBACK.sql');
 function section(source, start, end) {
   const i = source.indexOf(start), j = source.indexOf(end, i + start.length);
   assert.ok(i >= 0 && j > i, start);
@@ -121,6 +123,12 @@ const foodFinal = foodSentence.syls.find((sy) => sy.th === 'หาร');
 assert.strictEqual(foodFinal.finalRead, 'ร > น', 'Lin-approved sentence correction must remain present');
 assert.strictEqual(foodFinal.finalRead,
   catalog.find((word) => word.contentKey === 'อาหาร@中#noun-a-9').syllables[1].finalReadDifference);
+assert.match(sentenceMigration, /where th='อาหารจานนี้เผ็ดไหม'/);
+assert.match(sentenceMigration, /words #>> '\{0,syls,1,final\}'='ร'/);
+assert.match(sentenceMigration, /jsonb_set\(words,'\{0,syls,1,finalRead\}',to_jsonb\('น'::text\),true\)/);
+assert.match(sentenceMigration, /get diagnostics affected = row_count/);
+assert.match(sentenceRollback, /words=words #- '\{0,syls,1,finalRead\}'/);
+assert.match(sentenceRollback, /get diagnostics affected = row_count/);
 assert.match(toneSource, /var entries = buildSentenceWordsForToneFinder\(s\)/);
 
 // Unknown/conflicting tone authority must fail closed, never infer from Thai spelling.

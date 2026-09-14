@@ -232,12 +232,13 @@ var SAVE_KEY='rgv3_save';
 var rememberStep=0,rememberTimer=null,curWordIsKnownCheck=false; // curWordIsKnownCheck: ด่านพิสูจน์ 已記得 (ไม่มีคำใบ้ ไม่ได้แต้ม/ดาว)
 var wordUsedGuide=false; // งาน 9: เปิดคำใบ้ระหว่างคำนี้ไหม (ถ้าใช่ = 0 คะแนน + ไม่นับ SRS/ดาว)
 var wordWrongTotal=0; // นับผิดสะสม "ทั้งคำ/ประโยค" (ไม่แยกพยางค์) ใช้กับ rgWrongScore()
-// คำลงท้ายสุภาพเป็นข้อความประกอบประโยคเท่านั้น จนกว่าคลังกลางจะส่งระเบียนที่ Lin
-// ตรวจแล้วมาให้โดยตรง ห้ามสร้างพยางค์หรือคำตอบภาษาไว้ในเกม
+// คำลงท้ายสุภาพเป็น input ต่อท้ายที่ Lin อนุมัติโดยตรง ไม่ใช่ระเบียนคำศัพท์/คำอ่าน
+// จึงเก็บเฉพาะข้อความที่ต้องพิมพ์และธงกันคะแนน ห้ามสร้างข้อมูลวิเคราะห์ภาษาในเกม
 var tgParticleMode=(function(){try{return localStorage.getItem('games_particle_mode')||'off';}catch(e){return 'off';}})();
 function tgShowParticleFor(w){
   if(!w) return null;
-  if(tgParticleMode==='f' && w.politeF) return w.politeF;
+  if(tgParticleMode==='m') return 'ครับ';
+  if(tgParticleMode==='f') return w.politeF||'ครับ';
   return null;
 }
 // จำนวนพยางค์ที่ใช้คิดโควต้า/คะแนนจริง — ไม่นับพยางค์ครับ/ค่ะ/คะ synthetic ที่ต่อท้าย (ถ้ามี) เพราะไม่เกี่ยวกับคะแนนเลย
@@ -612,9 +613,10 @@ function loadWord(){
   WORD=WORDS[roundQueue[cur]];
   sylList=buildSyls(WORD);
   var _tgParticle=(WORD.level==='高')?tgShowParticleFor(WORD):null;
+  if(_tgParticle) sylList=sylList.concat([{th:_tgParticle,isParticle:true}]);
   sylIdx=0;wordHadWrong=false;wordFailed=false;wrongCount=0;wordWrongTotal=0;wordUsedGuide=false;sylCache=[]; // sylCache: เก็บ state แต่ละพยางค์ ให้เลือกพยางค์ไหนก่อนก็ได้ (คำใหม่ = ล้าง)
   wordGolden=Math.random()<GOLDEN_WORD_CHANCE; // สุ่มคำทองใหม่ทุกคำ (Lin 2026-07-03)
-  document.getElementById('wth').textContent=WORD.th; // แบบฝึกใช้เฉพาะข้อมูลประโยคที่คลังกลางส่งมา
+  document.getElementById('wth').textContent=WORD.th+(_tgParticle||'');
   document.getElementById('wzh').textContent=WORD.zh;
   tgSyncParticleBtn();
   rgRenderEnLine(); // Lin 2026-07-25: คำอ่านโรมันของคำใหม่ (ถ้าเปิด 英文讀音 อยู่)
@@ -2128,7 +2130,7 @@ function rgTypeChar(ch){
     document.getElementById('ok').textContent=okC;document.getElementById('bad').textContent=badC;
     updateCombo();
     rgTypeFlashWrong();
-    if(RG_TYPE.wrong>=rgQuotaFor(sylList.length)){
+    if(RG_TYPE.wrong>=rgQuotaFor(tgScoreSylCount())){
       var hint=document.getElementById('retry-hint');
       var _msg2627='本題分數已是 0，還是要繼續打到正確為止 💪';
       hint.textContent=_msg2627;
@@ -2211,7 +2213,7 @@ function rgContChar(ch){
     document.getElementById('ok').textContent=okC;document.getElementById('bad').textContent=badC;
     updateCombo();
     rgTypeFlashWrong();
-    if(RG_CONT_WRONG>=rgQuotaFor(sylList.length)){
+    if(RG_CONT_WRONG>=rgQuotaFor(tgScoreSylCount())){
       var hint=document.getElementById('retry-hint');
       hint.textContent='本題分數已是 0，還是要繼續打到正確為止 💪';
       hint.className='retry-hint show wrong3';
