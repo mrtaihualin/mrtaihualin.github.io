@@ -40,6 +40,10 @@ const rules = ['reading', 'typing'].map((game) => {
     'function buildRevealRules(w)', '// reviewed-vocabulary-display.js owns'), context);
   return context.buildRevealRules;
 });
+const reading = {};
+vm.createContext(reading);
+vm.runInContext(section(read('js/games/reading-game-app.js'),
+  'var CONS_GROUPS=', '// ════════════════════════════════════════════\n// PHONETIC MAPS'), reading);
 let checked = 0;
 function checkSyllable(sy, expectedTone) {
   current = sy;
@@ -93,6 +97,11 @@ sentences.forEach((sentence) => {
       const sy = grouped[wi].syls[si];
       assert.strictEqual(sy.th, raw.th);
       checkSyllable(sy, tones.indexOf(raw.tone_name) + 1);
+      // Every sentence must also be accepted by the real current Reading checker.
+      // This catches missing authority that a display-only comparison cannot detect.
+      reading.reviewedReadingAnswer(sy.cons, sy.consRead, 'consonant');
+      reading.reviewedReadingVowel(sy.vowel);
+      if (reading.reviewedPresent(sy.final)) reading.reviewedReadingFinal(sy.final, sy.finalRead);
       for (const [written, reading, tag] of [['final', 'finalRead', '尾音'], ['cons', 'consRead', '子音']]) {
         if (raw[reading] && raw[reading] !== 'ไม่มี') {
           const expected = /[>→]/.test(raw[reading]) ? raw[reading] : raw[written] + ' > ' + raw[reading];
@@ -107,6 +116,11 @@ sentences.forEach((sentence) => {
 });
 assert.strictEqual(JSON.stringify(sentences), before, 'sentence source must not be mutated');
 assert.ok(arrowChecks > 0, 'real sentence final-difference coverage');
+const foodSentence = api.buildSentencesForPhonicsGames(sentences.filter((s) => s.th === 'อาหารจานนี้เผ็ดไหม'))[0];
+const foodFinal = foodSentence.syls.find((sy) => sy.th === 'หาร');
+assert.strictEqual(foodFinal.finalRead, 'ร > น', 'Lin-approved sentence correction must remain present');
+assert.strictEqual(foodFinal.finalRead,
+  catalog.find((word) => word.contentKey === 'อาหาร@中#noun-a-9').syllables[1].finalReadDifference);
 assert.match(toneSource, /var entries = buildSentenceWordsForToneFinder\(s\)/);
 
 // Unknown/conflicting tone authority must fail closed, never infer from Thai spelling.

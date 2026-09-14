@@ -225,7 +225,7 @@
     {
       th: 'อาหารจานนี้เผ็ดไหม', zh: '這道菜辣嗎？', readingTH: 'อา-หาร-จาน-นี้-เผ็ด-ไหม', wc: 6, politeF: 'คะ',
       words: [
-      { th: 'อาหาร', zh: '食物／餐點', syls: [{cons:'อ', vowel:'อา', tone_name:'สามัญ', th:'อา', en:'aa'}, {cons:'ห', vowel:'อา', final:'ร', tone_name:'จัตวา', th:'หาร', en:'hǎan'}] },
+      { th: 'อาหาร', zh: '食物／餐點', syls: [{cons:'อ', vowel:'อา', tone_name:'สามัญ', th:'อา', en:'aa'}, {cons:'ห', vowel:'อา', final:'ร', finalRead:'น', tone_name:'จัตวา', th:'หาร', en:'hǎan'}] },
       { th: 'จานนี้', zh: '這盤／這道', syls: [{cons:'จ', vowel:'อา', final:'น', tone_name:'สามัญ', th:'จาน', en:'jaan'}, {cons:'น', vowel:'อี', tone:'้', tone_name:'ตรี', th:'นี้', en:'níi'}] },
       { th: 'เผ็ด', zh: '辣', syls: [{cons:'ผ', vowel:'เอะ', final:'ด', tone_name:'เอก', th:'เผ็ด', en:'phèt'}] },
       { th: 'ไหม', zh: '嗎（疑問）', syls: [{cons:'ม', lead:'ห', vowel:'ไอ', tone_name:'จัตวา', th:'ไหม', en:'mǎi'}] }
