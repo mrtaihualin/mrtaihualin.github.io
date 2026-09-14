@@ -65,7 +65,7 @@
 
 <h2 style="margin-top:32px;">เช็คด้วยมือ (ทำนอกหน้านี้ หลัง deploy จริง)</h2>
 <ol>
-  <li>เปิด <code>https://mrtaihualin.com/data/words-data.js</code> และ <code>.../data/adv-sentences.js</code> ตรงๆ —
+  <li>เปิด <code>https://www.mrtaihualin.com/data/words-data.js</code> และ <code>.../data/adv-sentences.js</code> ตรงๆ —
     ⚠️ Lin ยืนยันแล้ว (2026-08-02) ว่าไฟล์นี้ยังฝากไว้บน GitHub เหมือนเดิม (ง่ายกว่า ไม่กระทบสกิลร่างคำ/ประโยค)
     ดังนั้น "เปิด URL ตรงๆ ยังเห็นคำครบ" คือของที่ยอมรับแล้ว — สิ่งที่ต้องเช็คจริงคือ "เกมทั้ง 6 หน้าไม่โหลดไฟล์นี้อีกต่อไป"
     (ดู View Source ของแต่ละหน้าเกม ต้องไม่มี <code>&lt;script src="data/words-data.js"&gt;</code> หรือ
@@ -88,7 +88,7 @@ function addRow(name, expected, actual, ok) {
 // ── 2026-08-02 เพิ่ม: รู้ให้ได้ว่า "หน้านี้ถูกเปิดจากที่ถูกที่หรือเปล่า" ────────────────────
 // ข้อ 3 (ล็อกอินจริง) อ่านบัตรล็อกอินจาก localStorage ซึ่งผูกกับโดเมนเสมอ
 // เปิดจากไฟล์ในเครื่อง (file://) หรือโดเมนอื่น = อ่านไม่เจอแน่นอน 100% ไม่ว่าจะล็อกอินอยู่หรือไม่
-var SITE_ORIGIN = 'https://mrtaihualin.com';
+var SITE_ORIGIN = 'https://www.mrtaihualin.com';
 // 🔧 2026-08-02 (รอบ 2): ต่อ ?v=timestamp กันแคช 10 นาทีของ GitHub Pages (Cache-Control: max-age=600)
 // เจอจริง: Lin กด reload ธรรมดา (⌘R) แล้วเบราว์เซอร์ใช้ไฟล์เก่าที่แคชไว้ ทั้งที่ของใหม่ deploy ไปแล้ว
 // ใส่ query string ที่เปลี่ยนทุกครั้งที่โหลดหน้า = บังคับดึงของใหม่เสมอ ไม่ต้องพึ่งจำ hard refresh

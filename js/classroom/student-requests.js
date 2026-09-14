@@ -1680,7 +1680,7 @@ function notifyTeacherClassRequest(d) {
     // 本來就認得住所有 req-row-<id>，加課申請的卡片也是同一個 id，之前沒有理由不給，順便讓
     // 「📋 到網站處理」在加課卡片也能直接跳到那張卡片，不用自己滑）。多筆時用第一筆的 id 跳頁。
     var siteLinkId = (addRows && addRows[0] && addRows[0].requestId) || d.requestId;
-    var siteLink = 'https://mrtaihualin.com/classroom/' + (siteLinkId ? ('#req-row-' + encodeURIComponent(siteLinkId)) : '');
+    var siteLink = 'https://www.mrtaihualin.com/classroom/' + (siteLinkId ? ('#req-row-' + encodeURIComponent(siteLinkId)) : '');
 
     // 2026-07-16 加（Lin 要求：最多可以給 3 個時間選項）：改期把候選時間全部列出來，
     // 老師一眼就看到全部選項，不用點進網站才知道有幾個。

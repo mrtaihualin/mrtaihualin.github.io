@@ -269,7 +269,7 @@ function openFBArticle() {
   if (post && post.articleUrl) window.open(post.articleUrl, '_blank');
 }
 
-var SITE_URL = 'https://mrtaihualin.com'; // ← เปลี่ยนเป็น domain จริงเมื่อมี
+var SITE_URL = 'https://www.mrtaihualin.com'; // ← เปลี่ยนเป็น domain จริงเมื่อมี
 
 function shareFBPost() {
   var post = FB_POSTS.find(function(p) { return p.id === _fbDetailPostId; });
