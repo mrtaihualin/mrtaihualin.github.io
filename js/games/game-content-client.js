@@ -185,6 +185,13 @@
   // เกมอ่าน/เกมพิมพ์ ต้องการ WORDS_HIGH แบบแบน (syls รวมทั้งประโยค ไม่แยกกลุ่มตามคำ)
   // Encoding of the existing reviewed tone name, not a Thai-language calculation.
   var SENTENCE_TONE_NUMBERS = { 'สามัญ': 1, 'เอก': 2, 'โท': 3, 'ตรี': 4, 'จัตวา': 5 };
+  function sentenceReadingDifference(written, reading) {
+    if (!reading || reading === 'ไม่มี' || /[>→]/.test(reading)) return reading;
+    if (!isExactNonblank(written) || written === 'ไม่มี') throw new Error('game-content: sentence written difference missing');
+    // Legacy sentences supply each side separately. Encode the same reviewed pair;
+    // never infer a pronunciation or look up a different word's catalog record.
+    return written + ' > ' + reading;
+  }
   function projectSentenceSyllable(syllable) {
     var toneNumber = SENTENCE_TONE_NUMBERS[syllable.tone_name];
     if (!Number.isInteger(toneNumber) ||
@@ -194,9 +201,12 @@
     var projected = {};
     Object.keys(syllable).forEach(function (field) { projected[field] = syllable[field]; });
     projected.toneNumber = toneNumber;
+    projected.consRead = sentenceReadingDifference(syllable.cons, syllable.consRead);
+    projected.finalRead = sentenceReadingDifference(syllable.final, syllable.finalRead);
     // Sentence rows predate the canonical word catalog. Keep their reviewed values exact,
     // while exposing the same presentation-only shape used by reviewed-vocabulary-display.
-    // Text stays exact; only the already-reviewed tone name is encoded as its 1–5 ID.
+    // Text stays exact; tone names and separately stored reading pairs are encoded
+    // in the common answer format consumed by both gameplay and detailed display.
     projected.catalog = {
       roman: syllable.en,
       lead: syllable.lead,
@@ -208,8 +218,8 @@
       toneName: syllable.tone_name,
       toneNumber: toneNumber,
       liveDead: syllable.liveDead,
-      consonantReadDifference: syllable.consRead,
-      finalReadDifference: syllable.finalRead,
+      consonantReadDifference: projected.consRead,
+      finalReadDifference: projected.finalRead,
       silent: syllable.silent
     };
     return projected;

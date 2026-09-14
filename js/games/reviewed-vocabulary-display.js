@@ -21,14 +21,6 @@
     return value != null && String(value).trim() !== '' && value !== 'ไม่มี';
   }
 
-  function readingDifference(written, difference) {
-    if (!present(difference)) return written;
-    // Canonical records already contain the complete explanation. Older sentence
-    // records store its two sides separately; join those supplied values only.
-    if (/[>→]/.test(difference)) return difference;
-    return written + ' > ' + difference;
-  }
-
   function reviewedSyllable(value) {
     var record = value && value.catalog;
     if (record && Array.isArray(record.syllables)) {
@@ -72,10 +64,10 @@
     var silent = record.silent;
 
     if (present(lead)) rows.push({ tag: '前引字', text: lead + ' 置於 ' + (present(consonant) ? consonant : '') + ' 前' });
-    if (present(consonant)) rows.push({ tag: '子音', text: readingDifference(consonant, consonantDifference) });
+    if (present(consonant)) rows.push({ tag: '子音', text: present(consonantDifference) ? consonantDifference : consonant });
     if (present(cluster)) rows.push({ tag: '連音', text: (present(consonant) ? consonant : '') + cluster + '（兩個子音一起發音）' });
     if (present(vowel)) rows.push({ tag: '母音', text: vowel });
-    if (present(writtenFinal)) rows.push({ tag: '尾音', text: readingDifference(writtenFinal, finalDifference) });
+    if (present(writtenFinal)) rows.push({ tag: '尾音', text: present(finalDifference) ? finalDifference : writtenFinal });
     if (present(silent)) rows.push({ tag: '消音', text: silent + ' 不發音' });
     if (present(toneMark)) {
       var toneLabel = present(toneName) ? (TONE_ZH[toneName] || toneName) : '';

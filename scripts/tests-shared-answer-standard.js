@@ -96,6 +96,7 @@ sentences.forEach((sentence) => {
       for (const [written, reading, tag] of [['final', 'finalRead', '尾音'], ['cons', 'consRead', '子音']]) {
         if (raw[reading] && raw[reading] !== 'ไม่มี') {
           const expected = /[>→]/.test(raw[reading]) ? raw[reading] : raw[written] + ' > ' + raw[reading];
+          assert.strictEqual(sy[reading], expected, 'gameplay and display must receive the same reviewed pair');
           assert.strictEqual(api.buildAnswerRows(sy).find((r) => r.tag === tag).text, expected);
           arrowChecks++;
         }
