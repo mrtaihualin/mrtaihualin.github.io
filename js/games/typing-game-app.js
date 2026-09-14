@@ -246,6 +246,9 @@ function tgScoreSylCount(){
   if(sylList&&sylList.length&&sylList[sylList.length-1]&&sylList[sylList.length-1].isParticle) return sylList.length-1;
   return (sylList&&sylList.length)?sylList.length:1;
 }
+function tgIsParticleSegment(index){
+  return !!(sylList&&sylList[index]&&sylList[index].isParticle);
+}
 function tgSyncParticleBtn(){
   var b=document.getElementById('rg-particle-toggle');
   if(!b) return;
@@ -2125,7 +2128,10 @@ function rgTypeChar(ch){
       rgTypeHighlightNextKey();
     }
   } else {
-    RG_TYPE.wrong++;if(!(sylList[sylIdx]&&sylList[sylIdx].isParticle))wordWrongTotal++;wordHadWrong=true;streak=0;badC++; // Lin 2026-08-01: พิมพ์ผิดพยางค์ครับ/ค่ะ/คะ ไม่นับเข้าคะแนน
+    // Lin 2026-09-14: คำสุภาพมีไว้ให้พิมพ์ครบเท่านั้น — พิมพ์ผิดให้ลองใหม่
+    // แต่ห้ามเปลี่ยนคะแนน, สถิติผิด, streak หรือสถานะ clean ของคำ/รอบ
+    if(tgIsParticleSegment(sylIdx)){rgTypeFlashWrong();rgTypeHighlightNextKey();return;}
+    RG_TYPE.wrong++;wordWrongTotal++;wordHadWrong=true;streak=0;badC++;
     tgUpdateScoreBar(); // Lin 2026-07-06: หลอด 本題分數 ลดสด+ไล่สีตอนพิมพ์ผิด
     document.getElementById('ok').textContent=okC;document.getElementById('bad').textContent=badC;
     updateCombo();
@@ -2208,7 +2214,10 @@ function rgContChar(ch){
     }
   } else {
     // นับผิดรวมทั้งคำ (ไม่แยกนับทีละพยางค์แล้ว) — Phase 1: คะแนนถึง 0 แล้วยังต้องพิมพ์ต่อจนถูก
-    RG_CONT_WRONG++;if(!(sylList[RG_CONT_SEG]&&sylList[RG_CONT_SEG].isParticle))wordWrongTotal++;wordHadWrong=true;streak=0;badC++; // Lin 2026-08-01: พิมพ์ผิดพยางค์ครับ/ค่ะ/คะ ไม่นับเข้าคะแนน
+    // Lin 2026-09-14: คำสุภาพมีไว้ให้พิมพ์ครบเท่านั้น — พิมพ์ผิดให้ลองใหม่
+    // แต่ห้ามเปลี่ยนคะแนน, สถิติผิด, streak หรือสถานะ clean ของคำ/รอบ
+    if(tgIsParticleSegment(RG_CONT_SEG)){rgTypeFlashWrong();rgTypeHighlightNextKey();return;}
+    RG_CONT_WRONG++;wordWrongTotal++;wordHadWrong=true;streak=0;badC++;
     tgUpdateScoreBar(); // Lin 2026-07-06: หลอด 本題分數 ลดสด+ไล่สีตอนพิมพ์ผิด
     document.getElementById('ok').textContent=okC;document.getElementById('bad').textContent=badC;
     updateCombo();

@@ -105,10 +105,15 @@ const origin = 'https://answer-review.test';
               if (tgParticleMode !== 'm' || !sylList[sylList.length - 1].isParticle ||
                   sylList[sylList.length - 1].th !== 'ครับ' || RG_TYPE.target !== WORD.th + 'ครับ') throw Error('Typing male target missing');
               const scoreBeforeParticleError = tgCurWordScore();
+              const particleStatsBefore = {badC, wordWrongTotal, wordHadWrong, streak, rgWrong:RG_CONT_WRONG};
               RG_CONT_SEG = sylList.length - 1;
               RG_TYPE.pos = WORD.th.length;
               rgContChar('x');
-              if (tgCurWordScore() !== scoreBeforeParticleError || wordWrongTotal !== 0) throw Error('Typing particle changed score');
+              if (tgCurWordScore() !== scoreBeforeParticleError || badC !== particleStatsBefore.badC ||
+                  wordWrongTotal !== particleStatsBefore.wordWrongTotal || wordHadWrong !== particleStatsBefore.wordHadWrong ||
+                  streak !== particleStatsBefore.streak || RG_CONT_WRONG !== particleStatsBefore.rgWrong) {
+                throw Error('Typing particle changed score or statistics');
+              }
               Array.from('ครับ').forEach((character) => rgContChar(character));
               if (!checked) throw Error('Typing did not require the full male particle');
               tgParticleMode = 'f'; loadWord();

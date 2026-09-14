@@ -69,7 +69,78 @@ test('High polite mode requires the approved particle text without changing scor
   assert.match(load, /sylList=sylList\.concat\(\[\{th:_tgParticle,isParticle:true\}\]\)/);
   assert.match(load, /WORD\.th\+\(_tgParticle\|\|''\)/);
   assert.match(scoreUnits, /isParticle[\s\S]*sylList\.length-1/);
-  assert.match(source, /if\(!\(sylList\[RG_CONT_SEG\]&&sylList\[RG_CONT_SEG\]\.isParticle\)\)wordWrongTotal\+\+/);
+  assert.match(source, /function tgIsParticleSegment\(index\)/);
+});
+
+test('polite input mistakes retry without changing any statistics', () => {
+  const makeFlow = (continuous, particle) => {
+    const elements = {
+      ok: { textContent: '' },
+      bad: { textContent: '' },
+      'retry-hint': { textContent: '', className: '' },
+    };
+    const flow = {
+      RG_CONT_ON: continuous,
+      RG_CONT_SEG: 0,
+      RG_CONT_WRONG: 0,
+      RG_TYPE: { on: true, pos: 0, wrong: 0, target: 'ก' },
+      checked: false,
+      sylList: [{ isParticle: particle }],
+      sylIdx: 0,
+      wordWrongTotal: 0,
+      wordHadWrong: false,
+      streak: 7,
+      okC: 0,
+      badC: 0,
+      flashCount: 0,
+      highlightCount: 0,
+      document: { getElementById: (id) => elements[id] || null },
+      tgCurWordScore() { return 10 - this.wordWrongTotal; },
+      tgScoreSylCount() { return 1; },
+      tgUpdateScoreBar() {},
+      updateCombo() {},
+      rgTypeFlashWrong() {},
+      rgTypeHighlightNextKey() {},
+      rgTypeRenderTarget() {},
+      rgQuotaFor() { return 4; },
+      rgToast() {},
+    };
+    flow.rgTypeFlashWrong = () => { flow.flashCount++; };
+    flow.rgTypeHighlightNextKey = () => { flow.highlightCount++; };
+    vm.createContext(flow);
+    vm.runInContext([
+      functionBlock('tgIsParticleSegment', 'tgSyncParticleBtn'),
+      functionBlock('rgTypeChar', 'rgHandleEnterKey'),
+      functionBlock('rgContChar', 'rgContAdvanceSegment'),
+    ].join('\n'), flow);
+    return flow;
+  };
+
+  for (const continuous of [false, true]) {
+    const polite = makeFlow(continuous, true);
+    if (continuous) polite.rgContChar('x'); else polite.rgTypeChar('x');
+    assert.deepStrictEqual(
+      {
+        typeWrong: polite.RG_TYPE.wrong,
+        continuousWrong: polite.RG_CONT_WRONG,
+        wordWrongTotal: polite.wordWrongTotal,
+        wordHadWrong: polite.wordHadWrong,
+        streak: polite.streak,
+        badC: polite.badC,
+      },
+      { typeWrong: 0, continuousWrong: 0, wordWrongTotal: 0, wordHadWrong: false, streak: 7, badC: 0 }
+    );
+    assert.strictEqual(polite.flashCount, 1);
+    assert.strictEqual(polite.highlightCount, 1);
+
+    const normal = makeFlow(continuous, false);
+    if (continuous) normal.rgContChar('x'); else normal.rgTypeChar('x');
+    assert.strictEqual(continuous ? normal.RG_CONT_WRONG : normal.RG_TYPE.wrong, 1);
+    assert.strictEqual(normal.wordWrongTotal, 1);
+    assert.strictEqual(normal.wordHadWrong, true);
+    assert.strictEqual(normal.streak, 0);
+    assert.strictEqual(normal.badC, 1);
+  }
 });
 
 test('single-syllable zero score keeps accepting input without reveal/fail', () => {
@@ -376,7 +447,7 @@ test('Typing counter follows active syllables including High continuous segments
 });
 
 test('Typing loads the rebuilt crash-safe bundle with a fresh cache key', () => {
-  assert.match(html, /typing-game-app\.min\.js\?v=57/);
+  assert.match(html, /typing-game-app\.min\.js\?v=58/);
 });
 
 test('Typing treats the shared-profile legacy stat row as optional', () => {
