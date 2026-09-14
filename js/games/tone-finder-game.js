@@ -3547,26 +3547,7 @@ var TF = {
     if (!s) return;
     if (!s.readingTH || !Array.isArray(s.words) || !s.words.length) throw new Error('CATALOG_AUTHORITY_INCOMPLETE:sentence');
     var coreWords = s.words;
-    // Lin 2026-07-16: ช่อง syl รายคำถูกถอดออกจาก adv-sentences.js แล้ว — คำอ่านรวมอยู่ที่ s.readingTH (ทั้งประโยค คั่น '-')
-    // ตัดกลับเป็นรายคำด้วยจำนวนพยางค์ของแต่ละคำ (w.syls.length) ซึ่งตรงกันเสมอ (มีด่านเช็คใน check-data-health.js)
-    // — coreWords ไม่รวมพยางค์ของคำลงท้ายสุภาพแล้ว ตัดพยางค์ท้าย s.readingTH เกินมาไม่กระทบ เพราะ loop นี้หยุดแค่จำนวนคำใน coreWords
-    var _parts = String(s.readingTH).split('-'), _p = 0;
-    var _expectedParts = coreWords.reduce(function(total,w){
-      if (!w || !Array.isArray(w.syls) || !w.syls.length) throw new Error('CATALOG_AUTHORITY_INCOMPLETE:sentence syllables');
-      return total + w.syls.length;
-    }, 0);
-    if (_parts.length !== _expectedParts || _parts.some(function(part){ return !part; })) throw new Error('CATALOG_AUTHORITY_INCOMPLETE:sentence reading segmentation');
-    var entries = coreWords.map(function(w){
-      var _n = w.syls.length;
-      var _read = _parts.slice(_p, _p + _n).join('-'); _p += _n;
-      // Lin 2026-07-25: ใส่ readingEN ด้วย (ต่อ en ของทุกพยางค์) — เดิมลืมใส่ ทำให้ปุ่ม 英文讀音 ในโหมด高級 โชว์ว่างเปล่า
-      //   (กฎ CLAUDE.md: ตัวประกอบต้อง copy ทุกฟิลด์ที่เกมใช้จริง)
-      var _readEn = w.syls.map(function(sy){
-        if (!sy || !sy.en) throw new Error('CATALOG_AUTHORITY_INCOMPLETE:sentence romanization');
-        return sy.en;
-      }).join('-');
-      return { word: w.th, readingTH: _read, readingEN: _readEn, zh: w.zh, level: 3, category: '高級句子', syls: w.syls }; // 2026-07-30: แนบ syls จากคลัง — หน้าเฉลย高級ต้องแตกตัวอักษรจากข้อมูลที่ Lin ตรวจแล้ว ไม่ใช่สูตรคำนวณ
-    });
+    var entries = buildSentenceWordsForToneFinder(s);
     selectedLevel = 3;
     selectedCategory = '高級句子';
     advSentIdx = idx;

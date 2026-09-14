@@ -49,7 +49,7 @@ test('High sentence syllables expose exact reviewed fields to the shared answer 
   const syllable = projected.syls[0];
   assert.deepStrictEqual(JSON.parse(JSON.stringify(syllable.catalog)), {
     roman: 'gaa', lead: '', consonant: 'ก', cluster: '', vowel: 'อา',
-    writtenFinal: '', toneMark: '', toneName: 'สามัญ', liveDead: 'เป็น',
+    writtenFinal: '', toneMark: '', toneName: 'สามัญ', toneNumber: 1, liveDead: 'เป็น',
     consonantReadDifference: '', finalReadDifference: '', silent: ''
   });
   assert.match(reviewedDisplay.buildAnswerHeader(syllable), /^กา/);

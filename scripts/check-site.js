@@ -105,6 +105,7 @@ console.log(`✓ ตรวจ CSS ${cssFiles.length} ไฟล์`);
 
 runTest(['scripts/tests-current-free-200.js'], 'Current Free 200 data-health, duplicate and runtime integrity tests');
 runTest(['scripts/tests-no-vocabulary-judge.js'], 'catalog-to-game no-second-judge tests');
+runTest(['scripts/tests-shared-answer-standard.js'], 'shared word/sentence answer standard');
 runTest(['scripts/tests-secret-scanner.js'], 'secret-scanner tests');
 // เพิ่ม 2026-08-07 (รวมผล P3 — ตัวทดสอบคุ้มกันพฤติกรรมเดิม)
 runTest(['scripts/tests-marketing-behavioral.js'], 'marketing behavioral tests');

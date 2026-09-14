@@ -1,5 +1,12 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-09-14 — Shared word/sentence answer standard (`SOURCE_PASS / ISOLATED_BROWSER_PASS / HUMAN_REVIEW_PENDING / PRODUCTION_UNCHANGED`)
+
+- The existing sentence adapter now encodes each supplied reviewed tone name as its 1–5 ID and rejects unknown/conflicting tone metadata. Tone's sentence entry path uses the same projected syllables as Reading and Typing, eliminating missing `toneNumber`/catalog answer failures without a Thai-language calculator or a new sentence catalog.
+- The shared answer display preserves complete canonical explanations verbatim; for legacy sentence records with separately supplied written/read values it displays both sides (`ศ > ด`, `ณ > น`). Original vocabulary, sentence, translation, reading and particle data are unchanged. Typing's whole-sentence word-meaning explanation and Word Order's prescribed answer order remain unchanged. Listening and Lego have no source/UI changes.
+- Added `tests-shared-answer-standard.js` to the site gate: all 200 approved words, 30 existing sentences, 534 syllables and 10 sentence reading-difference rows pass against the actual Tone/Reading/Typing answer functions; source immutability, canonical-arrow preservation and invalid-tone rejection are covered. Rebuilt only Tone's minified app; advanced cache bindings on the four active content-client pages and the three detail-renderer pages.
+- The isolated browser runner uses the real candidate page/app bytes with approved fixtures and intercepts every external request. Desktop 1280×720 and Portrait 390×844 pass Tone's 166 sentence-syllable answer checks, Reading/Typing's 230 word/sentence DOM reveals each, reading-toggle visibility, Word Order entry smoke, zero page errors and no horizontal overflow. These are automated browser checks, not physical-device or Human quality approval. The full site gate passes. No Production, Edge, database, Auth, account or application-data mutation occurred; release remains pending exact Human review and authorization.
+
 ## 2026-09-13 — WWW canonical static-source candidate (`SOURCE_PASS / PREVIEW_PASS / PRODUCTION_UNCHANGED`)
 
 - Migrated the public canonical surface from the apex host to `www.mrtaihualin.com`: 68 canonical tags, all 66 sitemap URLs, the robots sitemap directive, structured/social metadata, hard-coded public links, shared social-share fallbacks and Classroom-generated website links now use the WWW host. Public HTML URLs and page behavior are unchanged.
