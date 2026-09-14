@@ -7364,7 +7364,7 @@
           "toneName": "ตรี",
           "liveDead": "死音",
           "consonantReadDifference": "ไม่มี",
-          "finalReadDifference": "ไม่มี",
+          "finalReadDifference": "ต > ด",
           "silent": "ย์"
         }
       ],
@@ -7391,6 +7391,7 @@
           "th": "ทิตย์",
           "en": "thít",
           "final": "ต",
+          "finalRead": "ด",
           "silent": "ย์"
         }
       ]
