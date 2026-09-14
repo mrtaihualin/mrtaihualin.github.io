@@ -138,26 +138,38 @@ const origin = 'https://answer-review.test';
                   item.correct_answer !== facts.spaced) throw Error('Word Order ' + label + ' report mismatch');
             };
 
-            if (!orderedTiles().length || document.getElementById('wo-particle-line').textContent) throw Error('Word Order OFF state mismatch');
+            if (!orderedTiles().length || document.getElementById('wo-particle-line')) throw Error('Word Order OFF state mismatch');
             const originalTileCount = orderedTiles().length;
             woToggleParticleMode();
             let facts = answerFacts();
             if (orderedTiles().length !== originalTileCount) throw Error('Word Order male particle became a tile');
             place(orderedTiles()); woCheck();
-            if (document.getElementById('wo-particle-line').textContent !== 'ครับ') throw Error('Word Order male display tail missing');
+            var maleParticleSlot=document.getElementById('wo-particle-line');
+            if (!maleParticleSlot || maleParticleSlot.querySelector('.wo-word-th').textContent !== 'ครับ' ||
+                maleParticleSlot.querySelector('.wo-read-zh').textContent !== '禮貌詞' ||
+                !maleParticleSlot.classList.contains('wo-slot') || !maleParticleSlot.classList.contains('correct')) {
+              throw Error('Word Order male display tail slot missing');
+            }
             assertReport(itemLog[itemLog.length - 1], facts, 'correct');
 
             woToggleParticleMode();
+            if (document.getElementById('wo-particle-line')) throw Error('Word Order toggle kept a stale male slot');
             facts = answerFacts();
             const sentence = ADV_SENTENCES.find((candidate) => candidate.th === facts.sentence);
             const expectedFemale = sentence.politeF || 'ครับ';
             if (orderedTiles().length !== originalTileCount) throw Error('Word Order female particle became a tile');
             place(orderedTiles()); woCheck();
-            if (document.getElementById('wo-particle-line').textContent !== expectedFemale) throw Error('Word Order female display tail missing: expected=' + expectedFemale + ' actual=' + document.getElementById('wo-particle-line').textContent);
+            var femaleParticleSlot=document.getElementById('wo-particle-line');
+            if (!femaleParticleSlot || femaleParticleSlot.querySelector('.wo-word-th').textContent !== expectedFemale ||
+                femaleParticleSlot.querySelector('.wo-read-zh').textContent !== '禮貌詞') {
+              throw Error('Word Order female display tail slot missing: expected=' + expectedFemale);
+            }
 
             woNext();
+            if (document.getElementById('wo-particle-line')) throw Error('Word Order next kept a stale female slot');
             facts = answerFacts();
             woSkip();
+            if (document.getElementById('wo-particle-line')) throw Error('Word Order skip kept a stale particle slot');
             assertReport(itemLog[itemLog.length - 1], facts, 'skip');
 
             facts = answerFacts();
@@ -166,6 +178,10 @@ const origin = 'https://answer-review.test';
             place(wrongTiles);
             for (let attempt = 0; attempt < 4; attempt++) woCheck();
             assertReport(itemLog[itemLog.length - 1], facts, 'failed');
+            var failedParticleSlots=document.querySelectorAll('#wo-slots > .wo-particle-slot');
+            if (failedParticleSlots.length !== 1 || failedParticleSlots[0].querySelector('.wo-read-zh').textContent !== '禮貌詞') {
+              throw Error('Word Order failed reveal particle slot mismatch');
+            }
             count = 5;
           }
           return { count, overflow: document.documentElement.scrollWidth > innerWidth };

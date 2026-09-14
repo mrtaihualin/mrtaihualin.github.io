@@ -332,7 +332,7 @@
   //   เกมนี้ไม่ใช่คำที่ต้องลากเรียงเลย — ต่อท้ายอัตโนมัติ "หลังเรียงประโยคหลักถูกแล้วเท่านั้น" (หรือกดยอมแพ้/ตายแล้วเฉลย ก็นับว่า "เห็นคำตอบสมบูรณ์" เหมือนกัน)
   //   ใช้ localStorage key เดียวกับเกมเสียง/เกมอ่าน/เกมพิมพ์ (games_particle_mode) ให้ค่าติดกันข้ามเกม
   var woParticleMode = (function(){ try { return localStorage.getItem('games_particle_mode') || 'off'; } catch(e){ return 'off'; } })();
-  var woSentenceRevealed = false; // true เมื่อเรียงถูก/ตายแล้วเฉลย — ใช้คุมว่าจะโชว์บรรทัดครับ/ค่ะ/คะ ไหม
+  var woSentenceRevealed = false; // true เมื่อเรียงถูก/ตายแล้วเฉลย — ใช้คุมว่าจะเติมช่องครับ/ค่ะ/คะ ไหม
   function woShowParticleFor(s){
     if (!s) return null;
     if (woParticleMode === 'm') return 'ครับ';
@@ -355,12 +355,26 @@
     b.setAttribute('aria-label', b.title);
   }
   function woRenderParticleLine(){
-    var el = document.getElementById('wo-particle-line');
-    if (!el) return;
+    var old = document.getElementById('wo-particle-line');
+    if (old && old.parentNode) old.parentNode.removeChild(old);
     var s = curSentence();
     var particle = woSentenceRevealed && s ? s.activeParticle : null;
-    el.style.display = particle ? '' : 'none';
-    el.textContent = particle || '';
+    var wrap = document.getElementById('wo-slots');
+    if (!particle || !wrap) return;
+    var el = document.createElement('div');
+    el.id = 'wo-particle-line';
+    el.className = 'wo-slot filled correct wo-particle-slot';
+    el.setAttribute('data-gsh-auto-tail', 'true');
+    el.setAttribute('aria-label', '禮貌詞 ' + particle);
+    var word = document.createElement('div');
+    word.className = 'wo-word-th';
+    word.textContent = particle;
+    var gloss = document.createElement('div');
+    gloss.className = 'wo-read-zh';
+    gloss.textContent = '禮貌詞';
+    el.appendChild(word);
+    el.appendChild(gloss);
+    wrap.appendChild(el);
   }
   window.woToggleParticleMode = function(){
     woParticleMode = (woParticleMode === 'off') ? 'm' : (woParticleMode === 'm' ? 'f' : 'off');
@@ -952,7 +966,7 @@
     document.getElementById('wo-next-btn').disabled = true;
     document.getElementById('wo-hint-btn').disabled = false;
     document.getElementById('wo-hint-btn').style.display = '';
-    woSentenceRevealed = false; woSyncParticleBtn(); woRenderParticleLine(); // Lin 2026-08-01: ประโยคใหม่ = ยังไม่เรียงเสร็จ ซ่อนบรรทัดครับ/ค่ะ/คะ ไว้ก่อน
+    woSentenceRevealed = false; woSyncParticleBtn(); woRenderParticleLine(); // Lin 2026-08-01: ประโยคใหม่ = ยังไม่เรียงเสร็จ ลบช่องครับ/ค่ะ/คะ เก่าไว้ก่อน
     var rb = document.getElementById('wo-skip-btn'); if (rb) { rb.style.display = ''; rb.disabled = false; }
     var resetButton = document.getElementById('wo-reset-btn'); if (resetButton) resetButton.disabled = false;
     updateCheckButton();
@@ -1018,6 +1032,7 @@
       }
       wrap.appendChild(slot);
     }
+    woRenderParticleLine();
   }
 
   function renderBank(){
@@ -1108,7 +1123,7 @@
     woLogSentence({failed:true, pts:0, srsDue:(woLoggedIn() && !practiceMode) ? ((srsRecords[srsKey] && srsRecords[srsKey].dueDate) || '') : ''});
     curSentenceIsKnownCheck = false;
     curCombo = 0;
-    woSentenceRevealed = true; woRenderParticleLine(); // Lin 2026-08-01: เฉลยคำตอบแล้ว (แม้เรียงแพ้) ก็ถือว่าเห็นประโยคสมบูรณ์ → โชว์บรรทัดครับ/ค่ะ/คะ ได้
+    woSentenceRevealed = true; woRenderParticleLine(); // Lin 2026-08-01/09-14: เฉลยแล้ว (รวมเรียงแพ้) → เติมช่องคำสุภาพต่อท้ายในแถวคำตอบ
   }
 
   function checkAnswer(){
@@ -1149,7 +1164,7 @@
         var _wobK=document.getElementById('wo-bank'); if(_wobK)_wobK.style.display='none'; // Lin 2026-07-12: เหมือนจุดอื่น กันช่องว่างเปล่าๆ
         Array.prototype.forEach.call(document.querySelectorAll('#wo-slots .wo-slot'), function(el){ el.classList.add('correct'); });
         woLogSentence({mastered:!!passedClean, pts:0, srsDue:passedClean?'已精通':((srsRecords[srsKey] && srsRecords[srsKey].dueDate) || '')});
-        woSentenceRevealed = true; woRenderParticleLine(); // Lin 2026-08-01: เรียงถูก (ด่านพิสูจน์已記得) → โชว์บรรทัดครับ/ค่ะ/คะ ได้
+        woSentenceRevealed = true; woRenderParticleLine(); // Lin 2026-08-01/09-14: เรียงถูกในด่านพิสูจน์ → เติมช่องคำสุภาพต่อท้ายในแถวคำตอบ
         return;
       }
 
@@ -1224,7 +1239,7 @@
           _woRev.innerHTML='';
         }
       }
-      woSentenceRevealed = true; woRenderParticleLine(); // Lin 2026-08-01: เรียงถูกแล้ว → โชว์บรรทัดครับ/ค่ะ/คะ ได้
+      woSentenceRevealed = true; woRenderParticleLine(); // Lin 2026-08-01/09-14: เรียงถูกแล้ว → เติมช่องคำสุภาพต่อท้ายในแถวคำตอบ
       // Lin 2026-07-12: คำในคลังใช้หมดแล้ว (มองไม่เห็นแต่ยังกินพื้นที่อยู่ opacity:0) → ซ่อนกล่องทั้งกล่องไปเลย กันช่องว่างเปล่าๆ ระหว่างช่องเฉลยกับ popup ผลลัพธ์
       var _wob=document.getElementById('wo-bank'); if(_wob)_wob.style.display='none';
       document.getElementById('wo-next-btn').disabled = false;

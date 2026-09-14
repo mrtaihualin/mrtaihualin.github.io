@@ -50,7 +50,7 @@ check(read('reading-game.html').indexOf('reading-auth.js?v=34') !== -1, 'Reading
 check(read('tone-finder.html').indexOf('tone-finder-game.min.js?v=87') !== -1, 'Tone fetches the current game runtime');
 check(read('reading-game.html').indexOf('reading-game-app.min.js?v=59') !== -1, 'Reading fetches the current game runtime');
 check(read('typing-game.html').indexOf('typing-game-app.min.js?v=58') !== -1, 'Typing fetches the current game runtime');
-check(read('word-order.html').indexOf('word-order-app.min.js?v=42') !== -1, 'Word Order fetches the current game runtime');
+check(read('word-order.html').indexOf('word-order-app.min.js?v=43') !== -1, 'Word Order fetches the current game runtime');
 
 [
   ['js/games/tone-finder-game.js', /tfMinimumGuestOnly\(\) && window\.LOGIN_FREE_SRS_PUBLIC_ENTRY !== true/],

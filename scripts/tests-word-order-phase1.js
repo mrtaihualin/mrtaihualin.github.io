@@ -62,13 +62,25 @@ test('polite mode is a revealed display tail and never an ordering tile', () => 
   const helpers = block('function woShowParticleFor(s)', 'function woSentenceText(s)');
   const render = block('function woRenderParticleLine()', 'window.woToggleParticleMode');
   const sentence = { th: 'คุณไปไหนมา', politeF: 'คะ', words: [{ th: 'คุณ' }, { th: 'ไปไหนมา' }] };
-  const elements = { 'wo-particle-line': { style: { display: '' }, textContent: '' } };
+  const makeNode = () => ({
+    id: '', className: '', textContent: '', parentNode: null, children: [], attributes: {},
+    appendChild(child) { child.parentNode = this; this.children.push(child); },
+    removeChild(child) { this.children = this.children.filter((item) => item !== child); child.parentNode = null; },
+    setAttribute(name, value) { this.attributes[name] = value; },
+  });
+  const slots = makeNode();
   const context = {
     woParticleMode: 'off',
     woSentenceRevealed: false,
     activeSentence: null,
     curSentence() { return context.activeSentence; },
-    document: { getElementById(id) { return elements[id] || null; } },
+    document: {
+      getElementById(id) {
+        if (id === 'wo-slots') return slots;
+        return slots.children.find((child) => child.id === id) || null;
+      },
+      createElement() { return makeNode(); },
+    },
   };
   vm.createContext(context);
   vm.runInContext(helpers + render, context);
@@ -83,15 +95,33 @@ test('polite mode is a revealed display tail and never an ordering tile', () => 
   assert.strictEqual(sentence.activeParticle, undefined);
   context.woSentenceRevealed = true;
   context.woRenderParticleLine();
-  assert.strictEqual(elements['wo-particle-line'].textContent, 'ครับ');
-  assert.strictEqual(elements['wo-particle-line'].style.display, '');
+  assert.strictEqual(slots.children.length, 1);
+  assert.strictEqual(slots.children[0].id, 'wo-particle-line');
+  assert.match(slots.children[0].className, /wo-slot filled correct wo-particle-slot/);
+  assert.strictEqual(slots.children[0].children[0].textContent, 'ครับ');
+  assert.strictEqual(slots.children[0].children[1].textContent, '禮貌詞');
+  assert.strictEqual(slots.children[0].attributes['data-gsh-auto-tail'], 'true');
   context.woParticleMode = 'f';
   context.activeSentence = context.woBuildPlayableSentence(sentence);
   assert.strictEqual(context.activeSentence.activeParticle, 'คะ');
   assert.strictEqual(context.activeSentence.words.length, 2);
+  context.woRenderParticleLine();
+  assert.strictEqual(slots.children.length, 1, 'particle slot must be replaced, not duplicated');
+  assert.strictEqual(slots.children[0].children[0].textContent, 'คะ');
   context.activeSentence = context.woBuildPlayableSentence({ th: 'ผมไปบ้าน', politeF: null, words: [{ th: 'ผม' }, { th: 'ไปบ้าน' }] });
   assert.strictEqual(context.activeSentence.activeParticle, 'ครับ');
+  context.woParticleMode = 'off';
+  context.activeSentence = context.woBuildPlayableSentence(sentence);
+  context.woRenderParticleLine();
+  assert.strictEqual(slots.children.length, 0, 'OFF must remove the generated particle slot');
   assert.doesNotMatch(app, /particleSyl|words:\s*s\.words\.concat/);
+  assert.doesNotMatch(html, /<div id="wo-particle-line"/);
+  assert.match(app, /function renderSlots\(s\)[\s\S]*woRenderParticleLine\(\);/);
+  assert.match(app, /function loadSentence\(\)[\s\S]*woSentenceRevealed = false; woSyncParticleBtn\(\); woRenderParticleLine\(\);/);
+  assert.match(app, /window\.woToggleParticleMode = function\(\)[\s\S]*if \(SET\.length && idx < SET\.length\) loadSentence\(\);/);
+  assert.match(app, /function woAdvanceToNextSentence\(\)[\s\S]*idx\+\+;\s*loadSentence\(\);/);
+  assert.match(app, /function woResumeContinue\(state, restoredSet\)[\s\S]*loadSentence\(\);/);
+  assert.match(app, /window\.woResumeRestartSameClick = function\(\)[\s\S]*loadSentence\(\);woSaveResume\(\);/);
 });
 
 test('a wrong order remains playable and gives correction feedback', () => {
