@@ -8,6 +8,7 @@ const vm = require('vm');
 
 const root = path.resolve(__dirname, '..');
 const source = fs.readFileSync(path.join(root, 'js/games/reading-game-app.js'), 'utf8');
+const minified = fs.readFileSync(path.join(root, 'js/games/reading-game-app.min.js'), 'utf8');
 const gameContentClient = fs.readFileSync(path.join(root, 'js/games/game-content-client.js'), 'utf8');
 const html = fs.readFileSync(path.join(root, 'reading-game.html'), 'utf8');
 const reviewedDisplay = require(path.join(root, 'js/games/reviewed-vocabulary-display.js'));
@@ -117,7 +118,12 @@ test('Reading keeps reviewed syllable authority through the live answer object',
 });
 
 test('Reading loads the rebuilt crash-safe bundle with a fresh cache key', () => {
-  assert.match(html, /reading-game-app\.min\.js\?v=58/);
+  assert.match(html, /reading-game-app\.min\.js\?v=59/);
+  assert.match(minified, /READING_FINAL_EXCEPTIONS=\{"อีเมล@中#noun-b-11":"ล"\}/);
+  assert.match(minified, /function reviewedReadingVowel\(/);
+  assert.match(minified, /function reviewedReadingFinal\(/);
+  assert.match(minified, /function readingOptionCounts\(/);
+  assert.match(minified, /\.match\(\/\^\(\.\+\) \(\?:>\|\\u2192\) \(\.\+\)\$\//);
 });
 
 test('Reading keeps scattered choices collision-safe and tone boxes proportional', () => {
@@ -155,24 +161,41 @@ test('every Reading syllable uses the locked consonant-vowel-final-tone slot ord
 
 test('Reading correct answers use Lin-reviewed pronunciation differences only where present', () => {
   const helper = block('function reviewedPresent(value)', '// ════════════════════════════════════════════\n// PHONETIC MAPS');
-  const context = {};
+  const context = {
+    VP: ['อื'],
+    FP: ['ก','ง','น','ม','ย','ว','ด','บ'],
+    READING_FINAL_EXCEPTIONS: { 'อีเมล@中#noun-b-11': 'ล' }
+  };
   vm.createContext(context);
   vm.runInContext(helper, context);
 
   assert.strictEqual(context.reviewedReadingAnswer('ภ', 'ภ > พ', 'consonant'), 'พ');
   assert.strictEqual(context.reviewedReadingAnswer('ศ', 'ศ > ส', 'consonant'), 'ส');
-  assert.strictEqual(context.reviewedReadingAnswer('พ', 'พ > บ', 'final'), 'บ');
+  assert.strictEqual(context.reviewedReadingAnswer('ธ', 'ธ → ท', 'consonant'), 'ท');
+  assert.strictEqual(context.reviewedReadingAnswer('พ', 'พ → บ', 'final'), 'บ');
   assert.strictEqual(context.reviewedReadingAnswer('ก', 'ไม่มี', 'consonant'), 'ก');
   assert.strictEqual(context.reviewedReadingAnswer('ม', 'ไม่มี', 'final'), 'ม');
+  assert.strictEqual(context.reviewedReadingVowel('อื'), 'อื');
+  assert.strictEqual(context.reviewedReadingFinal('พ', 'พ > บ', 'ทดสอบ@中'), 'บ');
+  assert.strictEqual(context.reviewedReadingFinal('ล', 'ไม่มี', 'อีเมล@中#noun-b-11'), 'ล');
+  assert.throws(() => context.reviewedReadingVowel('อือ'), /CATALOG_AUTHORITY_INCOMPLETE:reading vowel answer/);
+  assert.throws(() => context.reviewedReadingFinal('ต', 'ไม่มี'), /CATALOG_AUTHORITY_INCOMPLETE:reading final answer/);
+  assert.throws(() => context.reviewedReadingFinal('ล', 'ไม่มี', 'คำอื่น@中'), /CATALOG_AUTHORITY_INCOMPLETE:reading final answer/);
   assert.throws(
     () => context.reviewedReadingAnswer('ภ', 'ศ > ส', 'consonant'),
     /CATALOG_AUTHORITY_INCOMPLETE:reading consonant pronunciation answer/
   );
 
-  const answerSelection = block('// รอบ 1: หาคำตอบจริงของทุกช่องก่อน', '// รอบ 2: สร้างตัวเลือกจริงจริง');
+  const answerSelection = block('// รอบ 1: หาคำตอบจริงของแต่ละหัวข้อ', '// รอบ 2: สร้างตัวเลือกแยกภายในแต่ละหัวข้อ');
   assert.match(answerSelection, /comp==='cons'[\s\S]*reviewedReadingAnswer\(W\.cons,W\.consRead,'consonant'\)/);
-  assert.match(answerSelection, /comp==='final'[\s\S]*reviewedReadingAnswer\(W\.final,W\.finalRead,'final'\)/);
-  assert.match(answerSelection, /comp==='vowel'\)\{ans=W\.vowel;/, 'vowel answer must remain unchanged');
+  assert.match(answerSelection, /comp==='final'[\s\S]*reviewedReadingFinal\(W\.final,W\.finalRead,WORD\.contentKey\)/);
+  assert.match(answerSelection, /comp==='vowel'\)\{ans=reviewedReadingVowel\(W\.vowel\);/, 'vowel answer must remain exact and validated');
+
+  assert.deepStrictEqual(Array.from(context.readingComponentsFor({ final: 'ไม่มี', tone: 'ไม่มี' })), ['cons', 'vowel']);
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(context.readingOptionCounts(['cons', 'vowel']))), { cons: 4, vowel: 4 });
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(context.readingOptionCounts(['cons', 'vowel', 'tone']))), { cons: 3, vowel: 3, tone: 2 });
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(context.readingOptionCounts(['cons', 'vowel', 'final']))), { cons: 3, vowel: 3, final: 3 });
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(context.readingOptionCounts(['cons', 'vowel', 'final', 'tone']))), { cons: 3, vowel: 3, final: 2, tone: 2 });
 });
 
 test('Hint immediately refreshes the permanently zero word-score HUD', () => {
@@ -220,7 +243,7 @@ test('Reading option generator keeps displayed vowel choices complete and unique
   vm.runInContext(source.slice(utilStart, utilEnd), context);
   assert.strictEqual(context.dispOpt('vowel', 'ใอ'), 'ใอ', 'reviewed vowel must not be rewritten');
   assert.strictEqual(context.dispOpt('cons', 'ญ'), 'ญ', 'reviewed consonant must not be prefixed or rewritten');
-  const raw = context.buildOpts('อา', 'vowel', [['อา']], ['อา', 'อั', 'อะ', 'เออ', 'เอิ', 'โอ'], 4, null, []);
+  const raw = context.buildOpts('อา', 'vowel', [['อา']], ['อา', 'อิ', 'อะ', 'เออ', 'อี', 'โอ'], 4, null);
   const shown = raw.map((value) => context.dispOpt('vowel', value));
   assert.strictEqual(raw.length, 4);
   assert.strictEqual(new Set(shown).size, 4);
@@ -234,7 +257,7 @@ test('Reading option generator keeps displayed vowel choices complete and unique
   for (const [comp, groups, pool] of cases) {
     for (const answer of pool) {
       for (const count of [2, 3, 4]) {
-        const options = context.buildOpts(answer, comp, groups, pool, count, null, []);
+        const options = context.buildOpts(answer, comp, groups, pool, count, null);
         const visible = options.map((value) => context.dispOpt(comp, value));
         assert.strictEqual(options.length, count, `${comp}/${answer} should have ${count} options`);
         assert.strictEqual(new Set(visible).size, count, `${comp}/${answer} should be visually unique`);

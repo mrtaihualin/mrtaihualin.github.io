@@ -69,15 +69,13 @@ var CONS_GROUPS=[
 var VOWEL_GROUPS=[
   ['อะ','อา','ออ'],['เอาะ','เออะ'],['โอ','ไอ','ใอ'],['โอะ'],
   ['อุ','อู'],['อิ','อี','อื','อึ'],['เอะ','แอะ'],['เอ','แอ'],
-  ['เออ','เอา'],['เอีย','เอือ','เอิ'],['อัว','อั','อำ'],
-  ['แอ็','เอ็'],['อ็','็อ']
+  ['เออ','เอา'],['เอีย','เอือ'],['อัว','อำ']
 ];
 var FINAL_GROUPS=[
-  ['ม','น'],['ณ','ญ'],['ร','ธ'],['ฬ'],['ย'],['ง','ว','จ'],
-  ['ข','ช','ซ'],['ก','ถ'],['ค','ต','ด'],['ฆ'],['พ','ภ','ฟ'],
-  ['ฎ','ฏ'],['ฑ'],['ฒ'],['ฐ'],['ล','ส'],['ศ'],['ษ','บ'],['ท']
+  ['ม','น'],['ย'],['ง','ว'],['ก'],['ด'],['บ']
 ];
 var TONE_POOL=['่','้','๊','๋','์'];
+var READING_FINAL_EXCEPTIONS={'อีเมล@中#noun-b-11':'ล'};
 
 function poolOf(g){var p=[];g.forEach(function(x){x.forEach(function(y){if(p.indexOf(y)<0)p.push(y);});});return p;}
 var CP=poolOf(CONS_GROUPS),VP=poolOf(VOWEL_GROUPS),FP=poolOf(FINAL_GROUPS);
@@ -91,9 +89,32 @@ function reviewedPresent(value){return value!==undefined&&value!==null&&value!==
 function reviewedReadingAnswer(written,readDifference,field){
   if(!reviewedPresent(written))throw new Error('CATALOG_AUTHORITY_INCOMPLETE:reading '+field+' written answer');
   if(!reviewedPresent(readDifference))return written;
-  var parts=String(readDifference).split(' > ');
-  if(parts.length!==2||parts[0]!==written||!reviewedPresent(parts[1]))throw new Error('CATALOG_AUTHORITY_INCOMPLETE:reading '+field+' pronunciation answer');
-  return parts[1];
+  var exact=String(readDifference).match(/^(.+) (?:>|\u2192) (.+)$/);
+  if(!exact||exact[1]!==written||!reviewedPresent(exact[2]))throw new Error('CATALOG_AUTHORITY_INCOMPLETE:reading '+field+' pronunciation answer');
+  return exact[2];
+}
+function reviewedReadingVowel(vowel){
+  if(!reviewedPresent(vowel)||VP.indexOf(vowel)<0)throw new Error('CATALOG_AUTHORITY_INCOMPLETE:reading vowel answer');
+  return vowel;
+}
+function reviewedReadingFinal(written,readDifference,contentKey){
+  var answer=reviewedReadingAnswer(written,readDifference,'final');
+  var exceptionKey=contentKey==null?'':String(contentKey);
+  if(FP.indexOf(answer)<0&&READING_FINAL_EXCEPTIONS[exceptionKey]!==answer)throw new Error('CATALOG_AUTHORITY_INCOMPLETE:reading final answer');
+  return answer;
+}
+function readingComponentsFor(w){
+  var list=['cons','vowel'];
+  if(reviewedPresent(w.final))list.push('final');
+  if(reviewedPresent(w.tone))list.push('tone');
+  return list;
+}
+function readingOptionCounts(list){
+  var n=list.length,counts={};
+  if(n===4)return{cons:3,vowel:3,final:2,tone:2};
+  if(n===3)list.forEach(function(c){counts[c]=(c==='tone'?2:3);});
+  else list.forEach(function(c){counts[c]=4;});
+  return counts;
 }
 
 // ════════════════════════════════════════════
@@ -707,12 +728,8 @@ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded'
 function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
 function rnd(a){return a[Math.floor(Math.random()*a.length)];}
 
-// avoid = ค่าที่ "แสดงผลจริง" (dispOpt แล้ว) ของคำตอบจริงช่องอื่นๆ — กันตัวลวงปลอมไปหน้าตาซ้ำกับคำตอบจริงช่องอื่น
-// (ถ้าค่านั้นดันเป็นคำตอบจริงของช่องนี้เองพอดี ไม่ถือว่าปลอม ไม่กัน)
-// กฎ Lin 2026-07-07 (MASTER ข้อ12): "คำตอบที่ถูกห้ามซ้ำในตัวเลือก แต่ตัวลวงเสียงซ้ำกันเองได้"
-//   → ตัวเลือกอื่นๆ ห้าม "เสียงอ่าน" ตรงกับคำตอบที่ถูกพอดี (จะดูเหมือนมี 2 คำตอบถูก) แต่ตัวลวงจะเสียงซ้ำกันเอง (ไม่ตรงกับคำตอบ) ได้ปกติ เพราะเป็นจุดสอนจริง (เช่น ซ/ศ/ษ/ส อ่าน "ส" เหมือนกันหมด)
-function buildOpts(ans,comp,groups,pool2,count,exclude,avoid){
-  avoid=avoid||[];
+// คุ้มกันตัวเลือกซ้ำภายในหัวข้อเดียวกันเท่านั้น; 子音 และ 尾音 เป็นคนละหัวข้อจึงใช้ค่าเดียวกันได้
+function buildOpts(ans,comp,groups,pool2,count,exclude){
   var ansDisp=dispOpt(comp,ans);
   var grp=null;
   for(var i=0;i<groups.length;i++){if(groups[i].indexOf(ans)>=0){grp=groups[i].slice();break;}}
@@ -721,7 +738,7 @@ function buildOpts(ans,comp,groups,pool2,count,exclude,avoid){
   function addVisibleOption(x){
     if(x==null||x===exclude||opts.indexOf(x)>=0)return false;
     var shown=dispOpt(comp,x);
-    if(shown===ansDisp||avoid.indexOf(shown)>=0||visible[shown])return false;
+    if(shown===ansDisp||visible[shown])return false;
     opts.push(x);visible[shown]=true;return true;
   }
   shuffle(grp.filter(function(x){return x!==ans;})).forEach(function(x){if(opts.length<count)addVisibleOption(x);});
@@ -733,7 +750,7 @@ function buildOpts(ans,comp,groups,pool2,count,exclude,avoid){
   }
   // fallback แบบ deterministic เมื่อการสุ่มชนค่าที่ใช้แล้วหลายครั้ง; ยังห้ามตัวเลือกที่แสดงซ้ำเสมอ
   while(opts.length<count){
-    var remaining=pool2.filter(function(r2){var shown=dispOpt(comp,r2);return r2!==exclude&&opts.indexOf(r2)<0&&shown!==ansDisp&&avoid.indexOf(shown)<0&&!visible[shown];});
+    var remaining=pool2.filter(function(r2){var shown=dispOpt(comp,r2);return r2!==exclude&&opts.indexOf(r2)<0&&shown!==ansDisp&&!visible[shown];});
     if(!remaining.length)break;
     addVisibleOption(remaining[0]);
   }
@@ -943,15 +960,10 @@ function loadSyl(){
   var SY=sylList[sylIdx];
   W={th:SY.th,read:SY.read,zh:WORD.zh,en:WORD.en,cons:SY.cons,vowel:SY.vowel,tone:SY.tone,final:SY.final,lead:SY.lead,cluster:SY.cluster,tone_name:SY.tone_name,consRead:SY.consRead,finalRead:SY.finalRead,finalDisp:SY.finalDisp,silent:SY.silent,catalog:SY.catalog}; // คัดลอกเฉลยที่ตรวจแล้วเท่านั้น; ต้องรักษา catalog สำหรับหน้าคำอธิบายหลังตอบผิดครบ
   checked=false;picks=[]; // wrongCount ย้ายไปนับระดับ "ทั้งคำ" แล้ว (reset ที่ loadWord)
-  comps=['cons','vowel'];
-  if(reviewedPresent(W.final))comps.push('final');
-  if(reviewedPresent(W.tone)) comps.push('tone');
+  comps=readingComponentsFor(W);
   slotFills={cons:null,vowel:null,final:null,tone:null};
 
-  var n=comps.length,oc={};
-  if(n===4)      oc={cons:3,vowel:3,final:2,tone:2};
-  else if(n===3) comps.forEach(function(c){oc[c]=3;});
-  else           comps.forEach(function(c){oc[c]=4;});
+  var n=comps.length,oc=readingOptionCounts(comps);
   needN=n;
 
   // reset UI
@@ -988,21 +1000,20 @@ function loadSyl(){
   // ไทล์ไม่ผูกช่องแล้ว — type ใช้แค่สร้างตัวลวง · การวางตัดสินจาก "ช่องที่เล็ง" (activeSlot) → ตัวหน้าตาซ้ำไม่งง
   optTiles=[];correctVal={};
   var compDef={};
-  // รอบ 1: หาคำตอบจริงของทุกช่องก่อน (correctVal) — ต้องรู้ครบก่อนถึงจะกันตัวลวงปลอมไม่ให้ไปซ้ำหน้าตากับคำตอบจริงช่องอื่นได้
+  // รอบ 1: หาคำตอบจริงของแต่ละหัวข้อจากค่าที่ Lin ตรวจแล้วเท่านั้น
   comps.forEach(function(comp){
     var ans,groups,pool2,ex=null;
     if     (comp==='cons' ){ans=reviewedReadingAnswer(W.cons,W.consRead,'consonant'); groups=CONS_GROUPS; pool2=CP; ex=reviewedPresent(W.lead)?W.lead:null;}
-    else if(comp==='vowel'){ans=W.vowel; groups=VOWEL_GROUPS; pool2=VP;}
-    else if(comp==='final'){ans=reviewedReadingAnswer(W.final,W.finalRead,'final'); groups=FINAL_GROUPS; pool2=FP;}
+    else if(comp==='vowel'){ans=reviewedReadingVowel(W.vowel); groups=VOWEL_GROUPS; pool2=VP;}
+    else if(comp==='final'){ans=reviewedReadingFinal(W.final,W.finalRead,WORD.contentKey); groups=FINAL_GROUPS; pool2=FP;}
     else                   {ans=W.tone;  groups=[TONE_POOL];  pool2=TONE_POOL;}
     compDef[comp]={ans:ans,groups:groups,pool2:pool2,ex:ex};
     correctVal[comp]=dispOpt(comp,ans);
   });
-  // รอบ 2: สร้างตัวเลือกจริงจริง (ให้ avoid = คำตอบจริงของช่องอื่นทั้งหมด กันตัวลวงปลอมไปหน้าตาซ้ำ)
+  // รอบ 2: สร้างตัวเลือกแยกภายในแต่ละหัวข้อ; ไม่ห้ามค่าซ้ำข้ามหัวข้อ
   comps.forEach(function(comp){
     var d=compDef[comp];
-    var avoid=comps.filter(function(c){return c!==comp;}).map(function(c){return correctVal[c];});
-    var raw=buildOpts(d.ans,comp,d.groups,d.pool2,oc[comp],d.ex,avoid);
+    var raw=buildOpts(d.ans,comp,d.groups,d.pool2,oc[comp],d.ex);
     raw.forEach(function(o){optTiles.push({type:comp,val:dispOpt(comp,o)});});
   });
   optTiles=shuffle(optTiles);

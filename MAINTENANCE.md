@@ -1,5 +1,12 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-09-14 — Reading reviewed-answer and Current 389 audit (`SOURCE_PASS / DATABASE_SOURCE_ONLY / PRODUCTION_UNCHANGED`)
+
+- Reading now takes consonant and final answers from each exact Lin-reviewed pronunciation-difference field, preserves the stored vowel unchanged, keeps consonant/final as separate headings, and generates unique choices only within each heading. Heading counts follow the approved 2/3/4-heading rules, tone always has two choices, absent final/tone headings stay absent, and unsupported Current data fails closed.
+- The complete safe Current set passes through the real Reading helpers: 389 records (Free 200 plus queued Paid 189), 601 syllables, exact approved vowel/final inventories, both reviewed-difference delimiters, and no unresolved answer. `อีเมล@中#noun-b-11` is the sole word-specific final exception (`ล`); `วันอาทิตย์@中#weekday` is corrected exactly to `ต > ด`; and `หมื่น@初#numeral` is corrected exactly from `อือ` to `อื`.
+- Added guarded additive migrations for the exact `วันอาทิตย์` Free row and `หมื่น` queued Paid row. They are Source-only and unapplied; no Production database, Edge, Auth, account or player data changed. The other 193 reviewed-only records still have no safe row-level Current source, so this Delta neither audits nor activates them.
+- Focused Reading, Current Free 200, Paid queue, no-second-judge, Login-accessible and owner-switch tests pass. The complete `1,098`-file site gate passes.
+
 ## 2026-09-13 — WWW canonical static-source candidate (`SOURCE_PASS / PREVIEW_PASS / PRODUCTION_UNCHANGED`)
 
 - Migrated the public canonical surface from the apex host to `www.mrtaihualin.com`: 68 canonical tags, all 66 sitemap URLs, the robots sitemap directive, structured/social metadata, hard-coded public links, shared social-share fallbacks and Classroom-generated website links now use the WWW host. Public HTML URLs and page behavior are unchanged.
