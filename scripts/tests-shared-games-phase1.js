@@ -849,7 +849,7 @@ test('Typing has native mobile input while Listening typed mode is keyboard-focu
   assert.match(games.find((g) => g.id === 'listening').appText, /typeInput\.focus/);
 });
 
-test('Tone active-question guidance permanently locks that question to zero', () => {
+test('Tone active-question guidance locks scoring while preserving the approved teaching derivation', () => {
   const toneGame = games.find((g) => g.id === 'tone');
   const tone = toneGame.appText;
   const toneMin = fs.readFileSync(path.join(root, 'js/games/tone-finder-game.min.js'), 'utf8');
@@ -861,12 +861,13 @@ test('Tone active-question guidance permanently locks that question to zero', ()
   assert.match(tone, /wordScore\s*=\s*session\.currentWordGuideUsed\s*\?\s*0\s*:/, 'Tone: multi-syllable questions must remain zero after guidance');
   assert.match(tone, /hintUsed:\s*!!session\.hintUsed\s*\|\|\s*!!session\.currentWordGuideUsed/, 'Tone: Result evidence must record active guidance');
   assert.match(tone, /currentWordGuideIntroPending\s*=\s*!!tfGuideMode\s*&&\s*!tfCurWordNoTools\(\)/, 'Tone: a new guided question must stop at the intro gate');
-  assert.match(tone, /currentWordGuideIntroPending[\s\S]{0,500}查看已審核答案/, 'Tone: the intro gate must expose only the reviewed answer action');
-  assert.match(tone, /id="tf-guide-start-btn"[\s\S]{0,180}查看已審核答案/, 'Tone: reviewed-answer action must expose a stable Enter target');
+  assert.match(tone, /currentWordGuideIntroPending[\s\S]{0,500}開始推導/, 'Tone: the intro gate must expose the approved derivation action');
+  assert.match(tone, /id="tf-guide-start-btn"[\s\S]{0,220}開始推導/, 'Tone: derivation action must expose a stable Enter target');
   assert.match(tone, /tfOrdinaryDesktop\(\) \? document\.getElementById\('tf-guide-start-btn'\)/, 'Tone: Desktop Enter must prefer guided Start and never infer Skip');
   assert.match(tone, /active\.closest\('\.tf-known-btn'\)[\s\S]{0,120}e\.preventDefault\(\)[\s\S]{0,120}return;/, 'Tone: Enter on the focused Skip action must be blocked');
-  assert.match(tone, /startGuidedQuestion:\s*function\(\)[\s\S]{0,520}currentWordGuideIntroPending\s*=\s*false[\s\S]{0,320}tfForceRevealZero\(\)/, 'Tone: Desktop guidance must reveal the reviewed catalog answer directly');
-  assert.doesNotMatch(tone, /navigateToInflection|tryNavigate|function navigate\(/, 'Tone: no derivation route may remain');
+  assert.match(tone, /startGuidedQuestion:\s*function\(\)[\s\S]{0,520}currentWordGuideIntroPending\s*=\s*false[\s\S]{0,320}navigateToInflection\(\)/, 'Tone: guidance must enter the approved teaching derivation');
+  assert.match(tone, /function navigateToInflection\(\)[\s\S]{0,420}step: 's1'/, 'Tone: approved derivation route must remain');
+  assert.match(tone, /var newTone = nextStep === 'result' \? catalogToneNumber\(\) : null/, 'Tone: derivation must never become a second tone authority');
   assert.match(tone, /guessRow\s*=\s*\(tfDesktopOrPortrait\(\)\s*&&\s*initialGuess\s*==\s*null\)\s*\?\s*''/, 'Tone: guided Result must not invent an uncertain choice on Desktop or Portrait');
   assert.match(tone, /TF\.skipCurrentWord\(\)[^>]*>跳過<\/button>/, 'Tone: Desktop gameplay must expose neutral 跳過');
   assert.match(tone, /recordMistake\([\s\S]{0,140}TF_WORDSCORE\.onWrong\(session\)[\s\S]{0,100}TF_WORDSCORE\.onNextStep\(session\)/, 'Tone: a wrong catalog comparison must count once and drop the score ladder');
@@ -879,9 +880,9 @@ test('Tone active-question guidance permanently locks that question to zero', ()
   assert.match(toneMin, /currentWordGuideUsed/, 'Tone: deployed minified bundle must include the zero-lock state');
   assert.match(toneMin, /currentWordMistakesTotal/, 'Tone: deployed minified bundle must preserve the real wrong-answer total');
   assert.match(toneMin, /聲調選擇錯誤/, 'Tone: deployed minified bundle must charge a wrong initial tone answer');
-  assert.match(toneMin, /查看已審核答案/, 'Tone: deployed minified bundle must include the direct reviewed-answer gate');
+  assert.match(toneMin, /開始推導/, 'Tone: deployed minified bundle must include the derivation start gate');
   assert.match(toneMin, /pageshow/, 'Tone: deployed minified bundle must include the page-return guard');
-  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=88/, 'Tone: page must request the rebuilt shared-framework runtime version');
+  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=89/, 'Tone: page must request the rebuilt shared-framework runtime version');
 });
 
 test('Tone mobile touch surfaces keep Desktop gameplay free of keyboard-only copy', () => {
@@ -892,7 +893,7 @@ test('Tone mobile touch surfaces keep Desktop gameplay free of keyboard-only cop
   assert.match(tone.appText, /function tfWireEnterNext\(\)[\s\S]{0,140}if \(tfTouchMobileSurface\(\)\) return;/, 'mobile surfaces must ignore Enter gameplay');
   assert.match(tone.appText, /\(tfTouchMobileSurface\(\) \? '' : '<div[\s\S]{0,220}電腦也可以直接按鍵盤 1–5/, 'mobile surfaces must omit the computer keyboard hint');
   assert.match(tone.appText, /body\.innerHTML \+= '<div class="tf-known-bar">[\s\S]{0,260}TF\.skipCurrentWord\(\)">跳過<\/button>/, 'all layouts must retain Tone original neutral Skip placement and dimensions');
-  assert.match(tone.appText, /startGuidedQuestion:[\s\S]{0,300}if \(tfDesktopOrPortrait\(\)\)[\s\S]{0,180}tfForceRevealZero\(\)/, 'Portrait Hint must reveal the reviewed answer directly');
+  assert.match(tone.appText, /startGuidedQuestion:[\s\S]{0,360}navigateToInflection\(\)/, 'Portrait Hint must enter the approved teaching derivation');
   assert.match(tone.htmlText, /@media \(max-width:768px\) and \(orientation:portrait\)[\s\S]{0,12000}\.gsh-next-countdown,[\s\S]{0,220}\{ display:none !important; \}/, 'Portrait must render no countdown surface');
   assert.match(tone.htmlText, /\.sg-tone-btn \{[\s\S]{0,180}width:clamp\(44px,12vw,52px\)/, 'Portrait tone choices must stay compact and tappable');
   assert.match(tone.htmlText, /\.gsh-resume-actions button \{[\s\S]{0,180}min-height:34px/, 'Portrait Resume must stay compact in the Desktop position');

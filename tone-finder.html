@@ -2062,7 +2062,7 @@ document.addEventListener('contextmenu', function(e){
     <div style="background:#fff;border-radius:16px;max-width:620px;width:100%;padding:28px 24px;position:relative;font-family:'Noto Sans TC',sans-serif;max-height:90vh;overflow-y:auto;">
       <button onclick="try{if(typeof gtag==='function')gtag('event','tone_finder_howto_close',{category:'game'});}catch(e){}document.getElementById('tf-howto-modal').style.display='none'" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#aaa;">✕</button>
       <div style="font-size:22px;font-weight:900;color:#8B6310;margin-bottom:4px;">🎵 怎麼玩？</div>
-      <p style="font-size:14px;color:#444;line-height:1.7;margin:12px 0 8px;">直接練習辨認泰語聲調；每題答案都來自老師已審核的單字資料 😊</p>
+      <p style="font-size:14px;color:#444;line-height:1.7;margin:12px 0 8px;">泰語聲調其實有規律！先選聲調，答錯時跟著遊戲一步一步推導，慢慢就能自己判斷 😊</p>
       <ul style="font-size:14px;color:#444;line-height:1.7;margin:0 0 12px;padding-left:20px;">
         <li>泰語有 5 個聲調，同一個字聲調不一樣，意思就完全不同喔！</li>
         <li>看到泰文單字，題目問什麼就回答什麼就好了 😊 不確定也沒關係，先猜猜看，玩多了自然就會有感覺的 💛</li>
@@ -2070,7 +2070,7 @@ document.addEventListener('contextmenu', function(e){
       </ul>
       <div style="font-size:13px;color:#555;background:#f9f5ee;border-radius:8px;padding:10px 14px;margin:0 0 12px;">
         <ul style="margin:0;padding-left:18px;line-height:1.9;">
-          <li>每題從 <strong>10 分</strong>開始：選錯會扣分；不確定時可直接查看老師已審核的答案</li>
+          <li>每題從 <strong>10 分</strong>開始：答錯或使用「?」提示 1／2／3 次 → <strong>7／4／1 分</strong>，滿 4 次 → 0 分並直接看解答</li>
           <li>連續第一次答對 3／5／8 次 → <strong>×1.5／×2／×3</strong></li>
           <li>✨黃金字（約 18% 機率）答對再 <strong>×2</strong></li>
           <li>玩完一輪 <strong>+20</strong>，整輪都第一次就答對（perfect）再 <strong>+50</strong></li>
@@ -2085,20 +2085,20 @@ document.addEventListener('contextmenu', function(e){
         <div style="font-weight:700;color:#8B6310;margin:0 0 4px;">📚 三個等級</div>
         <p style="margin:0 0 10px;"><strong>初級</strong>與<strong>中級</strong>：練習單字。<strong>高級</strong>需要完整的已審核ประโยค聲調資料；資料未ครบ時系統會停止，不會自行判斷。</p>
 
-        <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🎵 答案從哪裡來</div>
-        <p style="margin:0 0 10px;">遊戲只比較你選的聲調和老師已審核資料中的聲調，不會從字形、子音類型或活音死音重新計算。資料缺少時會顯示錯誤，不會猜答案。</p>
+        <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🎵 怎麼推導聲調</div>
+        <p style="margin:0 0 10px;">初級與中級答錯後，遊戲會依老師已審核的子音、母音、尾音與活音／死音資料逐步提問；最後正確聲調仍只取自老師已審核的聲調答案，不會另外計算或建立第二套判定。</p>
 
         <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">💡🔥 兩種模式</div>
-        <p style="margin:0 0 10px;"><strong>💡 有提示（練習模式）</strong>：可直接查看已審核答案；整輪不計分、不算星星、不算複習進度。<strong>🔥 無提示（挑戰模式）</strong>：先自行選擇，再由遊戲和已審核答案直接比對。</p>
+        <p style="margin:0 0 10px;"><strong>💡 有提示（練習模式）</strong>：推導每一步會反白正確選項；整輪不計分、不算星星、不算複習進度。<strong>🔥 無提示（挑戰模式）</strong>：先自行選擇，答錯後靠自己完成推導。</p>
 
         <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">「跳過」按鈕是什麼意思</div>
         <p style="margin:0 0 10px;">不想做這題時可按「跳過」直接進入下一題；不算答對或答錯、不加減分，也不影響 Combo 或複習進度。是否已記住由複習系統依實際作答決定。</p>
 
         <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🧰 好用小工具</div>
-        <p style="margin:0 0 10px;">題目上方的工具列可直接使用：讀音顯示・翻譯顯示・🔖加入單字庫・💡／🔥提示模式切換・字體切換・🙏禮貌詞。禮貌詞只顯示資料庫中已存的內容，不會由遊戲補字。</p>
+        <p style="margin:0 0 10px;">題目上方的工具列可直接使用：讀音顯示・翻譯顯示・🔖加入單字庫・💡／🔥提示模式切換・字體切換・🙏禮貌詞。禮貌詞只顯示資料庫中已存的內容，不會由遊戲補字或影響推導與計分。</p>
 
         <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🔤 字母練習區</div>
-        <p style="margin:0 0 10px;">另外還有獨立的「字母練習區」，用字卡練習子音、母音、尾音；這是教材區，不參與單字答案判定。</p>
+        <p style="margin:0 0 10px;">另外還有獨立的「字母練習區」，用字卡練習子音、母音、尾音；這是教材區，與主遊戲的推導分開，也不參與單字答案判定。</p>
 
         <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🏆 星星、稻米勳章／連續天數勳章</div>
         <p style="margin:0 0 10px;">星星是這個字經過複習真的「精通」了才拿到（跟其他遊戲共用），累積解鎖 5 款稻米勳章：茉莉香米（10顆）→ 糯米（20顆）→ 紫米（40顆）→ 香黑米（60顆）→ 紅米（100顆）。這個遊戲另外還有「連續天數」勳章，照每天登入練習的連續天數解鎖：稻種（3天）→ 秧苗（7天）→ 幼穗（14天）→ 金穗（30天）→ 金色稻田（100天）。</p>
@@ -2108,7 +2108,7 @@ document.addEventListener('contextmenu', function(e){
         <p style="margin:0 0 10px;">玩完一輪可以列印或儲存這輪的學習紀錄，裡面有這輪總分和每個字的作答、正解、意思、結果與得分；登入後會自動加上既有的複習進度。</p>
 
         <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🔁 複習系統（登入才有）</div>
-        <p style="margin:0;">答錯或直接查看答案的字會排時間回來複習；乾淨答對才會推進複習狀態。</p>
+        <p style="margin:0;">答錯、推導中選錯或使用提示的字會排時間回來複習；只有乾淨答對才會推進複習狀態。</p>
       </div>
 
       <p style="font-size:13px;color:#8B6310;background:rgba(139,99,16,0.07);border-radius:8px;padding:10px 14px;margin:16px 0 0;">聲調其實是有規律的呢～想真正搞懂，<a href="pricing.html" style="color:#8B6310;font-weight:700;">可以來上課喔 😄</a></p>
@@ -2233,7 +2233,7 @@ document.addEventListener('contextmenu', function(e){
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/tone-finder-game.min.js?v=88'], {game:'tone'}).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/tone-finder-game.min.js?v=89'], {game:'tone'}).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 

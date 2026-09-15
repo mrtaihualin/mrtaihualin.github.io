@@ -208,6 +208,103 @@ function catalogToneNumber() {
   }
   return tone;
 }
+
+// 推導 is a deterministic teaching flow, not an answer engine. Every question
+// below starts from the current teacher-reviewed syllable. The final tone still
+// comes only from catalogToneNumber(); these helpers never inspect the raw word.
+function catalogPedagogySyllable() {
+  var projected = currentAnswerSyl();
+  var record = projected && projected.catalog;
+  if (!record || typeof record !== 'object' || Array.isArray(record)) {
+    throw new Error('CATALOG_AUTHORITY_INCOMPLETE:pedagogy syllable');
+  }
+  return record;
+}
+
+function catalogFieldPresent(value) {
+  return typeof value === 'string' && value !== '' && value !== 'ไม่มี';
+}
+
+function catalogPedagogyClass() {
+  var syllable = catalogPedagogySyllable();
+  if (catalogFieldPresent(syllable.lead)) return 'lead';
+  var consonant = syllable.consonant;
+  function inDef(key, value) {
+    return DEFS[key].chars.split(/\s+/).indexOf(value) !== -1;
+  }
+  if (inDef('low', consonant)) return 'low';
+  if (inDef('high', consonant)) return 'high';
+  if (inDef('mid', consonant)) return 'mid';
+
+  // Some reviewed syllables explicitly record a different spoken consonant
+  // (for example a written symbol read as ร). Use that reviewed field only;
+  // never derive a consonant from the Thai word itself.
+  var difference = syllable.consonantReadDifference;
+  if (catalogFieldPresent(difference) && /[>→]/.test(difference)) {
+    var spoken = difference.split(/[>→]/).pop().trim();
+    if (inDef('low', spoken)) return 'low';
+    if (inDef('high', spoken)) return 'high';
+    if (inDef('mid', spoken)) return 'mid';
+  }
+  throw new Error('CATALOG_AUTHORITY_INCOMPLETE:pedagogy consonant class');
+}
+
+function catalogPedagogyVowelLength() {
+  var vowel = catalogPedagogySyllable().vowel;
+  // This is the course's deterministic teaching table. It selects the next
+  // tutorial card only and is never used to calculate or correct toneNumber.
+  var shortVowels = ['อะ','อิ','อึ','อุ','เอะ','แอะ','โอะ','เอาะ'];
+  var longVowels = ['อา','อี','อื','อู','เอ','แอ','โอ','ออ','เออ','เอีย','เอือ','อัว','อำ','เอา','ไอ','ใอ'];
+  if (shortVowels.indexOf(vowel) !== -1) return 'short';
+  if (longVowels.indexOf(vowel) !== -1) return 'long';
+  throw new Error('CATALOG_AUTHORITY_INCOMPLETE:pedagogy vowel length');
+}
+
+function catalogPedagogyEndingType() {
+  var syllable = catalogPedagogySyllable();
+  if (!catalogFieldPresent(syllable.writtenFinal)) return null;
+  var written = syllable.writtenFinal;
+  function inDef(key, value) {
+    return DEFS[key].chars.split(/\s+/).indexOf(value) !== -1;
+  }
+  if (inDef('shortEnd', written)) return 'short';
+  if (inDef('longEnd', written)) return 'long';
+  var difference = syllable.finalReadDifference;
+  if (catalogFieldPresent(difference) && /[>→]/.test(difference)) {
+    var spoken = difference.split(/[>→]/).pop().trim();
+    if (inDef('shortEnd', spoken)) return 'short';
+    if (inDef('longEnd', spoken)) return 'long';
+  }
+  throw new Error('CATALOG_AUTHORITY_INCOMPLETE:pedagogy ending type');
+}
+
+function catalogExpectedTeachingChoice(step) {
+  var syllable = catalogPedagogySyllable();
+  var mark = syllable.toneMark;
+  var cls;
+  if (step === 's1') return catalogFieldPresent(mark) ? 'hasMark' : 'noMark';
+  if (step === 's2a') return catalogPedagogyClass() === 'low' ? 'low' : 'other';
+  if (step === 's2a_other') return catalogPedagogyClass();
+  if (step === 's2a_low' || step === 's2a_mid' || step === 's2a_hi') {
+    if (!catalogFieldPresent(mark)) throw new Error('CATALOG_AUTHORITY_INCOMPLETE:pedagogy tone mark');
+    return mark;
+  }
+  if (step === 's2b') {
+    if (syllable.liveDead === '活音') return 'live';
+    if (syllable.liveDead === '死音') return 'dead';
+    throw new Error('CATALOG_AUTHORITY_INCOMPLETE:pedagogy live/dead');
+  }
+  if (step === 's2b_live') {
+    cls = catalogPedagogyClass();
+    return (cls === 'high' || cls === 'lead') ? 'high_lead' : 'mid_low';
+  }
+  if (step === 's2b_dead') return catalogPedagogyClass() === 'low' ? 'low_dead' : 'high_lead_mid';
+  if (step === 's2b_dl') return catalogPedagogyVowelLength() === 'long' ? 'long_vowel' : 'short_vowel';
+  if (step === 'helper') return catalogFieldPresent(syllable.writtenFinal) ? 'has_tail' : 'no_tail';
+  if (step === 'h_with') return catalogPedagogyEndingType() === 'long' ? 'long_tail' : 'short_tail';
+  if (step === 'h_no') return catalogPedagogyVowelLength() === 'long' ? 'long_vowel_h' : 'short_vowel_h';
+  throw new Error('CATALOG_AUTHORITY_INCOMPLETE:unknown pedagogy step');
+}
 // Lin 2026-07-31: คำหลายพยางค์ — รวมเฉลยของ "ทุกพยางค์" ไว้ที่เดียว (ใช้โชว์ตอนหน้าพยางค์สุดท้ายเท่านั้น)
 //   เทียบไม่ได้ (จำนวนพยางค์ไม่ตรงคลัง) = คืน '' เหมือน currentAnswerSyl (ไม่เดา)
 function tfAllAnswerRowsHtml() {
@@ -305,9 +402,10 @@ var TF_SCORE = {
 // ===== TF_SCORE ENGINE END =====
 
 // ===== TF_WORDSCORE (Lin 2026-07-04) — state คะแนนต่อคำ บันได [10,7,4,1,0] · pure logic ทดสอบได้จริง =====
-//  ทำงานบน object ที่มีฟิลด์ currentWordDeduct เท่านั้น; ไม่คำนวณคำตอบภาษา
+//  ทำงานบนคะแนน/สถานะ UI เท่านั้น; ไม่คำนวณคำตอบภาษา
 //  กติกา (ยืนยันกับ Lin ผ่านหลอดคะแนน 2026-07-04):
-//   • เลือกผิด = หัก 1 ขั้น
+//   • เดาเสียงหรือเลือกขั้น推導ผิด = หัก 1 ขั้น
+//   • ปุ่ม ? ฟรีหนึ่งครั้งหลังตอบผิดในขั้นนั้น มิฉะนั้นหัก 1 ขั้น
 //   • หักครบ 4 (แต้มเหลือ 0) = เฉลยค่าจากคลัง + SRS รีเซ็ต day1
 var TF_WORDSCORE = {
   LADDER: [10, 7, 4, 1, 0],
@@ -319,6 +417,11 @@ var TF_WORDSCORE = {
     s.currentWordDeduct = (s.currentWordDeduct || 0) + 1;
     s.stepWrong = true;
     return s;
+  },
+  onPeek: function (s) {
+    if (s.stepWrong && !s.stepFreePeekUsed) { s.stepFreePeekUsed = true; return false; }
+    s.currentWordDeduct = (s.currentWordDeduct || 0) + 1;
+    return true;
   },
   // หลังบันทึกการเลือกแล้ว ล้างสถานะหน้าจอ
   onNextStep: function (s) { s.stepWrong = false; s.stepFreePeekUsed = false; return s; }
@@ -966,6 +1069,24 @@ function tfSyncGuideBtn() {
   b.setAttribute('aria-label', b.title);
 }
 
+// Highlight the one reviewed teaching choice for the current 推導 step.
+// This is navigation/pedagogy only; catalogToneNumber() remains the sole judge.
+function tfApplyGuideHints() {
+  var body = document.getElementById('tf-body');
+  if (!body) return;
+  var old = body.querySelectorAll('.tf-opt-hint');
+  for (var j = 0; j < old.length; j++) old[j].classList.remove('tf-opt-hint');
+  if (!tfGuideMode || S.step === 'session-guess') return;
+  var btns = body.querySelectorAll('[data-hintkey]');
+  if (btns.length < 2) return;
+  var expected = catalogExpectedTeachingChoice(S.step);
+  var correct = [];
+  for (var i = 0; i < btns.length; i++) {
+    if (btns[i].getAttribute('data-hintkey') === expected) correct.push(btns[i]);
+  }
+  if (correct.length === 1) correct[0].classList.add('tf-opt-hint');
+}
+
 // ป้ายบอกโหมด (เหมือนเกมอ่าน) — ให้ผู้เล่นรู้ตัวว่ากำลังเล่นแบบไม่คิดคะแนนอยู่
 function tfGuideNoteHtml() {
   if (!tfGuideMode) return '';
@@ -1313,7 +1434,82 @@ function tfScoreFirstTry() {
   }, 520);
 }
 
-// เผยคำตอบจาก canonical catalog โดยตรงและให้คะแนนศูนย์ ไม่มีขั้นอนุมานภาษา
+// Score a completed learner-facing 推導 path. The path teaches reviewed
+// properties; it does not calculate the correct tone.
+function tfScoreDeduce() {
+  if (!session) return;
+  var noSoftPoints = !!session.curWordIsKnownCheck || !tfSoftPointsAllowed(session.words[session.index]);
+  if (noSoftPoints) {
+    if (tfCurWordIsMulti()) {
+      if (session.scoredSyls) session.scoredSyls[S.selectedSyl] = true;
+      session.curWordAllFirstTry = false;
+    } else {
+      session.currentWordScored = true;
+    }
+    session.currentWordFirstTry = false;
+    if (!tfCurWordIsParticle()) session.combo = 0;
+    return;
+  }
+  var gold = tfGoldenMult();
+  if (tfCurWordIsMulti()) {
+    var k = S.selectedSyl;
+    if (session.scoredSyls && session.scoredSyls[k]) return;
+    session.scoredSyls[k] = true;
+    var sylBase = TF_WORDSCORE.score(session);
+    session.learningComponentWrongCounts[k] = Math.min(session.currentWordDeduct || 0, 4);
+    session.curWordSylRawSum = (session.curWordSylRawSum || 0) + sylBase;
+    session.curWordSylScoredCount = (session.curWordSylScoredCount || 0) + 1;
+    session.curWordAllFirstTry = false;
+    session.combo = 0;
+    setTimeout(function () { tfScorePop(sylBase, { gold: gold > 1 }); }, 60);
+    return;
+  }
+  if (session.currentWordScored) return;
+  var pts = Math.round(TF_WORDSCORE.score(session) * gold);
+  session.score += pts;
+  session.currentWordScore = pts;
+  session.currentWordFirstTry = false;
+  session.currentWordScored = true;
+  session.combo = 0;
+  setTimeout(function () { tfScorePop(pts, { gold: gold > 1 }); }, 60);
+}
+
+function tfUseHint(keys) {
+  if (tfCurWordIsParticle()) { showTip(keys); return; }
+  if (session) {
+    var charged = TF_WORDSCORE.onPeek(session);
+    if (charged) {
+      session.combo = 0;
+      session.hintUsed = true;
+      if (tfCurWordIsMulti()) session.curWordAllFirstTry = false;
+      tfUpdateWordScoreGauge();
+      if (TF_WORDSCORE.isDead(session)) {
+        showTip(keys);
+        tfForceRevealZero();
+        return;
+      }
+    }
+  }
+  showTip(keys);
+}
+
+function tfHandleDeduceMistake(choiceLabel, errMsg) {
+  if (!session || tfCurWordIsParticle()) { showError(errMsg); return; }
+  recordMistake(choiceLabel, errMsg);
+  TF_WORDSCORE.onWrong(session);
+  session.combo = 0;
+  if (tfCurWordIsMulti()) session.curWordAllFirstTry = false;
+  tfUpdateWordScoreGauge();
+  if (TF_WORDSCORE.isDead(session)) {
+    tfForceRevealZero();
+    tfMinaToast('wrong');
+  } else {
+    showError(errMsg);
+    tfMinaToast('wrong', { throttle: true, chance: 0.5 });
+  }
+}
+
+// เผยคำตอบจาก canonical catalog โดยตรงเมื่อครบเพดาน 4 ครั้งหรืออยู่ในรอบห้ามใช้เครื่องมือ
 function tfForceRevealZero() {
   var entry = session.words[session.index];
   if (tfCurWordIsMulti()) {
@@ -1330,7 +1526,7 @@ function tfForceRevealZero() {
     tfShowRevealOverlay({ word: syl, zh: entry.zh, readingTH: syl }, sct, { sylIdx: k, sylTone: sct });
     return;
   }
-  session.currentWordScore = TF_SCORE_CFG.SCORE_FAIL_ZERO; // ผิดครบ 3 ครั้ง (fail) = 0 pt
+  session.currentWordScore = TF_SCORE_CFG.SCORE_FAIL_ZERO; // ผิดครบ 4 ครั้ง (fail) = 0 pt
   session.currentWordFirstTry = false;
   session.currentWordScored = true;
   if (!entry.isParticle) session.combo = 0;
@@ -1723,6 +1919,28 @@ function act(fn) {
   return "TF._run('"+id+"')";
 }
 
+function navigate(nextStep, label) {
+  hist = hist.slice(0, histPos + 1);
+  var newPath = label ? S.path.concat([label]) : S.path.slice();
+  // Only the reviewed catalog tone may populate result state. 推導 never
+  // computes or supplies a competing tone value.
+  var newTone = nextStep === 'result' ? catalogToneNumber() : null;
+  S = {
+    word: S.word, step: nextStep, path: newPath, tone: newTone,
+    syllables: S.syllables, selectedSyl: S.selectedSyl,
+    sylResults: S.sylResults, parentWord: S.parentWord
+  };
+  if (session && /^s[12]/.test(nextStep)) TF_WORDSCORE.onNextStep(session);
+  hist.push({
+    step: S.step, path: S.path.slice(), tone: S.tone,
+    syllables: S.syllables, selectedSyl: S.selectedSyl,
+    sylResults: S.sylResults, parentWord: S.parentWord
+  });
+  histPos = hist.length - 1;
+  if (nextStep === 'result' && session && !session.currentWordScored) tfScoreDeduce();
+  render();
+}
+
 function restoreState(pos) {
   histPos = pos;
   var snap = hist[pos];
@@ -1739,7 +1957,22 @@ function restoreState(pos) {
 var STATS_KEY = 'tf_wrong_stats_v1';
 var STATS_KEEP_DAYS = 30;
 
-var STEP_LABELS = { 'session-guess': '聲調選擇' };
+var STEP_LABELS = {
+  'session-guess': '聲調選擇',
+  s1: '步驟一：聲調符號判斷',
+  s2a: '步驟二：子音分類（低子音／其他）',
+  s2a_other: '步驟二：子音細分類',
+  s2a_low: '步驟三：聲調符號選擇',
+  s2a_mid: '步驟四：聲調符號選擇',
+  s2a_hi: '步驟四：聲調符號選擇',
+  s2b: '步驟二：活音／死音判斷',
+  s2b_live: '步驟三：起首子音分類（活音）',
+  s2b_dead: '步驟三：起首子音分類（死音）',
+  s2b_dl: '步驟四：母音類型',
+  helper: '判斷工具：是否有尾音',
+  h_with: '判斷工具：尾音類型',
+  h_no: '判斷工具：母音類型'
+};
 
 function pad2(n) { return (n < 10 ? '0' : '') + n; }
 
@@ -1793,6 +2026,70 @@ function recordMistake(choiceLabel, errMsg) {
     session.currentWordMistakes = (session.currentWordMistakes || 0) + 1;
     session.currentWordMistakesTotal = (session.currentWordMistakesTotal || 0) + 1;
   }
+}
+
+function validateReviewedTeachingChoice(choiceKey) {
+  var expected = catalogExpectedTeachingChoice(S.step);
+  if (choiceKey === expected) return null;
+  var w = currentCatalogWord();
+  var syllable = catalogPedagogySyllable();
+  var cls = catalogPedagogyClass;
+  var classLabel = { low:'低子音', high:'高子音', mid:'中子音', lead:'前引字' };
+  var initial = catalogFieldPresent(syllable.lead) ? syllable.lead : syllable.consonant;
+  if (S.step === 's1') {
+    return expected === 'hasMark'
+      ? '「' + w + '」有聲調符號「' + syllable.toneMark + '」喔～\n請選「有聲調符號」再繼續吧！'
+      : '「' + w + '」好像沒有聲調符號耶～\n再確認一下輸入的字，或改選「無聲調符號」吧！';
+  }
+  if (S.step === 's2a') {
+    var c1 = cls();
+    return expected === 'low'
+      ? '「' + initial + '」是低子音喔～\n選「低子音」就對了！'
+      : '「' + initial + '」是' + classLabel[c1] + '呢，不是低子音～\n再看一下選哪個比較合適吧！';
+  }
+  if (S.step === 's2a_other') {
+    var c2 = cls();
+    return '「' + initial + '」應該是' + classLabel[c2] + '喔～\n再確認一下子音的種類吧！';
+  }
+  if (S.step === 's2a_low' || S.step === 's2a_mid' || S.step === 's2a_hi') {
+    return '「' + w + '」上面的聲調符號是「' + syllable.toneMark + '」喔～\n我們再看一下字上面的符號是哪個吧！';
+  }
+  if (S.step === 's2b') {
+    return expected === 'live'
+      ? '「' + w + '」看起來是活音喔～\n試試選「活音」，或用判斷工具確認一下吧！'
+      : '「' + w + '」看起來是死音喔～\n試試選「死音」，或用判斷工具確認一下吧！';
+  }
+  if (S.step === 's2b_live') {
+    var c3 = cls();
+    return '「' + initial + '」是' + classLabel[c3] + '喔～\n試試選「' + (expected === 'high_lead' ? '高子音／前引字' : '中子音／低子音') + '」吧！';
+  }
+  if (S.step === 's2b_dead') {
+    var c4 = cls();
+    return expected === 'low_dead'
+      ? '「' + initial + '」是低子音喔～\n試試選「低子音」吧！'
+      : '「' + initial + '」是' + classLabel[c4] + '，不是低子音喔～\n試試選「高子音／前引字／中子音」吧！';
+  }
+  if (S.step === 's2b_dl') {
+    return '「' + w + '」看起來是' + (expected === 'long_vowel' ? '長母音' : '短母音') + '喔～\n試試選「' + (expected === 'long_vowel' ? '長母音' : '短母音') + '」吧！';
+  }
+  if (S.step === 'helper') {
+    return expected === 'has_tail'
+      ? '「' + w + '」有尾音呢～\n試試選「有尾音」吧！'
+      : '「' + w + '」沒有尾音喔～\n試試選「無尾音」吧！';
+  }
+  if (S.step === 'h_with') {
+    return '「' + w + '」的尾音是' + (expected === 'long_tail' ? '長尾音' : '短尾音') + '喔～\n試試選「' + (expected === 'long_tail' ? '長尾音→活音' : '短尾音→死音') + '」吧！';
+  }
+  if (S.step === 'h_no') {
+    return '「' + w + '」是' + (expected === 'long_vowel_h' ? '長母音' : '短母音') + '喔～\n試試選「' + (expected === 'long_vowel_h' ? '長母音→活音' : '短母音→死音') + '」吧！';
+  }
+  return '再看一次這一步吧！';
+}
+
+function tryNavigate(choiceKey, choiceLabel, nextStep) {
+  var err = validateReviewedTeachingChoice(choiceKey);
+  if (err) { tfHandleDeduceMistake(choiceLabel, err); return; }
+  navigate(nextStep, choiceLabel);
 }
 
 // ════════════════════════════════════════════════════════════
@@ -1936,6 +2233,7 @@ function render() {
   // Main body
   var body = document.getElementById('tf-body');
   body.innerHTML = buildStep();
+  tfApplyGuideHints();
   if (window.GameFlow) {
     GameFlow.cancel('tone-finder');
     if (S.step === 'result' && session) {
@@ -2011,6 +2309,20 @@ function buildStep() {
     case 'session-summary': return stepSessionSummary();
     case 'mistake-review': return stepMistakeReview(); // F2 (2026-08-10)
     case 'session-guess':   return stepSessionGuess();
+    case 's1':              return step1();
+    case 's2a':             return step2a();
+    case 's2a_low':         return step2aLow();
+    case 's2a_other':       return step2aOther();
+    case 's2a_mid':         return step2aMid();
+    case 's2a_hi':          return step2aHi();
+    case 's2b':             return step2b();
+    case 'helper':          return helperStep1();
+    case 'h_with':          return helperWith();
+    case 'h_no':            return helperNo();
+    case 'h_done':          return helperDone();
+    case 's2b_live':        return s2bLive();
+    case 's2b_dead':        return s2bDead();
+    case 's2b_dl':          return s2bDeadLow();
     case 'result':          return stepResult();
     default: return '';
   }
@@ -2670,12 +2982,166 @@ function tfPrioritizeDueSrs(entries) {
 // ════════════════════════════════════════════════════════════
 // NEW PAGE 1: SESSION GUESS  (before tone-inflection)
 // ════════════════════════════════════════════════════════════
+function qbox(stepNum, text) {
+  return '<div class="tf-qbox">' +
+    (stepNum ? '<div class="tf-step-badge">步驟 ' + stepNum + '</div>' : '') +
+    '<div class="tf-qtext">' + text + '</div>' +
+  '</div>';
+}
+
+function optRow(label, onclickStr, defKeys, hintKey) {
+  var tipBtn = defKeys && defKeys.length
+    ? '<button class="tf-tip-btn" onclick="event.stopPropagation();try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_hint_click\',{category:\'game\'});}catch(e){}TF.hint(' + JSON.stringify(defKeys).replace(/"/g, '&quot;') + ')">?</button>'
+    : '';
+  var hintAttr = hintKey ? ' data-hintkey="' + hintKey + '"' : '';
+  return '<div class="tf-opt-wrap"><button class="tf-opt"' + hintAttr + ' onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_opt_select\',{category:\'game\'});}catch(e){}' + onclickStr + '">' + label + '</button>' + tipBtn + '</div>';
+}
+
+function markSymbol(mark) {
+  return '<span style="font-family:\'Sarabun\',sans-serif;">' +
+    '<span style="visibility:hidden;font-size:44px;">ก</span>' +
+    '<span class="tf-mark-symbol" style="margin-left:-0.6em;">' + mark + '</span>' +
+  '</span>';
+}
+
+function markRow(mark, onclickStr) {
+  return '<button class="tf-mark-btn" data-hintkey="' + mark + '" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_mark_select\',{category:\'game\'});}catch(e){}' + onclickStr + '">' + markSymbol(mark) + '</button>';
+}
+
+function footer() { return '<div class="tf-footer"></div>'; }
+
+function step1() {
+  return qbox('1','這個字有<strong style="color:var(--gold-bright);">聲調符號</strong>嗎？') +
+    '<div class="tf-options">' +
+      optRow('有聲調符號', act(function(){ tryNavigate('hasMark','有聲調符號','s2a'); }), ['toneMark'], 'hasMark') +
+      optRow('無聲調符號', act(function(){ tryNavigate('noMark','無聲調符號','s2b'); }), null, 'noMark') +
+    '</div>' + footer();
+}
+
+function step2a() {
+  return qbox('2','起首子音屬於哪一組？') +
+    '<div class="tf-options">' +
+      optRow('低子音', act(function(){ tryNavigate('low','低子音','s2a_low'); }), ['low'], 'low') +
+      optRow('其他子音（中子音 ／ 高子音 ／ 前引字）', act(function(){ tryNavigate('other','其他子音','s2a_other'); }), ['other'], 'other') +
+    '</div>' + footer();
+}
+
+function step2aLow() {
+  return qbox('3','聲調符號是哪一個？') +
+    '<div class="tf-mark-opts">' +
+      markRow('่', act(function(){ tryNavigate('่','่ 第二聲符號','result'); })) +
+      markRow('้', act(function(){ tryNavigate('้','้ 第三聲符號','result'); })) +
+    '</div>' + footer();
+}
+
+function step2aOther() {
+  return qbox('3','請選擇確切的子音種類') +
+    '<div class="tf-options">' +
+      optRow('中子音', act(function(){ tryNavigate('mid','中子音','s2a_mid'); }), ['mid'], 'mid') +
+      optRow('高子音', act(function(){ tryNavigate('high','高子音','s2a_hi'); }), ['high'], 'high') +
+      optRow('前引字', act(function(){ tryNavigate('lead','前引字','s2a_hi'); }), ['lead'], 'lead') +
+    '</div>' + footer();
+}
+
+function step2aMid() {
+  return qbox('4','聲調符號是哪一個？') +
+    '<div class="tf-mark-opts">' +
+      markRow('่', act(function(){ tryNavigate('่','่ 第二聲符號','result'); })) +
+      markRow('้', act(function(){ tryNavigate('้','้ 第三聲符號','result'); })) +
+      markRow('๊', act(function(){ tryNavigate('๊','๊ 第四聲符號','result'); })) +
+      markRow('๋', act(function(){ tryNavigate('๋','๋ 第五聲符號','result'); })) +
+    '</div>' + footer();
+}
+
+function step2aHi() {
+  return qbox('4','聲調符號是哪一個？') +
+    '<div class="tf-mark-opts">' +
+      markRow('่', act(function(){ tryNavigate('่','่ 第二聲符號','result'); })) +
+      markRow('้', act(function(){ tryNavigate('้','้ 第三聲符號','result'); })) +
+    '</div>' + footer();
+}
+
+function step2b() {
+  return qbox('2','這個字是<strong style="color:#7ec87e;">活音</strong>還是<strong style="color:#ff7c7c;">死音</strong>？') +
+    '<button class="tf-helper-trigger" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_helper_open\',{category:\'game\'});}catch(e){}' + act(function(){ navigate('helper','開啟判斷工具'); }) + '">🔎 還不確定？ 檢查活音／死音</button>' +
+    '<div class="tf-options">' +
+      optRow('活音', act(function(){ tryNavigate('live','活音','s2b_live'); }), ['live'], 'live') +
+      optRow('死音', act(function(){ tryNavigate('dead','死音','s2b_dead'); }), ['dead'], 'dead') +
+    '</div>' + footer();
+}
+
+function helperBannerHTML() { return '<div class="tf-helper-banner">🔎 活音／死音 判斷工具</div>'; }
+
+function helperStep1() {
+  return helperBannerHTML() + qbox('','這個字有「尾音」嗎？') +
+    '<div class="tf-options">' +
+      optRow('有尾音', act(function(){ tryNavigate('has_tail','有尾音','h_with'); }), ['longEnd','shortEnd'], 'has_tail') +
+      optRow('無尾音', act(function(){ tryNavigate('no_tail','無尾音','h_no'); }), null, 'no_tail') +
+    '</div>';
+}
+
+function helperWith() {
+  return helperBannerHTML() + qbox('','尾音是哪種類型？') +
+    '<div class="tf-options">' +
+      optRow('短尾音', act(function(){ tryNavigate('short_tail','短尾音','h_done'); }), ['shortEnd'], 'short_tail') +
+      optRow('長尾音', act(function(){ tryNavigate('long_tail','長尾音','h_done'); }), ['longEnd'], 'long_tail') +
+    '</div>';
+}
+
+function helperNo() {
+  return helperBannerHTML() + qbox('','使用的母音是哪種類型？') +
+    '<div class="tf-options">' +
+      optRow('短母音', act(function(){ tryNavigate('short_vowel_h','短母音','h_done'); }), ['shortVowel'], 'short_vowel_h') +
+      optRow('長母音', act(function(){ tryNavigate('long_vowel_h','長母音','h_done'); }), ['longVowel'], 'long_vowel_h') +
+    '</div>';
+}
+
+function helperDone() {
+  var last = S.path[S.path.length - 1];
+  var isDead = last === '短尾音' || last === '短母音';
+  var col = isDead ? '#ff7c7c' : '#7ec87e';
+  var label = isDead ? '死音' : '活音';
+  var nextStep = isDead ? 's2b_dead' : 's2b_live';
+  var continueAct = act(function(){ navigate(nextStep, label); });
+  return helperBannerHTML() +
+    '<div class="tf-helper-result" style="border-color:' + col + ';">' +
+      '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:rgba(255,255,255,0.4);letter-spacing:3px;margin-bottom:10px;">判斷結果</div>' +
+      '<div class="tf-helper-result-label" style="color:' + col + ';">' + label + '</div>' +
+      '<div class="tf-helper-result-desc">這個字是「' + label + '」</div>' +
+    '</div>' +
+    '<div style="text-align:center;"><button class="tf-search-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_helper_continue\',{category:\'game\'});}catch(e){}' + continueAct + '">繼續分析 →</button></div>';
+}
+
+function s2bLive() {
+  return qbox('3','起首子音屬於哪一組？') +
+    '<div class="tf-options">' +
+      optRow('中子音 ／ 低子音', act(function(){ tryNavigate('mid_low','中子音/低子音','result'); }), ['mid','low'], 'mid_low') +
+      optRow('高子音 ／ 前引字', act(function(){ tryNavigate('high_lead','高子音/前引字','result'); }), ['high','lead'], 'high_lead') +
+    '</div>' + footer();
+}
+
+function s2bDead() {
+  return qbox('3','起首子音屬於哪一組？') +
+    '<div class="tf-options">' +
+      optRow('高子音 ／ 前引字 ／ 中子音', act(function(){ tryNavigate('high_lead_mid','高子音/前引字/中子音','result'); }), ['high','lead','mid'], 'high_lead_mid') +
+      optRow('低子音', act(function(){ tryNavigate('low_dead','低子音','s2b_dl'); }), ['low'], 'low_dead') +
+    '</div>' + footer();
+}
+
+function s2bDeadLow() {
+  return qbox('4','母音是哪種類型？') +
+    '<div class="tf-options">' +
+      optRow('長母音', act(function(){ tryNavigate('long_vowel','長母音','result'); }), ['longVowel'], 'long_vowel') +
+      optRow('短母音', act(function(){ tryNavigate('short_vowel','短母音','result'); }), ['shortVowel'], 'short_vowel') +
+    '</div>' + footer();
+}
+
 function stepSessionGuess() {
   if (!session) throw new Error('CATALOG_AUTHORITY_UNAVAILABLE:no active session');
   var entry = session.words[session.index];
   if (tfGuideMode && session.currentWordGuideIntroPending && !tfCurWordNoTools()) {
     return '<div style="text-align:center;padding:18px 0 14px;">' +
-      '<button type="button" id="tf-guide-start-btn" class="sg-dontknow-btn" onclick="TF.startGuidedQuestion()">查看已審核答案</button>' +
+      '<button type="button" id="tf-guide-start-btn" class="sg-dontknow-btn" onclick="TF.startGuidedQuestion()">'+(tfMobilePortrait() ? '開始推導' : '開始練習')+'</button>' +
     '</div>';
   }
   // Lin 2026-07-25: ลบแถบปุ่ม 泰文讀音/英文讀音 ในหน้าเดาวรรณยุกต์ทิ้ง — ย้ายไปใช้สวิตช์ในเมนู 🍚 (ปุ่มขวา) ที่เดียว
@@ -2695,8 +3161,8 @@ function stepSessionGuess() {
       var correctTone = catalogToneNumber();
       if (correctTone && captureN === correctTone) {
         S.tone = correctTone;                            // สำเนาค่าตรงจากคลังสำหรับสถานะหน้าจอเท่านั้น
-        if (session && session.curWordWrongGuess) { tfForceRevealZero(); return; }
-        tfScoreFirstTry();
+        if (session && session.curWordWrongGuess) tfScoreDeduce();
+        else tfScoreFirstTry();
         goToResult(captureN);
       } else {
         // Lin 2026-08-26: เดาเสียงผิดต้องนับผิด 1 ครั้งและลดบันไดคะแนนทันที
@@ -2712,8 +3178,10 @@ function stepSessionGuess() {
           }
           tfUpdateWordScoreGauge();
         }
-        // No second judge is allowed. Wrong answers reveal the reviewed catalog answer directly.
-        tfForceRevealZero();
+        // Memory-only checks reveal immediately. Normal practice enters the
+        // deterministic teaching flow; it is not a second answer judge.
+        if (tfCurWordNoTools()) tfForceRevealZero();
+        else navigateToInflection();
       }
     });
     return '<button class="sg-tone-btn" style="border-color:'+c+';color:'+c+';" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_tone_choice_click\',{category:\'game\',tone:'+n+'});}catch(e){}'+clickAct+'">'+n+'</button>';
@@ -2726,11 +3194,11 @@ function stepSessionGuess() {
     session.currentWordToneAttempts.push({answer:'不確定',is_correct:false,syllable:tfCurWordIsMulti()?(S.selectedSyl+1):1});
     try { session.curWordGuesses = session.curWordGuesses || {}; session.curWordGuesses[tfCurWordIsMulti() ? S.selectedSyl : 0] = 0; } catch(e){}  // Phase 4: จำ "ไม่มั่นใจ" รายพยางค์
     if (session) { session.curWordWrongGuess = true; if (!tfCurWordIsParticle()) session.combo = 0; }
-    tfForceRevealZero();
+    navigateToInflection();
   });
 
   // รอบตัดสิน Day 7 ไม่มีตัวเลือก "ไม่มั่นใจ/ท้าทาย" — มีเพียงคำตอบเสียงวรรณยุกต์ 5 ปุ่ม
-  // ผิด/ไม่รู้ = แสดงคำตอบที่ตรวจแล้วทันที ไม่มีกรรมการหรือทางอนุมานอีกชุด
+  // ผิด/ไม่รู้ในรอบปกติ = เข้า 推導 เพื่อเรียนทีละขั้น; รอบห้ามใช้เครื่องมือเฉลยทันที
   var dontKnowHtml;
   if (session.curWordIsKnownCheck) {
     dontKnowHtml = '<div style="margin-top:8px;font-size:12px;color:#B07D00;">✓ 記憶確認 — 答對一次即可移除這個字（不給獎勵）· 禁止使用任何輔助工具，只能憑記憶作答一次</div>';
@@ -2747,6 +3215,24 @@ function stepSessionGuess() {
     (tfTouchMobileSurface() ? '' : '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:11px;color:#a08a5a;margin-top:4px;">💡 電腦也可以直接按鍵盤 1–5</div>')+
     dontKnowHtml+
   '</div>';
+}
+
+function navigateToInflection() {
+  var w = S.word;
+  // Start 推導 from a fresh history base so a learner cannot go back and
+  // repeat the initial guess until it becomes correct.
+  S = {
+    word: w, step: 's1', path: [w], tone: null,
+    syllables: S.syllables, selectedSyl: S.selectedSyl,
+    sylResults: S.sylResults, parentWord: S.parentWord
+  };
+  hist = [{
+    step: 's1', path: [w], tone: null,
+    syllables: S.syllables, selectedSyl: S.selectedSyl,
+    sylResults: S.sylResults, parentWord: S.parentWord
+  }];
+  histPos = 0;
+  render();
 }
 
 // Lin 2026-07-25: ลบหน้า PRE-RESULT CONFIRM (「分析完之後，你還是覺得是同一個聲調嗎？」) ทิ้งทั้งหน้า — โค้ดตาย
@@ -3843,14 +4329,10 @@ var TF = {
   startGuidedQuestion: function() {
     if (!session || !session.currentWordGuideIntroPending || !S || S.step !== 'session-guess') return;
     session.currentWordGuideIntroPending = false;
-    if (tfDesktopOrPortrait()) {
-      tfFireStartOnce();
-      session.initialGuess = undefined;
-      session.currentWordToneAttempts = [];
-      tfForceRevealZero();
-    } else {
-      render();
-    }
+    tfFireStartOnce();
+    session.initialGuess = undefined;
+    session.currentWordToneAttempts = [];
+    navigateToInflection();
     try { window.dispatchEvent(new CustomEvent('gsh:question-start')); } catch (e) {}
   },
   // ── D2 (2026-08-10): ปุ่ม [ 查看詳細解說 ] opt-in ในหน้าเฉลย — สลับเปิด/ปิดกล่อง .gsh-detail-box ที่อยู่ถัดจากปุ่มนี้ ──
@@ -3989,6 +4471,7 @@ var TF = {
   },
   // Lin 2026-07-25: ลบ TF.sgToggle ทิ้ง — แถบปุ่ม 泰文讀音/英文讀音 ในหน้าเดาถูกเอาออกแล้ว
   tip: function(keys) { showTip(keys); },
+  hint: function(keys) { tfUseHint(keys); },
   _run: function(id) { if(_acts[id]) _acts[id](); }
 };
 

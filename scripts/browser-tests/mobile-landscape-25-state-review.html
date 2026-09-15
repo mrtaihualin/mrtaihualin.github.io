@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>FB-02 Mobile Landscape — 20 real-source states</title>
+  <title>FB-02 Mobile Landscape — 25 real-source states</title>
   <style>
     * { box-sizing: border-box; }
     html, body { margin: 0; min-height: 100%; background: #ece7de; color: #49350d; font-family: system-ui, sans-serif; }
@@ -21,7 +21,7 @@
 </head>
 <body>
   <main>
-    <h1>FB-02 Mobile Landscape — 20 states จาก Source จริง · 844 × 390</h1>
+    <h1>FB-02 Mobile Landscape — 25 states จาก Source จริง · 844 × 390</h1>
     <div class="controls">
       <button type="button" id="prev">← ก่อนหน้า</button>
       <select id="state" aria-label="เลือก state"></select>
@@ -34,6 +34,11 @@
     (function () {
       'use strict';
       var states = [
+        {id:'tone-derive-2', group:'Tone 推導', label:'2 choices', page:'tone-finder.html', kind:'derive-2'},
+        {id:'tone-derive-3', group:'Tone 推導', label:'3 choices', page:'tone-finder.html', kind:'derive-3'},
+        {id:'tone-derive-4', group:'Tone 推導', label:'4 tone marks', page:'tone-finder.html', kind:'derive-4'},
+        {id:'tone-helper', group:'Tone 推導', label:'live/dead helper', page:'tone-finder.html', kind:'helper'},
+        {id:'tone-error', group:'Tone 推導', label:'error overlay', page:'tone-finder.html', kind:'error'},
         {id:'tone-howto-collapsed', group:'Shared 玩法', label:'Tone collapsed', page:'tone-finder.html', kind:'howto', modal:'tf-howto-modal', detail:'tf-howto-detail', trigger:'tf-howto-btn'},
         {id:'tone-howto-expanded', group:'Shared 玩法', label:'Tone expanded', page:'tone-finder.html', kind:'howto-expanded', modal:'tf-howto-modal', detail:'tf-howto-detail', trigger:'tf-howto-btn'},
         {id:'typing-howto-collapsed', group:'Shared 玩法', label:'Typing collapsed', page:'typing-game.html', kind:'howto', modal:'rg-howto-modal', detail:'rg-howto-detail', trigger:'rg-howto-btn'},
@@ -56,7 +61,7 @@
         {id:'alpha-ending-expanded', group:'Tone 字母練習區', label:'ending explanation', page:'tone-finder.html', kind:'alpha-ending-expanded', key:'ending'}
       ];
 
-      var wordKeys = ['มา@初'];
+      var wordKeys = ['มา@初','บ้าน@初#noun-b-35'];
       var sentence = {th:'วันนี้ผมไปเรียน',zh:'今天我去上課',readingTH:'วัน-นี้-ผม-ไป-เรียน',wc:4,politeF:null,words:[
         {th:'วันนี้',zh:'今天',syls:[{th:'วันนี้',en:'wan-níi'}]},
         {th:'ผม',zh:'我',syls:[{th:'ผม',en:'phǒm'}]},
@@ -109,7 +114,24 @@
         var skipTour = doc.querySelector('#gt-tour-card .gt-skip');
         if (skipTour && getComputedStyle(skipTour).display !== 'none') skipTour.click();
 
-        if (state.kind === 'howto' || state.kind === 'howto-expanded') {
+        if (state.kind.indexOf('derive') === 0 || state.kind === 'helper' || state.kind === 'error') {
+          await waitFor(function () { return doc.querySelector('.sg-dontknow-btn'); });
+          doc.querySelector('.sg-dontknow-btn').click();
+          await delay(100);
+          if (state.kind === 'derive-3' || state.kind === 'derive-4') {
+            clickText(doc, '.tf-opt', '有聲調符號');
+            await delay(100);
+            clickText(doc, '.tf-opt', '其他子音（中子音 ／ 高子音 ／ 前引字）');
+            await delay(100);
+            if (state.kind === 'derive-4') clickText(doc, '.tf-opt', '中子音');
+          } else if (state.kind === 'helper') {
+            clickText(doc, '.tf-opt', '無聲調符號');
+            await delay(100);
+            doc.querySelector('.tf-helper-trigger').click();
+          } else if (state.kind === 'error') {
+            clickText(doc, '.tf-opt', '無聲調符號');
+          }
+        } else if (state.kind === 'howto' || state.kind === 'howto-expanded') {
           doc.getElementById(state.trigger).click();
           if (state.kind === 'howto-expanded') {
             var detail = doc.getElementById(state.detail);
@@ -143,7 +165,35 @@
           var bottom = Math.max.apply(null, rects.map(function (rect) { return rect.bottom; }));
           return (top + bottom) / 2;
         }
-        if (state.kind === 'howto' || state.kind === 'howto-expanded') {
+        if (state.kind === 'derive-2') {
+          var twoChoiceRows = Array.prototype.slice.call(doc.querySelectorAll('.tf-options > .tf-opt-wrap'));
+          var questionRect = doc.querySelector('.tf-qbox').getBoundingClientRect();
+          var questionCenter = questionRect.top + (questionRect.height / 2);
+          var matchesQuestionPlane = twoChoiceRows.every(function (row) {
+            var rowRect = row.getBoundingClientRect();
+            return Math.abs((rowRect.top + (rowRect.height / 2)) - questionCenter) <= 2;
+          });
+          ok = twoChoiceRows.length === 2 && matchesQuestionPlane;
+        } else if (state.kind === 'derive-3') {
+          var threeChoices = Array.prototype.slice.call(doc.querySelectorAll('.tf-options > .tf-opt-wrap'));
+          var leftChoice = threeChoices.find(function (choice) { return choice.dataset.gshSide === 'left'; });
+          var rightChoices = threeChoices.filter(function (choice) { return choice.dataset.gshSide === 'right'; });
+          ok = threeChoices.length === 3 && rightChoices.length === 2 &&
+            samePlane(leftChoice, doc.querySelector('.tf-qbox')) &&
+            Math.abs(groupCenterY(rightChoices) - centerY(doc.querySelector('.tf-qbox'))) <= 2 &&
+            centerY(rightChoices[0]) < centerY(rightChoices[1]);
+        } else if (state.kind === 'derive-4') {
+          var fourMarks = Array.prototype.slice.call(doc.querySelectorAll('.tf-mark-opts > .tf-mark-btn'));
+          var leftMarks = fourMarks.filter(function (mark) { return mark.dataset.gshSide === 'left'; });
+          var rightMarks = fourMarks.filter(function (mark) { return mark.dataset.gshSide === 'right'; });
+          ok = fourMarks.length === 4 && leftMarks.length === 2 && rightMarks.length === 2 &&
+            samePlane(leftMarks[0], rightMarks[0]) && samePlane(leftMarks[1], rightMarks[1]) &&
+            Math.abs(groupCenterY(leftMarks) - centerY(doc.querySelector('.tf-qbox'))) <= 2 &&
+            Math.abs(groupCenterY(rightMarks) - centerY(doc.querySelector('.tf-qbox'))) <= 2 &&
+            centerY(leftMarks[0]) < centerY(leftMarks[1]);
+        } else if (state.kind === 'helper') ok = !!doc.querySelector('.tf-helper-banner');
+        else if (state.kind === 'error') ok = !!doc.getElementById('tf-err');
+        else if (state.kind === 'howto' || state.kind === 'howto-expanded') {
           var modal = doc.getElementById(state.modal);
           var detail = doc.getElementById(state.detail);
           ok = modal.style.display === 'flex' && (state.kind === 'howto' ? detail.style.display !== 'block' : detail.style.display === 'block');
@@ -157,7 +207,8 @@
       }
 
       function makeOverride(state) {
-        return '<script>(function(){var keys=' + JSON.stringify(wordKeys) + ';var sentences=' + JSON.stringify([sentence]) + ';try{localStorage.setItem("cookieConsent","denied");["tone","typing","reading","wordorder"].forEach(function(g){localStorage.setItem("howto_tour_seen_"+g,"1");localStorage.setItem("howto_hint_seen_"+g,"1");});}catch(e){}window.GameContentLoader.boot=function(srcs){var chain=new Promise(function(resolve){if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",resolve,{once:true});else resolve();}).then(function(){return fetch("data/approved-vocabulary-catalog.json",{cache:"no-store"}).then(function(res){if(!res.ok)throw new Error("canonical fixture unavailable");return res.json();}).then(function(catalog){window.WORDS_MASTER=keys.map(function(key){var record=catalog.records.find(function(row){return row.contentKey===key;});if(!record)throw new Error("canonical fixture missing: "+key);return {catalog:record};});window.ADV_SENTENCES=sentences;});}).then(function(){if(window.GameResume&&typeof window.GameResume.load==="function")window.GameResume.load=function(){return null;};});(srcs||[]).forEach(function(src){chain=chain.then(function(){return new Promise(function(resolve,reject){var script=document.createElement("script");script.src=src;script.onload=resolve;script.onerror=reject;document.head.appendChild(script);});});});return chain;};})();<\/script>';
+        var selectedKeys = state.kind === 'derive-3' || state.kind === 'derive-4' || state.kind === 'error' ? [wordKeys[1]] : [wordKeys[0]];
+        return '<script>(function(){var keys=' + JSON.stringify(selectedKeys) + ';var sentences=' + JSON.stringify([sentence]) + ';try{localStorage.setItem("cookieConsent","denied");["tone","typing","reading","wordorder"].forEach(function(g){localStorage.setItem("howto_tour_seen_"+g,"1");localStorage.setItem("howto_hint_seen_"+g,"1");});}catch(e){}window.GameContentLoader.boot=function(srcs){var chain=new Promise(function(resolve){if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",resolve,{once:true});else resolve();}).then(function(){return fetch("data/approved-vocabulary-catalog.json",{cache:"no-store"}).then(function(res){if(!res.ok)throw new Error("canonical fixture unavailable");return res.json();}).then(function(catalog){window.WORDS_MASTER=keys.map(function(key){var record=catalog.records.find(function(row){return row.contentKey===key;});if(!record)throw new Error("canonical fixture missing: "+key);return {catalog:record};});window.ADV_SENTENCES=sentences;});}).then(function(){if(window.GameResume&&typeof window.GameResume.load==="function")window.GameResume.load=function(){return null;};});(srcs||[]).forEach(function(src){chain=chain.then(function(){return new Promise(function(resolve,reject){var script=document.createElement("script");script.src=src;script.onload=resolve;script.onerror=reject;document.head.appendChild(script);});});});return chain;};})();<\/script>';
       }
 
       function loadState(nextIndex) {
@@ -186,14 +237,14 @@
                 }
               }, 3000);
               verifyState(state, doc);
-              status.textContent = 'PASS ' + (index + 1) + '/20 — ' + state.group + ' — ' + state.label;
+              status.textContent = 'PASS ' + (index + 1) + '/25 — ' + state.group + ' — ' + state.label;
             } catch (error) {
-              status.textContent = 'FAIL ' + (index + 1) + '/20 — ' + error.message;
+              status.textContent = 'FAIL ' + (index + 1) + '/25 — ' + error.message;
             }
           };
           frame.srcdoc = html;
         }).catch(function (error) {
-          status.textContent = 'FAIL ' + (index + 1) + '/20 — ' + error.message;
+          status.textContent = 'FAIL ' + (index + 1) + '/25 — ' + error.message;
         });
       }
 

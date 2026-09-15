@@ -35,7 +35,7 @@ assert.match(tone, /window\.PAID_SRS_PRIVATE_BETA && Number\(level\) === 3/);
 assert.match(tone, /if \(_paidRecord\.reschedulePending\) _paidRecord\.mastered = true/);
 assert.match(page, /game-content-client\.js\?v=22/);
 assert.match(page, /learning-review\.js\?v=7/);
-assert.match(page, /tone-finder-game\.min\.js\?v=88/);
+assert.match(page, /tone-finder-game\.min\.js\?v=89/);
 
 const nextWordMatch = tone.match(/nextWord:\s*function\(\)\s*\{([\s\S]*?)\n\s*\},\n\s*downloadSummary:/);
 assert.ok(nextWordMatch, 'Tone nextWord runtime must remain extractable for the Paid commit regression');
