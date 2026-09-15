@@ -16,8 +16,14 @@ const teachingStart = source.indexOf('function catalogPedagogySyllable()');
 const teachingEnd = source.indexOf('// Lin 2026-07-31:', teachingStart);
 const wordScoreStart = source.indexOf('var TF_WORDSCORE = {');
 const wordScoreEnd = source.indexOf('// Lin 2026-07-06:', wordScoreStart);
+const forceRevealStart = source.indexOf('function tfForceRevealZero()');
+const forceRevealEnd = source.indexOf('// overlay เฉลยเมื่อกดมั่วครบ 3 ครั้ง', forceRevealStart);
+const startSessionStart = source.indexOf('function startSetSession(words, opts)');
+const startSessionEnd = source.indexOf('// ── สเปก 2026-07-03 ข้อ 3:', startSessionStart);
 assert.ok(defsStart >= 0 && defsEnd > defsStart && teachingStart >= 0 && teachingEnd > teachingStart);
 assert.ok(wordScoreStart >= 0 && wordScoreEnd > wordScoreStart);
+assert.ok(forceRevealStart >= 0 && forceRevealEnd > forceRevealStart);
+assert.ok(startSessionStart >= 0 && startSessionEnd > startSessionStart);
 
 const sandbox = {
   __syllable: null,
@@ -36,6 +42,59 @@ for (const expected of [7, 4, 1, 0]) {
   assert.strictEqual(sandbox.TF_WORDSCORE.score(scoreSession), expected);
 }
 assert.strictEqual(sandbox.TF_WORDSCORE.isDead(scoreSession), true);
+
+const firstMultiRecord = catalog.records.find((record) => record.level === '中' && record.syllables.length > 1);
+assert.ok(firstMultiRecord, 'canonical intermediate multi-syllable fixture is required');
+const firstWordSandbox = {
+  advSentenceCtx: null,
+  WORD_LIST: [],
+  tfGuideMode: false,
+  selectedLevel: 2,
+  selectedCategory: 'ทั้งหมด',
+  session: null,
+  hist: [],
+  histPos: -1,
+  randomEntry: null,
+  S: null,
+  __reveal: null,
+  tfRollGolden() { return false; },
+  tfSetupSrsFlagsForCurrentWord() {},
+  tfCurWordNoTools() { return false; },
+  tfSaveResumeState() {},
+  render() {},
+  tfMinaToast() {},
+  setTimeout() {},
+  CustomEvent: function CustomEvent() {},
+  tfCurWordIsMulti() { return true; },
+  TF_SCORE_CFG: { SCORE_FAIL_ZERO: 0 },
+  catalogToneNumber() { return firstMultiRecord.syllables[0].toneNumber; },
+  tfShowRevealOverlay(entry, tone, options) {
+    firstWordSandbox.__reveal = { entry, tone, options };
+  }
+};
+firstWordSandbox.window = firstWordSandbox;
+vm.createContext(firstWordSandbox);
+vm.runInContext(source.slice(wordScoreStart, wordScoreEnd), firstWordSandbox);
+vm.runInContext(source.slice(startSessionStart, startSessionEnd), firstWordSandbox);
+vm.runInContext(source.slice(forceRevealStart, forceRevealEnd), firstWordSandbox);
+const firstMultiEntry = {
+  word: firstMultiRecord.word,
+  contentKey: firstMultiRecord.contentKey,
+  readingTH: firstMultiRecord.readingTH,
+  zh: firstMultiRecord.zhTW,
+  level: 2,
+  syls: firstMultiRecord.syllables.map((syllable) => ({ toneNumber: syllable.toneNumber, catalog: syllable }))
+};
+firstWordSandbox.startSetSession([firstMultiEntry], { keepOrder: true });
+assert.deepStrictEqual(Array.from(firstWordSandbox.session.learningComponentWrongCounts), []);
+for (const expected of [7, 4, 1, 0]) {
+  firstWordSandbox.TF_WORDSCORE.onWrong(firstWordSandbox.session);
+  assert.strictEqual(firstWordSandbox.TF_WORDSCORE.score(firstWordSandbox.session), expected);
+}
+assert.doesNotThrow(() => firstWordSandbox.tfForceRevealZero());
+assert.strictEqual(firstWordSandbox.session.learningComponentWrongCounts[0], 4);
+assert.strictEqual(firstWordSandbox.__reveal.tone, firstMultiRecord.syllables[0].toneNumber);
+assert.strictEqual(firstWordSandbox.__reveal.options.sylIdx, 0);
 
 let syllableCount = 0;
 for (const record of catalog.records) {

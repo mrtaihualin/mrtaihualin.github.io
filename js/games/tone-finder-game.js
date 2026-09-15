@@ -2935,7 +2935,7 @@ function startSetSession(words, opts) {
     sessionScored: false,
     submissionLinked: false,
     // ── สเตจ 2 + หลายพยางค์ ──
-    curWordAllFirstTry: true, scoredSyls: {},
+    curWordAllFirstTry: true, scoredSyls: {}, learningComponentWrongCounts: [],
     currentWordGolden: tfRollGolden(),
     // ── สเปก 2026-07-03: ดาวเงินที่ได้จริงรอบนี้ (สะสมจากคำที่ mastered ระหว่างเล่น) ──
     hardStarsEarned: 0,
