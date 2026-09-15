@@ -1,5 +1,11 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-09-15 — Tone analytics-isolated next-word commit (`SOURCE_PASS / LOCAL_REGRESSION_PASS / PRODUCTION_UNCHANGED`)
+
+- Tone's correct and wrong next-word analytics calls now use the same defensive boundary as the other game events. When `gtag` is available, the existing event names and payloads remain unchanged; when analytics is blocked or unavailable, gameplay continues to the existing `tfCommitWordAndAdvance()` path instead of raising a core-game `ReferenceError` before the Paid server-authoritative commit.
+- Rebuilt only `tone-finder-game.min.js` from its source and advanced only Tone's game-runtime cache binding from `v87` to `v88`. Existing cache-contract assertions were updated mechanically; no catalog, Thai-language field, scoring, queue, SRS transition, Guest, Reading, Typing, Word Order, Listening or Lego behavior changed.
+- The exact extracted `TF.nextWord()` runtime passes correct/wrong cases with analytics present and absent, with one commit in every case and unchanged analytics events when available. Paid local PostgreSQL checks pass migration compilation, owner/direct-access isolation, the `0→1→8→16→30→60→90` path, Challenge failure isolation, concurrency/idempotency and fail-closed recovery. Deterministic Terser rebuild is byte-identical and the complete `1,101`-file site gate passes. No Supabase, Edge, database, account/player data, Preview or Production mutation occurred; exact-build Human Paid persistence retest remains a separate release gate.
+
 ## 2026-09-14 — Shared word/sentence answer standard (`SOURCE_PASS / ISOLATED_BROWSER_PASS / DATABASE_SOURCE_ONLY / HUMAN_REVIEW_PENDING / PRODUCTION_UNCHANGED`)
 
 - The existing sentence adapter now encodes each supplied reviewed tone name as its 1–5 ID and rejects unknown/conflicting tone metadata. Tone's sentence entry path uses the same projected syllables as Reading and Typing, eliminating missing `toneNumber`/catalog answer failures without a Thai-language calculator or a new sentence catalog.

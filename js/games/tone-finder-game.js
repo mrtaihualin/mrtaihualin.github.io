@@ -3757,12 +3757,12 @@ var TF = {
       var _gaMistakes = session.currentWordMistakes || 0;
       var _gaToneName = (TONES[_gaTone] && TONES[_gaTone].zh) || String(_gaTone);
       if (_gaMistakes === 0) {
-        gtag('event','tone_answer_correct',{category:'game',word: _gaEntry.word, tone: _gaToneName});
+        try{ if(typeof gtag==='function') gtag('event','tone_answer_correct',{category:'game',word: _gaEntry.word, tone: _gaToneName}); }catch(e){}
         try{ if(window.gtag) gtag('event','game_correct',{category:'game',game:'tone_finder'}); }catch(e){}
       } else {
         var _gaFinal = session.finalAnswer != null ? session.finalAnswer : session.initialGuess;
         var _gaSelectedName = (TONES[_gaFinal] && TONES[_gaFinal].zh) || String(_gaFinal);
-        gtag('event','tone_answer_wrong',{category:'game',word: _gaEntry.word, selected: _gaSelectedName, correct: _gaToneName});
+        try{ if(typeof gtag==='function') gtag('event','tone_answer_wrong',{category:'game',word: _gaEntry.word, selected: _gaSelectedName, correct: _gaToneName}); }catch(e){}
         try{ if(window.gtag) gtag('event','game_wrong',{category:'game',game:'tone_finder'}); }catch(e){}
       }
       // สเตจ 1: บันทึกผล (พร้อมคะแนน) + ไปคำถัดไป/สรุป + คิดโบนัสจบชุด
