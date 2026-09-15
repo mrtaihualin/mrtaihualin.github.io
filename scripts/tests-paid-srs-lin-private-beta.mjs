@@ -33,9 +33,40 @@ assert.match(tone, /Paid progress is server-authoritative/);
 assert.match(tone, /paidUnavailable\s*=\s*n === '3' && !!window\.PAID_SRS_PRIVATE_BETA/);
 assert.match(tone, /window\.PAID_SRS_PRIVATE_BETA && Number\(level\) === 3/);
 assert.match(tone, /if \(_paidRecord\.reschedulePending\) _paidRecord\.mastered = true/);
-assert.match(page, /game-content-client\.js\?v=20/);
+assert.match(page, /game-content-client\.js\?v=22/);
 assert.match(page, /learning-review\.js\?v=7/);
-assert.match(page, /tone-finder-game\.min\.js\?v=86/);
+assert.match(page, /tone-finder-game\.min\.js\?v=88/);
+
+const nextWordMatch = tone.match(/nextWord:\s*function\(\)\s*\{([\s\S]*?)\n\s*\},\n\s*downloadSummary:/);
+assert.ok(nextWordMatch, 'Tone nextWord runtime must remain extractable for the Paid commit regression');
+function runNextWord({ mistakes, analytics }) {
+  const events = [];
+  let commits = 0;
+  const context = {
+    session: {
+      words: [{ word: 'ขอบคุณ' }], index: 0, currentWordMistakes: mistakes,
+      initialGuess: 2, finalAnswer: mistakes ? 2 : 1,
+    },
+    catalogToneNumber: () => 1,
+    TONES: { 1: { zh: '第一聲' }, 2: { zh: '第二聲' } },
+    tfCommitWordAndAdvance: () => { commits += 1; },
+    TF: { _startRandom5: () => assert.fail('active session must commit instead of restarting') },
+  };
+  context.window = context;
+  if (analytics) context.gtag = (...args) => events.push(args);
+  vm.runInNewContext(`(function () {${nextWordMatch[1]}})()`, context, { filename: 'tone-next-word-regression.js' });
+  return { commits, events };
+}
+for (const mistakes of [0, 1]) {
+  const withoutAnalytics = runNextWord({ mistakes, analytics: false });
+  assert.equal(withoutAnalytics.commits, 1, 'blocked analytics must not stop the Paid round commit');
+  assert.equal(withoutAnalytics.events.length, 0);
+  const withAnalytics = runNextWord({ mistakes, analytics: true });
+  assert.equal(withAnalytics.commits, 1);
+  assert.deepEqual(Array.from(withAnalytics.events, (event) => event[1]),
+    mistakes === 0 ? ['tone_answer_correct', 'game_correct'] : ['tone_answer_wrong', 'game_wrong']);
+}
+console.log('Tone next-word analytics isolation and Paid commit continuation: PASS');
 
 const browser = { window: {} };
 vm.runInNewContext(loader, browser, { filename: 'game-content-client.js' });
