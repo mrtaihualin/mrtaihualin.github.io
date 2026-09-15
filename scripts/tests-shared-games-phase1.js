@@ -883,7 +883,9 @@ test('Tone active-question guidance locks scoring while preserving the approved 
   assert.match(toneMin, /currentWordMistakesTotal/, 'Tone: deployed minified bundle must preserve the real wrong-answer total');
   assert.match(toneMin, /開始推導/, 'Tone: deployed minified bundle must include the derivation start gate');
   assert.match(toneMin, /pageshow/, 'Tone: deployed minified bundle must include the page-return guard');
-  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=89/, 'Tone: page must request the rebuilt shared-framework runtime version');
+  assert.match(toneMin, /tfHandleInitialToneMistake/, 'Tone: deployed minified bundle must preserve the initial no-deduction handler');
+  assert.doesNotMatch(toneMin, /聲調選擇錯誤/, 'Tone: deployed minified bundle must not retain the superseded initial scored-mistake branch');
+  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=90/, 'Tone: page must request the rebuilt shared-framework runtime version');
 });
 
 test('Tone mobile touch surfaces keep Desktop gameplay free of keyboard-only copy', () => {

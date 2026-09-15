@@ -1,5 +1,11 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-09-15 — Tone minified runtime parity (`SOURCE_FIX / PRODUCTION_PREFLIGHT_BLOCKER_RESOLVED / PRODUCTION_UNCHANGED`)
+
+- Regenerated `js/games/tone-finder-game.min.js` from the exact corrected Tone source and advanced the runtime cache binding `v89→v90` after the Production preflight browser check proved that the prior minified asset still applied the superseded initial `1–5` deduction.
+- The corrected minified runtime now keeps score `10` and zero deduction/mistake counters on an ordinary initial wrong choice, then starts deduction inside `推導`. This is runtime parity for the already approved rule, not a new Product behavior.
+- Source/minified parity is byte-reproducible; targeted Tone checks pass and the required full site gate passes all `1,102` files. No catalog/content, Supabase/Auth/account/data, Cloudflare traffic or Production state changed in this source patch.
+
 ## 2026-09-15 — Tone initial 1–5 scoring correction (`SOURCE_PASS / LOCAL_REGRESSION_PASS / RUNTIME_RELEASE_PENDING`)
 
 - Restored Lin's current scoring rule for ordinary Tone practice: a wrong initial `1–5` tone choice keeps the per-word score at `10`, records no scored mistake, cuts combo/first-try eligibility, and enters the reviewed `推導` flow. The deduction ladder begins only on the first wrong answer inside `推導`, then remains `10→7→4→1→0`.
