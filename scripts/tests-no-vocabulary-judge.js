@@ -120,7 +120,10 @@ assert.doesNotMatch(toneGame, /data\.advSentIdx/);
 assert.doesNotMatch(toneGame, /map\(tfFindEntryByResumeId\)\.filter\(Boolean\)/);
 assert.match(listeningGame, /wordIds: state\.round\.map\(function \(w\) \{ return srsKey\(w\); \}\)/);
 assert.doesNotMatch(listeningGame, /wordIds: state\.round\.map\(function \(w\) \{ return w\.th; \}\)|byTh\[w\.th\]/);
-assert.doesNotMatch(toneGame, /tryNavigate|navigateToInflection|function navigate\(|deriveText|TF_PARTICLE_WORDS/);
+assert.match(toneGame, /function navigateToInflection\(\)/);
+assert.match(toneGame, /function catalogExpectedTeachingChoice\(step\)/);
+assert.match(toneGame, /var newTone = nextStep === 'result' \? catalogToneNumber\(\) : null/);
+assert.doesNotMatch(toneGame, /deriveText|TF_PARTICLE_WORDS/);
 assert.doesNotMatch(toneGame, /WORD_SYLS/);
 assert.doesNotMatch(toneGame, /tfCurWordIsToneSpecial/);
 assert.doesNotMatch(toneGame, /S\.parentWord\s*\|\||entrySyls\.map\([^\n]*\.join\(''\)|syls\.join\(''\)/);
@@ -250,7 +253,7 @@ assert.match(read('listening-game.html'), /js\/games\/game-content-client\.js/);
 assert.doesNotMatch(read('listening-game.html'), /data\/tone-engine\.js/);
 assert.doesNotMatch(read('listening-game.html'), /GameContentLoader\.boot/);
 
-const forbiddenRuntimeJudgeMarkers = /tryNavigate|navigateToInflection|deriveText|readSyls|VOWEL_SYMBOL|VOWEL_READ|noneToEmpty|TF_PARTICLE_WORDS|SCORE_DEDUCE|DEDUCE_WRONG|deduceScore|onPeek/;
+const forbiddenRuntimeJudgeMarkers = /deriveText|readSyls|VOWEL_SYMBOL|VOWEL_READ|noneToEmpty|TF_PARTICLE_WORDS|SCORE_DEDUCE|DEDUCE_WRONG|deduceScore/;
 [
   'js/games/tone-finder-game.min.js',
   'js/games/reading-game-app.min.js',

@@ -101,9 +101,12 @@ test('tone marks are visible and have no fabricated audio', () => {
   assert.match(app, /這一區只顯示符號，不製作假錄音/);
 });
 
-test('alphabet manual is isolated from the vocabulary answer path', () => {
-  assert.doesNotMatch(app, /function tfUseHint\(|navigateToInflection|tryNavigate|function navigate\(/);
-  assert.match(app, /startGuidedQuestion:[\s\S]{0,420}tfForceRevealZero\(\)/);
+test('alphabet manual and tutorial stay isolated from the vocabulary answer authority', () => {
+  assert.match(app, /function navigateToInflection\(\)/);
+  assert.match(app, /function catalogExpectedTeachingChoice\(step\)/);
+  assert.match(app, /var newTone = nextStep === 'result' \? catalogToneNumber\(\) : null/);
+  assert.doesNotMatch(app, /\bTH\.|TH_ENGINE|computeTone|TONE_OVERRIDE|getInitClass|getVowelType|isLiveWord/);
+  assert.match(app, /startGuidedQuestion:[\s\S]{0,420}navigateToInflection\(\)/);
   assert.match(app, /openManualFromTip[\s\S]{0,420}tfOpenAlphabetOverlay\('manual'/);
 });
 

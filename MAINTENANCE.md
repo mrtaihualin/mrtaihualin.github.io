@@ -1,5 +1,12 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-09-15 — PB-FIX-8 Tone teaching derivation regression preparation (`SOURCE_PASS / LOCAL_REGRESSION_PASS / PRODUCTION_UNCHANGED`)
+
+- Created the isolated local branch `codex/pb-fix-8-tone-derivation-20260915` from the no-drift GitLab `main=80a75fb5a6fc33f33dc9f86db652db1a72f98fce`; commit `1c3d3ced3fd27738c22b1ba60be0c61e7c56654b` was inspected only as the earlier implementation reference. Normal 初/中 wrong answers now enter the reviewed teaching 推導 again, while memory-only checks retain their existing direct-reveal boundary.
+- Restored the per-word `10→7→4→1→0` deduction ladder and four-failure zero/reveal behavior. Teaching choices read only reviewed catalog pedagogy fields, and the final answer remains `catalogToneNumber()` from the canonical catalog; no vocabulary lookup, Thai parser, tone calculator, override or other second judge was reintroduced.
+- The exact 14-file write-set is this maintenance Delta; Tone source/minified runtime and page copy/cache binding; the existing mobile-state, no-second-judge, manual/tutorial, shared-game, Login, owner-switch and Paid SRS regressions; plus the new exhaustive teaching-derivation regression. The new regression passes all 200 catalog records / 368 syllables and executable score steps; focused Tone, canonical-answer, Guest/Login, shared-game, owner-switch and Paid PostgreSQL commit/SRS tests pass; the complete site gate passes all 1,102 local project files.
+- This is local preparation only. No branch was pushed, no MR was opened, and no merge, upload, deployment, Cloudflare traffic, Supabase, migration, Edge Function, Database, Auth, entitlement, account or player-data change occurred.
+
 ## 2026-09-15 — Tone analytics-isolated next-word commit (`SOURCE_PASS / LOCAL_REGRESSION_PASS / PRODUCTION_UNCHANGED`)
 
 - Tone's correct and wrong next-word analytics calls now use the same defensive boundary as the other game events. When `gtag` is available, the existing event names and payloads remain unchanged; when analytics is blocked or unavailable, gameplay continues to the existing `tfCommitWordAndAdvance()` path instead of raising a core-game `ReferenceError` before the Paid server-authoritative commit.
