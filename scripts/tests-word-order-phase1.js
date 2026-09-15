@@ -8,6 +8,7 @@ const vm = require('vm');
 
 const root = path.resolve(__dirname, '..');
 const app = fs.readFileSync(path.join(root, 'js/games/word-order-app.js'), 'utf8');
+const minApp = fs.readFileSync(path.join(root, 'js/games/word-order-app.min.js'), 'utf8');
 const html = fs.readFileSync(path.join(root, 'word-order.html'), 'utf8');
 const sentenceSource = fs.readFileSync(path.join(root, 'data/adv-sentences.js'), 'utf8');
 let passed = 0;
@@ -162,6 +163,96 @@ test('SRS lifecycle is the Phase 1 Day 1 / Day 7 path', () => {
 test('Guest can play while account SRS writes remain login-gated', () => {
   assert.match(app, /if \(woLoggedIn\(\) && !practiceMode && !woReviewOwns\(s\.th\)\) \{/);
   assert.match(app, /else \{\s*pool = allIdx\.slice\(\);/);
+});
+
+test('normal rounds fail closed unless they contain exactly five unique valid questions', () => {
+  const helpers = block('function woRoundIdentity(', '// ════════════════════════════════════════════════════════════\n  // 勳章');
+  const context = {
+    ADV_SENTENCES: Array.from({ length: 8 }, (_, index) => ({ th: `ประโยค-${index}` })),
+    WO_ROUND_SIZE: 5,
+    WO_REVIEW_LIMIT: 1,
+    WO_SRS_DUE_LIMIT: 1,
+    window: { console: { error() {} } },
+    console: { error() {} },
+  };
+  vm.createContext(context);
+  vm.runInContext(helpers, context);
+
+  assert.deepStrictEqual(Array.from(context.woRequireExactRound([0, 1, 2, 3, 4])), [0, 1, 2, 3, 4]);
+  assert.throws(() => context.woRequireExactRound([0, 1, 1, 2, 3]), /WORD_ORDER_ROUND_EXACT_FIVE_REQUIRED/);
+  assert.throws(() => context.woRequireExactRound([0, 1, 2, 3]), /WORD_ORDER_ROUND_EXACT_FIVE_REQUIRED/);
+  context.ADV_SENTENCES[4].th = '';
+  assert.throws(() => context.woRequireExactRound([0, 1, 2, 3, 4]), /WORD_ORDER_ROUND_EXACT_FIVE_REQUIRED/);
+});
+
+test('Word Order caps Review and SRS Due separately at one without emergency fill', () => {
+  const helpers = block('function woRoundIdentity(', '// ════════════════════════════════════════════════════════════\n  // 勳章');
+  const context = {
+    ADV_SENTENCES: Array.from({ length: 10 }, (_, index) => ({ th: `ประโยค-${index}` })),
+    WO_ROUND_SIZE: 5,
+    WO_REVIEW_LIMIT: 1,
+    WO_SRS_DUE_LIMIT: 1,
+    window: { console: { error() {} } },
+    console: { error() {} },
+  };
+  vm.createContext(context);
+  vm.runInContext(helpers, context);
+
+  const allocation = context.woAllocateSrsStrict({ total: 5, due: [0, 1, 2], regular: [0, 3, 4, 5, 6, 7] });
+  assert.strictEqual(allocation.selectedDue.length, 1);
+  assert.strictEqual(allocation.items.length, 5);
+  assert.strictEqual(new Set(Array.from(allocation.items)).size, 5);
+  const dueOnly = context.woAllocateSrsStrict({ total: 5, due: [0, 1, 2, 3, 4], regular: [] });
+  assert.strictEqual(dueOnly.items.length, 1, 'must not emergency-fill from additional Due items');
+  assert.throws(() => context.woRequireExactRound(dueOnly.items), /WORD_ORDER_ROUND_EXACT_FIVE_REQUIRED/);
+
+  assert.match(app, /reviewDue:shuffle\(_reviewDue\)\.slice\(0,WO_REVIEW_LIMIT\)/);
+  assert.match(app, /allocateSrs:woAllocateSrsStrict/);
+  assert.match(app, /selectedReview\.length>WO_REVIEW_LIMIT\|\|_reviewAllocation\.selectedSrs\.length>WO_SRS_DUE_LIMIT/);
+  assert.doesNotMatch(app, /GameFlow\.allocateSrs\(\{tier:'free'/);
+  assert.doesNotMatch(app, /practiceMode = true; pool = allIdx\.slice\(\)/);
+});
+
+test('normal-round eligibility excludes all SRS-owned and queued Review items from regular fill', () => {
+  assert.match(app, /_reviewDue=.*\.filter\(function\(i\)\{return !srsRecords\[woSrsKey\(ADV_SENTENCES\[i\]\.th\)\];\}\)/);
+  assert.match(app, /_regularIdx=allIdx\.filter\(function\(i\)\{return !srsRecords\[woSrsKey\(ADV_SENTENCES\[i\]\.th\)\]&&!_reviewDueSeen\[woRoundIdentity\(i\)\];\}\)/);
+  assert.doesNotMatch(app, /Math\.min\(WO_ROUND_SIZE,_dueIdx\.length\+_regularIdx\.length\)/);
+});
+
+test('resume accepts only versioned five-question bases and bounded base retries', () => {
+  const helpers = block('function woRoundIdentity(', '// ════════════════════════════════════════════════════════════\n  // 勳章');
+  const context = {
+    ADV_SENTENCES: Array.from({ length: 8 }, (_, index) => ({ th: `ประโยค-${index}` })),
+    WO_ROUND_SIZE: 5,
+    WO_REVIEW_LIMIT: 1,
+    WO_SRS_DUE_LIMIT: 1,
+    window: { console: { error() {} } },
+    console: { error() {} },
+  };
+  vm.createContext(context);
+  vm.runInContext(helpers, context);
+
+  assert.strictEqual(context.woValidResumeRound({ roundSize: 5, idx: 2 }, [0, 1, 2, 3, 4]), true);
+  assert.strictEqual(context.woValidResumeRound({ roundSize: 5, idx: 5 }, [0, 1, 2, 3, 4, 0, 1]), true);
+  assert.strictEqual(context.woValidResumeRound({ idx: 1 }, [0, 1, 2]), false, 'legacy short snapshots must be cleared');
+  assert.strictEqual(context.woValidResumeRound({ roundSize: 5, idx: 1 }, [0, 1, 1, 3, 4]), false);
+  assert.strictEqual(context.woValidResumeRound({ roundSize: 5, idx: 5 }, [0, 1, 2, 3, 4, 5]), false);
+  assert.strictEqual(context.woValidResumeRound({ roundSize: 5, idx: 6 }, [0, 1, 2, 3, 4, 0, 0]), false);
+  assert.match(app, /roundSize: WO_ROUND_SIZE/);
+  assert.match(app, /woValidResumeRound\(_resumeState,_restoredSet\)/);
+});
+
+test('direct sentence practice remains a separate single-item mode without Resume writes', () => {
+  const fresh = block('function startFreshRound(', 'function loadSentence()');
+  assert.match(fresh, /practiceMode = true;\s*SET = \[requestedIndex\]/);
+  assert.match(app, /if \(practiceMode \|\| !window\.GameResume \|\| !SET\.length\) return/);
+});
+
+test('HTML fetches the exact-five minified runtime and source/minified carry the fail-closed contract', () => {
+  assert.match(app, /var WO_ROUND_SIZE = 5/);
+  assert.match(html, /word-order-app\.min\.js\?v=44/);
+  assert.match(minApp, /WORD_ORDER_ROUND_EXACT_FIVE_REQUIRED/);
+  assert.match(minApp, /round unavailable/);
 });
 
 test('round completion writes account evidence as word_order', () => {

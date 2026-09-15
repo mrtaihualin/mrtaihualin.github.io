@@ -349,7 +349,7 @@ test('four-game refinements expose original controls and one shared modal shell'
   assert.match(stage, /data-gsh-ml-unavailable[\s\S]{0,500}!control \|\| !!control\.disabled/);
   assert.match(css, /data-gsh-ml-unavailable="true"[\s\S]{0,180}cursor: not-allowed/);
   assert.match(css, /#tf-howto-modal,[\s\S]{0,180}#rg-howto-modal,[\s\S]{0,180}#wo-howto-modal[\s\S]{0,180}z-index: 100002 !important/);
-  assert.match(wordOrder, /word-order-app\.min\.js\?v=43/);
+  assert.match(wordOrder, /word-order-app\.min\.js\?v=44/);
 });
 
 test('local Landscape review pages load current game assets from the site root', () => {
