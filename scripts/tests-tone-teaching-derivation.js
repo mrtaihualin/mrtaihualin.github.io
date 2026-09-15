@@ -20,10 +20,16 @@ const forceRevealStart = source.indexOf('function tfForceRevealZero()');
 const forceRevealEnd = source.indexOf('// overlay เฉลยเมื่อกดมั่วครบ 3 ครั้ง', forceRevealStart);
 const startSessionStart = source.indexOf('function startSetSession(words, opts)');
 const startSessionEnd = source.indexOf('// ── สเปก 2026-07-03 ข้อ 3:', startSessionStart);
+const initialToneMistakeStart = source.indexOf('function tfHandleInitialToneMistake(entry)');
+const initialToneMistakeEnd = source.indexOf('function stepSessionGuess()', initialToneMistakeStart);
+const deduceMistakeStart = source.indexOf('function tfHandleDeduceMistake(choiceLabel, errMsg)');
+const deduceMistakeEnd = source.indexOf('// เผยคำตอบจาก canonical catalog', deduceMistakeStart);
 assert.ok(defsStart >= 0 && defsEnd > defsStart && teachingStart >= 0 && teachingEnd > teachingStart);
 assert.ok(wordScoreStart >= 0 && wordScoreEnd > wordScoreStart);
 assert.ok(forceRevealStart >= 0 && forceRevealEnd > forceRevealStart);
 assert.ok(startSessionStart >= 0 && startSessionEnd > startSessionStart);
+assert.ok(initialToneMistakeStart >= 0 && initialToneMistakeEnd > initialToneMistakeStart);
+assert.ok(deduceMistakeStart >= 0 && deduceMistakeEnd > deduceMistakeStart);
 
 const sandbox = {
   __syllable: null,
@@ -42,6 +48,49 @@ for (const expected of [7, 4, 1, 0]) {
   assert.strictEqual(sandbox.TF_WORDSCORE.score(scoreSession), expected);
 }
 assert.strictEqual(sandbox.TF_WORDSCORE.isDead(scoreSession), true);
+
+const initialWrongSandbox = {
+  session: {
+    combo: 4,
+    currentWordDeduct: 0,
+    currentWordMistakes: 0,
+    currentWordMistakesTotal: 0,
+    curWordAllFirstTry: true
+  },
+  __gaugeUpdates: 0,
+  __multi: true,
+  __errors: [],
+  tfCurWordIsMulti() { return initialWrongSandbox.__multi; },
+  tfCurWordIsParticle() { return false; },
+  tfUpdateWordScoreGauge() { initialWrongSandbox.__gaugeUpdates += 1; },
+  recordMistake() {
+    initialWrongSandbox.session.currentWordMistakes += 1;
+    initialWrongSandbox.session.currentWordMistakesTotal += 1;
+  },
+  showError(message) { initialWrongSandbox.__errors.push(message); },
+  tfMinaToast() {},
+  tfForceRevealZero() { throw new Error('first derivation mistake must not reveal'); }
+};
+initialWrongSandbox.window = initialWrongSandbox;
+vm.createContext(initialWrongSandbox);
+vm.runInContext(source.slice(wordScoreStart, wordScoreEnd), initialWrongSandbox);
+vm.runInContext(source.slice(initialToneMistakeStart, initialToneMistakeEnd), initialWrongSandbox);
+vm.runInContext(source.slice(deduceMistakeStart, deduceMistakeEnd), initialWrongSandbox);
+
+initialWrongSandbox.tfHandleInitialToneMistake({ isParticle: false });
+assert.strictEqual(initialWrongSandbox.session.curWordWrongGuess, true);
+assert.strictEqual(initialWrongSandbox.session.combo, 0);
+assert.strictEqual(initialWrongSandbox.session.curWordAllFirstTry, false);
+assert.strictEqual(initialWrongSandbox.session.currentWordDeduct, 0);
+assert.strictEqual(initialWrongSandbox.session.currentWordMistakes, 0);
+assert.strictEqual(initialWrongSandbox.session.currentWordMistakesTotal, 0);
+assert.strictEqual(initialWrongSandbox.TF_WORDSCORE.score(initialWrongSandbox.session), 10);
+
+initialWrongSandbox.tfHandleDeduceMistake('ตัวเลือกผิด', '推導ผิด');
+assert.strictEqual(initialWrongSandbox.session.currentWordDeduct, 1);
+assert.strictEqual(initialWrongSandbox.session.currentWordMistakes, 1);
+assert.strictEqual(initialWrongSandbox.session.currentWordMistakesTotal, 1);
+assert.strictEqual(initialWrongSandbox.TF_WORDSCORE.score(initialWrongSandbox.session), 7);
 
 const firstMultiRecord = catalog.records.find((record) => record.level === '中' && record.syllables.length > 1);
 assert.ok(firstMultiRecord, 'canonical intermediate multi-syllable fixture is required');
@@ -134,7 +183,9 @@ assert.strictEqual(catalog.records.length, 200);
 assert.ok(syllableCount > 200);
 assert.match(source, /function navigateToInflection\(\)/);
 assert.match(source, /if \(tfCurWordNoTools\(\)\) tfForceRevealZero\(\);\s*else navigateToInflection\(\);/);
-assert.match(source, /TF_WORDSCORE\.onWrong\(session\);[\s\S]{0,180}TF_WORDSCORE\.onNextStep\(session\);[\s\S]{0,320}navigateToInflection\(\);/);
+assert.match(source, /tfHandleInitialToneMistake\(entry\);[\s\S]{0,260}navigateToInflection\(\);/);
+assert.doesNotMatch(source.slice(initialToneMistakeStart, initialToneMistakeEnd), /recordMistake|TF_WORDSCORE\.onWrong|TF_WORDSCORE\.onNextStep/);
+assert.match(source.slice(deduceMistakeStart, deduceMistakeEnd), /recordMistake\([\s\S]{0,120}TF_WORDSCORE\.onWrong\(session\)/);
 assert.match(source, /function tfScoreDeduce\(\)[\s\S]{0,1500}TF_WORDSCORE\.score\(session\)/);
 assert.match(source, /if \(TF_WORDSCORE\.isDead\(session\)\) \{\s*tfForceRevealZero\(\);/);
 assert.match(source, /session\.initialGuess = 0;[\s\S]{0,650}navigateToInflection\(\);/);

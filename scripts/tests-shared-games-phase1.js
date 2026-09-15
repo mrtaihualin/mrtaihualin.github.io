@@ -870,7 +870,9 @@ test('Tone active-question guidance locks scoring while preserving the approved 
   assert.match(tone, /var newTone = nextStep === 'result' \? catalogToneNumber\(\) : null/, 'Tone: derivation must never become a second tone authority');
   assert.match(tone, /guessRow\s*=\s*\(tfDesktopOrPortrait\(\)\s*&&\s*initialGuess\s*==\s*null\)\s*\?\s*''/, 'Tone: guided Result must not invent an uncertain choice on Desktop or Portrait');
   assert.match(tone, /TF\.skipCurrentWord\(\)[^>]*>跳過<\/button>/, 'Tone: Desktop gameplay must expose neutral 跳過');
-  assert.match(tone, /recordMistake\([\s\S]{0,140}TF_WORDSCORE\.onWrong\(session\)[\s\S]{0,100}TF_WORDSCORE\.onNextStep\(session\)/, 'Tone: a wrong catalog comparison must count once and drop the score ladder');
+  assert.match(tone, /function tfHandleInitialToneMistake\(entry\)[\s\S]{0,260}session\.curWordWrongGuess\s*=\s*true[\s\S]{0,160}session\.combo\s*=\s*0[\s\S]{0,180}tfUpdateWordScoreGauge\(\)/, 'Tone: a wrong initial 1–5 choice must cut combo without dropping the score ladder');
+  assert.doesNotMatch(tone, /聲調選擇錯誤/, 'Tone: a wrong initial 1–5 choice must not be recorded as a scored mistake');
+  assert.match(tone, /function tfHandleDeduceMistake\(choiceLabel, errMsg\)[\s\S]{0,220}recordMistake\(choiceLabel, errMsg\)[\s\S]{0,120}TF_WORDSCORE\.onWrong\(session\)/, 'Tone: the first wrong answer inside derivation must begin the score deduction ladder');
   assert.match(tone, /function tfResetWordScoring\(\)[\s\S]{0,220}currentWordMistakesTotal\s*=\s*0/, 'Tone: each new word must reset its total mistake evidence');
   assert.match(tone, /function recordMistake\([\s\S]{0,900}currentWordMistakesTotal\s*=\s*\(session\.currentWordMistakesTotal \|\| 0\) \+ 1/, 'Tone: every real wrong answer must update the total mistake evidence');
   assert.match(tone, /function tfCommitWordAndAdvance\(opts\)[\s\S]{0,260}var mistakes = session\.currentWordMistakesTotal/, 'Tone: Result must retain mistake totals across syllables');
@@ -879,7 +881,6 @@ test('Tone active-question guidance locks scoring while preserving the approved 
   assert.match(tone, /function tfArmGuideIntroForPageReturn\(\)[\s\S]{0,400}currentWordGuideIntroPending\s*=\s*true/, 'Tone: returning to a preserved page must re-arm the guided-question gate');
   assert.match(toneMin, /currentWordGuideUsed/, 'Tone: deployed minified bundle must include the zero-lock state');
   assert.match(toneMin, /currentWordMistakesTotal/, 'Tone: deployed minified bundle must preserve the real wrong-answer total');
-  assert.match(toneMin, /聲調選擇錯誤/, 'Tone: deployed minified bundle must charge a wrong initial tone answer');
   assert.match(toneMin, /開始推導/, 'Tone: deployed minified bundle must include the derivation start gate');
   assert.match(toneMin, /pageshow/, 'Tone: deployed minified bundle must include the page-return guard');
   assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=89/, 'Tone: page must request the rebuilt shared-framework runtime version');
