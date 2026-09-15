@@ -404,7 +404,8 @@ var TF_SCORE = {
 // ===== TF_WORDSCORE (Lin 2026-07-04) — state คะแนนต่อคำ บันได [10,7,4,1,0] · pure logic ทดสอบได้จริง =====
 //  ทำงานบนคะแนน/สถานะ UI เท่านั้น; ไม่คำนวณคำตอบภาษา
 //  กติกา (ยืนยันกับ Lin ผ่านหลอดคะแนน 2026-07-04):
-//   • เดาเสียงหรือเลือกขั้น推導ผิด = หัก 1 ขั้น
+//   • เดาเสียงปุ่ม 1–5 ผิดในหน้าหลัก = ไม่หักคะแนน; ตัดคอมโบแล้วเข้า推導
+//   • เลือกขั้น推導ผิด = เริ่มหัก 1 ขั้น
 //   • ปุ่ม ? ฟรีหนึ่งครั้งหลังตอบผิดในขั้นนั้น มิฉะนั้นหัก 1 ขั้น
 //   • หักครบ 4 (แต้มเหลือ 0) = เฉลยค่าจากคลัง + SRS รีเซ็ต day1
 var TF_WORDSCORE = {
@@ -3136,6 +3137,16 @@ function s2bDeadLow() {
     '</div>' + footer();
 }
 
+// Lin 2026-09-15: เดาเสียง 1–5 ผิดก่อนเข้า推導ไม่นับผิดและไม่ลดบันไดคะแนน
+// ยังตัดคอมโบ/สิทธิ์ first-try ตามเดิม; คะแนนเริ่มลดเมื่อตอบผิดภายใน推導เท่านั้น
+function tfHandleInitialToneMistake(entry) {
+  if (!session) return;
+  session.curWordWrongGuess = true;
+  if (!entry.isParticle) session.combo = 0;
+  if (tfCurWordIsMulti()) session.curWordAllFirstTry = false;
+  tfUpdateWordScoreGauge();
+}
+
 function stepSessionGuess() {
   if (!session) throw new Error('CATALOG_AUTHORITY_UNAVAILABLE:no active session');
   var entry = session.words[session.index];
@@ -3165,19 +3176,7 @@ function stepSessionGuess() {
         else tfScoreFirstTry();
         goToResult(captureN);
       } else {
-        // Lin 2026-08-26: เดาเสียงผิดต้องนับผิด 1 ครั้งและลดบันไดคะแนนทันที
-        // ปุ่ม 不確定 ไม่สร้างคำตอบใหม่และเผยค่าจากคลังโดยตรง
-        if (session) {
-          session.curWordWrongGuess = true;
-          if (!entry.isParticle) session.combo = 0;
-          if (tfCurWordIsMulti()) session.curWordAllFirstTry = false;
-          if (!entry.isParticle) {
-            recordMistake(TONES[captureN] ? TONES[captureN].zh : String(captureN), '聲調選擇錯誤');
-            TF_WORDSCORE.onWrong(session);
-            TF_WORDSCORE.onNextStep(session);
-          }
-          tfUpdateWordScoreGauge();
-        }
+        tfHandleInitialToneMistake(entry);
         // Memory-only checks reveal immediately. Normal practice enters the
         // deterministic teaching flow; it is not a second answer judge.
         if (tfCurWordNoTools()) tfForceRevealZero();

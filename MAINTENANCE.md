@@ -1,5 +1,11 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-09-15 — Tone initial 1–5 scoring correction (`SOURCE_PASS / LOCAL_REGRESSION_PASS / RUNTIME_RELEASE_PENDING`)
+
+- Restored Lin's current scoring rule for ordinary Tone practice: a wrong initial `1–5` tone choice keeps the per-word score at `10`, records no scored mistake, cuts combo/first-try eligibility, and enters the reviewed `推導` flow. The deduction ladder begins only on the first wrong answer inside `推導`, then remains `10→7→4→1→0`.
+- Memory-only final/known checks retain their existing direct-fail boundary because those checks intentionally have no `推導`. Catalog answer authority, hint charging, vocabulary content, SRS namespaces and other games are unchanged.
+- Executable regression proves the initial wrong choice leaves deduction/mistake counters at zero and the first derivation mistake changes the item score to `7`. Focused derivation, manual, no-second-judge and shared-game suites pass. This Delta changes canonical source and tests only; the minified runtime, cache binding, Preview and Production remain unchanged pending a separate exact release gate.
+
 ## 2026-09-15 — PB-FIX-8 Tone teaching derivation regression preparation (`SOURCE_PASS / LOCAL_REGRESSION_PASS / PRODUCTION_UNCHANGED`)
 
 - Created the isolated local branch `codex/pb-fix-8-tone-derivation-20260915` from the no-drift GitLab `main=80a75fb5a6fc33f33dc9f86db652db1a72f98fce`; commit `1c3d3ced3fd27738c22b1ba60be0c61e7c56654b` was inspected only as the earlier implementation reference. Normal 初/中 wrong answers now enter the reviewed teaching 推導 again, while memory-only checks retain their existing direct-reveal boundary.
