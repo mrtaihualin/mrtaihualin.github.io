@@ -13,6 +13,8 @@ const readingAuth = read('js/games/reading-auth.js');
 const wordVault = read('js/games/word-vault.js');
 const sentenceVault = read('js/games/sentence-vault.js');
 const scoreSubmit = read('supabase/functions/score-submit/index.ts');
+const learningReview = read('js/games/learning-review.js');
+const learningSql = read('supabase/migrations/20260915165150_phase1_login_free_learning_engine_v2.sql');
 const scoreSql = read('supabase/sql/2026-08-15_s29_authoritative_score_security.sql');
 const scoreAtomicSql = read('supabase/sql/2026-08-16_phase1_score_submit_atomic.sql');
 const toneAtomicSql = read('supabase/sql/2026-08-16_phase1_tone_round_atomic.sql');
@@ -48,15 +50,14 @@ test('round-save Edge call has a bounded wait and fails closed', () => {
   assert.match(toneServer, /NetworkGuard\.request[\s\S]*tone-round'[\s\S]{0,80}12000/);
   assert.match(toneServer, /return \{ ok: false, reason: 'exception'/);
 });
-test('server SRS protects retry and concurrent duplicate writes', () => {
-  assert.match(edge, /if \(!TF_SRS\.isDue\(rec, nowMs\)\) return reject\('not_due'/);
-  assert.match(edge, /admin\.rpc\("phase1_tone_round_commit"/);
-  assert.match(edge, /admin\.rpc\("game_content_rl_check"[\s\S]{0,180}p_key:\s*`tone-round:\$\{user\.id\}`[\s\S]{0,120}p_window:\s*60/);
-  assert.match(edge, /p_key:\s*`tone-round:\$\{user\.id\}`[^\n]*p_limit:\s*60/);
-  assert.doesNotMatch(edge, /admin\.rpc\(["']rl_check["']/);
-  assert.match(contentSql, /game_content_rl_check\(\s*p_key text, p_limit int default 60, p_window int default 60/);
-  assert.match(toneAtomicSql, /return jsonb_build_object\('ok', false, 'reason', 'race_retry'\)/);
-  assert.match(toneAtomicSql, /pg_advisory_xact_lock/);
+test('server Learning Engine protects retry and concurrent duplicate writes', () => {
+  assert.match(scoreSubmit, /phase1_login_free_learning_commit/);
+  assert.match(scoreSubmit, /p_expected_state_token: expectedToken/);
+  assert.match(learningSql, /pg_advisory_xact_lock/);
+  assert.match(learningSql, /'reason', 'replay_conflict'/);
+  assert.match(learningSql, /v_current_token is distinct from p_expected_state_token/);
+  assert.match(learningSql, /'reason', 'resync_required'/);
+  assert.match(edge, /learning_engine_required/);
 });
 test('client score retry reuses one idempotent payload', () => {
   assert.match(readingAuth, /submission_id: scoreSubmissionId\(\)/);
@@ -88,19 +89,21 @@ test('personal vault saves and deletes use bounded owner-safe online retry', () 
   assert.match(sentenceVault, /if \(!ownerIsCurrent\(owner\)\) return;[\s\S]{0,180}delete _saveInFlight\[th\]/);
 });
 test('Login Core exposes idempotent SRS and Review transaction clients', () => {
-  ['tone-finder.html','typing-game.html','word-order.html'].forEach((page) => {
+  ['tone-finder.html','reading-game.html','typing-game.html','word-order.html'].forEach((page) => {
     const html = read(page);
-    assert.match(html, /tone-server\.js\?v=6/);
     assert.match(html, /network-guard\.js\?v=1/);
     assert.match(html, /reading-auth\.js\?v=34/);
-    assert.match(html, /learning-review\.js\?v=\d+/);
+    assert.match(html, /learning-review\.js\?v=8/);
     assert.match(html, /game-account\.js\?v=6/);
     assert.match(html, /practice-events\.js\?v=3/);
+    if (page === 'tone-finder.html') assert.match(html, /tone-server\.js\?v=6/);
+    else assert.doesNotMatch(html, /tone-server\.js/);
   });
   const reading = read('reading-game.html');
-  assert.match(reading, /tone-server\.js\?v=6/);
   assert.match(reading, /network-guard\.js\?v=1/);
   assert.match(reading, /reading-auth\.js\?v=34/);
+  assert.match(learningReview, /action: 'learning_queue'/);
+  assert.match(learningReview, /action: 'learning_commit'/);
   assert.match(readingAuth, /if \(publicLoginOnly\) return null;/);
   assert.match(readingAuth, /API\.srsUser = publicLoginSrs \? loginUser : API\.user/);
   assert.doesNotMatch(read('listening-game.html'), /(?:tone-server|learning-review)\.js/);

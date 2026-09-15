@@ -118,7 +118,7 @@ test('Reading keeps reviewed syllable authority through the live answer object',
 });
 
 test('Reading loads the rebuilt crash-safe bundle with a fresh cache key', () => {
-  assert.match(html, /reading-game-app\.min\.js\?v=59/);
+  assert.match(html, /reading-game-app\.min\.js\?v=60/);
   assert.match(minified, /READING_FINAL_EXCEPTIONS=\{"อีเมล@中#noun-b-11":"ล"\}/);
   assert.match(minified, /function reviewedReadingVowel\(/);
   assert.match(minified, /function reviewedReadingFinal\(/);
@@ -356,13 +356,13 @@ test('resume report restore fails safe and cannot strand the question UI', () =>
   const restored = context.rgRestoreRoundReport('malformed');
   assert.strictEqual(restored.fallback, true);
   assert.strictEqual(restored.defaults.game_type, 'reading');
-  const resume = block('function rgResumeContinue()', 'function rgResumeRestartSame()');
+  const resume = block('function rgResumeContinue(', 'function rgResumeRestartSame(');
   assert.match(resume, /roundReport=rgRestoreRoundReport\(st\.report\)/);
   assert.match(resume, /refreshUI\(\);\s*loadWord\(\)/);
 });
 
 test('direct word practice bypasses a saved Resume without deleting it', () => {
-  const resumeGate = block('function rgHasDirectWordQuery()', 'function rgResumeContinue()');
+  const resumeGate = block('function rgHasDirectWordQuery(', 'function rgResumeContinue(');
   const banner = { style: { display: 'stale' } };
   const detail = { textContent: '' };
   const saved = { level: '中', wordIds: ['เขา'], cur: 0 };

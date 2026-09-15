@@ -253,7 +253,7 @@ function rgLogWord(o){
     var base={th:w.th,contentKey:rgContentKey(w),zh:w.zh,wordGlosses:wordGlosses,reading:w.readingTH,userAnswer:readingSubmittedAttempts.length?readingSubmittedAttempts[readingSubmittedAttempts.length-1].answer:'',correctAnswer:w.readingTH,wrong:totalWrong,attempts:readingSubmittedAttempts.slice(),attemptScore:readingAttemptScore,correctionAttempts:readingCorrectionAttempts,learningEvidence:{firstCheckSyllableWrongCounts:(readingFirstCheckWrongCounts||sylWrongCount||[]).slice()},failed:false,guide:false,pts:0,srsDue:'',mastered:false};
     for(var k in o){ if(Object.prototype.hasOwnProperty.call(o,k)) base[k]=o[k]; }
     roundLog.push(base);
-    if(roundReport&&window.RoundReport)RoundReport.addItem(roundReport,{content_ref:{source:(w&&w.words&&w.words.length)?'game_sentences':'game_words',key:rgContentKey(w)},question:base.th,meaning:base.zh,attempts:base.attempts,user_answer:base.userAnswer,correct_answer:base.correctAnswer,is_correct:!base.skipped&&!base.failed&&!base.guide&&base.wrong===0,is_skipped:!!base.skipped,skip_reason:base.skipped?'user_skip':null,wrong_count:base.wrong,item_score:base.pts,hint_used:!!base.guide,learning_evidence:base.learningEvidence,linguistic:{reading_th:base.reading,syls:w&&w.syls||null},words:wordGlosses||[],srs_state:base.srsDue||null,mastered_state:!!base.mastered});
+    if(roundReport&&window.RoundReport)RoundReport.addItem(roundReport,{content_ref:{source:(w&&w.words&&w.words.length)?'game_sentences':'game_words',key:rgContentKey(w)},question:base.th,meaning:base.zh,attempts:base.attempts,user_answer:base.userAnswer,correct_answer:base.correctAnswer,is_correct:!base.skipped&&!base.failed&&!base.guide&&base.wrong===0,is_skipped:!!base.skipped,skip_reason:base.skipped?'user_skip':null,wrong_count:base.wrong,item_score:base.pts,hint_used:!!base.guide,learning_evidence:base.learningEvidence,learning_action:base.learningAction||'answer',linguistic:{reading_th:base.reading,syls:w&&w.syls||null},words:wordGlosses||[],srs_state:base.srsDue||null,mastered_state:!!base.mastered});
   }catch(e){}
 }
 // 2026-07-13 Lin：ดึงคำที่พลาดในรอบนี้จาก roundLog ไปเก็บลง reading_sessions.wrong_items (ฐานข้อมูลจุดอ่อน)
@@ -336,11 +336,11 @@ var RG_SRS={
 };
 // Lin 2026-07-15: เปลี่ยน key จาก "ลำดับ index ใน WORDS" เป็น "คำ+ระดับ" (rgSrsKey) กันบั๊ก —
 // เดิม key เป็นตำแหน่งเลขในลิสต์ พอ Lin เพิ่ม/ลบคำ ตำแหน่งขยับ ความจำของนักเรียนที่เคยเล่นแล้วจะไปติดผิดคำ
-// ฝั่งเซิร์ฟเวอร์ (tone_srs_state, tone-round) เก็บด้วย "คำ+ระดับ" อยู่แล้วเป็นความจริงหลัก — อันนี้แค่ทำให้ local ตรงกัน
+// Login Free ใช้ stable contentKey กับ LearningReview; key local นี้เหลือไว้เฉพาะ compatibility/recovery นอก runtime นั้น
 function rgSrsKey(w){return rgContentKey(w);}
 var srsRecords={}; // key = rgSrsKey(word) → SRS record
-function rgSrsGet(key){return srsRecords[key]||null;}
-function rgSrsSet(key,rec){srsRecords[key]=rec;}
+function rgSrsGet(key){if(window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()&&LearningReview.srsRecord)return LearningReview.srsRecord({game:'reading',level:RG_LEVEL_TO_NUM[curLevel]||1,contentRef:{source:curLevel==='高'?'game_sentences':'game_words',key:key}});return srsRecords[key]||null;}
+function rgSrsSet(key,rec){if(window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled())return;srsRecords[key]=rec;}
 var SAVE_KEY='rgv3_save';
 var rememberStep=0,rememberTimer=null;
 var totalStars=0,totalBadges=0;
@@ -493,12 +493,12 @@ function loadSave(){
   if(rgMinimumGuestOnly()){srsRecords={};totalStars=0;totalBadges=0;return;}
   try{
     var raw=localStorage.getItem(SAVE_KEY);
-    if(raw){var d=JSON.parse(raw);srsRecords=d.srsRecords||{};totalStars=d.totalStars||0;totalBadges=d.totalBadges||0;}
+    if(raw){var d=JSON.parse(raw);srsRecords=(window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled())?{}:(d.srsRecords||{});totalStars=d.totalStars||0;totalBadges=d.totalBadges||0;}
   }catch(e){}
 }
 function doSave(){
   if(rgMinimumGuestOnly())return;
-  try{localStorage.setItem(SAVE_KEY,JSON.stringify({srsRecords,totalStars,totalBadges}));}catch(e){}
+  try{if(window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()){var old=JSON.parse(localStorage.getItem(SAVE_KEY)||'{}')||{};old.totalStars=totalStars;old.totalBadges=totalBadges;localStorage.setItem(SAVE_KEY,JSON.stringify(old));return;}localStorage.setItem(SAVE_KEY,JSON.stringify({srsRecords,totalStars,totalBadges}));}catch(e){}
 }
 
 // ════════════════════════════════════════════
@@ -579,12 +579,17 @@ function rgTryLoadResumeBanner(){
   banner.style.display='';
   return true;
 }
-function rgResumeContinue(){
+function rgResumeContinue(reviewReady){
   try{ if(typeof gtag==='function') gtag('event','reading_game_resume_continue',{category:'game'}); }catch(e){}
-  var banner=document.getElementById('rg-resume-banner'); if(banner)banner.style.display='none';
-  var st=window.__rgPendingResume; window.__rgPendingResume=null;
+  var st=window.__rgPendingResume;
   if(!st){ initGame(); return; }
   curLevel=st.level||curLevel;
+  if(!reviewReady&&window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()){
+    rgPrimeReview().then(function(){rgResumeContinue(true);});
+    return;
+  }
+  var banner=document.getElementById('rg-resume-banner'); if(banner)banner.style.display='none';
+  window.__rgPendingResume=null;
   try{localStorage.setItem('rg_reading_level',curLevel);}catch(e){}
   document.querySelectorAll('.ltab').forEach(function(b){b.classList.remove('active');});
   var lt=document.getElementById('ltab-'+curLevel); if(lt)lt.classList.add('active');
@@ -600,20 +605,25 @@ function rgResumeContinue(){
   // Resume must never strand the UI on the HTML placeholders. Old/malformed report snapshots
   // fall back to a fresh report while the saved question queue and counters remain recoverable.
   roundReport=rgRestoreRoundReport(st.report);
-  rgPrimeReview().then(rgRegisterRestoredReview);
+  rgRegisterRestoredReview();
   document.getElementById('end').style.display='none';
   document.getElementById('game').style.display='flex';
   refreshUI();
   loadWord();
 }
-function rgResumeRestartSame(){
+function rgResumeRestartSame(reviewReady){
   var st=window.__rgPendingResume;
   if(!st){ rgResumeNewRound(); return; }
+  curLevel=st.level||curLevel;
+  if(!reviewReady&&window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()){
+    rgPrimeReview().then(function(){rgResumeRestartSame(true);});
+    return;
+  }
   var rq=rgResolveResumeWordIds(st.wordIds,st.level);
   if(!rq){rgResumeNewRound();return;}
   var banner=document.getElementById('rg-resume-banner');if(banner)banner.style.display='none';
-  curLevel=st.level||curLevel;roundQueue=rq;roundTotal=rq.length;cur=0;okC=0;badC=0;streak=0;maxStreak=0;roundScore=0;cleanC=0;roundLog=[];readingSubmittedAttempts=[];roundReport=window.RoundReport?RoundReport.create({game_type:'reading',difficulty:curLevel,mode:'phonics'}):null;isWordPractice=false;
-  rgPrimeReview().then(rgRegisterRestoredReview);
+  roundQueue=rq;roundTotal=rq.length;cur=0;okC=0;badC=0;streak=0;maxStreak=0;roundScore=0;cleanC=0;roundLog=[];readingSubmittedAttempts=[];roundReport=window.RoundReport?RoundReport.create({game_type:'reading',difficulty:curLevel,mode:'phonics'}):null;isWordPractice=false;
+  rgRegisterRestoredReview();
   window.__rgPendingResume=null;rgSaveResumeState();
   document.getElementById('end').style.display='none';document.getElementById('game').style.display='flex';refreshUI();loadWord();
 }
@@ -627,14 +637,12 @@ function rgResumeNewRound(){
 function rgResumeRestart(){rgResumeNewRound();}
 
 // ════════════════════════════════════════════
-// ── Lin 2026-07-13: ซิงก์ SRS "ข้ามเครื่อง" — อ่านกลับจาก Supabase (tone_srs_state, game='reading') → merge เข้า srsRecords ──
-//   • อ่านอย่างเดียว · เขียนขึ้นเซิร์ฟเวอร์ยังเป็นหน้าที่ tone-round เหมือนเดิม (ดาว/กันโกงไม่แตะ)
+// ── Compatibility SRS hydration seam ──
+//   • Login Free อ่าน snapshot ผ่าน LearningReview เท่านั้น; ไม่มี direct table read/write จาก browser
 //   • 2026-07-15: เปลี่ยนมาใช้ key "คำ+ระดับ" ตรงกับฝั่งเซิร์ฟเวอร์เป๊ะ ไม่ต้องแปลง index อีกแล้ว
 //     (เดิมต้องสแกนหา index ใน WORDS ก่อน merge — พอ Lin แก้ไฟล์คำ ตำแหน่งขยับ ก็เคย merge ผิดคำได้)
-//   • คู่ขนาน ไม่บล็อกเกม · เน็ตล่ม/ไม่ล็อกอิน = ใช้ srsRecords ในเครื่องเดิม · กติกา merge = เลือกอันก้าวหน้ากว่า (ทดสอบกดจริง 8/8)
+//   • local srsRecords เหลือเป็น recovery snapshot สำหรับ runtime เก่าที่อยู่นอก Login Free
 // ════════════════════════════════════════════
-function rgSrsRank(r){ if(!r) return -1; if(r.mastered) return 3; return (r.stage||0); }
-function rgSrsPickAdvanced(a,b){ if(!a)return b; if(!b)return a; var ra=rgSrsRank(a),rb=rgSrsRank(b); if(ra!==rb)return ra>rb?a:b; var da=a.dueDate||'',db=b.dueDate||''; if(da!==db)return (da>db)?a:b; return a; }
 var __rgSrsSyncPromise=null;
 window.__rgSrsSyncedOnce=false;
 var __rgLearningOwnerEpoch=0;
@@ -658,41 +666,7 @@ function rgResetAccountStateAtBoundary(){
 function rgSyncSrsFromServer(force){
   try{ if(!rgLoggedIn()) return Promise.resolve(false); }catch(e){ return Promise.resolve(false); }
   if(__rgSrsSyncPromise) return __rgSrsSyncPromise;
-  var sb=window.getSupabaseClient?window.getSupabaseClient():null;
-  if(!sb||!sb.from) return Promise.resolve(false);
-  // dedupe fetch 2026-07-20: rgWireSrsSync รีเซ็ต __rgSrsSyncPromise แล้วเรียกฟังก์ชันนี้ใหม่ทุกครั้งที่ SITE_AUTH.onChange ยิง
-  //   (หลายรอบต่อโหลดหน้าเดียว) → ห่อ fetch ด้วย getCachedFetch กันยิง Supabase ซ้ำทั้งที่ user เดิม
-  var _uid=String(READING_AUTH.srsUser.id);
-  var _ownerEpoch=Number(window.SITE_AUTH&&SITE_AUTH.learningOwnerEpoch)||0;
-  var _requestId=++__rgSrsRequestSequence;__rgLatestSrsRequest=_requestId;
-  var _fetchSrs = window.getCachedFetch
-    ? window.getCachedFetch('tone_srs_state:reading:'+_uid, function(){
-        return sb.from('tone_srs_state').select('level, word, stage, due_date, ever_failed, mastered').eq('user_id',_uid).eq('game','reading');
-      })
-    : sb.from('tone_srs_state').select('level, word, stage, due_date, ever_failed, mastered').eq('user_id',_uid).eq('game','reading');
-  __rgSrsSyncPromise = _fetchSrs
-    .then(function(res){
-      if(!rgSrsOwnerCurrent(_uid,_ownerEpoch,_requestId))return false;
-      if(res.error||!res.data){ window.__rgSrsSyncedOnce=true; return false; }
-      var changed=false;
-      res.data.forEach(function(row){
-        var key=String(row.word||'');
-        var exact=WORDS.some(function(item){
-          return rgContentKey(item)===key && (RG_LEVEL_TO_NUM[item.level]||0)===Number(row.level);
-        });
-        if(!exact)return;
-        var srv={stage:row.stage||0,dueDate:row.due_date||'',dueAt:0,everFailed:!!row.ever_failed,mastered:!!row.mastered};
-        var cur=srsRecords[key];
-        var win=rgSrsPickAdvanced(cur,srv);
-        if(!cur || win.stage!==cur.stage || (win.dueDate||'')!==(cur.dueDate||'') || (!!win.mastered)!==(!!cur.mastered)){
-          srsRecords[key]=win; changed=true;
-        }
-      });
-      if(changed) doSave();
-      window.__rgSrsSyncedOnce=true;
-      return changed;
-    })
-    .catch(function(){ if(!rgSrsOwnerCurrent(_uid,_ownerEpoch,_requestId))return false; window.__rgSrsSyncedOnce=true; return false; });
+  __rgSrsSyncPromise=Promise.resolve().then(function(){window.__rgSrsSyncedOnce=true;return !!(window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled());});
   return __rgSrsSyncPromise;
 }
 // ทริกเกอร์: ล็อกอินครั้งแรกของหน้า → ซิงก์ SRS เท่านั้น; bootstrap ท้ายไฟล์เป็น owner เดียว
@@ -832,7 +806,7 @@ function initGame(){
       _reviewSrsOwned=allIdx.filter(function(i){return !!srsRecords[rgSrsKey(WORDS[i])];});
       var _reviewDue=window.LearningReview&&LearningReview.matchQueue?LearningReview.matchQueue({game:'reading',level:RG_LEVEL_TO_NUM[curLevel]||1,items:allIdx,contentRefOf:rgReviewRef}):[];
       if(window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()&&window.GameFlow&&GameFlow.allocateSrs&&(_reviewDue.length||_dueIdx.length||_regularIdx.length)){
-        var _reviewAllocation=LearningReview.allocateRuntime({total:Math.min(rgRoundSize(),_dueIdx.length+_regularIdx.length),reviewDue:shuffle(_reviewDue),srsDue:shuffle(_dueIdx),regular:shuffle(_regularIdx),idOf:function(i){return LearningReview.keyOfRef(rgReviewRef(i));},scope:'reading-'+curLevel,srsScope:'reading-'+curLevel,allocateSrs:GameFlow.allocateSrs});
+        var _reviewAllocation=LearningReview.allocateRuntime({game:'reading',level:RG_LEVEL_TO_NUM[curLevel]||1,total:Math.min(rgRoundSize(),_dueIdx.length+_regularIdx.length),reviewDue:shuffle(_reviewDue),srsDue:shuffle(_dueIdx),regular:shuffle(_regularIdx),idOf:function(i){return LearningReview.keyOfRef(rgReviewRef(i));},scope:'reading-'+curLevel,srsScope:'reading-'+curLevel,allocateSrs:GameFlow.allocateSrs});
         pool=_reviewAllocation.items;_reviewSelected=_reviewAllocation.selectedReview;
         _srsAllocated=true;
       }else if(window.GameFlow&&GameFlow.allocateSrs&&(_dueIdx.length||_regularIdx.length)){
@@ -1173,16 +1147,11 @@ function finalizeWord(){
       } else {
         rgSrsSet(srsKey,RG_SRS.resetOnFail(rgSrsGet(srsKey)));
       }
-      // Phase 4: บอกเซิร์ฟเวอร์ด้วย (已記得 = พิสูจน์ครั้งเดียว → mastered แต่ไม่ให้ดาว)
-      try{
-        if(window.TONE_SERVER && TONE_SERVER.available())
-          TONE_SERVER.finishRound({ game:'reading', word:WORD.th, contentKey:rgContentKey(WORD), level:RG_LEVEL_TO_NUM[curLevel]||1, clean:passedClean, knownCheck:true });
-      }catch(e){}
     }
     curWordIsKnownCheck=false;
     if(passedClean){ b.textContent='真的記得！這個字標記為熟練 ✓（不計分、不加星）';b.className='result-banner show ok'; }
     else{ b.textContent='中途有出錯/用了提示，這個字先留在複習清單裡 🔁';b.className='result-banner show no'; }
-    rgLogWord({mastered:!!passedClean,pts:0,srsDue:passedClean?'已精通':(loggedIn?(rgSrsGet(srsKey)&&rgSrsGet(srsKey).dueDate||''):'')});
+    rgLogWord({mastered:!!passedClean,pts:0,learningAction:'known_check',srsDue:passedClean?'已精通':(loggedIn?(rgSrsGet(srsKey)&&rgSrsGet(srsKey).dueDate||''):'')});
     doSave();
     return;
   }
@@ -1221,18 +1190,6 @@ function finalizeWord(){
   try{ if(typeof gtag==='function') gtag('event','reading_game_correct',{category:'game',word: WORD.th, pts: basePtsAwarded}); }catch(e){}
   try{ if(typeof gtag==='function') gtag('event','game_correct',{category:'game',game:'reading_game'}); }catch(e){}
   var srsBonusAwarded=0; // เก็บโบนัสรอบทบทวน SRS ไว้รวมกับแบนเนอร์ตอนจบคำ — Lin 2026-07-07
-
-  // ── Phase 4 (กันโกงดาว): ให้เซิร์ฟเวอร์เป็นคนตัดสิน+แจกดาวจริง (เกมสะกด: ดาว=สะกดถูก ไม่ใช่วรรณยุกต์) ──
-  //   ยิงทุกรอบเหมือนเกมเสียง (clean/ไม่ clean) → เซิร์ฟเวอร์เลื่อน/รีเซ็ต SRS เอง → mastered แล้วแจกดาว
-  //   คู่ขนาน ไม่รื้อ local · เน็ตล่ม/ไม่ล็อกอิน = เกมทำงานเหมือนเดิมทุกอย่าง
-  try{
-    if(loggedIn && window.TONE_SERVER && TONE_SERVER.available()){
-      TONE_SERVER.finishRound({ game:'reading', word:WORD.th, contentKey:rgContentKey(WORD), level:RG_LEVEL_TO_NUM[curLevel]||1, clean:clean }).then(function(r){
-        if(r&&r.ok&&r.justMastered&&r.stars>0&&window.console) console.log('[P4] ⭐ server',r.stars,'→ total',r.totalStars);
-        else if(r&&!r.ok&&window.console) console.log('[P4] server not-ok:',r.reason);
-      });
-    }
-  }catch(e){}
 
   // ── SRS เลื่อนขั้น/รีเซ็ต + โบนัสรอบทบทวน + แจกดาวเงินตอน mastered จริง (เฉพาะล็อกอิน) ──
   if(loggedIn&&!rgReviewOwns(WORD)){
