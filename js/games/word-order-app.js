@@ -19,7 +19,9 @@
   var LEVEL_WEIGHT = 2;              // เกมนี้ทั้งเกม=高級ล้วน → ตัวคูณระดับคงที่ ×2 คูณ "ทั้งรอบ" ตอนจบ (ข้อ2)
   var LEVEL_NUM = 3;                 // ใช้กับ GAME_ACCOUNT.addHardStars(clean, level) — 高級=3
   var SENTENCE_LIFE_START = 10;      // "ชีวิต" ของประโยคนี้ เริ่ม 10 (ก่อนคูณระดับ/คอมโบ/คำทอง) — ตรงตาราง MASTER ข้อ1
-  var WO_ROUND_SIZE = 3;             // Lin 2026-07-31: จำนวนประโยคต่อชุด
+  var WO_ROUND_SIZE = 5;             // Login Free Q2/Q3: รอบปกติต้องมี 5 ประโยคไม่ซ้ำเสมอ
+  var WO_REVIEW_LIMIT = 1;           // Review แทรกได้ไม่เกิน 1 ข้อต่อรอบฐาน 5 ข้อ
+  var WO_SRS_DUE_LIMIT = 1;          // SRS Due เป็นโควตาแยกและแทรกได้ไม่เกิน 1 ข้อ
   var WRONG_DEDUCT = [3, 3, 3, 1];   // เรียงผิดครั้งที่1/2/3/4 หักเท่านี้ตามลำดับ (รวม=10 พอดี → ผิดครบ4=ตาย ตรงตาราง 10,7,4,1,0)
   var HINT_DEDUCT = 2;               // 提示 หักครั้งละ 2 เสมอ ไม่จำกัดจำนวนครั้ง (ข้อยกเว้นจาก MASTER ข้อ9 — Lin ยืนยัน 2026-07-05 ข้อ3.6)
   function woComboMult(streak){ return streak >= 8 ? 3 : (streak >= 5 ? 2 : (streak >= 3 ? 1.5 : 1)); } // คอมโบ 3/5/8×1.5/2/3 (ข้อ3)
@@ -521,6 +523,7 @@
       if (practiceMode || !window.GameResume || !SET.length) return;
       if (idx >= SET.length) return; // จบรอบแล้ว ไม่ต้อง save (finish() จะ clear เอง)
       GameResume.save('word-order', {
+        roundSize: WO_ROUND_SIZE,
         sentenceIds: SET.map(function(i){ return ADV_SENTENCES[i].th; }),
         idx: idx,
         completedCurrent: !!completedCurrent,
@@ -556,6 +559,80 @@
       var t = a[i]; a[i] = a[j]; a[j] = t;
     }
     return a;
+  }
+
+  function woRoundIdentity(index){
+    var sentence=ADV_SENTENCES[index];
+    return sentence&&typeof sentence.th==='string'&&sentence.th.trim()?sentence.th:'';
+  }
+  function woUniqueRoundItems(items, seen){
+    seen=seen||Object.create(null);
+    var out=[];
+    (items||[]).forEach(function(item){
+      var id=woRoundIdentity(item);
+      if(!id||seen[id])return;
+      seen[id]=true;
+      out.push(item);
+    });
+    return out;
+  }
+  function woInterleaveDue(due, regular){
+    var out=[],di=0,ri=0,total=due.length+regular.length;
+    while(out.length<total){
+      var target=Math.floor((out.length+1)*due.length/total);
+      if(di<target&&di<due.length)out.push(due[di++]);
+      else if(ri<regular.length)out.push(regular[ri++]);
+      else if(di<due.length)out.push(due[di++]);
+    }
+    return out;
+  }
+  function woAllocateSrsStrict(options){
+    options=options||{};
+    var total=Math.max(0,Math.floor(Number(options.total)||0));
+    var seen=Object.create(null);
+    var due=woUniqueRoundItems(options.due,seen);
+    var selectedDue=due.slice(0,Math.min(WO_SRS_DUE_LIMIT,total));
+    var regularSeen=Object.create(null);
+    due.forEach(function(item){regularSeen[woRoundIdentity(item)]=true;});
+    var regular=woUniqueRoundItems(options.regular,regularSeen);
+    var selectedRegular=regular.slice(0,Math.max(0,total-selectedDue.length));
+    return {
+      items:woInterleaveDue(selectedDue,selectedRegular).slice(0,total),
+      selectedDue:selectedDue,
+      carryOverDue:due.slice(selectedDue.length),
+      fractionCarry:0
+    };
+  }
+  function woRequireExactRound(items){
+    var exact=woUniqueRoundItems(items).slice(0,WO_ROUND_SIZE);
+    if(exact.length!==WO_ROUND_SIZE){
+      try{if(window.console&&console.error)console.error('[word-order] round unavailable',{required:WO_ROUND_SIZE,eligible:exact.length});}catch(e){}
+      var error=new Error('WORD_ORDER_ROUND_EXACT_FIVE_REQUIRED');
+      error.code='WORD_ORDER_ROUND_EXACT_FIVE_REQUIRED';
+      throw error;
+    }
+    return exact;
+  }
+  function woValidResumeRound(state,restoredSet){
+    if(!state||state.roundSize!==WO_ROUND_SIZE||!Array.isArray(restoredSet))return false;
+    if(restoredSet.length<WO_ROUND_SIZE||restoredSet.length>WO_ROUND_SIZE*2)return false;
+    if(typeof state.idx!=='number'||state.idx<0||state.idx>=restoredSet.length)return false;
+    var base=restoredSet.slice(0,WO_ROUND_SIZE),seen=Object.create(null);
+    for(var i=0;i<base.length;i++){
+      var id=woRoundIdentity(base[i]);
+      if(!id||seen[id])return false;
+      seen[id]=1;
+    }
+    for(var j=WO_ROUND_SIZE;j<restoredSet.length;j++){
+      var retryId=woRoundIdentity(restoredSet[j]);
+      if(!retryId||!seen[retryId]||seen[retryId]>1)return false;
+      seen[retryId]++;
+    }
+    return true;
+  }
+  function woShowRoundUnavailable(){
+    var game=document.getElementById('game');
+    if(game)game.innerHTML='<p style="font-family:\'Noto Sans TC\',sans-serif;color:#8B6310;text-align:center;">目前沒有足夠的有效題目開始 5 題練習，請稍後再試。</p>';
   }
 
   // ════════════════════════════════════════════════════════════
@@ -828,16 +905,16 @@
 
     var _resumeState = null;
     try{ _resumeState = window.GameResume ? GameResume.load('word-order') : null; }catch(e){ _resumeState = null; }
-    if (_resumeState && _resumeState.sentenceIds && _resumeState.sentenceIds.length && typeof _resumeState.idx === 'number' && _resumeState.idx < _resumeState.sentenceIds.length) {
+    if (_resumeState && _resumeState.sentenceIds && _resumeState.sentenceIds.length) {
       var _restoredSet = _resumeState.sentenceIds.map(function(th){
         for (var i=0;i<ADV_SENTENCES.length;i++){ if (ADV_SENTENCES[i].th===th) return i; }
         return -1;
       });
-      if (_restoredSet.indexOf(-1) === -1) {
+      if (woValidResumeRound(_resumeState,_restoredSet)) {
         showResumeBanner(_resumeState, _restoredSet);
         return; // รอผู้เล่นเลือก 繼續練習/重新開始 ก่อน — ยังไม่เริ่มรอบใหม่ทับ
       }
-      woClearResume(); // ประโยคที่บันทึกไว้หายไปจาก adv-sentences.js แล้ว (ผี) → ทิ้งไปเลย ไม่เดา
+      woClearResume(); // snapshot เก่า/สั้น/ซ้ำ/ประโยคหาย → ทิ้งไปเลย ไม่เดาหรือเติมข้อ
     }
 
     startFreshRound();
@@ -889,32 +966,34 @@
         var rec = srsRecords[woSrsKey(ADV_SENTENCES[i].th)];
         return !!(rec && !rec.mastered && WO_SRS.isDue(rec, now));
       });
-      var _regularIdx = allIdx.filter(function(i){ var rec=srsRecords[woSrsKey(ADV_SENTENCES[i].th)]; return !(rec&&rec.mastered)&&_dueIdx.indexOf(i)===-1; });
       _reviewAllIdx=allIdx.slice();
       _reviewSrsOwned=allIdx.filter(function(i){return !!srsRecords[woSrsKey(ADV_SENTENCES[i].th)];});
-      var _reviewDue=window.LearningReview&&LearningReview.matchQueue?LearningReview.matchQueue({game:'word_order',level:LEVEL_NUM,items:allIdx,contentRefOf:woReviewRef}):[];
-      if(window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()&&window.GameFlow&&GameFlow.allocateSrs&&(_reviewDue.length||_dueIdx.length||_regularIdx.length)){
-        var _reviewAllocation=LearningReview.allocateRuntime({total:Math.min(WO_ROUND_SIZE,_dueIdx.length+_regularIdx.length),reviewDue:shuffle(_reviewDue),srsDue:shuffle(_dueIdx),regular:shuffle(_regularIdx),idOf:function(i){return LearningReview.keyOfRef(woReviewRef(i));},scope:'word-order',srsScope:'word-order',allocateSrs:GameFlow.allocateSrs});
+      var _reviewDue=window.LearningReview&&LearningReview.matchQueue?LearningReview.matchQueue({game:'word_order',level:LEVEL_NUM,items:allIdx,contentRefOf:woReviewRef}).filter(function(i){return !srsRecords[woSrsKey(ADV_SENTENCES[i].th)];}):[];
+      var _reviewDueSeen=Object.create(null);
+      _reviewDue.forEach(function(i){_reviewDueSeen[woRoundIdentity(i)]=true;});
+      var _regularIdx=allIdx.filter(function(i){return !srsRecords[woSrsKey(ADV_SENTENCES[i].th)]&&!_reviewDueSeen[woRoundIdentity(i)];});
+      if(window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()){
+        var _reviewAllocation=LearningReview.allocateRuntime({total:WO_ROUND_SIZE,reviewDue:shuffle(_reviewDue).slice(0,WO_REVIEW_LIMIT),srsDue:shuffle(_dueIdx),regular:shuffle(_regularIdx),idOf:function(i){return LearningReview.keyOfRef(woReviewRef(i));},scope:'word-order',srsScope:'word-order',allocateSrs:woAllocateSrsStrict});
+        if(_reviewAllocation.selectedReview.length>WO_REVIEW_LIMIT||_reviewAllocation.selectedSrs.length>WO_SRS_DUE_LIMIT){woShowRoundUnavailable();return;}
         pool=_reviewAllocation.items;_reviewSelected=_reviewAllocation.selectedReview;
         _srsAllocated=true;
-      }else if (window.GameFlow && GameFlow.allocateSrs && (_dueIdx.length || _regularIdx.length)) {
-        pool = GameFlow.allocateSrs({tier:'free',total:Math.min(WO_ROUND_SIZE,_dueIdx.length+_regularIdx.length),due:shuffle(_dueIdx),regular:shuffle(_regularIdx),idOf:function(i){return woSrsKey(ADV_SENTENCES[i].th);},scope:'word-order'}).items;
+      }else {
+        pool=woAllocateSrsStrict({total:WO_ROUND_SIZE,due:shuffle(_dueIdx),regular:shuffle(_regularIdx)}).items;
         _srsAllocated = true;
-      } else pool = _dueIdx.concat(_regularIdx);
-      if (pool.length === 0) { practiceMode = true; pool = allIdx.slice(); } // จำครบทุกประโยคแล้ว → ทบทวนฟรี 0 แต้ม (กันฟาร์ม)
+      }
     } else {
       pool = allIdx.slice();
     }
     // Lin 2026-07-13: SRS กรอง pool ก่อนแล้ว (ข้างบน) — เลือก "ลำดับ" ในเซ็ตด้วย pickAdaptive
     // (เน้นประโยคที่เพิ่งพลาดบ่อยจาก reading_sessions ขึ้นมาก่อน ไม่ทับ/ไม่ยุ่ง SRS)
     if (_srsAllocated) {
-      SET = pool.slice();
+      try{SET=woRequireExactRound(pool);}catch(e){woShowRoundUnavailable();return;}
     } else if (window.READING_AUTH && typeof READING_AUTH.pickAdaptive === 'function' && READING_AUTH.adaptiveReady && READING_AUTH.adaptiveReady()) {
       var _items = pool.map(function(i){ return {idx:i, th:ADV_SENTENCES[i].th}; });
-      var _picked = READING_AUTH.pickAdaptive(_items, Math.min(WO_ROUND_SIZE,_items.length));
-      SET = _picked.map(function(p){ return p.idx; });
+      var _picked = READING_AUTH.pickAdaptive(_items, WO_ROUND_SIZE);
+      try{SET=woRequireExactRound(_picked.map(function(p){ return p.idx; }));}catch(e){woShowRoundUnavailable();return;}
     } else {
-      SET = shuffle(pool).slice(0,WO_ROUND_SIZE);
+      try{SET=woRequireExactRound(shuffle(pool));}catch(e){woShowRoundUnavailable();return;}
     }
     idx = 0; score = 0; correctFirstTry = 0;
     cleanC = 0; curCombo = 0; maxCombo = 0;
