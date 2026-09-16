@@ -385,7 +385,7 @@ serve(async (req) => {
     } else if (isSentence) {
       canonical = await admin.from('game_sentences').select('th,wc').in('th', keys);
     } else {
-      let query = admin.from('game_words').select('canonical_record').in('content_key', keys);
+      let query = admin.from('game_words').select('canonical_record,status,access_tier').in('content_key', keys);
       if (accepted.difficulty !== 'mixed') query = query.eq('level', accepted.difficulty);
       canonical = await query;
     }

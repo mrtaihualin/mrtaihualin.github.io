@@ -157,7 +157,7 @@ check('score-submit resolves protected Free200 words by exact content_key', () =
   const root = new URL('../', import.meta.url);
   const edge = fs.readFileSync(new URL('supabase/functions/score-submit/index.ts', root), 'utf8');
   const engine = fs.readFileSync(new URL('supabase/functions/score-submit/score-engine.mjs', root), 'utf8');
-  assert.match(edge, /select\('canonical_record'\)\.in\('content_key', keys\)/);
+  assert.match(edge, /select\('canonical_record,status,access_tier'\)\.in\('content_key', keys\)/);
   assert.match(edge, /function vocabularyScoreRow/);
   assert.doesNotMatch(edge, /row\.content_key \|\| row\.th \|\| row\.word/);
   assert.doesNotMatch(engine, /row\.content_key \|\| row\.th \|\| row\.word/);
