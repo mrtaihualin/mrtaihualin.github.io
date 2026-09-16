@@ -1,10 +1,11 @@
 # ประวัติงานดูแลเว็บ
 
-## 2026-09-16 — Production score-submit entitlement projection repair (`SOURCE_PASS / REAL_ACCOUNT_FAILURE_REPRODUCED / PRODUCTION_FIX_PENDING`)
+## 2026-09-16 — Production score-submit entitlement projection repair (`PASS_CLOSED / PRODUCTION_V18_ACTIVE / REAL_ACCOUNT_PERSISTENCE_PASS`)
 
 - A logged-in Production Tone canary completed two five-item rounds and reproduced the launch-blocking failure twice: gameplay and Result completed, but `score-submit` returned non-2xx, no authoritative score/session row was committed, and the account progress date/round count stayed unchanged. The same canary confirmed the approved scoring rule: an initial wrong `1–5` choice kept the item at `10/10`, while the first wrong answer inside `推導` changed it to `7/10`.
 - Root cause was the Edge query projecting only `canonical_record` immediately before `vocabularyScoreRow()` requires `status` and `access_tier`; every normal word-score request therefore failed closed as `content_validation_unavailable`. The query now projects all three reviewed fields while retaining exact `content_key`, level, status and entitlement validation.
-- Strengthened the existing protected-content regression to require the complete projection. Focused learning-score, S29 security and Login Free SRS suites pass, and `node scripts/check-site.js` passes all `1,106` files. This is a source/MR repair only; no Supabase Edge deployment, database/Auth mutation, account repair or Cloudflare change has been made. The Production Edge deployment and a fresh real-account persistence retest remain separately gated.
+- Strengthened the existing protected-content regression to require the complete projection. Focused learning-score, S29 security and Login Free SRS suites pass, and `node scripts/check-site.js` passes all `1,106` files. GitLab MR `!58` passed pipeline `#2852989233` and merged as `5e208fd4f46fa3da5829fba841723fc1f36e36e9`, with the source branch preserved.
+- After exact approval, deployed only `score-submit` to Supabase Production project `qzkxlhpcputsvbqmtqfi` as ACTIVE version `18` with `verify_jwt=true` and bundle SHA-256 `944018e72c83c6e686bebdc68b6c11a52004c7be27253ce3d148a80c88671566`; no database migration, Auth mutation, account repair or Cloudflare change occurred. A fresh logged-in Tone canary completed on the real account without the prior save-error toast, committed one authoritative score submission and one Tone session at the same timestamp, and `/my-progress` advanced the Tone account record from `1` to `2` with latest practice `2026/09/16`. Rollback to preserved version `17` was not invoked.
 
 ## 2026-09-16 — Login Free unified Learning Engine (`SOURCE_PASS / DATABASE_SOURCE_ONLY / PRODUCTION_UNCHANGED`)
 
