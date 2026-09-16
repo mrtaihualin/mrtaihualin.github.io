@@ -1,5 +1,11 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-09-16 — Login Free Review/SRS mixed-version compatibility (`SOURCE_PASS / PRODUCTION_EDGE_PENDING`)
+
+- Production still serves the legacy `review_*` client while the current source also contains the not-yet-applied unified `learning_*` migration contract. The Production v18 Edge bundle routed both protocols to `phase1_login_free_learning_commit`, which is absent until that migration is applied, so legacy Review commits failed closed even though ordinary score persistence was repaired.
+- `score-submit` now keeps `learning_*` on the unified RPC and routes only legacy `review_queue` / `review_commit` through the already-deployed Review tables and `phase1_learning_review_commit`. Authentication, canonical server-side score verification, owner scoping, idempotency, rate limiting and the ordinary score fix remain unchanged. The unified migration/static rollout stays separately gated.
+- Added regression locks for the mixed-version routing. Focused backend, SRS, Review integration, Production-candidate and save/retry suites pass; `node scripts/check-site.js` passes all `1,107` local project files. This entry records source verification only; no Supabase Edge, database, Auth, account/player data, Cloudflare traffic or Production state changed.
+
 ## 2026-09-16 — Production score-submit entitlement projection repair (`PASS_CLOSED / PRODUCTION_V18_ACTIVE / REAL_ACCOUNT_PERSISTENCE_PASS`)
 
 - A logged-in Production Tone canary completed two five-item rounds and reproduced the launch-blocking failure twice: gameplay and Result completed, but `score-submit` returned non-2xx, no authoritative score/session row was committed, and the account progress date/round count stayed unchanged. The same canary confirmed the approved scoring rule: an initial wrong `1–5` choice kept the item at `10/10`, while the first wrong answer inside `推導` changed it to `7/10`.
