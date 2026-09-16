@@ -58,6 +58,14 @@ test('tone-round Edge is Paid-only while Login Free uses one canonical owner', (
   assert.match(scoreEdge, /admin\.rpc\('phase1_login_free_learning_commit'/);
 });
 
+test('score Edge preserves legacy review writes until unified migration rollout', () => {
+  assert.match(scoreEdge, /async function handleLegacyReviewAction/);
+  assert.match(scoreEdge, /admin\.rpc\('phase1_learning_review_commit'/);
+  assert.match(scoreEdge, /const isLegacyReviewAction = action\.startsWith\('review_'\)/);
+  assert.match(scoreEdge, /if \(isLegacyReviewAction\) \{[\s\S]+handleLegacyReviewAction/);
+  assert.match(scoreEdge, /if \(isLearningAction\) \{[\s\S]+handleLearningAction/);
+});
+
 test('tone-round client retries once with the same generated round id', () => {
   assert.strictEqual((toneClient.match(/round_id: roundId\(\)/g) || []).length, 1);
   assert.match(toneClient, /var payload = \{/);

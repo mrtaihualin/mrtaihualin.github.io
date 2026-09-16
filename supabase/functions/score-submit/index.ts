@@ -141,6 +141,86 @@ async function reviewCanonical(admin: any, game: string, level: number, item: an
   });
 }
 
+// Production still serves the v7 client, whose review_* contract predates the
+// unified Learning Engine migration. Keep that contract on its deployed RPC
+// until the migration and v8 static client are released together.
+async function handleLegacyReviewAction(origin: string, body: any, user: any, admin: any) {
+  if (!LOGIN_FREE_REVIEW_ACTIONS_ENABLED) return reply(origin, { error: 'feature_disabled' }, 404);
+  const action = String(body.action || '');
+  const game = reviewGame(body.game);
+  const level = reviewLevel(body.level);
+  const today = taipeiDay();
+
+  if (action === 'review_queue') {
+    const playSetSize = Number(body.play_set_size);
+    if (!Number.isInteger(playSetSize) || playSetSize < 1 || playSetSize > 100) {
+      return reply(origin, { error: 'invalid_play_set_size' }, 400);
+    }
+    const states = await admin.from('phase1_learning_review_states')
+      .select('item_id,state,due_on,updated_at')
+      .eq('user_id', user.id).eq('game', game.database).eq('level', level)
+      .in('state', ['next_day_check', 'review_needed', 'weak_4d'])
+      .lte('due_on', today).order('due_on', { ascending: true }).order('updated_at', { ascending: true })
+      .limit(Math.min(100, playSetSize * 5));
+    if (states.error) return reply(origin, { error: 'review_queue_unavailable' }, 503);
+    const itemIds = Array.from(new Set((states.data || []).map((row: any) => row.item_id).filter(Boolean)));
+    let refs: any = { data: [], error: null };
+    if (itemIds.length) {
+      refs = await admin.from('learning_items').select('item_id,content_source,content_key').in('item_id', itemIds);
+    }
+    if (refs.error) return reply(origin, { error: 'review_queue_unavailable' }, 503);
+    const byId = new Map((refs.data || []).map((row: any) => [row.item_id, row]));
+    const items = (states.data || []).map((row: any) => {
+      const ref: any = byId.get(row.item_id);
+      return ref ? {
+        content_ref: { source: ref.content_source, key: ref.content_key },
+        state: row.state, due_on: row.due_on,
+      } : null;
+    }).filter(Boolean);
+    return reply(origin, { ok: true, game: game.verifier, level, today, items });
+  }
+
+  if (action !== 'review_commit') return reply(origin, { error: 'invalid_review_action' }, 400);
+  const operationId = String(body.operation_id || '').toLowerCase();
+  const roundId = String(body.round_id || '').toLowerCase();
+  if (!UUID_V4.test(operationId) || !UUID_V4.test(roundId)) return reply(origin, { error: 'invalid_operation_id' }, 400);
+  const item = body.item;
+  let verified;
+  try { verified = await reviewCanonical(admin, game.verifier, level, item); }
+  catch (error) {
+    const code = error?.code || 'invalid_learning_evidence';
+    return reply(origin, { error: code }, code === 'content_validation_unavailable' ? 503 : 400);
+  }
+  const ref = verified.contentRef;
+  const learning = await admin.from('learning_items').select('item_id')
+    .is('owner_user_id', null).eq('content_source', ref.source).eq('content_key', ref.key).limit(2);
+  if (learning.error) return reply(origin, { error: 'review_state_unavailable' }, 503);
+  if (!learning.data || learning.data.length !== 1) return reply(origin, { error: 'content_ref_not_unique' }, 400);
+  const current = await admin.from('phase1_learning_review_states').select('state,state_token')
+    .eq('user_id', user.id).eq('game', game.database).eq('level', level)
+    .eq('item_id', learning.data[0].item_id).maybeSingle();
+  if (current.error) return reply(origin, { error: 'review_state_unavailable' }, 503);
+  const expectedState = current.data?.state || 'normal';
+  const expectedToken = current.data?.state_token || null;
+  const requestHash = await sha256({ user_id: user.id, game: game.database, level, round_id: roundId, item, verified });
+  const committed = await admin.rpc('phase1_learning_review_commit', {
+    p_operation_id: operationId, p_user_id: user.id, p_request_hash: requestHash,
+    p_game: game.database, p_level: level, p_content_source: ref.source, p_content_key: ref.key,
+    p_server_learning_score: verified.score, p_score_verified_by: verified.verifiedBy,
+    p_round_id: roundId, p_expected_state: expectedState, p_expected_state_token: expectedToken,
+    p_occurred_on: today, p_tier: 'free',
+  });
+  if (committed.error) return reply(origin, { error: 'review_write_unavailable' }, 503);
+  const result = committed.data;
+  if (!result || typeof result !== 'object') return reply(origin, { error: 'review_write_unavailable' }, 503);
+  if (result.ok !== true) {
+    const status = result.reason === 'replay_conflict' ? 409 : 400;
+    return reply(origin, { error: result.reason || 'review_write_unavailable' }, status);
+  }
+  return reply(origin, { ok: true, idempotent: result.idempotent === true, from_state: result.from_state,
+    to_state: result.to_state, due_on: result.due_on, review_attempts_used: result.review_attempts_used });
+}
+
 function learningToken(itemId: string, row: any) {
   if (row?.state_token) return String(row.state_token);
   return 'legacy-stable:' + itemId + ':' + Number(row?.stage || 0) + ':' + String(row?.due_date || '') + ':' +
@@ -357,15 +437,22 @@ serve(async (req) => {
     try { body = JSON.parse(rawText); } catch { return reply(origin, { error: 'malformed_json' }, 400); }
 
     const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
-    const isLearningAction = /^(learning|review)_/.test(String(body.action || ''));
-    if (isLearningAction && !reviewCallerAllowed(user, url)) return reply(origin, { error: 'feature_disabled' }, 404);
-    const rateArgs = isLearningAction
-      ? { p_key: `login-free-learning:${user.id}`, p_limit: 120, p_window: 600 }
+    const action = String(body.action || '');
+    const isLegacyReviewAction = action.startsWith('review_');
+    const isLearningAction = action.startsWith('learning_');
+    const isLearningRequest = isLegacyReviewAction || isLearningAction;
+    if (isLearningRequest && !reviewCallerAllowed(user, url)) return reply(origin, { error: 'feature_disabled' }, 404);
+    const rateArgs = isLearningRequest
+      ? { p_key: isLegacyReviewAction ? `learning-review:${user.id}` : `login-free-learning:${user.id}`, p_limit: 120, p_window: 600 }
       : { p_key: `score-submit:${user.id}`, p_limit: 30, p_window: 600 };
     const { data: rateOk, error: rateError } = await admin.rpc('game_content_rl_check', rateArgs);
     if (rateError) return reply(origin, { error: 'rate_limit_unavailable' }, 503);
     if (rateOk !== true) return reply(origin, { error: 'rate_limited' }, 429);
 
+    if (isLegacyReviewAction) {
+      try { return await handleLegacyReviewAction(origin, body, user, admin); }
+      catch (error) { return reply(origin, { error: error?.code || 'invalid_review_request' }, 400); }
+    }
     if (isLearningAction) {
       try { return await handleLearningAction(origin, body, user, admin); }
       catch (error) { return reply(origin, { error: error?.code || 'invalid_learning_request' }, 400); }
