@@ -3,100 +3,11 @@
 // This file contains no Thai spelling, tone, consonant, vowel or exception rules.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.3";
 
-/* ===== srsEngine ===== */
-var TF_SRS_CFG = { INTERVALS: [1, 7], CLEAN_ROUNDS_TO_MASTER: 3 };
-var TF_SRS = {
-  cfg: TF_SRS_CFG,
-  twDate: function (ms) {
-    var d = ms == null ? new Date() : new Date(ms);
-    try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(d); }
-    catch (_) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
-  },
-  twDatePlusDays: function (ms, days) { return this.twDate((ms == null ? Date.now() : ms) + (days || 0) * 86400000); },
-  blank: function () { return { stage: 0, dueDate: '', dueAt: 0, everFailed: false, mastered: false, firstPassSoftAwarded: false }; },
-  isDue: function (rec, nowMs) {
-    if (!rec || rec.mastered) return false;
-    if (rec.dueDate) return this.twDate(nowMs || Date.now()) >= rec.dueDate;
-    return !rec.dueAt || (nowMs || Date.now()) >= rec.dueAt;
-  },
-  advanceOnClean: function (rec, nowMs) {
-    var out = JSON.parse(JSON.stringify(rec || this.blank()));
-    out.stage = (out.stage || 0) + 1;
-    if (out.stage >= this.cfg.CLEAN_ROUNDS_TO_MASTER) {
-      out.mastered = true; out.dueDate = ''; out.dueAt = 0;
-      return { rec: out, justMastered: true, clean: !out.everFailed };
-    }
-    out.dueDate = this.twDatePlusDays(nowMs, this.cfg.INTERVALS[out.stage - 1] || 1);
-    out.dueAt = 0;
-    return { rec: out, justMastered: false, clean: !out.everFailed };
-  },
-  resetOnFail: function (rec) {
-    var out = JSON.parse(JSON.stringify(rec || this.blank()));
-    out.stage = 0; out.dueDate = ''; out.dueAt = 0; out.mastered = false; out.everFailed = true;
-    return out;
-  }
-};
-
-/* ===== scoreEngine ===== */
-function normalizeLevel(level) {
-  var n = Number(level);
-  return n === 1 || n === 2 || n === 3 ? n : null;
-}
 function normalizeGuess(value) {
   return Number.isInteger(value) && value >= 0 && value <= 5 ? value : -1;
 }
-function reject(reason, account, extra) {
-  return Object.assign({ ok: false, reason: reason, correct: false, justMastered: false,
-    starsAwarded: 0, capped: false, newSrsRecord: null, newAccount: account }, extra || {});
-}
-function ok(reason, correct, justMastered, rec, account) {
-  return { ok: true, reason: reason, correct: correct, justMastered: justMastered,
-    starsAwarded: 0, capped: false, newSrsRecord: rec, newAccount: account };
-}
-
-// The only accepted correct answers are toneNumber values already stored in the
-// reviewed canonical catalog. Missing authority is an error, never a calculation.
-function resolveRound(input) {
-  var account = input.account || { stars: 0, hardWordsByLevel: {} };
-  var level = normalizeLevel(input.level);
-  var word = String(input.word == null ? '' : input.word);
-  var opts = input.opts || {};
-  var nowMs = typeof input.nowMs === 'number' ? input.nowMs : Date.now();
-  if (!level) return reject('bad_level', account);
-  if (!word) return reject('bad_word', account);
-
-  var hadSrsRecord = !!input.srsRecord;
-  var rec = hadSrsRecord ? JSON.parse(JSON.stringify(input.srsRecord)) : TF_SRS.blank();
-  if (rec.mastered) return reject('already_mastered', account, { newSrsRecord: rec });
-  if (!TF_SRS.isDue(rec, nowMs)) return reject('not_due', account, { newSrsRecord: rec });
-
-  var correctClean = false;
-  if (opts.spellingGame) {
-    correctClean = opts.spellingClean === true;
-  } else {
-    var approved = input.approvedToneNumbers;
-    if (!Array.isArray(approved) || !approved.length || approved.some(function (tone) {
-      return !Number.isInteger(tone) || tone < 1 || tone > 5;
-    })) return reject('catalog_authority_incomplete', account, { newSrsRecord: rec });
-    if (approved.length === 1) {
-      correctClean = normalizeGuess(input.initialGuess) === approved[0];
-    } else {
-      var guesses = Array.isArray(input.guesses) ? input.guesses : [];
-      if (guesses.length !== approved.length) return reject('bad_guesses_len', account, { newSrsRecord: rec });
-      correctClean = approved.every(function (tone, index) { return normalizeGuess(guesses[index]) === tone; });
-    }
-  }
-
-  if (opts.knownCheck) {
-    if (correctClean) { rec.mastered = true; return ok('known_master', true, false, rec, account); }
-    return ok('known_reset', false, false, TF_SRS.resetOnFail(rec), account);
-  }
-  if (correctClean) {
-    var advanced = TF_SRS.advanceOnClean(rec, nowMs);
-    return ok(advanced.justMastered ? 'mastered' : 'advanced', true, advanced.justMastered, advanced.rec, account);
-  }
-  if (!hadSrsRecord) return reject('below_entry_score', account, { newSrsRecord: null });
-  return ok('reset', false, false, TF_SRS.resetOnFail(rec), account);
+function taipeiDay(ms = Date.now()) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(new Date(ms));
 }
 
 function paidOutcome(input: any) {
@@ -256,7 +167,7 @@ Deno.serve(async (req: Request) => {
     const committed = await admin.rpc('phase2_paid_srs_commit', {
       p_operation_id: operationId, p_user_id: user.id, p_request_hash: requestHash,
       p_game: game, p_level: level, p_content_key: contentKey,
-      p_outcome: evaluated.outcome, p_occurred_on: TF_SRS.twDate(Date.now())
+      p_outcome: evaluated.outcome, p_occurred_on: taipeiDay()
     });
     if (committed.error) return json({ error: 'paid_srs_write_unavailable' }, 503);
     const result = committed.data;
@@ -266,36 +177,8 @@ Deno.serve(async (req: Request) => {
       compatibility: legacyCompatibility ? 'legacy-no-id' : 'explicit-id' }));
   }
 
-  const srsRead = await admin.from("tone_srs_state").select("stage, due_date, ever_failed, mastered")
-    .eq("user_id", user.id).eq("game", game).eq("level", level).eq("word", stateWord).maybeSingle();
-  if (srsRead.error) return json({ error: "srs_read_unavailable" }, 503);
-  const srsRow = srsRead.data;
-  const account = { stars: 0, hardWordsByLevel: {} };
-  const srsRecord = srsRow ? { stage: srsRow.stage, dueDate: srsRow.due_date, dueAt: 0,
-    everFailed: srsRow.ever_failed, mastered: srsRow.mastered } : null;
-  const R = resolveRound({ account, srsRecord, word, level, initialGuess: body.initialGuess,
-    guesses: body.guesses, approvedToneNumbers, nowMs: Date.now(),
-    opts: { knownCheck: !!body.knownCheck, spellingGame, spellingClean: !!body.clean } });
-  if (!R.ok) {
-    const concurrentReplay = await committedReplayResponse();
-    if (concurrentReplay) return concurrentReplay;
-    return json({ ok: false, reason: R.reason, stars: 0, totalStars: 0 });
-  }
-
-  const rec = R.newSrsRecord;
-  const committed = await admin.rpc("phase1_tone_round_commit", {
-    p_operation_id: operationId, p_user_id: user.id, p_request_hash: requestHash,
-    p_game: game, p_level: level, p_word: stateWord, p_expected_exists: !!srsRow,
-    p_expected_stage: srsRow?.stage ?? null, p_expected_due_date: srsRow?.due_date ?? null,
-    p_expected_ever_failed: srsRow?.ever_failed ?? null, p_expected_mastered: srsRow?.mastered ?? null,
-    p_next_stage: rec.stage, p_next_due_date: rec.dueDate, p_next_ever_failed: rec.everFailed,
-    p_next_mastered: rec.mastered, p_reason: R.reason, p_correct: R.correct,
-    p_just_mastered: R.justMastered, p_reward_clean: false
-  });
-  if (committed.error) return json({ error: "round_commit_unavailable" }, 503);
-  const result = committed.data;
-  if (!result || typeof result !== "object") return json({ error: "round_commit_unavailable" }, 503);
-  if (result.ok !== true && result.reason === "replay_conflict") return json({ error: "replay_conflict" }, 409);
-  return json(Object.assign({}, result, { roundId: operationId,
-    compatibility: legacyCompatibility ? "legacy-no-id" : "explicit-id" }));
+  // Login Free progress is owned by score-submit/phase1_login_free_learning_commit.
+  // Keep tone-round available only for the separately gated Paid private beta so
+  // a stale client can never write the retired Free transition path.
+  return json({ error: 'learning_engine_required' }, 409);
 });

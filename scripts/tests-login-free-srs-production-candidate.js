@@ -26,7 +26,9 @@ pages.forEach(function (file) {
   var html = read(file);
   check(html.indexOf('js/core/minimum-guest-launch.js?v=25') !== -1, file + ' fetches the current Login Free launch gate');
   check(html.indexOf('js/core/supabase-config.js?v=11') !== -1, file + ' fetches the Login Free content-tier config');
-  check(html.indexOf('js/games/tone-server.js?v=6') !== -1, file + ' loads the authenticated SRS transport');
+  check(html.indexOf('js/games/learning-review.js?v=8') !== -1, file + ' loads the canonical Learning Engine client');
+  check((file === 'tone-finder.html') === (html.indexOf('js/games/tone-server.js?v=6') !== -1),
+    file + ' keeps tone-round transport only where the Paid Tone gate exists');
   check(html.indexOf('game-account.js?v=6') !== -1, file + ' activates the server-authoritative Free account facade');
   check(html.indexOf('practice-events.js?v=3') !== -1, file + ' activates durable Login Free reporting');
   check(html.indexOf('games-challenge-app.js') === -1, file + ' does not activate Challenge runtime');
@@ -47,10 +49,10 @@ check(read('lego.html').indexOf('tone-server.js') === -1, 'Lego receives no SRS 
 check(read('js/core/minimum-guest-launch.js').indexOf('login-surface.js?v=16') !== -1, 'SRS pages fetch the account-aware Login surface');
 check(read('js/core/login-surface.js').indexOf('reading-auth.js?v=34') !== -1, 'Login surface fetches the account-aware auth client');
 check(read('reading-game.html').indexOf('reading-auth.js?v=34') !== -1, 'Reading direct provider flow fetches the account-aware auth client');
-check(read('tone-finder.html').indexOf('tone-finder-game.min.js?v=90') !== -1, 'Tone fetches the current game runtime');
-check(read('reading-game.html').indexOf('reading-game-app.min.js?v=59') !== -1, 'Reading fetches the current game runtime');
-check(read('typing-game.html').indexOf('typing-game-app.min.js?v=58') !== -1, 'Typing fetches the current game runtime');
-check(read('word-order.html').indexOf('word-order-app.min.js?v=44') !== -1, 'Word Order fetches the current game runtime');
+check(read('tone-finder.html').indexOf('tone-finder-game.min.js?v=91') !== -1, 'Tone fetches the current game runtime');
+check(read('reading-game.html').indexOf('reading-game-app.min.js?v=60') !== -1, 'Reading fetches the current game runtime');
+check(read('typing-game.html').indexOf('typing-game-app.min.js?v=59') !== -1, 'Typing fetches the current game runtime');
+check(read('word-order.html').indexOf('word-order-app.min.js?v=45') !== -1, 'Word Order fetches the current game runtime');
 
 [
   ['js/games/tone-finder-game.js', /tfMinimumGuestOnly\(\) && window\.LOGIN_FREE_SRS_PUBLIC_ENTRY !== true/],
@@ -74,6 +76,7 @@ check(/API\.srsUser = publicLoginSrs \? loginUser : API\.user/.test(auth), 'SRS 
 check(/if \(publicLoginOnly\) return null/.test(auth), 'Score persistence stays off in Login-only fallback mode');
 
 var edge = read('supabase/functions/tone-round/index.ts');
+var scoreEdge = read('supabase/functions/score-submit/index.ts');
 check(/\["tone", "reading", "typing", "wordorder"\]\.includes\(game\)/.test(edge), 'Edge accepts exactly the four approved SRS games');
 check(!/\["tone", "reading", "listening"/.test(edge), 'Listening is rejected by the SRS Edge allow-list');
 check(/https:\/\/mrtaihualin-preview-learning-e4ea92c\.mrtaihualin\.workers\.dev/.test(edge), 'Edge permits the exact Login Free Cloudflare Preview origin');
@@ -81,11 +84,17 @@ check(/https:\/\/mrtaihualin-preview-learning-e4ea92c\.mrtaihualin\.workers\.dev
 check(!/\[([^\]]*["']challenge["'][^\]]*)\]\.includes\(game\)/.test(edge), 'Challenge is rejected by the SRS Edge');
 check(!/VALID_GAMES\s*=\s*\[[^\]]*["']challenge["']/.test(edge), 'No hidden Challenge allow-list exists');
 check(/stars:\s*0/.test(edge) && /totalStars:\s*0/.test(edge), 'Paid/reward output remains zero');
+check(/learning_engine_required/.test(edge), 'retired Login Free tone-round writes fail closed');
+check(/phase1_login_free_learning_commit/.test(scoreEdge), 'score-submit owns all Login Free transitions');
 
 var migration = read('supabase/migrations/20260903075852_phase1_login_free_srs_least_privilege.sql');
+var engineMigration = read('supabase/migrations/20260915165150_phase1_login_free_learning_engine_v2.sql');
 check(/revoke all on table public\.tone_srs_state from public, anon, authenticated/.test(migration), 'SRS table broad grants are revoked');
 check(/grant select on table public\.tone_srs_state to authenticated/.test(migration), 'Authenticated users receive read-only owner access');
 check(/revoke all on table public\.tone_round_operations from public, anon, authenticated/.test(migration), 'Replay table remains server-only');
 check(/to authenticated[\s\S]*using \(\(select auth\.uid\(\)\) = user_id\)/.test(migration), 'Owner RLS policy is authenticated-only');
+check(/revoke all on function public\.phase1_login_free_learning_commit[\s\S]*from public, anon, authenticated/.test(engineMigration),
+  'canonical Learning Engine RPC is server-only');
+check(/legacy null-item rows remain read-only and fail closed/.test(engineMigration), 'migration forbids implicit legacy backfill');
 
 process.stdout.write('LOGIN_FREE_SRS_PRODUCTION_CANDIDATE_PASS\n');

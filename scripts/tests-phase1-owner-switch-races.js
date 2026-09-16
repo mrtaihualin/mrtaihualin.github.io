@@ -303,41 +303,11 @@ function srsHarness(kind) {
   return { spec, context, localStorage, client, SITE_AUTH, READING_AUTH, boundary };
 }
 
-for (const kind of ['reading', 'typing', 'wordorder']) {
-  test(kind + ' SRS discards Account A completion without clearing Account B request', async () => {
-    const h = srsHarness(kind);
-    const promiseA = h.context[h.spec.sync](true);
-    h.READING_AUTH.srsUser = { id: 'account-b' }; h.SITE_AUTH.learningOwnerEpoch = 2;
-    h.localStorage.setItem(h.boundary.ownerKey, 'account-b');
-    h.context[h.spec.reset]();
-    const promiseB = h.context[h.spec.sync](true);
-    const [requestA, requestB] = h.client.requests;
-    requestB.resolve({ data: [{ word: 'B-new', level: h.spec.level, stage: 1, due_date: '2026-08-17', mastered: false }] });
-    await promiseB; await settle();
-    requestA.resolve({ data: [{ word: 'A-old', level: h.spec.level, stage: 2, due_date: '2026-08-20', mastered: false }] });
-    await promiseA; await settle();
-    const state = h.context[h.spec.state];
-    const expectedKey = kind === 'wordorder' ? 'B-new@' + h.spec.level : 'B-new';
-    const staleKey = kind === 'wordorder' ? 'A-old@' + h.spec.level : 'A-old';
-    assert.ok(state[expectedKey], 'new owner SRS was not applied');
-    assert.ok(!state[staleKey], 'old owner SRS leaked into new owner');
-    assert.strictEqual(h.context[h.spec.promise], promiseB, 'stale completion replaced/cleared newer promise');
-    assert.deepStrictEqual(requestA.filters.find(([key]) => key === 'user_id'), ['user_id', 'account-a']);
-  });
-}
-
-test('Tone SRS resets on logout and discards the late authenticated response', async () => {
-  const h = srsHarness('tone');
-  const promiseA = h.context[h.spec.sync]();
-  h.READING_AUTH.srsUser = null; h.SITE_AUTH.learningOwnerEpoch = 2;
-  h.localStorage.removeItem(h.boundary.ownerKey);
-  h.context[h.spec.reset]();
-  const requestA = h.client.requests[0];
-  requestA.resolve({ data: [{ word: 'A-old', level: 1, stage: 2, due_date: '2026-08-20', mastered: false }] });
-  await promiseA; await settle();
-  assert.deepStrictEqual(h.context._toneStore, {});
-  assert.strictEqual(h.context.__tfSrsSyncedOnce, false);
-  assert.strictEqual(h.context.__tfSrsSyncPromise, null);
+test('Login Free Learning Engine clears owner projections and rejects late commits', async () => {
+  const learning = read('js/games/learning-review.js');
+  assert.match(learning, /ownerId: String\(currentUser\(\) && currentUser\(\)\.id \|\| ''\), ownerEpoch: ownerScope\(\)/);
+  assert.match(learning, /if \(!user \|\| context\.ownerId !== String\(user\.id \|\| ''\) \|\| context\.ownerEpoch !== ownerScope\(\)\) fail\('LEARNING_OWNER_CHANGED'\)/);
+  assert.match(learning, /SITE_AUTH\.onChange\(function \(user\) \{[\s\S]{0,220}queues = Object\.create\(null\); packets = Object\.create\(null\); rounds = Object\.create\(null\); latestRound = Object\.create\(null\)/);
 });
 
 test('Four games expose Login Free learning runtimes while Listening, Paid and Lego remain outside', async () => {
@@ -363,10 +333,10 @@ test('Four games expose Login Free learning runtimes while Listening, Paid and L
     assert.match(read(page), /reading-auth\.js\?v=34/, page + ' reading-auth cache');
   }
   assert.doesNotMatch(read('lego.html'), /game-account\.js/);
-  assert.match(read('tone-finder.html'), /tone-finder-game\.min\.js\?v=90/);
-  assert.match(read('reading-game.html'), /reading-game-app\.min\.js\?v=59/);
-  assert.match(read('typing-game.html'), /typing-game-app\.min\.js\?v=58/);
-  assert.match(read('word-order.html'), /word-order-app\.min\.js\?v=44/);
+  assert.match(read('tone-finder.html'), /tone-finder-game\.min\.js\?v=91/);
+  assert.match(read('reading-game.html'), /reading-game-app\.min\.js\?v=60/);
+  assert.match(read('typing-game.html'), /typing-game-app\.min\.js\?v=59/);
+  assert.match(read('word-order.html'), /word-order-app\.min\.js\?v=45/);
   assert.match(read('listening-game.html'), /Preserved paused runtime: js\/games\/listening-game-app\.js\?v=19/);
   assert.doesNotMatch(read('listening-game.html'), /GameContentLoader\.boot\(\['js\/games\/listening-game-app\.js/);
 });

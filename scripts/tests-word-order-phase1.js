@@ -121,8 +121,8 @@ test('polite mode is a revealed display tail and never an ordering tile', () => 
   assert.match(app, /function loadSentence\(\)[\s\S]*woSentenceRevealed = false; woSyncParticleBtn\(\); woRenderParticleLine\(\);/);
   assert.match(app, /window\.woToggleParticleMode = function\(\)[\s\S]*if \(SET\.length && idx < SET\.length\) loadSentence\(\);/);
   assert.match(app, /function woAdvanceToNextSentence\(\)[\s\S]*idx\+\+;\s*loadSentence\(\);/);
-  assert.match(app, /function woResumeContinue\(state, restoredSet\)[\s\S]*loadSentence\(\);/);
-  assert.match(app, /window\.woResumeRestartSameClick = function\(\)[\s\S]*loadSentence\(\);woSaveResume\(\);/);
+  assert.match(app, /function woResumeContinue\(state, restoredSet, reviewReady\)[\s\S]*loadSentence\(\);/);
+  assert.match(app, /function woResumeRestartSameReady\(p\)[\s\S]*loadSentence\(\);woSaveResume\(\);/);
 });
 
 test('a wrong order remains playable and gives correction feedback', () => {
@@ -151,8 +151,10 @@ test('new below-10 item does not create a local SRS record', () => {
   assert.doesNotMatch(check, /WO_SRS\.resetOnFail\(existingRec \|\| WO_SRS\.blank\(\)\)/);
 });
 
-test('failed checkpoint is sent as non-clean server evidence', () => {
-  assert.match(app, /woServerFinish\(s\.th, false\); \/\/ Edge จะตอบ below_entry_score/);
+test('failed checkpoint is owned by the canonical Learning Engine only', () => {
+  assert.match(app, /LearningReview\.owns\(roundReport/);
+  assert.doesNotMatch(app, /TONE_SERVER|woServerFinish/);
+  assert.match(app, /woLogSentence\(\{failed:true, pts:0/);
 });
 
 test('SRS lifecycle is the Phase 1 Day 1 / Day 7 path', () => {
@@ -206,7 +208,7 @@ test('Word Order caps Review and SRS Due separately at one without emergency fil
   assert.strictEqual(dueOnly.items.length, 1, 'must not emergency-fill from additional Due items');
   assert.throws(() => context.woRequireExactRound(dueOnly.items), /WORD_ORDER_ROUND_EXACT_FIVE_REQUIRED/);
 
-  assert.match(app, /reviewDue:shuffle\(_reviewDue\)\.slice\(0,WO_REVIEW_LIMIT\)/);
+  assert.match(app, /LearningReview\.allocateRuntime\(\{game:'word_order'/);
   assert.match(app, /allocateSrs:woAllocateSrsStrict/);
   assert.match(app, /selectedReview\.length>WO_REVIEW_LIMIT\|\|_reviewAllocation\.selectedSrs\.length>WO_SRS_DUE_LIMIT/);
   assert.doesNotMatch(app, /GameFlow\.allocateSrs\(\{tier:'free'/);
@@ -250,7 +252,7 @@ test('direct sentence practice remains a separate single-item mode without Resum
 
 test('HTML fetches the exact-five minified runtime and source/minified carry the fail-closed contract', () => {
   assert.match(app, /var WO_ROUND_SIZE = 5/);
-  assert.match(html, /word-order-app\.min\.js\?v=44/);
+  assert.match(html, /word-order-app\.min\.js\?v=45/);
   assert.match(minApp, /WORD_ORDER_ROUND_EXACT_FIVE_REQUIRED/);
   assert.match(minApp, /round unavailable/);
 });

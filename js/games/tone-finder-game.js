@@ -557,8 +557,8 @@ var TF_SRS = {
 // ── localStorage: state SRS ต่อคำ (แยกจาก game-account.js เพราะผูกกับเกมเสียงเท่านั้น) ──
 var TF_SRS_KEY = 'tf_srs_v1';
 function tfSrsStorageKey(){return window.PAID_SRS_PRIVATE_BETA?'tf_paid_srs_v1':TF_SRS_KEY;}
-function tfLoadSrs() { if(!tfSrsLoggedIn())return {};try { return JSON.parse(localStorage.getItem(tfSrsStorageKey()) || '{}') || {}; } catch (e) { return {}; } }
-function tfSaveSrs(o) { if(!tfSrsLoggedIn())return;try { localStorage.setItem(tfSrsStorageKey(), JSON.stringify(o)); } catch (e) {} }
+function tfLoadSrs() { if(window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled())return {};if(!tfSrsLoggedIn())return {};try { return JSON.parse(localStorage.getItem(tfSrsStorageKey()) || '{}') || {}; } catch (e) { return {}; } }
+function tfSaveSrs(o) { if(window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled())return;if(!tfSrsLoggedIn())return;try { localStorage.setItem(tfSrsStorageKey(), JSON.stringify(o)); } catch (e) {} }
 function tfStateWord(entryOrWord) {
   if (entryOrWord && typeof entryOrWord === 'object') {
     return tfWordContentKey(entryOrWord);
@@ -572,11 +572,17 @@ function tfReviewSentenceRef(index){var sentence=ADV_SENTENCES[index];if(!senten
 function tfReviewOwns(entry){try{return !!(window.LearningReview&&LearningReview.owns(roundReport,tfContentRefForEntry(entry)));}catch(e){return false;}}
 function tfRegisterRestoredReview(){try{if(!window.LearningReview||!roundReport||!session)return;if(selectedLevel===3&&advSentIdx>=0){var all=ADV_SENTENCES.map(function(_,i){return i;}),selected=LearningReview.matchQueue({game:'tone',level:3,items:[advSentIdx],contentRefOf:tfReviewSentenceRef}),refKey=LearningReview.keyOfRef(tfReviewSentenceRef(advSentIdx)),group={},groupSize=advSentenceCtx&&advSentenceCtx.words?advSentenceCtx.words.length:session.words.length;group[refKey]=groupSize;LearningReview.registerRound({report:roundReport,game:'tone',level:3,allItems:all,srsOwned:all.filter(function(i){return !!tfGetSrsRecord(ADV_SENTENCES[i].th,3);}),selectedReview:selected,alreadyRetried:session.words.length>groupSize?[advSentIdx]:[],idOf:function(i){return LearningReview.keyOfRef(tfReviewSentenceRef(i));},contentRefOf:tfReviewSentenceRef,groupSizeByRef:group,retry:function(){session.words=session.words.concat(session.words.slice(0,groupSize));}});}else{var pool=WORD_LIST.filter(function(w){return w.level===selectedLevel;}),selectedWords=LearningReview.matchQueue({game:'tone',level:selectedLevel,items:session.words,contentRefOf:tfReviewWordRef}),seen=Object.create(null),duplicates=[];session.words.forEach(function(w){var key=LearningReview.keyOfRef(tfReviewWordRef(w));if(seen[key])duplicates.push(w);seen[key]=true;});LearningReview.registerRound({report:roundReport,game:'tone',level:selectedLevel,allItems:pool,srsOwned:pool.filter(function(w){return !!tfGetSrsRecord(w,tfWordLevel(w));}),selectedReview:selectedWords,alreadyRetried:duplicates,idOf:function(w){return LearningReview.keyOfRef(tfReviewWordRef(w));},contentRefOf:tfReviewWordRef,retry:function(w){session.words.push(w);}});}}catch(e){}}
 function tfGetSrsRecord(entryOrWord, level) {
+  if(window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()&&LearningReview.srsRecord){
+    var source=Number(level)===3?'game_sentences':'game_words';
+    var key=entryOrWord&&typeof entryOrWord==='object'?tfWordContentKey(entryOrWord):String(entryOrWord||'');
+    return LearningReview.srsRecord({game:'tone',level:level,contentRef:{source:source,key:key}});
+  }
   var all = tfLoadSrs();
   var k = TF_SRS.keyFor(tfStateWord(entryOrWord), level);
   return all[k] || null;
 }
 function tfSetSrsRecord(entryOrWord, level, rec) {
+  if(window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled())return;
   var all = tfLoadSrs();
   all[TF_SRS.keyFor(tfStateWord(entryOrWord), level)] = rec;
   tfSaveSrs(all);
@@ -594,21 +600,10 @@ function tfCtaLogin() {
 }
 
 // ════════════════════════════════════════════════════════════
-// ── Lin 2026-07-13: ซิงก์ SRS "ข้ามเครื่อง" — อ่านกลับจาก Supabase (tone_srs_state) → merge เข้า tf_srs_v1 ──
-//   • อ่านอย่างเดียว (SELECT) · เขียนขึ้นเซิร์ฟเวอร์ยังเป็นหน้าที่ Edge Function tone-round เหมือนเดิม (ดาว/กันโกงไม่แตะ)
-//   • คู่ขนาน ไม่บล็อกเกม · เน็ตล่ม/ไม่ล็อกอินจริง = ใช้เล่มในเครื่อง (localStorage) เดิมทุกอย่าง
-//   • กติกา merge: เลือก "อันก้าวหน้ากว่า" เสมอ (精通 > stage สูง > วันครบกำหนดใหม่กว่า) → ไม่มีทางถอยหลัง/ข้อมูลหาย
-//     (ยืนยันด้วยตัวทดสอบกดจริง 8/8 เคส ก่อนนำมาใช้ — กฎ 14)
+// ── Compatibility SRS hydration seam ──
+//   • Login Free อ่าน snapshot ผ่าน LearningReview เท่านั้น; tone-round เหลือเฉพาะ Paid private beta
+//   • localStorage เหลือเป็น recovery snapshot สำหรับ runtime เก่าที่อยู่นอก Login Free
 // ════════════════════════════════════════════════════════════
-function tfSrsRank(r) { if (!r) return -1; if (r.mastered) return 3; return (r.stage || 0); }
-function tfSrsPickAdvanced(a, b) {
-  if (!a) return b; if (!b) return a;
-  var ra = tfSrsRank(a), rb = tfSrsRank(b);
-  if (ra !== rb) return ra > rb ? a : b;
-  var da = a.dueDate || '', db = b.dueDate || '';
-  if (da !== db) return (da > db) ? a : b;
-  return a;
-}
 var __tfSrsSyncPromise = null;
 window.__tfSrsSyncedOnce = false;
 var __tfLearningOwnerEpoch = 0;
@@ -633,54 +628,10 @@ function tfResetAccountStateAtBoundary() {
 }
 function tfSyncSrsFromServer() {
   if (__tfSrsSyncPromise) return __tfSrsSyncPromise;
-  __tfSrsSyncPromise = (function () {
-    try {
-      // The Lin-only Paid snapshot is returned atomically with protected content
-      // before this game script boots. Never merge Free rows into its isolated key.
-      if (window.PAID_SRS_PRIVATE_BETA) { window.__tfSrsSyncedOnce = true; return Promise.resolve(true); }
-      // ต้อง "ล็อกอินจริง" (มี JWT) เท่านั้น — แค่ให้อีเมล (lead) ไม่มีแถวบนเซิร์ฟเวอร์อยู่แล้ว
-      if (!(window.READING_AUTH && READING_AUTH.srsUser)) return Promise.resolve(false);
-      var sb = window.getSupabaseClient ? window.getSupabaseClient() : null;
-      if (!sb || !sb.from) return Promise.resolve(false);
-      // dedupe fetch 2026-07-20: tfWireSrsSync รีเซ็ต __tfSrsSyncPromise แล้วเรียกฟังก์ชันนี้ใหม่ทุกครั้งที่ SITE_AUTH.onChange ยิง
-      //   (หลายรอบต่อโหลดหน้าเดียว) → ห่อ fetch ด้วย getCachedFetch กันยิง Supabase ซ้ำทั้งที่ user เดิม
-      var _uid = String(READING_AUTH.srsUser.id);
-      var _ownerEpoch = Number(window.SITE_AUTH && SITE_AUTH.learningOwnerEpoch) || 0;
-      var _requestId = ++__tfSrsRequestSequence;
-      __tfLatestSrsRequest = _requestId;
-      var _fetchSrs = window.getCachedFetch
-        ? window.getCachedFetch('tone_srs_state:tone:' + _uid, function () {
-            return sb.from('tone_srs_state').select('level, word, stage, due_date, ever_failed, mastered').eq('user_id', _uid).eq('game', 'tone');
-          })
-        : sb.from('tone_srs_state').select('level, word, stage, due_date, ever_failed, mastered').eq('user_id', _uid).eq('game', 'tone');
-      return _fetchSrs
-        .then(function (res) {
-          if (!tfSrsOwnerCurrent(_uid, _ownerEpoch, _requestId)) return false;
-          if (res.error || !res.data) return false;
-          var local = tfLoadSrs(), changed = false;
-          res.data.forEach(function (row) {
-            var stateId = String(row.word || '');
-            var exact = WORD_LIST.some(function (entry) {
-              return entry.contentKey === stateId && Number(entry.level) === Number(row.level);
-            });
-            if (!exact) return;
-            var key = TF_SRS.keyFor(stateId, row.level);
-            var srv = { stage: row.stage || 0, dueDate: row.due_date || '', dueAt: 0,
-                        everFailed: !!row.ever_failed, mastered: !!row.mastered };
-            var cur = local[key];
-            var win = tfSrsPickAdvanced(cur, srv);
-            // เขียนกลับเฉพาะเมื่อผลต่างจากเดิมจริง (กันเขียน localStorage ฟุ่มเฟือย)
-            if (!cur || win.stage !== cur.stage || (win.dueDate || '') !== (cur.dueDate || '') || (!!win.mastered) !== (!!cur.mastered)) {
-              local[key] = win; changed = true;
-            }
-          });
-          if (changed) tfSaveSrs(local);
-          window.__tfSrsSyncedOnce = true;
-          return changed;
-        })
-        .catch(function () { if (!tfSrsOwnerCurrent(_uid, _ownerEpoch, _requestId)) return false; window.__tfSrsSyncedOnce = true; return false; });
-    } catch (e) { window.__tfSrsSyncedOnce = true; return Promise.resolve(false); }
-  })();
+  __tfSrsSyncPromise = Promise.resolve().then(function(){
+    window.__tfSrsSyncedOnce=true;
+    return !!(window.PAID_SRS_PRIVATE_BETA || (window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()));
+  });
   return __tfSrsSyncPromise;
 }
 // ทริกเกอร์: ซิงก์ตอนเปิดหน้าถ้าล็อกอินอยู่แล้ว + ทุกครั้งที่ล็อกอินใหม่ระหว่างเล่น
@@ -1658,6 +1609,7 @@ function tfCommitWordAndAdvance(opts) {
       learning_evidence: _tfResult.learningEvidence,
       linguistic: { reading_th: entry.readingTH || '', syls: entry.syls || null, correct_tone: tone },
       words: (_tfSentence && advSentenceCtx.words) ? advSentenceCtx.words.map(function(w){return {th:w.th||'',zh:w.zh||''};}) : [],
+      learning_action: session.curWordIsKnownCheck ? 'known_check' : 'answer',
       srs_state: _tfRec && (_tfRec.dueDate || _tfRec.stage) || null,
       mastered_state: !!(_tfRec && _tfRec.mastered)
     });
@@ -1708,18 +1660,17 @@ function tfLevelWordCount(level) {
 function tfProcessSrsOnWordCommit(entry, mistakes, firstTry, forced) {
   if (!entry || !entry.word) return;
   if (!tfSrsLoggedIn()) return; // Guest Free ไม่มี SRS และห้ามนำรอบก่อน Login ไปนับย้อนหลัง
-  if (tfReviewOwns(entry)) return; // Review owns every pre-SRS transition; tone-round keeps existing SRS only.
+  if (tfReviewOwns(entry)) return; // Login Free is committed only by LearningReview.
+  if (!window.PAID_SRS_PRIVATE_BETA) return; // tone-round is retained for the gated Paid beta only.
   if (tfGuideMode || (session && session.currentWordGuideUsed)) return;
   var wasFinalCheck = !!(session && session.curWordIsFinalSrsCheck);
   var wasKnownCheck = !!(session && session.curWordIsKnownCheck);
   // คำตอบที่ไม่สะอาดไม่เลื่อน SRS
   var cleanThisRound = !!firstTry && !forced && (mistakes || 0) === 0;
 
-  // ── Phase 4 (กันโกงดาว): ให้ "เซิร์ฟเวอร์" เป็นคนตัดสิน+แจกดาวจริง (ล็อกอินเท่านั้น) ──
-  //   เพิ่มเข้ามาคู่ขนาน ไม่รื้อ logic local ด้านล่าง (เน็ตล่ม/ไม่ล็อกอิน → เกมทำงานเหมือนเดิมทุกอย่าง)
-  //   ดาวที่ "แลกเงินได้" = ที่เซิร์ฟเวอร์เขียนเท่านั้น · ดาว local = ตัวโชว์เฉยๆ (หลังล็อก RLS จะ sync ขึ้นไม่ได้)
+  // Paid private beta keeps its separate server-authoritative SRS transport.
   try {
-    if (window.TONE_SERVER && TONE_SERVER.available()) {
+    if (window.PAID_SRS_PRIVATE_BETA && window.TONE_SERVER && TONE_SERVER.available()) {
       var _sv = { word: entry.word, contentKey: entry.contentKey, level: selectedLevel || 1, knownCheck: wasKnownCheck };
       var _syls = (entry.readingTH && entry.readingTH.indexOf('-') > -1) ? entry.readingTH.split('-') : null;
       if (_syls && _syls.length > 1) {
@@ -1746,10 +1697,8 @@ function tfProcessSrsOnWordCommit(entry, mistakes, firstTry, forced) {
       });
       // Paid progress is server-authoritative. Do not run the optimistic Free
       // cadence or write the Free local key while the private beta is active.
-      if (window.PAID_SRS_PRIVATE_BETA) {
-        if (session) { session.curWordIsKnownCheck = false; session.curWordIsFinalSrsCheck = false; }
-        return;
-      }
+      if (session) { session.curWordIsKnownCheck = false; session.curWordIsFinalSrsCheck = false; }
+      return;
     }
   } catch (e) {}
 
@@ -2903,7 +2852,7 @@ function tfRestoreSavedProgress(data) {
   session.maxCombo = Number(data.maxCombo) || 0;
   session.hardStarsEarned = Number(data.hardStarsEarned) || 0;
   roundReport = window.RoundReport ? RoundReport.restore(data.report,{game_type:'tone',difficulty:({1:'初',2:'中',3:'高'})[selectedLevel]||'初',mode:selectedCategory||'全部'}) : null;
-  if(window.LearningReview)LearningReview.prime({game:'tone',level:selectedLevel||1,playSetSize:selectedLevel===3?1:5}).then(tfRegisterRestoredReview);
+  if(window.LearningReview)tfRegisterRestoredReview();
   hist = []; histPos = -1;
   tfSetupNextWord();
   tfSaveResumeState();
@@ -3872,7 +3821,7 @@ var TF = {
     if (selectedLevel === 3) { // 高級 ไม่มีคำใน WORD_LIST → สุ่มประโยคใหม่แทน (Lin 2026-07-03)
       var _allSentences=ADV_SENTENCES.map(function(_,i){return i;});
       var _reviewSentences=window.LearningReview&&LearningReview.matchQueue?LearningReview.matchQueue({game:'tone',level:3,items:_allSentences,contentRefOf:tfReviewSentenceRef}):[];
-      var _sentenceAllocation=window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()?LearningReview.allocateRuntime({total:1,reviewDue:_reviewSentences,srsDue:[],regular:_allSentences,idOf:function(i){return LearningReview.keyOfRef(tfReviewSentenceRef(i));},scope:'tone-3'}):{items:[Math.floor(Math.random()*ADV_SENTENCES.length)],selectedReview:[]};
+      var _sentenceAllocation=window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()?LearningReview.allocateRuntime({game:'tone',level:3,total:1,reviewDue:_reviewSentences,srsDue:[],regular:_allSentences,idOf:function(i){return LearningReview.keyOfRef(tfReviewSentenceRef(i));},scope:'tone-3'}):{items:[Math.floor(Math.random()*ADV_SENTENCES.length)],selectedReview:[]};
       var _sentenceIndex=_sentenceAllocation.items.length?_sentenceAllocation.items[0]:Math.floor(Math.random()*ADV_SENTENCES.length);
       TF.startAdvSentence(_sentenceIndex);
       if(window.LearningReview&&LearningReview.registerRound){var _sentenceRefKey=LearningReview.keyOfRef(tfReviewSentenceRef(_sentenceIndex)),_group={};_group[_sentenceRefKey]=session&&session.words?session.words.length:1;LearningReview.registerRound({report:roundReport,game:'tone',level:3,allItems:_allSentences,srsOwned:_allSentences.filter(function(i){return !!tfGetSrsRecord(ADV_SENTENCES[i].th,3);}),selectedReview:_sentenceAllocation.selectedReview,idOf:function(i){return LearningReview.keyOfRef(tfReviewSentenceRef(i));},contentRefOf:tfReviewSentenceRef,groupSizeByRef:_group,retry:function(){if(session&&session.words&&session.words.length){session.words=session.words.concat(session.words.slice());}}});}
@@ -3899,7 +3848,7 @@ var TF = {
       var _now=Date.now();
       var _due=pool.filter(function(w){var r=tfGetSrsRecord(w,tfWordLevel(w));return !!(r&&!r.mastered&&TF_SRS.isDue(r,_now));});
       var _regular=pool.filter(function(w){return _due.indexOf(w)===-1;});
-      var _allocation=LearningReview.allocateRuntime({total:Math.min(5,pool.length),reviewDue:_reviewDue,srsDue:_due.slice().sort(function(){return Math.random()-0.5;}),regular:_regular.slice().sort(function(){return Math.random()-0.5;}),idOf:function(w){return LearningReview.keyOfRef(tfReviewWordRef(w));},scope:'tone-'+selectedLevel,srsScope:'tone-'+selectedLevel,allocateSrs:GameFlow.allocateSrs});
+      var _allocation=LearningReview.allocateRuntime({game:'tone',level:selectedLevel,total:Math.min(5,pool.length),reviewDue:_reviewDue,srsDue:_due.slice().sort(function(){return Math.random()-0.5;}),regular:_regular.slice().sort(function(){return Math.random()-0.5;}),idOf:function(w){return LearningReview.keyOfRef(tfReviewWordRef(w));},scope:'tone-'+selectedLevel,srsScope:'tone-'+selectedLevel,allocateSrs:GameFlow.allocateSrs});
       words=_allocation.items;_reviewSelected=_allocation.selectedReview;
     } else if (tfSrsLoggedIn() && window.GameFlow && GameFlow.allocateSrs) {
       var _now=Date.now();
@@ -4345,10 +4294,15 @@ var TF = {
     btn.textContent = isOpen ? '查看詳細解說' : '收起詳細解說';
   },
   // Resume saved safe point: restore completed evidence and continue at the saved word.
-  resumeSavedSession: function() {
+  resumeSavedSession: function(reviewReady) {
     var data = __tfResumeSnapshot;
-    tfHideResumeBanner();
     if (!data) return;
+    if (!reviewReady && window.LearningReview && LearningReview.runtimeEnabled && LearningReview.runtimeEnabled()) {
+      LearningReview.prime({game:'tone',level:data.level||1,playSetSize:data.level===3?1:5})
+        .then(function(){ TF.resumeSavedSession(true); });
+      return;
+    }
+    tfHideResumeBanner();
     try { if (typeof gtag === 'function') gtag('event','tone_finder_resume_continue',{category:'game'}); } catch (e) {}
     if (data.level === 3) {
       var sentenceIdx=tfResumeSentenceIndex(data);
@@ -4368,8 +4322,14 @@ var TF = {
     startSetSession(entries, { keepOrder: true });
     tfRestoreSavedProgress(data);
   },
-  restartSavedSession: function() {
-    var data=__tfResumeSnapshot;tfHideResumeBanner();if(!data)return;
+  restartSavedSession: function(reviewReady) {
+    var data=__tfResumeSnapshot;if(!data)return;
+    if(!reviewReady&&window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()){
+      LearningReview.prime({game:'tone',level:data.level||1,playSetSize:data.level===3?1:5})
+        .then(function(){TF.restartSavedSession(true);});
+      return;
+    }
+    tfHideResumeBanner();
     selectedLevel=data.level||1;
     if(data.level===3){var sentenceIdx=tfResumeSentenceIndex(data);if(sentenceIdx!=null){TF.startAdvSentence(sentenceIdx);return;}tfClearResumeState();TF._startRandom5();return;}
     var entries=tfResolveResumeEntries(data.wordIds,data.level);

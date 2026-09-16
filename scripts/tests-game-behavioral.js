@@ -10,7 +10,7 @@
  *   A) เกม Free ทั้ง 5 หน้า (reading-game/tone-finder/typing-game/word-order/listening-game)
  *      โหลดข้อมูลผ่าน game-content-client.js เท่านั้น ไม่มี <script src="data/words-data.js"> หลงเหลือ
  *   B) ยามเฝ้าประตูถูกเรียกจริงในจุดที่ควรบล็อกก่อนให้เล่น/ให้แต้ม
- *      (lego-daily-limit ก่อน startTest, TONE_SERVER.finishRound ในเกมที่มี SRS/ดาว)
+ *      (lego-daily-limit ก่อน startTest, LearningReview.advance ใน Login Free learning loop)
  *   C) เพดานเนื้อหาใน Edge Function game-content ตรงกับที่ CLAUDE.md บันทึกไว้ (50/100, 20/40)
  *      + tier ต้องมาจาก JWT ฝั่งเซิร์ฟเวอร์เท่านั้น ห้ามอ่านจาก body ที่ client ส่งมา
  *
@@ -118,27 +118,36 @@ GAME_PAGES.forEach((page) => {
 }
 
 // ════════════════════════════════════════════════════════════
-// B-2) TONE_SERVER.finishRound ต้องถูกเรียกในทุกเกมที่มีดาว/SRS
+// B-2) Login Free ทั้ง 4 เกมต้องส่งทุก item ให้ LearningReview ซึ่งเรียก server authority
 // ════════════════════════════════════════════════════════════
 {
-  const GAMES_WITH_SRS = {
+  const LOGIN_FREE_GAMES = {
     'js/games/reading-game-app.js': 'เกมอ่าน',
     'js/games/typing-game-app.js': 'เกมพิมพ์',
     'js/games/word-order-app.js': 'เกมลำดับคำ',
     'js/games/tone-finder-game.js': 'เกมเสียง',
   };
-  Object.keys(GAMES_WITH_SRS).forEach((file) => {
+  Object.keys(LOGIN_FREE_GAMES).forEach((file) => {
     const text = read(file);
     if (text === null) { fail(`B-2: ${file}`, 'ไม่พบไฟล์'); return; }
-    const callsFinishRound = /TONE_SERVER\.finishRound\(/.test(text);
-    if (!callsFinishRound) fail(`B-2: ${file}`, `${GAMES_WITH_SRS[file]} ไม่เรียก TONE_SERVER.finishRound() — เสี่ยงให้ดาว/เลื่อนขั้นฝั่ง client เองโดยไม่ผ่านเซิร์ฟเวอร์`);
-    else ok(`B-2: ${file} (${GAMES_WITH_SRS[file]}) เรียก TONE_SERVER.finishRound() ให้เซิร์ฟเวอร์ตัดสินดาว/SRS`);
+    const commitsEveryItem = /LearningReview\.advance\(/.test(text);
+    if (!commitsEveryItem) fail(`B-2: ${file}`, `${LOGIN_FREE_GAMES[file]} ไม่เรียก LearningReview.advance() — เสี่ยงข้าม server learning commit`);
+    else ok(`B-2: ${file} (${LOGIN_FREE_GAMES[file]}) ส่งทุก item ผ่าน LearningReview.advance()`);
   });
+
+  const learningClient = read('js/games/learning-review.js');
+  const scoreSubmit = read('supabase/functions/score-submit/index.ts');
+  if (!learningClient || !/action:\s*'learning_commit'/.test(learningClient)) {
+    fail('B-2: learning-review.js', 'ไม่พบ learning_commit ไปยัง server authority');
+  } else ok('B-2: learning-review.js ส่ง primitive evidence ด้วย learning_commit');
+  if (!scoreSubmit || !/phase1_login_free_learning_commit/.test(scoreSubmit)) {
+    fail('B-2: score-submit/index.ts', 'ไม่พบ transactional learning RPC');
+  } else ok('B-2: score-submit ใช้ transactional learning RPC เป็น authority');
 
   const listeningApp = read('js/games/listening-game-app.js');
   if (listeningApp !== null) {
     const callsFinishRound = /TONE_SERVER\.finishRound\(/.test(listeningApp);
-    if (callsFinishRound) ok('B-2: listening-game-app.js เรียก TONE_SERVER.finishRound() ด้วย');
+    if (callsFinishRound) ok('B-2: listening-game-app.js ยังใช้เส้นทางเดิมตามขอบเขตงาน');
     else notes.push('เกมฟัง (listening-game-app.js) ไม่เรียก TONE_SERVER.finishRound() — ไม่มีระบบดาว/SRS ในเกมนี้ (ตรวจโค้ดแล้วไม่พบการให้ดาวฝั่ง client เองด้วย) ยืนยันกับ Lin ว่าเป็นการออกแบบตั้งใจหรือไม่ได้ทำ');
   }
 }

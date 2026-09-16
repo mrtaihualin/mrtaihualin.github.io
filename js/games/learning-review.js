@@ -1,4 +1,4 @@
-/* Login Free pre-SRS Review owner and cumulative 20% played-set allocator. */
+/* Canonical Login Free Learning Engine client. Server owns queue/state/transition. */
 (function (root, factory) {
   'use strict';
   var api = factory(root);
@@ -8,8 +8,10 @@
   'use strict';
 
   var FEATURE_DEFAULT_ENABLED = false;
-  var STORAGE_KEY = 'gsh_review_quota_v1';
+  var ENGINE_VERSION = 'phase1-login-free-learning-v2';
+  var STORAGE_KEY = 'gsh_learning_projection_v2';
   var queues = Object.create(null);
+  var packets = Object.create(null);
   var rounds = Object.create(null);
   var latestRound = Object.create(null);
 
@@ -95,19 +97,29 @@
     var invoke = options.invoke;
     return {
       loadQueue: function (input) {
-        return Promise.resolve(invoke({ action: 'review_queue', game: input.game, level: input.level, play_set_size: input.playSetSize }))
+        return Promise.resolve(invoke({ action: 'learning_queue', game: input.game, level: input.level, play_set_size: input.playSetSize,
+          round_id: input.roundId || null }))
           .then(function (result) {
-            if (!result || result.ok !== true || !Array.isArray(result.items)) fail('REVIEW_QUEUE_UNAVAILABLE');
-            return result.items;
+            if (!result || result.ok !== true || result.engine_version !== ENGINE_VERSION ||
+                !Array.isArray(result.review_due) || !Array.isArray(result.srs_due) ||
+                !Array.isArray(result.regular_or_new) || !Array.isArray(result.non_due_srs) ||
+                !Array.isArray(result.mastered) || !Array.isArray(result.snapshots) || !Array.isArray(result.round_items)) {
+              fail('LEARNING_QUEUE_UNAVAILABLE');
+            }
+            return result;
           });
       },
       commit: function (input) {
-        if (!input || !input.item || !input.roundId || !input.operationId) fail('INVALID_REVIEW_COMMIT');
+        if (!input || !input.item || !input.roundId || !input.operationId || !input.expectedState || !input.expectedStateToken) {
+          fail('INVALID_LEARNING_COMMIT');
+        }
         return Promise.resolve(invoke({
-          action: 'review_commit', game: input.game, level: input.level,
+          action: 'learning_commit', game: input.game, level: input.level,
           round_id: input.roundId, operation_id: input.operationId, item: input.item,
+          expected_state: input.expectedState, expected_state_token: input.expectedStateToken,
+          attempt_kind: input.attemptKind === 'known_check' ? 'known_check' : 'answer',
         })).then(function (result) {
-          if (!result || result.ok !== true) fail('REVIEW_COMMIT_UNAVAILABLE');
+          if (!result || result.ok !== true || !result.snapshot) fail('LEARNING_COMMIT_UNAVAILABLE');
           return result;
         });
       },
@@ -156,6 +168,7 @@
         return bodyPromise.then(function (payload) {
           var code = payload && typeof payload.error === 'string' && payload.error || 'REVIEW_REQUEST_FAILED';
           var error = new Error(code); error.code = code; error.status = status;
+          if (payload && payload.snapshot) error.snapshot = payload.snapshot;
           throw error;
         });
       }).catch(function (error) {
@@ -172,9 +185,17 @@
     if (!runtimeEnabled()) return Promise.resolve([]);
     var key;
     try { key = runtimeKey(options.game, options.level); } catch (e) { return Promise.resolve([]); }
-    return runtimeClient().loadQueue({ game: normalizeGame(options.game), level: normalizeLevel(options.level), playSetSize: options.playSetSize })
-      .then(function (items) { queues[key] = items.slice(); return queues[key]; })
-      .catch(function () { queues[key] = []; return []; });
+    return runtimeClient().loadQueue({ game: normalizeGame(options.game), level: normalizeLevel(options.level),
+      playSetSize: options.playSetSize, roundId: options.roundId })
+      .then(function (packet) {
+        packets[key] = packet;
+        queues[key] = packet.review_due.slice();
+        return packet;
+      })
+      .catch(function (error) {
+        delete packets[key]; queues[key] = [];
+        throw error;
+      });
   }
   function queue(options) {
     try { return (queues[runtimeKey(options.game, options.level)] || []).slice(); }
@@ -191,17 +212,53 @@
   }
   function queueStateMap(options) {
     var result = Object.create(null);
-    queue(options || {}).forEach(function (row) { result[keyOfRef(row.content_ref)] = String(row.state || ''); });
+    var packet;
+    try { packet = packets[runtimeKey(options.game, options.level)]; } catch (e) { packet = null; }
+    (packet && packet.snapshots || []).forEach(function (row) { result[keyOfRef(row.content_ref)] = row; });
     return result;
+  }
+  function snapshot(options) {
+    try {
+      var states = queueStateMap(options || {});
+      return states[keyOfRef(options.contentRef)] || null;
+    } catch (e) { return null; }
+  }
+  function srsRecord(options) {
+    var row = snapshot(options || {});
+    if (!row || (row.state !== 'srs' && row.state !== 'mastered')) return null;
+    return { stage: Number(row.stage || 0), dueDate: row.due_on || '', dueAt: 0,
+      everFailed: row.ever_failed === true, mastered: row.mastered === true };
   }
   function allocateRuntime(options) {
     options = options || {};
-    return allocate({
-      total: options.total, reviewDue: options.reviewDue, srsDue: options.srsDue,
-      regular: options.regular, idOf: options.idOf, scope: ownerScope() + ':' + String(options.scope || 'default'),
-      srsScope: ownerScope() + ':' + String(options.srsScope || options.scope || 'default'), storage: options.storage || (root && root.localStorage),
-      allocateSrs: options.allocateSrs || (root.GameFlow && root.GameFlow.allocateSrs),
+    if (typeof options.idOf !== 'function') fail('IDENTITY_REQUIRED');
+    var packet;
+    try { packet = packets[runtimeKey(options.game || String(options.scope || '').split('-')[0], options.level)]; } catch (e) { packet = null; }
+    if (!packet) {
+      var scope = String(options.scope || '');
+      var game = scope.indexOf('word-order') === 0 ? 'word_order' : scope.split('-')[0];
+      var level = options.level;
+      if (!level && game === 'word_order') level = 3;
+      if (!level && scope.split('-')[1]) level = scope.split('-')[1];
+      try { packet = packets[runtimeKey(game, level)]; } catch (e2) { packet = null; }
+    }
+    if (!packet) fail('LEARNING_QUEUE_UNAVAILABLE');
+    var candidates = [].concat(options.reviewDue || [], options.srsDue || [], options.regular || []);
+    var byRef = Object.create(null);
+    candidates.forEach(function (item) { byRef[String(options.idOf(item))] = item; });
+    var items = packet.round_items.map(function (row) {
+      var item = byRef[keyOfRef(row.content_ref)];
+      if (item === undefined) fail('CANONICAL_QUEUE_ITEM_MISSING');
+      return item;
     });
+    var reviewStates = { next_day_check: true, review_needed: true, weak_4d: true };
+    return {
+      items: items,
+      selectedReview: packet.round_items.filter(function (row) { return reviewStates[row.state]; }).map(function (row) { return byRef[keyOfRef(row.content_ref)]; }),
+      selectedSrs: packet.round_items.filter(function (row) { return row.state === 'srs'; }).map(function (row) { return byRef[keyOfRef(row.content_ref)]; }),
+      reviewCarryOver: packet.review_due.slice(),
+      fractionCarry: 0,
+    };
   }
 
   function registerRound(options) {
@@ -215,14 +272,17 @@
     (options.allItems || []).forEach(function (item) { original[keyOfRef(contentRefOf(item))] = item; });
     (options.srsOwned || []).forEach(function (item) { srs[keyOfRef(contentRefOf(item))] = true; });
     var states = queueStateMap({ game: game, level: level });
+    Object.keys(states).forEach(function (key) {
+      if (states[key] && (states[key].state === 'srs' || states[key].state === 'mastered')) srs[key] = true;
+    });
     (options.selectedReview || []).forEach(function (item) {
       var key = keyOfRef(contentRefOf(item));
-      due[key] = states[key] || 'review_needed';
+      due[key] = states[key] && states[key].state || 'review_needed';
     });
     var context = {
       roundId: String(options.report.round_id), game: game, level: level,
       ownerId: String(currentUser() && currentUser().id || ''), ownerEpoch: ownerScope(),
-      srs: srs, due: due, original: original, retried: Object.create(null),
+      srs: srs, due: due, original: original, snapshots: states, retried: Object.create(null),
       groupSize: options.groupSizeByRef || Object.create(null), groupBuffers: Object.create(null),
       pending: Promise.resolve(), jobs: [], advancePending: false,
       retry: typeof options.retry === 'function' ? options.retry : function () {},
@@ -242,7 +302,7 @@
   function owns(reportOrId, ref) {
     var context = contextFor(reportOrId);
     if (!context || !runtimeEnabled()) return false;
-    return !context.srs[keyOfRef(ref)];
+    return Object.prototype.hasOwnProperty.call(context.original, keyOfRef(ref));
   }
   function ownsCurrent(game, level, ref) {
     var id;
@@ -296,13 +356,19 @@
     return runtimeClient().commit({
       game: context.game, level: context.level, roundId: context.roundId,
       operationId: job.operationId, item: job.item,
+      expectedState: job.expectedState, expectedStateToken: job.expectedStateToken,
+      attemptKind: job.attemptKind,
     }).then(function (result) {
       var user = currentUser();
       if (!user || context.ownerId !== String(user.id || '') || context.ownerEpoch !== ownerScope()) fail('LEARNING_OWNER_CHANGED');
       job.status = 'committed'; job.result = result;
+      if (result.snapshot && result.snapshot.content_ref) {
+        context.snapshots[job.refKey] = result.snapshot;
+      }
       if (result.to_state === 'retry_end_round') scheduleRetry(context, job.refKey);
       return result;
     }).catch(function (error) {
+      if (error && error.snapshot && error.snapshot.content_ref) context.snapshots[job.refKey] = error.snapshot;
       job.status = 'failed'; job.error = error;
       throw error;
     });
@@ -321,7 +387,7 @@
     if (!context || !runtimeEnabled()) return Promise.resolve({ ok: false, reason: 'not_owned' });
     if (item && item.is_skipped === true) return Promise.resolve({ ok: true, skipped: true });
     var refKey = assertItemIdentity(item);
-    if (!refKey || context.srs[refKey]) return Promise.resolve({ ok: false, reason: 'srs_owner' });
+    if (!refKey || !Object.prototype.hasOwnProperty.call(context.original, refKey)) return Promise.resolve({ ok: false, reason: 'not_owned' });
     var groupSize = Math.max(1, Math.floor(Number(context.groupSize[refKey]) || 1));
     if (groupSize > 1) {
       var buffer = context.groupBuffers[refKey] || [];
@@ -339,7 +405,14 @@
         },
       });
     }
-    var job = { operationId: uuid(), item: item, refKey: refKey, status: 'queued', error: null, result: null };
+    var expected = context.snapshots[refKey];
+    if (!expected || !expected.state || !expected.state_token || expected.state === 'legacy_identity_unresolved') {
+      return Promise.reject(Object.assign(new Error('LEARNING_SNAPSHOT_REQUIRED'), { code: 'LEARNING_SNAPSHOT_REQUIRED' }));
+    }
+    var job = { operationId: uuid(), item: item, refKey: refKey,
+      expectedState: String(expected.state), expectedStateToken: String(expected.state_token),
+      attemptKind: item.learning_action === 'known_check' ? 'known_check' : 'answer',
+      status: 'queued', error: null, result: null };
     context.jobs.push(job);
     context.pending = context.pending.catch(function () {}).then(function () { return runJob(context, job); });
     return context.pending;
@@ -408,7 +481,7 @@
     root.addEventListener('gsh:item-complete', handleItemComplete);
     try {
       if (root.SITE_AUTH && root.SITE_AUTH.onChange) root.SITE_AUTH.onChange(function (user) {
-        queues = Object.create(null); rounds = Object.create(null); latestRound = Object.create(null);
+        queues = Object.create(null); packets = Object.create(null); rounds = Object.create(null); latestRound = Object.create(null);
       });
     } catch (e) {}
   }
@@ -416,6 +489,7 @@
 
   return {
     FEATURE_DEFAULT_ENABLED: FEATURE_DEFAULT_ENABLED,
+    ENGINE_VERSION: ENGINE_VERSION,
     STORAGE_KEY: STORAGE_KEY,
     keyOfRef: keyOfRef,
     allocate: allocate,
@@ -423,6 +497,8 @@
     prime: prime,
     queue: queue,
     matchQueue: matchQueue,
+    snapshot: snapshot,
+    srsRecord: srsRecord,
     allocateRuntime: allocateRuntime,
     registerRound: registerRound,
     owns: owns,

@@ -150,19 +150,20 @@ await test('Played bridge resolves only an exact content identity and never a wo
   assert.match(practiceEdge, /if \(resolved\.some\(\(item: any\) => !item\.item_id\)\) throw new Error\('unknown_content_ref'\)/);
 });
 
-await test('Tone accepts missing ids but rejects malformed explicit ids', () => {
+await test('Paid Tone accepts missing ids but rejects malformed explicit ids', () => {
   assert.match(toneEdge, /legacyCompatibility = !suppliedOperationId/);
   assert.match(toneEdge, /suppliedOperationId && !UUID_V4\.test\(suppliedOperationId\)/);
   assert.match(toneEdge, /operationId = suppliedOperationId \|\| crypto\.randomUUID\(\)/);
-  assert.match(toneEdge, /compatibility: legacyCompatibility \? "legacy-no-id" : "explicit-id"/);
+  assert.match(toneEdge, /compatibility: legacyCompatibility \? 'legacy-no-id' : 'explicit-id'/);
 });
 
-await test('Tone legacy duplicates remain transactional and cannot double-award', () => {
+await test('Tone legacy writer is parked for Free while Paid remains transactional', () => {
   assert.match(toneSql, /pg_advisory_xact_lock\(hashtextextended\('phase1-tone-account:'/);
   assert.match(toneSql, /return jsonb_build_object\('ok', false, 'reason', 'race_retry'\)/);
   assert.match(toneSql, /insert into public\.tone_round_operations/);
-  assert.match(toneEdge, /p_expected_stage: srsRow\?\.stage/);
-  assert.match(toneEdge, /p_expected_mastered: srsRow\?\.mastered/);
+  assert.match(toneEdge, /phase2_paid_srs_commit/);
+  assert.match(toneEdge, /learning_engine_required/);
+  assert.doesNotMatch(toneEdge, /phase1_tone_round_commit/);
 });
 
 await test('new Tone/Lego clients still send one stable id per retry payload', () => {

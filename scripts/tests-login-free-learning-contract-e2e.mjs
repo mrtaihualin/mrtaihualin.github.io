@@ -12,7 +12,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const roundReportSource = fs.readFileSync(path.join(root, 'js/games/round-report.js'), 'utf8');
 const learningReviewSource = fs.readFileSync(path.join(root, 'js/games/learning-review.js'), 'utf8');
 
-function runtimeFor(fixture) {
+async function runtimeFor(fixture) {
   const listeners = Object.create(null);
   const retryItems = [];
   const commitBodies = [];
@@ -48,7 +48,12 @@ function runtimeFor(fixture) {
       invoke(name, options) {
         assert.equal(name, 'score-submit');
         const body = options.body;
-        if (body.action === 'review_queue') return Promise.resolve({ data: { ok: true, items: [] }, error: null });
+        if (body.action === 'learning_queue') {
+          const snapshot = { item_id: 'fixture-item', content_ref: { source: fixture.source, key: fixture.key },
+            state: 'normal', state_token: 'normal:fixture-item', due_on: null, stage: null, mastered: false };
+          return Promise.resolve({ data: { ok: true, engine_version: 'phase1-login-free-learning-v2', review_due: [], srs_due: [],
+            regular_or_new: [snapshot], non_due_srs: [], mastered: [], snapshots: [snapshot], round_items: [snapshot] }, error: null });
+        }
         commitBodies.push(body);
         let verified;
         try {
@@ -75,13 +80,15 @@ function runtimeFor(fixture) {
         if (transportMode === 'delayed') {
           return new Promise(resolve => {
             releaseCommit = () => resolve({
-              data: { ok: true, from_state: 'normal', to_state: verified.score <= 3 ? 'retry_end_round' : 'weak_4d' },
+              data: { ok: true, from_state: 'normal', to_state: verified.score <= 3 ? 'retry_end_round' : 'weak_4d',
+                snapshot: { content_ref: body.item.content_ref, state: verified.score <= 3 ? 'retry_end_round' : 'weak_4d', state_token: 'next-token' } },
               error: null,
             });
           });
         }
         return Promise.resolve({
-          data: { ok: true, from_state: 'normal', to_state: verified.score <= 3 ? 'retry_end_round' : 'weak_4d' },
+          data: { ok: true, from_state: 'normal', to_state: verified.score <= 3 ? 'retry_end_round' : 'weak_4d',
+            snapshot: { content_ref: body.item.content_ref, state: verified.score <= 3 ? 'retry_end_round' : 'weak_4d', state_token: 'next-token' } },
           error: null,
         });
       },
@@ -90,6 +97,8 @@ function runtimeFor(fixture) {
 
   vm.runInNewContext(roundReportSource, context, { filename: 'round-report.js' });
   vm.runInNewContext(learningReviewSource, context, { filename: 'learning-review.js' });
+
+  await context.LearningReview.prime({ game: fixture.game, level: fixture.level, playSetSize: 1 });
 
   const report = context.RoundReport.create({ game_type: fixture.reportGame, difficulty: fixture.difficulty });
   const original = { id: fixture.key, ref: { source: fixture.source, key: fixture.key } };
@@ -149,7 +158,7 @@ const fixtures = [
 ];
 
 for (const fixture of fixtures) {
-  const runtime = runtimeFor(fixture);
+  const runtime = await runtimeFor(fixture);
   runtime.setTransportMode('delayed');
   const row = runtime.context.RoundReport.addItem(runtime.report, {
     content_ref: { source: fixture.source, key: fixture.key },
@@ -173,10 +182,13 @@ for (const fixture of fixtures) {
   assert.equal(advanced, 1, fixture.game + ' advances exactly once after acknowledgement');
   assert.equal(runtime.retryItems.length, 1, fixture.game + ' schedules Retry only after server acknowledgement');
   assert.equal(runtime.commitBodies[0].item.key, fixture.key, fixture.game + ' sends the canonical key to score-submit');
+  assert.equal(runtime.commitBodies[0].action, 'learning_commit', fixture.game + ' uses the canonical Learning Engine action');
+  assert.equal(runtime.commitBodies[0].expected_state, 'normal', fixture.game + ' sends the exact server snapshot state');
+  assert.equal(runtime.commitBodies[0].expected_state_token, 'normal:fixture-item', fixture.game + ' sends the exact CAS token');
 }
 
 for (const fixture of fixtures) {
-  const runtime = runtimeFor(fixture);
+  const runtime = await runtimeFor(fixture);
   const row = runtime.context.RoundReport.addItem(runtime.report, {
     content_ref: { source: fixture.source, key: fixture.key },
     question: fixture.key,
@@ -197,7 +209,7 @@ for (const fixture of fixtures) {
 
 {
   const fixture = fixtures[0];
-  const runtime = runtimeFor(fixture);
+  const runtime = await runtimeFor(fixture);
   assert.throws(() => runtime.context.RoundReport.addItem(runtime.report, {
     key: 'mismatch', content_ref: { source: fixture.source, key: fixture.key },
   }), /CONTENT_REF_IDENTITY_MISMATCH/);
@@ -208,7 +220,7 @@ for (const fixture of fixtures) {
 
 {
   const fixture = fixtures[3];
-  const runtime = runtimeFor(fixture);
+  const runtime = await runtimeFor(fixture);
   runtime.setTransportMode('failure');
   runtime.context.RoundReport.addItem(runtime.report, {
     content_ref: { source: fixture.source, key: fixture.key },
@@ -227,7 +239,7 @@ for (const fixture of fixtures) {
 }
 
 {
-  const runtime = runtimeFor(fixtures[0]);
+  const runtime = await runtimeFor(fixtures[0]);
   assert.equal(runtime.context.LearningReview.runtimeEnabled(), true);
   assert.throws(() => runtime.context.LearningReview.registerRound({
     report: { round_id: 'listening-contract-check', game_type: 'listening', difficulty: '初' },
@@ -242,7 +254,7 @@ for (const fixture of fixtures) {
 
 {
   const fixture = fixtures[0];
-  const runtime = runtimeFor(fixture);
+  const runtime = await runtimeFor(fixture);
   runtime.setTransportMode('delayed');
   runtime.context.RoundReport.addItem(runtime.report, {
     content_ref: { source: fixture.source, key: fixture.key },

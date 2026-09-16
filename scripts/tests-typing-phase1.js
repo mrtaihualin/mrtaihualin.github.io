@@ -447,7 +447,7 @@ test('Typing counter follows active syllables including High continuous segments
 });
 
 test('Typing loads the rebuilt crash-safe bundle with a fresh cache key', () => {
-  assert.match(html, /typing-game-app\.min\.js\?v=58/);
+  assert.match(html, /typing-game-app\.min\.js\?v=59/);
 });
 
 test('Typing treats the shared-profile legacy stat row as optional', () => {
@@ -458,7 +458,7 @@ test('Typing treats the shared-profile legacy stat row as optional', () => {
 
 test('Typing resolves SRS ownership before a recovered Review round becomes interactive', () => {
   const prepare = functionBlock('tgPrepareRestoredReview', 'tgSaveResume');
-  assert.match(prepare, /Promise\.all\(\[reviewReady,srsReady\]\)\.then\(finish,finish\)/);
+  assert.match(prepare, /Promise\.all\(\[reviewReady,srsReady\]\)\.then\(finish\)/);
   const resume = functionBlock('tgResumeContinue', 'tgResumeRestartSame');
   assert.match(resume, /tgPrepareRestoredReview\(function\(\)\{[\s\S]*loadWord\(\)/);
 });

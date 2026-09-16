@@ -46,10 +46,14 @@ assert.strictEqual(Review.predictedScore('word_order', { wrong_count: 1, learnin
 
 (async () => {
   const calls = [];
-  const client = Review.create({ enabled: true, invoke(body) { calls.push(body); return body.action === 'review_queue' ? { ok: true, items: [] } : { ok: true, to_state: 'weak_4d' }; } });
+  const emptyPacket = { ok: true, engine_version: Review.ENGINE_VERSION, review_due: [], srs_due: [], regular_or_new: [],
+    non_due_srs: [], mastered: [], snapshots: [], round_items: [] };
+  const client = Review.create({ enabled: true, invoke(body) { calls.push(body); return body.action === 'learning_queue'
+    ? emptyPacket : { ok: true, to_state: 'weak_4d', snapshot: { content_ref: body.item.content_ref, state: 'weak_4d', state_token: 'next' } }; } });
   await client.loadQueue({ game: 'reading', level: 1, playSetSize: 5 });
-  await client.commit({ game: 'reading', level: 1, roundId: 'round', operationId: 'op', item: { content_ref: { source: 'game_words', key: 'กา@初' } } });
-  assert.deepStrictEqual(calls.map(x => x.action), ['review_queue', 'review_commit']);
+  await client.commit({ game: 'reading', level: 1, roundId: 'round', operationId: 'op', expectedState: 'normal', expectedStateToken: 'normal:item',
+    item: { content_ref: { source: 'game_words', key: 'กา@初' } } });
+  assert.deepStrictEqual(calls.map(x => x.action), ['learning_queue', 'learning_commit']);
   assert.throws(() => Review.create({ enabled: false, invoke() {} }), /FEATURE_DISABLED/);
 
   global.LOGIN_FREE_REVIEW_PUBLIC_ENTRY = true;
@@ -68,8 +72,14 @@ assert.strictEqual(Review.predictedScore('word_order', { wrong_count: 1, learnin
   const runtimeCalls = [];
   global.getSupabaseClient = () => ({ functions: { invoke(name, options) {
     runtimeCalls.push(options.body);
-    if (options.body.action === 'review_queue') return Promise.resolve({ data: { ok: true, items: [{ content_ref: { source: 'game_words', key: 'weak@初' }, state: 'weak_4d' }] }, error: null });
-    return Promise.resolve({ data: { ok: true, to_state: 'retry_end_round' }, error: null });
+    if (options.body.action === 'learning_queue') {
+      const key = options.body.game === 'typing' ? 'เดิน@初' : 'weak@初';
+      const row = { item_id: 'item-' + options.body.game, content_ref: { source: 'game_words', key }, state: 'weak_4d', state_token: 'token-' + options.body.game };
+      return Promise.resolve({ data: { ok: true, engine_version: Review.ENGINE_VERSION, review_due: [row], srs_due: [], regular_or_new: [],
+        non_due_srs: [], mastered: [], snapshots: [row], round_items: [row] }, error: null });
+    }
+    return Promise.resolve({ data: { ok: true, to_state: 'retry_end_round', snapshot: {
+      content_ref: options.body.item.content_ref, state: 'retry_end_round', state_token: 'next-token' } }, error: null });
   } } });
   await Review.prime({ game: 'reading', level: 1, playSetSize: 5 });
   const retryItems = [];
@@ -82,7 +92,7 @@ assert.strictEqual(Review.predictedScore('word_order', { wrong_count: 1, learnin
     item: { key: original.ref.key, content_ref: original.ref, learning_evidence: { firstCheckSyllableWrongCounts: [3] }, wrong_count: 3 }
   } });
   assert.strictEqual(retryItems.length, 1, 'due Weak+4 gets the one same-round retry');
-  assert.deepStrictEqual(runtimeCalls.map(x => x.action), ['review_queue', 'review_commit']);
+  assert.deepStrictEqual(runtimeCalls.map(x => x.action), ['learning_queue', 'learning_commit']);
   const callsBeforeSkip = runtimeCalls.length;
   const skipped = await Review.handleItemComplete({ detail: {
     game_type: report.game_type,
@@ -94,6 +104,12 @@ assert.strictEqual(Review.predictedScore('word_order', { wrong_count: 1, learnin
   assert.strictEqual(Review.runtimeEnabled(), true, 'Login Free authenticated owner enables Review');
   const errorReport = { round_id: '00000000-0000-4000-8000-000000000002', game_type: 'typing', difficulty: '初' };
   const errorOriginal = { id: 2, ref: { source: 'game_words', key: 'เดิน@初' } };
+  global.getSupabaseClient = () => ({ functions: { invoke(name, options) {
+    const row = { item_id: 'item-typing', content_ref: errorOriginal.ref, state: 'normal', state_token: 'normal:item-typing' };
+    return Promise.resolve({ data: { ok: true, engine_version: Review.ENGINE_VERSION, review_due: [], srs_due: [], regular_or_new: [row],
+      non_due_srs: [], mastered: [], snapshots: [row], round_items: [row] }, error: null });
+  } } });
+  await Review.prime({ game: 'typing', level: 1, playSetSize: 5 });
   Review.registerRound({ report: errorReport, game: 'typing', level: 1, allItems: [errorOriginal], srsOwned: [], selectedReview: [], idOf: x => x.id, contentRefOf: x => x.ref });
   global.getSupabaseClient = () => ({ functions: { invoke() {
     const context = { status: 400, clone() { return this; }, json() { return Promise.resolve({ error: 'invalid_wrong_count' }); } };

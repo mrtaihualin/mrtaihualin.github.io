@@ -182,7 +182,7 @@ function rgLogWord(o){
     var base={th:w.th,contentKey:tgContentKey(w),zh:w.zh,wordGlosses:wordGlosses,reading:w.readingTH,userAnswer:submitted,correctAnswer:w.th,wrong:wordWrongTotal||0,attempts:[{answer:submitted,is_correct:true}],failed:false,guide:false,pts:0,srsDue:'',mastered:false};
     for(var k in o){ if(Object.prototype.hasOwnProperty.call(o,k)) base[k]=o[k]; }
     roundLog.push(base);
-    if(roundReport&&window.RoundReport)RoundReport.addItem(roundReport,{content_ref:{source:(w&&w.words&&w.words.length)?'game_sentences':'game_words',key:tgContentKey(w)},question:base.th,meaning:base.zh,attempts:base.attempts,user_answer:base.userAnswer,correct_answer:base.correctAnswer,is_correct:!base.skipped&&!base.failed&&!base.guide&&base.wrong===0,is_skipped:!!base.skipped,skip_reason:base.skipped?'user_skip':null,wrong_count:base.wrong,item_score:base.pts,hint_used:!!base.guide,linguistic:{reading_th:base.reading,syls:w&&w.syls||null},words:wordGlosses||[],srs_state:base.srsDue||null,mastered_state:!!base.mastered});
+    if(roundReport&&window.RoundReport)RoundReport.addItem(roundReport,{content_ref:{source:(w&&w.words&&w.words.length)?'game_sentences':'game_words',key:tgContentKey(w)},question:base.th,meaning:base.zh,attempts:base.attempts,user_answer:base.userAnswer,correct_answer:base.correctAnswer,is_correct:!base.skipped&&!base.failed&&!base.guide&&base.wrong===0,is_skipped:!!base.skipped,skip_reason:base.skipped?'user_skip':null,wrong_count:base.wrong,item_score:base.pts,hint_used:!!base.guide,learning_action:base.learningAction||'answer',linguistic:{reading_th:base.reading,syls:w&&w.syls||null},words:wordGlosses||[],srs_state:base.srsDue||null,mastered_state:!!base.mastered});
   }catch(e){}
 }
 // 2026-07-13 Lin：ดึงคำที่พลาดในรอบนี้จาก roundLog ไปเก็บลง reading_sessions.wrong_items (ฐานข้อมูลจุดอ่อน)
@@ -221,11 +221,11 @@ var RG_SRS={
 };
 // Lin 2026-07-15: เปลี่ยน key จาก "ลำดับ index ใน WORDS" เป็น "คำ+ระดับ" (rgSrsKey) กันบั๊ก —
 // เดิม key เป็นตำแหน่งเลขในลิสต์ พอ Lin เพิ่ม/ลบคำ ตำแหน่งขยับ ความจำของนักเรียนที่เคยเล่นแล้วจะไปติดผิดคำ
-// ฝั่งเซิร์ฟเวอร์ (tone_srs_state, tone-round) เก็บด้วย "คำ+ระดับ" อยู่แล้วเป็นความจริงหลัก — อันนี้แค่ทำให้ local ตรงกัน
+// Login Free ใช้ stable contentKey กับ LearningReview; key local นี้เหลือไว้เฉพาะ compatibility/recovery นอก runtime นั้น
 function rgSrsKey(w){return tgContentKey(w);}
 var srsRecords={}; // key = rgSrsKey(word) → SRS record
-function rgSrsGet(key){return srsRecords[key]||null;}
-function rgSrsSet(key,rec){srsRecords[key]=rec;}
+function rgSrsGet(key){if(window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()&&LearningReview.srsRecord)return LearningReview.srsRecord({game:'typing',level:RG_LEVEL_TO_NUM[curLevel]||1,contentRef:{source:curLevel==='高'?'game_sentences':'game_words',key:key}});return srsRecords[key]||null;}
+function rgSrsSet(key,rec){if(window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled())return;srsRecords[key]=rec;}
 function rgMinimumGuestOnly(){return typeof window.isMinimumGuestOnly==='function'&&window.isMinimumGuestOnly();}
 function rgLoggedIn(){ if(rgMinimumGuestOnly()&&window.LOGIN_FREE_SRS_PUBLIC_ENTRY!==true)return false;try{ return !!(window.READING_AUTH && READING_AUTH.srsUser); }catch(e){ return false; } }
 var SAVE_KEY='rgv3_save';
@@ -292,25 +292,23 @@ function loadSave(){
   if(rgMinimumGuestOnly()){srsRecords={};totalStars=0;totalBadges=0;return;}
   try{
     var raw=localStorage.getItem(SAVE_KEY);
-    if(raw){var d=JSON.parse(raw);srsRecords=d.srsRecords||{};totalStars=d.totalStars||0;totalBadges=d.totalBadges||0;}
+    if(raw){var d=JSON.parse(raw);srsRecords=(window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled())?{}:(d.srsRecords||{});totalStars=d.totalStars||0;totalBadges=d.totalBadges||0;}
   }catch(e){}
 }
 function doSave(){
   if(rgMinimumGuestOnly())return;
-  try{localStorage.setItem(SAVE_KEY,JSON.stringify({srsRecords:srsRecords,totalStars:totalStars,totalBadges:totalBadges}));}catch(e){}
+  try{if(window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()){var old=JSON.parse(localStorage.getItem(SAVE_KEY)||'{}')||{};old.totalStars=totalStars;old.totalBadges=totalBadges;localStorage.setItem(SAVE_KEY,JSON.stringify(old));return;}localStorage.setItem(SAVE_KEY,JSON.stringify({srsRecords:srsRecords,totalStars:totalStars,totalBadges:totalBadges}));}catch(e){}
 }
 
 // ════════════════════════════════════════════
-// ── Lin 2026-07-13: ซิงก์ SRS "ข้ามเครื่อง" — อ่านกลับจาก Supabase (tone_srs_state, game='typing') → merge เข้า srsRecords ──
-//   • อ่านอย่างเดียว · เขียนขึ้นเซิร์ฟเวอร์ยังเป็นหน้าที่ tone-round เหมือนเดิม (ดาว/กันโกงไม่แตะ)
+// ── Compatibility SRS hydration seam ──
+//   • Login Free อ่าน snapshot ผ่าน LearningReview เท่านั้น; ไม่มี direct table read/write จาก browser
 //   • 2026-07-15: เปลี่ยนมาใช้ key "คำ+ระดับ" ตรงกับฝั่งเซิร์ฟเวอร์เป๊ะ ไม่ต้องแปลง index อีกแล้ว
 //     (เดิมต้องสแกนหา index ใน WORDS ก่อน merge — พอ Lin แก้ไฟล์คำ ตำแหน่งขยับ ก็เคย merge ผิดคำได้)
 //   • หมายเหตุ: เกมพิมพ์+เกมอ่านใช้ SAVE_KEY 'rgv3_save' เดียวกัน (แชร์ SRS ในเครื่องเป็นดีไซน์เดิม) —
 //     ใช้ key "คำ+ระดับ" เหมือนกันทั้ง 2 เกมแล้ว การแชร์นี้เลยไม่พึ่งพาลำดับ WORDS ต้องตรงกันอีกต่อไป
 //     merge เลือก "อันก้าวหน้ากว่า" อย่างเดียว → ไม่มีทาง downgrade คำที่จำได้จากอีกเกม (ทดสอบกดจริง 8/8)
 // ════════════════════════════════════════════
-function tgSrsRank(r){ if(!r) return -1; if(r.mastered) return 3; return (r.stage||0); }
-function tgSrsPickAdvanced(a,b){ if(!a)return b; if(!b)return a; var ra=tgSrsRank(a),rb=tgSrsRank(b); if(ra!==rb)return ra>rb?a:b; var da=a.dueDate||'',db=b.dueDate||''; if(da!==db)return (da>db)?a:b; return a; }
 var __tgSrsSyncPromise=null;
 window.__tgSrsSyncedOnce=false;
 var __tgLearningOwnerEpoch=0;
@@ -334,41 +332,7 @@ function tgResetAccountStateAtBoundary(){
 function tgSyncSrsFromServer(force){
   try{ if(!rgLoggedIn()) return Promise.resolve(false); }catch(e){ return Promise.resolve(false); }
   if(__tgSrsSyncPromise) return __tgSrsSyncPromise;
-  var sb=window.getSupabaseClient?window.getSupabaseClient():null;
-  if(!sb||!sb.from) return Promise.resolve(false);
-  // dedupe fetch 2026-07-20: tgWireSrsSync รีเซ็ต __tgSrsSyncPromise แล้วเรียกฟังก์ชันนี้ใหม่ทุกครั้งที่ SITE_AUTH.onChange ยิง
-  //   (หลายรอบต่อโหลดหน้าเดียว) → ห่อ fetch ด้วย getCachedFetch กันยิง Supabase ซ้ำทั้งที่ user เดิม
-  var _uid=String(READING_AUTH.srsUser.id);
-  var _ownerEpoch=Number(window.SITE_AUTH&&SITE_AUTH.learningOwnerEpoch)||0;
-  var _requestId=++__tgSrsRequestSequence;__tgLatestSrsRequest=_requestId;
-  var _fetchSrs = window.getCachedFetch
-    ? window.getCachedFetch('tone_srs_state:typing:'+_uid, function(){
-        return sb.from('tone_srs_state').select('level, word, stage, due_date, ever_failed, mastered').eq('user_id',_uid).eq('game','typing');
-      })
-    : sb.from('tone_srs_state').select('level, word, stage, due_date, ever_failed, mastered').eq('user_id',_uid).eq('game','typing');
-  __tgSrsSyncPromise = _fetchSrs
-    .then(function(res){
-      if(!tgSrsOwnerCurrent(_uid,_ownerEpoch,_requestId))return false;
-      if(res.error||!res.data){ window.__tgSrsSyncedOnce=true; return false; }
-      var changed=false;
-      res.data.forEach(function(row){
-        var key=String(row.word||'');
-        var exact=WORDS.some(function(item){
-          return tgContentKey(item)===key && (RG_LEVEL_TO_NUM[item.level]||0)===Number(row.level);
-        });
-        if(!exact)return;
-        var srv={stage:row.stage||0,dueDate:row.due_date||'',dueAt:0,everFailed:!!row.ever_failed,mastered:!!row.mastered};
-        var cur=srsRecords[key];
-        var win=tgSrsPickAdvanced(cur,srv);
-        if(!cur || win.stage!==cur.stage || (win.dueDate||'')!==(cur.dueDate||'') || (!!win.mastered)!==(!!cur.mastered)){
-          srsRecords[key]=win; changed=true;
-        }
-      });
-      if(changed) doSave();
-      window.__tgSrsSyncedOnce=true;
-      return changed;
-    })
-    .catch(function(){ if(!tgSrsOwnerCurrent(_uid,_ownerEpoch,_requestId))return false; window.__tgSrsSyncedOnce=true; return false; });
+  __tgSrsSyncPromise=Promise.resolve().then(function(){window.__tgSrsSyncedOnce=true;return !!(window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled());});
   return __tgSrsSyncPromise;
 }
 // ซิงก์ SRS เท่านั้น; bootstrap ท้ายไฟล์เป็น owner เดียวที่มีสิทธิ์สร้าง/กู้รอบ
@@ -495,7 +459,7 @@ function initGame(){
       _reviewSrsOwned=allIdx.filter(function(i){return !!srsRecords[rgSrsKey(WORDS[i])];});
       var _reviewDue=window.LearningReview&&LearningReview.matchQueue?LearningReview.matchQueue({game:'typing',level:RG_LEVEL_TO_NUM[curLevel]||1,items:allIdx,contentRefOf:tgReviewRef}):[];
       if(window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()&&window.GameFlow&&GameFlow.allocateSrs&&(_reviewDue.length||_dueIdx.length||_regularIdx.length)){
-        var _reviewAllocation=LearningReview.allocateRuntime({total:Math.min(tgRoundSize(),_dueIdx.length+_regularIdx.length),reviewDue:shuffle(_reviewDue),srsDue:shuffle(_dueIdx),regular:shuffle(_regularIdx),idOf:function(i){return LearningReview.keyOfRef(tgReviewRef(i));},scope:'typing-'+curLevel,srsScope:'typing-'+curLevel,allocateSrs:GameFlow.allocateSrs});
+        var _reviewAllocation=LearningReview.allocateRuntime({game:'typing',level:RG_LEVEL_TO_NUM[curLevel]||1,total:Math.min(tgRoundSize(),_dueIdx.length+_regularIdx.length),reviewDue:shuffle(_reviewDue),srsDue:shuffle(_dueIdx),regular:shuffle(_regularIdx),idOf:function(i){return LearningReview.keyOfRef(tgReviewRef(i));},scope:'typing-'+curLevel,srsScope:'typing-'+curLevel,allocateSrs:GameFlow.allocateSrs});
         pool=_reviewAllocation.items;_reviewSelected=_reviewAllocation.selectedReview;
         _srsAllocated=true;
       }else if(window.GameFlow&&GameFlow.allocateSrs&&(_dueIdx.length||_regularIdx.length)){
@@ -836,16 +800,11 @@ function finalizeWord(){
       } else {
         rgSrsSet(srsKey,RG_SRS.resetOnFail(rgSrsGet(srsKey)));
       }
-      // Phase 4: บอกเซิร์ฟเวอร์ด้วย (已記得 = พิสูจน์ครั้งเดียว → mastered แต่ไม่ให้ดาว)
-      try{
-        if(window.TONE_SERVER && TONE_SERVER.available())
-          TONE_SERVER.finishRound({ game:'typing', word:WORD.th, contentKey:tgContentKey(WORD), level:RG_LEVEL_TO_NUM[curLevel]||1, clean:passedClean, knownCheck:true });
-      }catch(e){}
     }
     curWordIsKnownCheck=false;
     if(passedClean){ b.textContent='真的記得！這個字標記為熟練 ✓（不計分、不加星）';b.className='gsh-feedback-slot result-banner show ok'; }
     else{ b.textContent='中途有出錯/用了提示，這個字先留在複習清單裡 🔁';b.className='gsh-feedback-slot result-banner show no'; }
-    rgLogWord({failed:!passedClean,pts:0,mastered:passedClean});
+    rgLogWord({failed:!passedClean,pts:0,mastered:passedClean,learningAction:'known_check'});
     doSave();
     return;
   }
@@ -880,18 +839,6 @@ function finalizeWord(){
   var basePtsAwarded=pts;
   roundScore+=basePtsAwarded;okC++;
   var srsBonusAwarded=0; // เก็บโบนัสรอบทบทวน SRS ไว้รวมกับแบนเนอร์ตอนจบคำ (ดูด้านล่าง) — Lin 2026-07-07
-
-  // ── Phase 4 (กันโกงดาว): ให้เซิร์ฟเวอร์เป็นคนตัดสิน+แจกดาวจริง (เกมสะกด: ดาว=สะกดถูก ไม่ใช่วรรณยุกต์) ──
-  //   ยิงทุกรอบเหมือนเกมเสียง (clean/ไม่ clean) → เซิร์ฟเวอร์เลื่อน/รีเซ็ต SRS เอง → mastered แล้วแจกดาว
-  //   คู่ขนาน ไม่รื้อ local · เน็ตล่ม/ไม่ล็อกอิน = เกมทำงานเหมือนเดิมทุกอย่าง
-  try{
-    if(loggedIn && window.TONE_SERVER && TONE_SERVER.available()){
-      TONE_SERVER.finishRound({ game:'typing', word:WORD.th, contentKey:tgContentKey(WORD), level:RG_LEVEL_TO_NUM[curLevel]||1, clean:clean }).then(function(r){
-        if(r&&r.ok&&r.justMastered&&r.stars>0&&window.console) console.log('[P4] ⭐ server',r.stars,'→ total',r.totalStars);
-        else if(r&&!r.ok&&window.console) console.log('[P4] server not-ok:',r.reason);
-      });
-    }
-  }catch(e){}
 
   // ── SRS เลื่อนขั้น/รีเซ็ต + โบนัสรอบทบทวน + แจกดาวเงินตอน mastered จริง (เฉพาะล็อกอิน) ──
   if(loggedIn&&!tgReviewOwns(WORD)){
@@ -1269,7 +1216,7 @@ function tgPrepareRestoredReview(ready){
   // A recovered question must not become interactive until both ownership sources
   // are known. Otherwise a legacy SRS item can be registered as Review-owned and
   // the canonical commit correctly rejects it as legacy_srs_identity_unresolved.
-  Promise.all([reviewReady,srsReady]).then(finish,finish);
+  Promise.all([reviewReady,srsReady]).then(finish);
 }
 function tgSaveResume(){
   try{
@@ -2579,11 +2526,15 @@ if(!_tgResumeHandled){
   var _tgInitialReviewReady=Promise.resolve();
   try{if(rgLoggedIn())_tgInitialSrsReady=tgSyncSrsFromServer(true);}catch(e){}
   try{_tgInitialReviewReady=tgPrimeReview();}catch(e){}
-  Promise.race([
-    Promise.all([_tgInitialReviewReady,_tgInitialSrsReady]),
-    new Promise(function(resolve){setTimeout(resolve,1600);})
-  ]).then(_tgInitialGo,_tgInitialGo);
-  setTimeout(_tgInitialGo,1700);
+  if(window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()){
+    Promise.all([_tgInitialReviewReady,_tgInitialSrsReady]).then(_tgInitialGo);
+  }else{
+    Promise.race([
+      Promise.all([_tgInitialReviewReady,_tgInitialSrsReady]),
+      new Promise(function(resolve){setTimeout(resolve,1600);})
+    ]).then(_tgInitialGo,_tgInitialGo);
+    setTimeout(_tgInitialGo,1700);
+  }
 }
 try { rgRenderGameBar(); } catch(e){}
 
