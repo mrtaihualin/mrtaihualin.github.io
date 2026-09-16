@@ -306,8 +306,9 @@ function srsHarness(kind) {
 test('Login Free Learning Engine clears owner projections and rejects late commits', async () => {
   const learning = read('js/games/learning-review.js');
   assert.match(learning, /ownerId: String\(currentUser\(\) && currentUser\(\)\.id \|\| ''\), ownerEpoch: ownerScope\(\)/);
-  assert.match(learning, /if \(!user \|\| context\.ownerId !== String\(user\.id \|\| ''\) \|\| context\.ownerEpoch !== ownerScope\(\)\) fail\('LEARNING_OWNER_CHANGED'\)/);
-  assert.match(learning, /SITE_AUTH\.onChange\(function \(user\) \{[\s\S]{0,220}queues = Object\.create\(null\); packets = Object\.create\(null\); rounds = Object\.create\(null\); latestRound = Object\.create\(null\)/);
+  assert.match(learning, /if \(!runtimeEnabled\(\) \|\| !user \|\| context\.ownerId !== String\(user\.id \|\| ''\) \|\| context\.ownerEpoch !== ownerScope\(\) \|\| context\.ownerGeneration !== ownerGeneration\) fail\('LEARNING_OWNER_CHANGED'\)/);
+  assert.match(learning, /SITE_AUTH\.onChange\(function \(user\) \{[\s\S]{0,220}ownerGeneration\+\+;[\s\S]{0,220}queues = Object\.create\(null\); packets = Object\.create\(null\); latestRound = Object\.create\(null\)/);
+  assert.doesNotMatch(learning.slice(learning.indexOf('SITE_AUTH.onChange')), /rounds = Object\.create\(null\)/, 'retain old-round tombstones so owner changes cannot bypass continuation');
 });
 
 test('Four games expose Login Free learning runtimes while Listening, Paid and Lego remain outside', async () => {
@@ -316,27 +317,27 @@ test('Four games expose Login Free learning runtimes while Listening, Paid and L
     const html = read(page);
     assert.match(html, /phase1-canonical-state\.js\?v=3/, page + ' canonical runtime active');
     assert.match(html, /game-account\.js\?v=6/, page + ' GameAccount runtime active');
-    assert.match(html, /reading-auth\.js\?v=34/, page + ' Login Free account runtime');
-    assert.match(html, /practice-events\.js\?v=3/, page + ' durable report runtime');
+    assert.match(html, /reading-auth\.js\?v=35/, page + ' Login Free account runtime');
+    assert.match(html, /practice-events\.js\?v=4/, page + ' durable report runtime');
     assert.match(html, /learning-review\.js\?v=\d+/, page + ' Review runtime');
   }
   const reading = read('reading-game.html');
   assert.match(reading, /phase1-canonical-state\.js\?v=3/, 'reading canonical runtime active');
   assert.match(reading, /game-account\.js\?v=6/, 'reading GameAccount runtime active');
-  assert.match(reading, /reading-auth\.js\?v=34/, 'reading Login Free account runtime');
+  assert.match(reading, /reading-auth\.js\?v=35/, 'reading Login Free account runtime');
   assert.doesNotMatch(read('listening-game.html'), /(?:tone-server|learning-review)\.js/, 'Listening learning loop stays absent');
   assert.match(read('js/games/reading-auth.js'), /API\.user = publicLoginOnly \? null : loginUser/);
   for (const page of ['my-progress.html', 'vault.html']) {
     assert.match(read(page), /phase1-canonical-state\.js\?v=3/, page + ' canonical cache');
   }
   for (const page of ['vault.html']) {
-    assert.match(read(page), /reading-auth\.js\?v=34/, page + ' reading-auth cache');
+    assert.match(read(page), /reading-auth\.js\?v=35/, page + ' reading-auth cache');
   }
   assert.doesNotMatch(read('lego.html'), /game-account\.js/);
-  assert.match(read('tone-finder.html'), /tone-finder-game\.min\.js\?v=91/);
-  assert.match(read('reading-game.html'), /reading-game-app\.min\.js\?v=60/);
-  assert.match(read('typing-game.html'), /typing-game-app\.min\.js\?v=59/);
-  assert.match(read('word-order.html'), /word-order-app\.min\.js\?v=45/);
+  assert.match(read('tone-finder.html'), /tone-finder-game\.min\.js\?v=92/);
+  assert.match(read('reading-game.html'), /reading-game-app\.min\.js\?v=61/);
+  assert.match(read('typing-game.html'), /typing-game-app\.min\.js\?v=60/);
+  assert.match(read('word-order.html'), /word-order-app\.min\.js\?v=46/);
   assert.match(read('listening-game.html'), /Preserved paused runtime: js\/games\/listening-game-app\.js\?v=19/);
   assert.doesNotMatch(read('listening-game.html'), /GameContentLoader\.boot\(\['js\/games\/listening-game-app\.js/);
 });

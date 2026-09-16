@@ -570,7 +570,7 @@ function tfContentRefForEntry(entry){if(selectedLevel===3){var sentence=advSente
 function tfReviewWordRef(entry){return {source:'game_words',key:tfWordContentKey(entry)};}
 function tfReviewSentenceRef(index){var sentence=ADV_SENTENCES[index];if(!sentence||!sentence.th)throw new Error('CATALOG_AUTHORITY_INCOMPLETE:sentence identity');return {source:'game_sentences',key:sentence.th};}
 function tfReviewOwns(entry){try{return !!(window.LearningReview&&LearningReview.owns(roundReport,tfContentRefForEntry(entry)));}catch(e){return false;}}
-function tfRegisterRestoredReview(){try{if(!window.LearningReview||!roundReport||!session)return;if(selectedLevel===3&&advSentIdx>=0){var all=ADV_SENTENCES.map(function(_,i){return i;}),selected=LearningReview.matchQueue({game:'tone',level:3,items:[advSentIdx],contentRefOf:tfReviewSentenceRef}),refKey=LearningReview.keyOfRef(tfReviewSentenceRef(advSentIdx)),group={},groupSize=advSentenceCtx&&advSentenceCtx.words?advSentenceCtx.words.length:session.words.length;group[refKey]=groupSize;LearningReview.registerRound({report:roundReport,game:'tone',level:3,allItems:all,srsOwned:all.filter(function(i){return !!tfGetSrsRecord(ADV_SENTENCES[i].th,3);}),selectedReview:selected,alreadyRetried:session.words.length>groupSize?[advSentIdx]:[],idOf:function(i){return LearningReview.keyOfRef(tfReviewSentenceRef(i));},contentRefOf:tfReviewSentenceRef,groupSizeByRef:group,retry:function(){session.words=session.words.concat(session.words.slice(0,groupSize));}});}else{var pool=WORD_LIST.filter(function(w){return w.level===selectedLevel;}),selectedWords=LearningReview.matchQueue({game:'tone',level:selectedLevel,items:session.words,contentRefOf:tfReviewWordRef}),seen=Object.create(null),duplicates=[];session.words.forEach(function(w){var key=LearningReview.keyOfRef(tfReviewWordRef(w));if(seen[key])duplicates.push(w);seen[key]=true;});LearningReview.registerRound({report:roundReport,game:'tone',level:selectedLevel,allItems:pool,srsOwned:pool.filter(function(w){return !!tfGetSrsRecord(w,tfWordLevel(w));}),selectedReview:selectedWords,alreadyRetried:duplicates,idOf:function(w){return LearningReview.keyOfRef(tfReviewWordRef(w));},contentRefOf:tfReviewWordRef,retry:function(w){session.words.push(w);}});}}catch(e){}}
+function tfRegisterRestoredReview(){try{if(!window.LearningReview||!roundReport||!session)return;if(selectedLevel===3&&advSentIdx>=0){var all=ADV_SENTENCES.map(function(_,i){return i;}),selected=LearningReview.matchQueue({game:'tone',level:3,items:[advSentIdx],contentRefOf:tfReviewSentenceRef}),refKey=LearningReview.keyOfRef(tfReviewSentenceRef(advSentIdx)),group={},groupSize=advSentenceCtx&&advSentenceCtx.words?advSentenceCtx.words.length:session.words.length;group[refKey]=groupSize;LearningReview.registerRound({report:roundReport,game:'tone',level:3,allItems:all,srsOwned:all.filter(function(i){return !!tfGetSrsRecord(ADV_SENTENCES[i].th,3);}),selectedReview:selected,alreadyRetried:session.words.length>groupSize?[advSentIdx]:[],idOf:function(i){return LearningReview.keyOfRef(tfReviewSentenceRef(i));},contentRefOf:tfReviewSentenceRef,groupSizeByRef:group,checkpoint:function(completed){tfSaveResumeState(completed);},retry:function(){session.words=session.words.concat(session.words.slice(0,groupSize));}});}else{var pool=WORD_LIST.filter(function(w){return w.level===selectedLevel;}),selectedWords=LearningReview.matchQueue({game:'tone',level:selectedLevel,items:session.words,contentRefOf:tfReviewWordRef}),seen=Object.create(null),duplicates=[];session.words.forEach(function(w){var key=LearningReview.keyOfRef(tfReviewWordRef(w));if(seen[key])duplicates.push(w);seen[key]=true;});LearningReview.registerRound({report:roundReport,game:'tone',level:selectedLevel,allItems:pool,srsOwned:pool.filter(function(w){return !!tfGetSrsRecord(w,tfWordLevel(w));}),selectedReview:selectedWords,alreadyRetried:duplicates,idOf:function(w){return LearningReview.keyOfRef(tfReviewWordRef(w));},contentRefOf:tfReviewWordRef,checkpoint:function(completed){tfSaveResumeState(completed);},retry:function(w){session.words.push(w);}});}}catch(e){if(window.LearningReview&&LearningReview.blockRound)LearningReview.blockRound(roundReport,e);}}
 function tfGetSrsRecord(entryOrWord, level) {
   if(window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()&&LearningReview.srsRecord){
     var source=Number(level)===3?'game_sentences':'game_words';
@@ -1790,7 +1790,7 @@ function tfSetupNextWord() {
 
 // เข้าหน้าสรุป + คิดโบนัสจบชุด/perfect (ครั้งเดียว)
 function tfGoToSummary() {
-  tfClearResumeState(); // E3: จบรอบปกติแล้ว ไม่ต้องเสนอ resume อีก (F5/F1 ก็เรียก session ใหม่ต่อซึ่งจะ save ทับเองอยู่แล้ว)
+  if(!window.LearningReview||!LearningReview.runtimeEnabled())tfClearResumeState(); // E3: จบรอบปกติแล้ว ไม่ต้องเสนอ resume อีก (F5/F1 ก็เรียก session ใหม่ต่อซึ่งจะ save ทับเองอยู่แล้ว)
   tfApplySessionBonus();
   S = { word: '', step: 'session-summary', path: [], tone: null };
   hist.push({ step: 'session-summary' }); histPos++;
@@ -2456,12 +2456,12 @@ function stepSessionSummary() {
     var _tfSubmissionId=null;
     try{
       if(window.READING_AUTH && READING_AUTH.saveScore) _tfSubmissionId=READING_AUTH.saveScore(weightedScore,1,'tone',scoreResults.filter(function(r){return r.mistakes>0;}).map(function(r){return {word:r.entry.word,wrong:r.mistakes||0};}),{
-        difficulty:({1:'初',2:'中',3:'高'})[selectedLevel]||'初',
+        report:roundReport,difficulty:({1:'初',2:'中',3:'高'})[selectedLevel]||'初',
         items:scoreResults.map(function(r){var ref=tfContentRefForEntry(r.entry);return {key:ref.key,contentRef:ref,points:Number(r.score)||0,wrong:Number(r.mistakes)||0,guide:!!r.hintUsed,failed:!!r.forced,skipped:!!r.skipped,mastered:false,learningEvidence:r.learningEvidence||null};}),
         roundBonus:Number(session.bonusAwarded)||0,
         srsBonus:Number(session.srsReviewBonus)||0
       });
-    }catch(e){} // S29: ยกเลิก GA interception/direct tone_sessions insert
+    }catch(e){if(window.LearningReview&&LearningReview.blockRound)LearningReview.blockRound(roundReport,e);} // S29: ยกเลิก GA interception/direct tone_sessions insert
     session.submissionLinked=true;
     if(roundReport&&window.RoundReport)RoundReport.finish(roundReport,{score:weightedScore,submission_id:_tfSubmissionId});
     tfAttachLoginSummary();
@@ -2776,19 +2776,21 @@ function tfResumeSentenceIndex(data) {
   for(var i=0;i<ADV_SENTENCES.length;i++)if(ADV_SENTENCES[i]&&ADV_SENTENCES[i].th===data.sentenceId)matches.push(i);
   if(matches.length!==1)return null;
   var sentence=ADV_SENTENCES[matches[0]];
-  if(!Array.isArray(sentence.words)||sentence.words.length!==data.wordIds.length)return null;
-  for(var j=0;j<sentence.words.length;j++){
-    if(!sentence.words[j]||sentence.words[j].th!==data.wordIds[j])return null;
+  if(!Array.isArray(sentence.words)||!sentence.words.length||
+      (data.wordIds.length!==sentence.words.length&&data.wordIds.length!==sentence.words.length*2))return null;
+  for(var j=0;j<data.wordIds.length;j++){
+    var word=sentence.words[j%sentence.words.length];
+    if(!word||word.th!==data.wordIds[j])return null;
   }
   return matches[0];
 }
-function tfSaveResumeState() {
+function tfSaveResumeState(completedCurrent) {
   try {
     if (!window.GameResume || !session || !session.words || !session.words.length) return;
     GameResume.save('tone-finder', {
       level: selectedLevel,
       wordIds: session.words.map(tfResumeWordId),
-      index: session.index,
+      index: session.index + (completedCurrent ? 1 : 0),
       total: session.words.length,
       sentenceId: (selectedLevel === 3 && advSentIdx >= 0 && ADV_SENTENCES[advSentIdx]) ? ADV_SENTENCES[advSentIdx].th : null,
       results: session.results || [],
@@ -2844,7 +2846,8 @@ function tfShowResumeBannerIfAny(data) {
 
 function tfRestoreSavedProgress(data) {
   if (!session || !data) return;
-  var idx = Math.min(Math.max(0, Number(data.index) || 0), Math.max(0, session.words.length - 1));
+  if(selectedLevel===3&&data.wordIds&&data.wordIds.length===session.words.length*2)session.words=session.words.concat(session.words.slice());
+  var idx = Math.min(Math.max(0, Number(data.index) || 0), Math.max(0, session.words.length));
   session.index = idx;
   session.results = Array.isArray(data.results) ? data.results : [];
   session.score = Number(data.score) || 0;
@@ -2854,8 +2857,7 @@ function tfRestoreSavedProgress(data) {
   roundReport = window.RoundReport ? RoundReport.restore(data.report,{game_type:'tone',difficulty:({1:'初',2:'中',3:'高'})[selectedLevel]||'初',mode:selectedCategory||'全部'}) : null;
   if(window.LearningReview)tfRegisterRestoredReview();
   hist = []; histPos = -1;
-  tfSetupNextWord();
-  tfSaveResumeState();
+  LearningReview.advance(roundReport,function(){if(session.index>=session.words.length){tfGoToSummary();return;}tfSetupNextWord();tfSaveResumeState();});
 }
 
 function startSetSession(words, opts) {
@@ -2893,6 +2895,7 @@ function startSetSession(words, opts) {
     startFired: false
   };
   roundReport = window.RoundReport ? RoundReport.create({game_type:'tone',difficulty:({1:'初',2:'中',3:'高'})[selectedLevel]||'初',mode:selectedCategory||'全部'}) : null;
+  if(window.LearningReview&&LearningReview.runtimeEnabled())tfRegisterRestoredReview();
   hist = []; histPos = -1;
   tfSetupSrsFlagsForCurrentWord();   // เช็กรอบตัดสิน Day 7 สำหรับคำแรกของ session
   session.currentWordGuideIntroPending = !!tfGuideMode && !tfCurWordNoTools();
@@ -3824,7 +3827,7 @@ var TF = {
       var _sentenceAllocation=window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()?LearningReview.allocateRuntime({game:'tone',level:3,total:1,reviewDue:_reviewSentences,srsDue:[],regular:_allSentences,idOf:function(i){return LearningReview.keyOfRef(tfReviewSentenceRef(i));},scope:'tone-3'}):{items:[Math.floor(Math.random()*ADV_SENTENCES.length)],selectedReview:[]};
       var _sentenceIndex=_sentenceAllocation.items.length?_sentenceAllocation.items[0]:Math.floor(Math.random()*ADV_SENTENCES.length);
       TF.startAdvSentence(_sentenceIndex);
-      if(window.LearningReview&&LearningReview.registerRound){var _sentenceRefKey=LearningReview.keyOfRef(tfReviewSentenceRef(_sentenceIndex)),_group={};_group[_sentenceRefKey]=session&&session.words?session.words.length:1;LearningReview.registerRound({report:roundReport,game:'tone',level:3,allItems:_allSentences,srsOwned:_allSentences.filter(function(i){return !!tfGetSrsRecord(ADV_SENTENCES[i].th,3);}),selectedReview:_sentenceAllocation.selectedReview,idOf:function(i){return LearningReview.keyOfRef(tfReviewSentenceRef(i));},contentRefOf:tfReviewSentenceRef,groupSizeByRef:_group,retry:function(){if(session&&session.words&&session.words.length){session.words=session.words.concat(session.words.slice());}}});}
+      if(window.LearningReview&&LearningReview.registerRound){var _sentenceRefKey=LearningReview.keyOfRef(tfReviewSentenceRef(_sentenceIndex)),_group={};_group[_sentenceRefKey]=session&&session.words?session.words.length:1;LearningReview.registerRound({report:roundReport,game:'tone',level:3,allItems:_allSentences,srsOwned:_allSentences.filter(function(i){return !!tfGetSrsRecord(ADV_SENTENCES[i].th,3);}),selectedReview:_sentenceAllocation.selectedReview,idOf:function(i){return LearningReview.keyOfRef(tfReviewSentenceRef(i));},contentRefOf:tfReviewSentenceRef,groupSizeByRef:_group,checkpoint:function(completed){tfSaveResumeState(completed);},retry:function(){if(session&&session.words&&session.words.length){session.words=session.words.concat(session.words.slice());}}});}
       return;
     }
     // F5 (2026-08-10): จำ "คำสุดท้ายของชุดก่อนหน้า" ไว้ก่อนที่ session ตัวแปรจะถูกทับด้วยชุดใหม่ (ใช้กันคำแรกของชุดใหม่ซ้ำกับคำสุดท้ายของชุดก่อน)
@@ -3864,7 +3867,7 @@ var TF = {
       var _tmp = words[0]; words[0] = words[1]; words[1] = _tmp;
     }
     startSetSession(words,{keepOrder:true});
-    if(window.LearningReview&&LearningReview.registerRound)LearningReview.registerRound({report:roundReport,game:'tone',level:selectedLevel,allItems:pool,srsOwned:_srsOwned,selectedReview:_reviewSelected,idOf:function(w){return LearningReview.keyOfRef(tfReviewWordRef(w));},contentRefOf:tfReviewWordRef,retry:function(w){if(session&&session.words)session.words.push(w);}});
+    if(window.LearningReview&&LearningReview.registerRound)LearningReview.registerRound({report:roundReport,game:'tone',level:selectedLevel,allItems:pool,srsOwned:_srsOwned,selectedReview:_reviewSelected,idOf:function(w){return LearningReview.keyOfRef(tfReviewWordRef(w));},contentRefOf:tfReviewWordRef,checkpoint:function(completed){tfSaveResumeState(completed);},retry:function(w){if(session&&session.words)session.words.push(w);}});
   },
   // Lin 2026-07-04: ตัด selectCategory/selectSet/openSpecial ทิ้งแล้ว — หน้าเลือกหมวด/ชุด + 特訓區 ไม่ใช้แล้ว
   // ⭐ Lin 2026-07-25: ปุ่มดาว แยกออกจากปุ่ม勳章(showBadges) — โชว์แค่จำนวนดาวสะสม ไม่มีตารางแบดจ์

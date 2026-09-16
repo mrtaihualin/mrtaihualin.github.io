@@ -43,7 +43,7 @@
   // v18 (LIN 2026-08-10, P7-02 C.5): openLoginGate ให้หน้าอื่น (game-content-client.js แถบแจ้ง
   //   "เนื้อหาฟรีหมดแล้ว") เปิด modal ล็อกอินเดียวกันนี้ได้ตรงๆ โดยไม่ต้องหาปุ่ม #rg-login-btn เอง
   var loginUser = null;
-  var API = { ready: true, user: null, srsUser: null, saveScore: saveScore, render: render, startLineLink: function () { startLineLogin(true); }, openLoginGate: openGate };
+  var API = { ready: true, user: null, srsUser: null, saveScore: saveScore, settleScore: settleScore, render: render, startLineLink: function () { startLineLogin(true); }, openLoginGate: openGate };
   window.READING_AUTH = API;
 
   function slot() { return document.getElementById('rg-login-slot'); }
@@ -776,32 +776,84 @@
       saveToast('⚠️ 分數儲存失敗：' + msg, false);
       try { if (window.gtag) gtag('event','score_save_fail',{category:'game', reason: String(msg).slice(0, 90), game: gm }); } catch (e) {}
     }
-    function requestScoreSubmit() {
-      if (!window.NetworkGuard || !NetworkGuard.request) {
-        return Promise.reject(new Error('網路保護尚未就緒'));
-      }
-      return NetworkGuard.request(function () {
-        return sb.functions.invoke('score-submit', { body: payload });
-      }, 'score-submit', {}, 12000, null);
+    if (proof.report) {
+      var report = proof.report;
+      if (report.score_save && report.score_save.payload) payload = report.score_save.payload;
+      else report.score_save = { payload: JSON.parse(JSON.stringify(payload)), status: 'pending' };
+      if (!persistScore(report)) throw new Error('SCORE_RECOVERY_STORAGE_UNAVAILABLE');
+      settleScore(report).catch(function () {});
+    } else {
+      // Preserve the parked/non-learning caller contract, with an owner-bound request.
+      sendScore(payload, API.user.id, Number(window.SITE_AUTH && SITE_AUTH.learningOwnerEpoch) || 0).catch(function (e) { onFail(e.code || 'score_save_failed'); });
     }
-    function submit(attempt) {
-      try {
-        requestScoreSubmit().then(function (res) {
-          if (!res.error && res.data && res.data.ok) {
-            saveToast('✅ 分數已驗證並儲存 +' + res.data.score + ' 分', true);
-            return;
-          }
-          if (attempt === 0) { setTimeout(function () { submit(1); }, 800); return; }
-          onFail((res.error && res.error.message) || (res.data && res.data.error) || '伺服器驗證失敗');
-        }, function (e) {
-          if (attempt === 0) { setTimeout(function () { submit(1); }, 800); return; }
-          onFail(e && e.message || '網路錯誤');
-        });
-      } catch (e) { onFail(e && e.message || String(e)); }
-    }
-    submit(0);
-    if (window.GAME_ACCOUNT && GAME_ACCOUNT.sync) { try { GAME_ACCOUNT.sync(sb, API.user.id); } catch (e) {} }
     return payload.submission_id;
+  }
+  var scoreSaveJobs = Object.create(null);
+  var scoreSaveOwners = new WeakMap();
+  function persistScore(report) {
+    var gameId = { tone: 'tone-finder', reading: 'reading-game', typing: 'typing-game', word_order: 'word-order', wordorder: 'word-order' }[String(report.game_type || '')];
+    if (!gameId || !window.GameResume) return false;
+    var saved = GameResume.load(gameId);
+    if (saved && saved.report && saved.report.round_id === report.round_id) {
+      saved.report.score_save = JSON.parse(JSON.stringify(report.score_save));
+      GameResume.save(gameId, saved);
+      var stored = GameResume.load(gameId);
+      return !!(stored && stored.report && stored.report.round_id === report.round_id && JSON.stringify(stored.report.score_save) === JSON.stringify(report.score_save));
+    }
+    return false;
+  }
+  function scoreOwnerCurrent(id, epoch) {
+    return !!(API.user && API.user.id === id && (!window.SITE_AUTH || (SITE_AUTH.user && SITE_AUTH.user.id === id && (Number(SITE_AUTH.learningOwnerEpoch) || 0) === epoch)));
+  }
+  function sendScore(payload, id, epoch) {
+    function attempt(remaining) {
+      if (!scoreOwnerCurrent(id, epoch)) return Promise.reject(new Error('SCORE_OWNER_CHANGED'));
+      if (!window.NetworkGuard || !NetworkGuard.request) return Promise.reject(new Error('SCORE_TRANSPORT_UNAVAILABLE'));
+      return NetworkGuard.request(function (_, options) {
+        if (!scoreOwnerCurrent(id, epoch)) throw new Error('SCORE_OWNER_CHANGED');
+        return sb.functions.invoke('score-submit', { body: payload, signal: options && options.signal });
+      }, 'score-submit', {}, 12000).then(function (res) {
+        if (!scoreOwnerCurrent(id, epoch)) throw new Error('SCORE_OWNER_CHANGED');
+        if (!res || res.error || !res.data || res.data.ok !== true || Number(res.data.score) !== payload.client_score) {
+          var error = new Error('SCORE_SAVE_UNAVAILABLE');
+          error.status = res && res.error && res.error.context && res.error.context.status;
+          throw error;
+        }
+        if (window.GAME_ACCOUNT && GAME_ACCOUNT.sync) { try { GAME_ACCOUNT.sync(sb, id); } catch (_) {} }
+        return res.data;
+      }).catch(function (error) {
+        var terminal = error.message === 'SCORE_OWNER_CHANGED' || (error.status >= 400 && error.status < 500 && error.status !== 408 && error.status !== 429);
+        if (remaining && !terminal) return new Promise(function (resolve) { setTimeout(resolve, 800); }).then(function () { return attempt(remaining - 1); });
+        throw error;
+      });
+    }
+    return attempt(1);
+  }
+  function settleScore(report) {
+    var record = report && report.score_save;
+    if (!record) return Promise.resolve(true); // Guest, admin and practice remain outside score writes.
+    var id = API.user && API.user.id, epoch = Number(window.SITE_AUTH && SITE_AUTH.learningOwnerEpoch) || 0;
+    if (!id) return Promise.reject(new Error('SCORE_OWNER_CHANGED'));
+    var bound = scoreSaveOwners.get(record);
+    if (bound && (bound.id !== id || bound.epoch !== epoch)) return Promise.reject(new Error('SCORE_OWNER_CHANGED'));
+    scoreSaveOwners.set(record, { id: id, epoch: epoch });
+    if (record.status === 'committed') return Promise.resolve(true);
+    var key = id + ':' + epoch + ':' + record.payload.submission_id;
+    if (scoreSaveJobs[key]) return scoreSaveJobs[key];
+    record.status = 'pending';
+    if (!persistScore(report)) return Promise.reject(new Error('SCORE_RECOVERY_STORAGE_UNAVAILABLE'));
+    var pending = sendScore(record.payload, id, epoch).then(function (result) {
+      record.status = 'committed'; persistScore(report);
+      saveToast('✅ 分數已驗證並儲存 +' + result.score + ' 分', true);
+      return true;
+    }, function (error) {
+      if (scoreOwnerCurrent(id, epoch)) { record.status = 'failed'; persistScore(report); }
+      throw error;
+    });
+    scoreSaveJobs[key] = pending;
+    function clear() { if (scoreSaveJobs[key] === pending) delete scoreSaveJobs[key]; }
+    pending.then(clear, clear);
+    return pending;
   }
 
   // ── session กลาง: ใช้ window.SITE_AUTH (auth-widget.js) ถ้ามี — client เดียวกับทุกหน้า ──

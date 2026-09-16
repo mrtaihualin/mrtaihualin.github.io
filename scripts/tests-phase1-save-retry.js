@@ -62,7 +62,7 @@ test('server Learning Engine protects retry and concurrent duplicate writes', ()
 test('client score retry reuses one idempotent payload', () => {
   assert.match(readingAuth, /submission_id: scoreSubmissionId\(\)/);
   assert.strictEqual((readingAuth.match(/submission_id: scoreSubmissionId\(\)/g) || []).length, 1);
-  assert.match(readingAuth, /if \(attempt === 0\) \{ setTimeout\(function \(\) \{ submit\(1\); \}, 800\); return; \}/);
+  assert.match(readingAuth, /if \(remaining && !terminal\)[\s\S]{0,180}setTimeout\(resolve, 800\)[\s\S]{0,100}attempt\(remaining - 1\)/);
   assert.match(readingAuth, /return payload\.submission_id;/);
   assert.match(scoreSql, /submission_id uuid primary key/);
   assert.match(scoreSubmit, /phase1_score_submit_commit/);
@@ -75,10 +75,11 @@ test('round retry reuses one idempotent operation payload', () => {
   assert.match(toneServer, /functions\.invoke\('tone-round', \{ body: payload \}\)/);
 });
 test('hung client score submissions time out before the same payload retries once', () => {
-  assert.match(readingAuth, /function requestScoreSubmit\(\)/);
-  assert.match(readingAuth, /NetworkGuard\.request\(function \(\) \{[\s\S]{0,120}sb\.functions\.invoke\('score-submit', \{ body: payload \}\);[\s\S]{0,80}'score-submit', \{\}, 12000, null\)/);
+  assert.match(readingAuth, /function sendScore\(payload, id, epoch\)/);
+  assert.match(readingAuth, /NetworkGuard\.request\(function \(_, options\) \{[\s\S]{0,180}sb\.functions\.invoke\('score-submit', \{ body: payload, signal: options && options.signal \}\);[\s\S]{0,80}'score-submit', \{\}, 12000\)/);
   assert.match(readingAuth, /if \(!window\.NetworkGuard \|\| !NetworkGuard\.request\)[\s\S]{0,120}Promise\.reject/);
-  assert.strictEqual((readingAuth.match(/submit\(1\)/g) || []).length, 2);
+  assert.match(readingAuth, /return attempt\(1\);/);
+  assert.match(readingAuth, /error.status !== 408 && error.status !== 429/);
 });
 test('personal vault saves and deletes use bounded owner-safe online retry', () => {
   assert.match(wordVault, /function _handleOnline\(\)[\s\S]*_flushPendingDeletes\(owner\)[\s\S]*_flushPendingSaves\(owner\)/);
@@ -92,16 +93,16 @@ test('Login Core exposes idempotent SRS and Review transaction clients', () => {
   ['tone-finder.html','reading-game.html','typing-game.html','word-order.html'].forEach((page) => {
     const html = read(page);
     assert.match(html, /network-guard\.js\?v=1/);
-    assert.match(html, /reading-auth\.js\?v=34/);
-    assert.match(html, /learning-review\.js\?v=8/);
+    assert.match(html, /reading-auth\.js\?v=35/);
+    assert.match(html, /learning-review\.js\?v=9/);
     assert.match(html, /game-account\.js\?v=6/);
-    assert.match(html, /practice-events\.js\?v=3/);
+    assert.match(html, /practice-events\.js\?v=4/);
     if (page === 'tone-finder.html') assert.match(html, /tone-server\.js\?v=6/);
     else assert.doesNotMatch(html, /tone-server\.js/);
   });
   const reading = read('reading-game.html');
   assert.match(reading, /network-guard\.js\?v=1/);
-  assert.match(reading, /reading-auth\.js\?v=34/);
+  assert.match(reading, /reading-auth\.js\?v=35/);
   assert.match(learningReview, /action: 'learning_queue'/);
   assert.match(learningReview, /action: 'learning_commit'/);
   assert.match(readingAuth, /if \(publicLoginOnly\) return null;/);

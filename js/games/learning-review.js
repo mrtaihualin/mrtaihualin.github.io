@@ -14,6 +14,7 @@
   var packets = Object.create(null);
   var rounds = Object.create(null);
   var latestRound = Object.create(null);
+  var ownerGeneration = 0;
 
   function fail(code) { var error = new Error(code); error.code = code; throw error; }
   function normalizeGame(value) {
@@ -139,7 +140,11 @@
       root.LOGIN_FREE_REVIEW_PUBLIC_ENTRY === true && currentUser());
   }
   function ownerScope() { return String(root && root.SITE_AUTH && root.SITE_AUTH.learningOwnerEpoch || 0); }
-  function runtimeKey(game, level) { return ownerScope() + ':' + normalizeGame(game) + ':' + normalizeLevel(level); }
+  function runtimeKey(game, level) { return String(currentUser() && currentUser().id || '') + ':' + ownerScope() + ':' + normalizeGame(game) + ':' + normalizeLevel(level); }
+  function assertOwner(context) {
+    var user = currentUser();
+    if (!runtimeEnabled() || !user || context.ownerId !== String(user.id || '') || context.ownerEpoch !== ownerScope() || context.ownerGeneration !== ownerGeneration) fail('LEARNING_OWNER_CHANGED');
+  }
   function uuid() {
     try { if (root.crypto && root.crypto.randomUUID) return root.crypto.randomUUID(); } catch (e) {}
     var bytes = new Uint8Array(16);
@@ -153,10 +158,11 @@
     if (!sb || !sb.functions || !root.NetworkGuard || typeof root.NetworkGuard.request !== 'function') {
       return Promise.reject(new Error('TRANSPORT_UNAVAILABLE'));
     }
+    var owner = { ownerId: String(currentUser() && currentUser().id || ''), ownerEpoch: ownerScope(), ownerGeneration: ownerGeneration };
     function attempt(remaining) {
-      return root.NetworkGuard.request(function () {
-        return sb.functions.invoke('score-submit', { body: body });
-      }, 'score-submit:learning-review', {}, 12000, null).then(function (response) {
+      return root.NetworkGuard.request(function (_, options) {
+        assertOwner(owner);
+        return Promise.resolve(sb.functions.invoke('score-submit', { body: body, signal: options && options.signal })).then(function (response) {
         if (response && !response.error && response.data) return response.data;
         var status = null, context = null;
         try { context = response && response.error && response.error.context; status = context && context.status; } catch (e) {}
@@ -171,30 +177,109 @@
           if (payload && payload.snapshot) error.snapshot = payload.snapshot;
           throw error;
         });
-      }).catch(function (error) {
-        if (remaining > 0) return new Promise(function (resolve) { setTimeout(resolve, 500); }).then(function () { return attempt(remaining - 1); });
+        });
+      }, 'score-submit:learning-review', {}, 12000).catch(function (error) {
+        var terminal = error && (error.code === 'LEARNING_OWNER_CHANGED' || (error.status >= 400 && error.status < 500 && error.status !== 408 && error.status !== 429));
+        if (remaining > 0 && !terminal) return new Promise(function (resolve) { setTimeout(resolve, 500); }).then(function () { return attempt(remaining - 1); });
         throw error;
       });
     }
     return attempt(1);
   }
   function runtimeClient() { return create({ enabled: runtimeEnabled(), invoke: browserInvoke }); }
+  function resumeId(game) { return { tone: 'tone-finder', reading: 'reading-game', typing: 'typing-game', word_order: 'word-order' }[game]; }
+  function readResume(game) {
+    try { return root.GameResume && root.GameResume.load(resumeId(game)); } catch (_) { return null; }
+  }
+  function saveResumeJournal(game, roundId, journal) {
+    var saved = readResume(game);
+    if (saved && saved.report && saved.report.round_id === roundId && root.GameResume) {
+      saved.report.learning_save = JSON.parse(JSON.stringify(journal));
+      root.GameResume.save(resumeId(game), saved);
+    }
+  }
+  function journalOf(context) {
+    return { version: ENGINE_VERSION, game: context.game, level: context.level,
+      jobs: context.jobs.map(function (job) {
+        return { operationId: job.operationId, item: job.item, refKey: job.refKey, itemId: job.itemId,
+          expectedState: job.expectedState, expectedStateToken: job.expectedStateToken,
+          attemptKind: job.attemptKind, status: job.status, result: job.result };
+      }), groupBuffers: context.groupBuffers, seen: Object.keys(context.seenItems).map(function (key) {
+        return { ordinal: key, signature: context.seenItems[key].signature };
+      }), failures: context.failures.map(function (error) { return String(error.code || error.message); }) };
+  }
+  function persistContext(context, checkpoint) {
+    var journal = journalOf(context);
+    context.report.learning_save = JSON.parse(JSON.stringify(journal));
+    if (checkpoint) context.checkpoint(true);
+    saveResumeJournal(context.game, context.roundId, journal);
+    if (context.requiresCheckpoint) {
+      var saved = readResume(context.game);
+      if (!saved || !saved.report || saved.report.round_id !== context.roundId ||
+          JSON.stringify(saved.report.learning_save) !== JSON.stringify(journal)) fail('LEARNING_RECOVERY_STORAGE_UNAVAILABLE');
+    }
+  }
+  function recoverResume(game, level, owner) {
+    var saved = readResume(game), journal = saved && saved.report && saved.report.learning_save;
+    if (!journal || journal.version !== ENGINE_VERSION || journal.game !== game || journal.level !== level) return Promise.resolve();
+    if (journal.failures && journal.failures.length) return Promise.reject(new Error(journal.failures[0]));
+    var chain = Promise.resolve();
+    (journal.jobs || []).forEach(function (job) {
+      if (job.status === 'committed') return;
+      chain = chain.then(function () {
+        assertOwner(owner);
+        if (assertItemIdentity(job.item) !== job.refKey) fail('CONTENT_REF_IDENTITY_MISMATCH');
+        return runtimeClient().commit({ game: game, level: level, roundId: saved.report.round_id,
+          operationId: job.operationId, item: job.item, expectedState: job.expectedState,
+          expectedStateToken: job.expectedStateToken, attemptKind: job.attemptKind });
+      }).then(function (result) {
+        assertOwner(owner);
+        if (result.operation_id !== job.operationId || keyOfRef(result.snapshot.content_ref) !== job.refKey ||
+            !result.snapshot.state_token || !job.itemId || result.snapshot.item_id !== job.itemId) fail('LEARNING_COMMIT_IDENTITY_MISMATCH');
+        job.status = 'committed'; job.result = result;
+        saveResumeJournal(game, saved.report.round_id, journal);
+      });
+    });
+    return chain.then(function () {
+      assertOwner(owner);
+      if (saved.report.score_save) {
+        if (!root.READING_AUTH || !root.READING_AUTH.settleScore) fail('SCORE_TRANSPORT_UNAVAILABLE');
+        return root.READING_AUTH.settleScore(saved.report);
+      }
+    }).then(function () {
+      assertOwner(owner);
+      if (saved.report.ended_at) {
+        if (!root.PracticeEvents || !root.PracticeEvents.submitReport) fail('PRACTICE_TRANSPORT_UNAVAILABLE');
+        return root.PracticeEvents.submitReport(saved.report).then(function (ok) { if (ok !== true) fail('PRACTICE_SAVE_UNAVAILABLE'); });
+      }
+    });
+  }
 
   function prime(options) {
     options = options || {};
     if (!runtimeEnabled()) return Promise.resolve([]);
     var key;
     try { key = runtimeKey(options.game, options.level); } catch (e) { return Promise.resolve([]); }
-    return runtimeClient().loadQueue({ game: normalizeGame(options.game), level: normalizeLevel(options.level),
+    var owner = { ownerId: String(currentUser().id || ''), ownerEpoch: ownerScope(), ownerGeneration: ownerGeneration };
+    return recoverResume(normalizeGame(options.game), normalizeLevel(options.level), owner).then(function () {
+      assertOwner(owner);
+      return runtimeClient().loadQueue({ game: normalizeGame(options.game), level: normalizeLevel(options.level),
       playSetSize: options.playSetSize, roundId: options.roundId })
+    })
       .then(function (packet) {
+        assertOwner(owner);
         packets[key] = packet;
         queues[key] = packet.review_due.slice();
         return packet;
       })
       .catch(function (error) {
+        if (owner.ownerGeneration !== ownerGeneration) throw error;
         delete packets[key]; queues[key] = [];
-        throw error;
+        assertOwner(owner);
+        return new Promise(function (resolve, reject) {
+          function retry() { prime(options).then(resolve, reject); }
+          if (!showRecovery({ roundId: options.roundId || '', game: options.game }, retry, error)) reject(error);
+        });
       });
   }
   function queue(options) {
@@ -282,22 +367,41 @@
     var context = {
       roundId: String(options.report.round_id), game: game, level: level,
       ownerId: String(currentUser() && currentUser().id || ''), ownerEpoch: ownerScope(),
+      ownerGeneration: ownerGeneration,
+      report: options.report, requiresCheckpoint: typeof options.checkpoint === 'function', checkpoint: typeof options.checkpoint === 'function' ? options.checkpoint : function () {},
       srs: srs, due: due, original: original, snapshots: states, retried: Object.create(null),
       groupSize: options.groupSizeByRef || Object.create(null), groupBuffers: Object.create(null),
-      pending: Promise.resolve(), jobs: [], advancePending: false,
+      pending: Promise.resolve(), jobs: [], failures: [], seenItems: Object.create(null), advancePending: false, settlePending: null,
       retry: typeof options.retry === 'function' ? options.retry : function () {},
     };
     (options.alreadyRetried || []).forEach(function (item) { context.retried[keyOfRef(contentRefOf(item))] = true; });
     rounds[context.roundId] = context;
     latestRound[runtimeKey(game, level)] = context.roundId;
+    var saved = readResume(game);
+    var journal = saved && saved.report && saved.report.round_id === context.roundId ? saved.report.learning_save : options.report.learning_save;
+    if (journal && journal.version === ENGINE_VERSION && journal.game === game && journal.level === level) {
+      context.groupBuffers = journal.groupBuffers || Object.create(null);
+      context.failures = (journal.failures || []).map(function (code) { return new Error(code); });
+      context.jobs = (journal.jobs || []).map(function (job) {
+        if (assertItemIdentity(job.item) !== job.refKey || !Object.prototype.hasOwnProperty.call(original,job.refKey)) fail('CONTENT_REF_NOT_IN_ROUND');
+        return Object.assign({}, job, { status: job.status === 'committed' ? 'committed' : 'failed', error: null });
+      });
+      (journal.seen || []).forEach(function (row) { context.seenItems[row.ordinal] = { signature: row.signature, pending: Promise.resolve({ ok: true, restored: true }) }; });
+      context.jobs.forEach(function (job) { if (job.result && job.result.to_state === 'retry_end_round') scheduleRetry(context, job.refKey); });
+      persistContext(context, false);
+    }
     return context;
   }
   function contextFor(reportOrId) {
     var id = typeof reportOrId === 'string' ? reportOrId : reportOrId && reportOrId.round_id;
     var context = id ? rounds[String(id)] || null : null;
     var user = currentUser();
-    if (!context || !user || context.ownerId !== String(user.id || '') || context.ownerEpoch !== ownerScope()) return null;
+    if (!context || !user || context.ownerId !== String(user.id || '') || context.ownerEpoch !== ownerScope() || context.ownerGeneration !== ownerGeneration) return null;
     return context;
+  }
+  function managedContext(reportOrId) {
+    var id = typeof reportOrId === 'string' ? reportOrId : reportOrId && reportOrId.round_id;
+    return id ? rounds[String(id)] || null : null;
   }
   function owns(reportOrId, ref) {
     var context = contextFor(reportOrId);
@@ -352,24 +456,41 @@
     return refKey;
   }
   function runJob(context, job) {
+    var firstSend = job.status === 'queued';
     job.status = 'pending'; job.error = null;
-    return runtimeClient().commit({
+    return Promise.resolve().then(function () {
+      assertOwner(context);
+      if (context.failures.length) throw context.failures[0];
+      if (context.jobs.some(function (other) { return other !== job && other.refKey === job.refKey && context.jobs.indexOf(other) < context.jobs.indexOf(job) && other.status !== 'committed'; })) fail('LEARNING_PREVIOUS_COMMIT_REQUIRED');
+      if (firstSend) {
+        var expected = context.snapshots[job.refKey];
+        job.expectedState = String(expected.state); job.expectedStateToken = String(expected.state_token);
+      }
+      persistContext(context, false);
+      return runtimeClient().commit({
       game: context.game, level: context.level, roundId: context.roundId,
       operationId: job.operationId, item: job.item,
       expectedState: job.expectedState, expectedStateToken: job.expectedStateToken,
       attemptKind: job.attemptKind,
+      });
     }).then(function (result) {
-      var user = currentUser();
-      if (!user || context.ownerId !== String(user.id || '') || context.ownerEpoch !== ownerScope()) fail('LEARNING_OWNER_CHANGED');
+      assertOwner(context);
+      if (!result.snapshot || keyOfRef(result.snapshot.content_ref) !== job.refKey || !result.snapshot.state_token ||
+          result.snapshot.item_id !== job.itemId || result.operation_id !== job.operationId) fail('LEARNING_COMMIT_IDENTITY_MISMATCH');
       job.status = 'committed'; job.result = result;
       if (result.snapshot && result.snapshot.content_ref) {
         context.snapshots[job.refKey] = result.snapshot;
+        var packet = packets[runtimeKey(context.game, context.level)];
+        if (packet) packet.snapshots = packet.snapshots.map(function (row) { return keyOfRef(row.content_ref) === job.refKey ? result.snapshot : row; });
       }
       if (result.to_state === 'retry_end_round') scheduleRetry(context, job.refKey);
+      persistContext(context, false);
       return result;
     }).catch(function (error) {
       if (error && error.snapshot && error.snapshot.content_ref) context.snapshots[job.refKey] = error.snapshot;
       job.status = 'failed'; job.error = error;
+      // Never persist an old owner's journal into the newly selected account.
+      if (contextFor(context.roundId)) { try { persistContext(context, false); } catch (_) {} }
       throw error;
     });
   }
@@ -383,17 +504,52 @@
     } catch (_) {}
   }
   function processItem(report, item) {
-    var context = contextFor(report);
-    if (!context || !runtimeEnabled()) return Promise.resolve({ ok: false, reason: 'not_owned' });
-    if (item && item.is_skipped === true) return Promise.resolve({ ok: true, skipped: true });
+    var context = managedContext(report);
+    if (!context) return Promise.resolve({ ok: false, reason: 'not_owned' });
+    try {
+      assertOwner(context);
+      var pending = enqueueItem(context, item);
+      return pending;
+    } catch (error) {
+      context.failures.push(error);
+      context.pending.catch(function () {});
+      if (contextFor(context.roundId)) { try { persistContext(context, false); } catch (_) {} }
+      return Promise.reject(error);
+    }
+  }
+  function enqueueItem(context, item) {
     var refKey = assertItemIdentity(item);
-    if (!refKey || !Object.prototype.hasOwnProperty.call(context.original, refKey)) return Promise.resolve({ ok: false, reason: 'not_owned' });
+    if (context.report.learning_exempt !== true && !Object.prototype.hasOwnProperty.call(context.original, refKey)) fail('CONTENT_REF_NOT_IN_ROUND');
+    var ordinal = Number(item.ordinal), seenKey = Number.isInteger(ordinal) && ordinal > 0 ? String(ordinal) : null;
+    var signature = JSON.stringify(item);
+    if (seenKey && context.seenItems[seenKey]) {
+      var previous = context.seenItems[seenKey];
+      if (previous.signature !== signature) fail('LEARNING_ATTEMPT_CONFLICT');
+      return previous.pending;
+    }
+    var pending = enqueueAttempt(context, item, refKey);
+    if (seenKey) context.seenItems[seenKey] = { signature: signature, pending: pending };
+    persistContext(context, true);
+    return pending;
+  }
+  function blockRound(reportOrId, error) {
+    var context = managedContext(reportOrId);
+    if (!context || !contextFor(reportOrId)) return;
+    context.failures.push(error || new Error('LEARNING_EVIDENCE_REQUIRED'));
+    try { persistContext(context, false); } catch (storageError) { context.failures.push(storageError); }
+    emitSaveError(context, error);
+  }
+  function enqueueAttempt(context, item, refKey) {
+    if (context.report.learning_exempt === true) return Promise.resolve({ ok: true, exempt: true });
     var groupSize = Math.max(1, Math.floor(Number(context.groupSize[refKey]) || 1));
     if (groupSize > 1) {
       var buffer = context.groupBuffers[refKey] || [];
       buffer.push(item); context.groupBuffers[refKey] = buffer;
       if (buffer.length < groupSize) return Promise.resolve({ ok: true, pending_group: true });
       var group = buffer.splice(0, groupSize);
+      // A sentence with a skipped component has no complete learning evidence.
+      // Keep all raw rows in RoundReport; never turn the skip into a scored answer.
+      if (group.some(function (row) { return row.is_skipped === true; })) return Promise.resolve({ ok: true, skipped: true });
       item = Object.assign({}, group[0], {
         key: group[0].content_ref.key,
         wrong_count: group.reduce(function (sum, row) { return sum + (Number(row.wrong_count) || 0); }, 0),
@@ -405,11 +561,12 @@
         },
       });
     }
+    if (item.is_skipped === true) return Promise.resolve({ ok: true, skipped: true });
     var expected = context.snapshots[refKey];
-    if (!expected || !expected.state || !expected.state_token || expected.state === 'legacy_identity_unresolved') {
-      return Promise.reject(Object.assign(new Error('LEARNING_SNAPSHOT_REQUIRED'), { code: 'LEARNING_SNAPSHOT_REQUIRED' }));
+    if (!expected || !expected.item_id || !expected.state || !expected.state_token || expected.state === 'legacy_identity_unresolved') {
+      fail('LEARNING_SNAPSHOT_REQUIRED');
     }
-    var job = { operationId: uuid(), item: item, refKey: refKey,
+    var job = { operationId: uuid(), item: item, refKey: refKey, itemId: expected.item_id,
       expectedState: String(expected.state), expectedStateToken: String(expected.state_token),
       attemptKind: item.learning_action === 'known_check' ? 'known_check' : 'answer',
       status: 'queued', error: null, result: null };
@@ -418,20 +575,28 @@
     return context.pending;
   }
   function settle(reportOrId) {
-    var context = contextFor(reportOrId);
-    if (!context || !runtimeEnabled()) return Promise.resolve([]);
-    return context.pending.catch(function () {}).then(function () {
+    var context = managedContext(reportOrId);
+    if (!context) return runtimeEnabled() ? Promise.reject(new Error('LEARNING_ROUND_REQUIRED')) : Promise.resolve([]);
+    if (context.settlePending) return context.settlePending;
+    var pending = context.pending.catch(function () {}).then(function () {
+      assertOwner(context);
+      if (context.failures.length) throw context.failures[0];
       var failed = context.jobs.filter(function (job) { return job.status === 'failed'; });
       var retryChain = Promise.resolve();
       failed.forEach(function (job) {
         retryChain = retryChain.then(function () { return runJob(context, job); });
       });
       return retryChain.then(function () {
+        assertOwner(context);
         var unresolved = context.jobs.filter(function (job) { return job.status !== 'committed'; });
         if (unresolved.length) throw unresolved[0].error || new Error('REVIEW_COMMIT_UNAVAILABLE');
         return context.jobs.map(function (job) { return job.result; });
       });
     });
+    context.settlePending = pending;
+    function clear() { if (context.settlePending === pending) context.settlePending = null; }
+    pending.then(clear, clear);
+    return pending;
   }
   function removeRecovery() {
     try { var old = root.document && root.document.getElementById('gsh-learning-save-recovery'); if (old) old.remove(); } catch (_) {}
@@ -448,14 +613,34 @@
     button.onclick = function () { button.disabled = true; button.textContent = '儲存中…'; retry(); };
     box.appendChild(button); root.document.body.appendChild(box); return true;
   }
-  function advance(reportOrId, callback) {
-    var context = contextFor(reportOrId);
-    if (!context || !runtimeEnabled()) { callback(); return Promise.resolve(true); }
+  function settleResult(report) {
+    return settle(report).then(function () {
+      var context = managedContext(report); assertOwner(context);
+      if (root.READING_AUTH && root.READING_AUTH.settleScore) return root.READING_AUTH.settleScore(report);
+      if (report.score_save) fail('SCORE_TRANSPORT_UNAVAILABLE');
+    }).then(function () {
+      assertOwner(managedContext(report));
+      if (!root.PracticeEvents || !root.PracticeEvents.submitReport) fail('PRACTICE_TRANSPORT_UNAVAILABLE');
+      return root.PracticeEvents.submitReport(report);
+    }).then(function (ok) {
+      assertOwner(managedContext(report));
+      if (ok !== true) fail('PRACTICE_SAVE_UNAVAILABLE');
+    });
+  }
+  function advanceResult(report, callback) { return advanceWithGate(report, callback, true); }
+  function advance(reportOrId, callback) { return advanceWithGate(reportOrId, callback, false); }
+  function advanceWithGate(reportOrId, callback, resultGate) {
+    var context = managedContext(reportOrId);
+    if (!context) {
+      if (runtimeEnabled()) return Promise.reject(new Error('LEARNING_ROUND_REQUIRED'));
+      callback(); return Promise.resolve(true);
+    }
     if (context.advancePending) return context.advancePending;
     function attempt() {
-      context.advancePending = settle(reportOrId).then(function () {
+      context.advancePending = (resultGate ? settleResult(reportOrId) : settle(reportOrId)).then(function () {
+        assertOwner(context);
         context.advancePending = false; removeRecovery(); callback(); return true;
-      }).catch(function (error) {
+      }, function (error) {
         context.advancePending = false; emitSaveError(context, error);
         if (!showRecovery(context, attempt, error)) throw error;
         return false;
@@ -481,7 +666,8 @@
     root.addEventListener('gsh:item-complete', handleItemComplete);
     try {
       if (root.SITE_AUTH && root.SITE_AUTH.onChange) root.SITE_AUTH.onChange(function (user) {
-        queues = Object.create(null); packets = Object.create(null); rounds = Object.create(null); latestRound = Object.create(null);
+        ownerGeneration++;
+        queues = Object.create(null); packets = Object.create(null); latestRound = Object.create(null);
       });
     } catch (e) {}
   }
@@ -503,12 +689,15 @@
     registerRound: registerRound,
     owns: owns,
     ownsCurrent: ownsCurrent,
+    roundCurrent: function (report) { return !!(runtimeEnabled() && contextFor(report)); },
     predictedScore: predictedScore,
     shouldRetry: shouldRetry,
     processItem: processItem,
+    blockRound: blockRound,
     handleItemComplete: handleItemComplete,
     settle: settle,
     advance: advance,
+    advanceResult: advanceResult,
     runtimeEnabled: runtimeEnabled,
   };
 });

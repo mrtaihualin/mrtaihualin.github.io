@@ -78,8 +78,8 @@ assert.strictEqual(Review.predictedScore('word_order', { wrong_count: 1, learnin
       return Promise.resolve({ data: { ok: true, engine_version: Review.ENGINE_VERSION, review_due: [row], srs_due: [], regular_or_new: [],
         non_due_srs: [], mastered: [], snapshots: [row], round_items: [row] }, error: null });
     }
-    return Promise.resolve({ data: { ok: true, to_state: 'retry_end_round', snapshot: {
-      content_ref: options.body.item.content_ref, state: 'retry_end_round', state_token: 'next-token' } }, error: null });
+    return Promise.resolve({ data: { ok: true, operation_id: options.body.operation_id, to_state: 'retry_end_round', snapshot: {
+      item_id: 'item-' + options.body.game, content_ref: options.body.item.content_ref, state: 'retry_end_round', state_token: 'next-token' } }, error: null });
   } } });
   await Review.prime({ game: 'reading', level: 1, playSetSize: 5 });
   const retryItems = [];

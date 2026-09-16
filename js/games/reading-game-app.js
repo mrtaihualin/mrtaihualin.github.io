@@ -238,7 +238,7 @@ function rgRequiredCorrectAnswer(w){if(!w||typeof w.correctAnswer!=='string'||!w
 function rgReviewRef(i){var w=WORDS[i];return {source:(w&&w.words&&w.words.length)?'game_sentences':'game_words',key:rgContentKey(w)};}
 function rgPrimeReview(){try{return window.LearningReview&&LearningReview.prime?LearningReview.prime({game:'reading',level:RG_LEVEL_TO_NUM[curLevel]||1,playSetSize:rgRoundSize()}):Promise.resolve([]);}catch(e){return Promise.resolve([]);}}
 function rgReviewOwns(w){try{return !!(window.LearningReview&&LearningReview.owns(roundReport,{source:(w&&w.words&&w.words.length)?'game_sentences':'game_words',key:rgContentKey(w)}));}catch(e){return false;}}
-function rgRegisterRestoredReview(){try{if(!window.LearningReview||!roundReport)return;var all=WORDS.map(function(_,i){return i;}).filter(function(i){return WORDS[i].level===curLevel;}),selected=LearningReview.matchQueue({game:'reading',level:RG_LEVEL_TO_NUM[curLevel]||1,items:roundQueue,contentRefOf:rgReviewRef}),srs=all.filter(function(i){return !!srsRecords[rgSrsKey(WORDS[i])];}),seen=Object.create(null),duplicates=[];roundQueue.forEach(function(i){var key=LearningReview.keyOfRef(rgReviewRef(i));if(seen[key])duplicates.push(i);seen[key]=true;});LearningReview.registerRound({report:roundReport,game:'reading',level:RG_LEVEL_TO_NUM[curLevel]||1,allItems:all,srsOwned:srs,selectedReview:selected,alreadyRetried:duplicates,idOf:function(i){return LearningReview.keyOfRef(rgReviewRef(i));},contentRefOf:rgReviewRef,retry:function(i){roundQueue.push(i);roundTotal=roundQueue.length;refreshUI();}});}catch(e){}}
+function rgRegisterRestoredReview(){try{if(!window.LearningReview||!roundReport)return;var all=WORDS.map(function(_,i){return i;}).filter(function(i){return WORDS[i].level===curLevel;}),selected=LearningReview.matchQueue({game:'reading',level:RG_LEVEL_TO_NUM[curLevel]||1,items:roundQueue,contentRefOf:rgReviewRef}),srs=all.filter(function(i){return !!srsRecords[rgSrsKey(WORDS[i])];}),seen=Object.create(null),duplicates=[];roundQueue.forEach(function(i){var key=LearningReview.keyOfRef(rgReviewRef(i));if(seen[key])duplicates.push(i);seen[key]=true;});LearningReview.registerRound({report:roundReport,game:'reading',level:RG_LEVEL_TO_NUM[curLevel]||1,allItems:all,srsOwned:srs,selectedReview:selected,alreadyRetried:duplicates,idOf:function(i){return LearningReview.keyOfRef(rgReviewRef(i));},contentRefOf:rgReviewRef,checkpoint:function(completed){rgSaveResumeState(completed);},retry:function(i){roundQueue.push(i);roundTotal=roundQueue.length;refreshUI();}});}catch(e){if(window.LearningReview&&LearningReview.blockRound)LearningReview.blockRound(roundReport,e);}}
 function rgReportRows(){
   if(!roundReport||!roundReport.items)return [];
   return roundReport.items.map(function(i){return {th:i.question,zh:i.meaning,wordGlosses:i.words,reading:i.linguistic&&i.linguistic.reading_th||'',userAnswer:i.user_answer,correctAnswer:i.correct_answer,wrong:i.wrong_count,failed:!i.is_correct,guide:!!i.hint_used,pts:i.item_score,srsDue:i.srs_state||'',mastered:!!i.mastered_state,attempts:i.attempts};});
@@ -254,7 +254,7 @@ function rgLogWord(o){
     for(var k in o){ if(Object.prototype.hasOwnProperty.call(o,k)) base[k]=o[k]; }
     roundLog.push(base);
     if(roundReport&&window.RoundReport)RoundReport.addItem(roundReport,{content_ref:{source:(w&&w.words&&w.words.length)?'game_sentences':'game_words',key:rgContentKey(w)},question:base.th,meaning:base.zh,attempts:base.attempts,user_answer:base.userAnswer,correct_answer:base.correctAnswer,is_correct:!base.skipped&&!base.failed&&!base.guide&&base.wrong===0,is_skipped:!!base.skipped,skip_reason:base.skipped?'user_skip':null,wrong_count:base.wrong,item_score:base.pts,hint_used:!!base.guide,learning_evidence:base.learningEvidence,learning_action:base.learningAction||'answer',linguistic:{reading_th:base.reading,syls:w&&w.syls||null},words:wordGlosses||[],srs_state:base.srsDue||null,mastered_state:!!base.mastered});
-  }catch(e){}
+  }catch(e){if(window.LearningReview&&LearningReview.blockRound)LearningReview.blockRound(roundReport,e);}
 }
 // 2026-07-13 Lin：ดึงคำที่พลาดในรอบนี้จาก roundLog ไปเก็บลง reading_sessions.wrong_items (ฐานข้อมูลจุดอ่อน)
 function rgWrongItemsFromLog(){
@@ -523,7 +523,7 @@ function rgResolveResumeWordIds(ids,level){
   var resolved=ids.map(function(id){return rgResumeWordIndex(id,level);});
   return resolved.some(function(idx){return idx==null;})?null:resolved;
 }
-function rgSaveResumeState(){
+function rgSaveResumeState(completedCurrent){
   try{
     if(isWordPractice)return; // ?word= ฝึกคำเดียว/ทบทวน全部精通 — ไม่ใช่ "รอบ" จริง ไม่ต้องจำ
     if(!window.GameResume)return;
@@ -531,7 +531,7 @@ function rgSaveResumeState(){
     GameResume.save(RG_RESUME_ID,{
       level:curLevel,
       wordIds:roundQueue.map(function(i){return rgResumeWordId(WORDS[i]);}),
-      cur:cur,okC:okC,badC:badC,streak:streak,maxStreak:maxStreak,
+      cur:cur+(completedCurrent?1:0),okC:okC,badC:badC,streak:streak,maxStreak:maxStreak,
       roundScore:roundScore,cleanC:cleanC,roundTotal:roundTotal
       ,roundLog:roundLog,report:roundReport&&window.RoundReport?RoundReport.snapshot(roundReport):null
     });
@@ -564,7 +564,7 @@ function rgTryLoadResumeBanner(){
   if(!banner||!window.GameResume)return false;
   var st=null;
   try{ st=GameResume.load(RG_RESUME_ID); }catch(e){ st=null; }
-  if(!st||!st.wordIds||!st.wordIds.length||typeof st.cur!=='number'||st.cur>=st.wordIds.length){
+  if(!st||!st.wordIds||!st.wordIds.length||typeof st.cur!=='number'||(st.cur>=st.wordIds.length&&!(st.report&&st.report.learning_save))){
     banner.style.display='none';
     return false;
   }
@@ -597,7 +597,7 @@ function rgResumeContinue(reviewReady){
   var rq=rgResolveResumeWordIds(st.wordIds,st.level);
   if(!rq){ rgClearResumeState(); initGame(); return; }
   roundQueue=rq; roundTotal=roundQueue.length;
-  cur=Math.min(st.cur||0,roundQueue.length-1);
+  cur=Math.min(st.cur||0,roundQueue.length);
   okC=st.okC||0;badC=st.badC||0;streak=st.streak||0;maxStreak=st.maxStreak||0;
   roundScore=st.roundScore||0;cleanC=st.cleanC||0;
   isWordPractice=false;
@@ -609,7 +609,7 @@ function rgResumeContinue(reviewReady){
   document.getElementById('end').style.display='none';
   document.getElementById('game').style.display='flex';
   refreshUI();
-  loadWord();
+  LearningReview.advance(roundReport,function(){if(cur>=roundQueue.length){endRound();return;}loadWord();});
 }
 function rgResumeRestartSame(reviewReady){
   var st=window.__rgPendingResume;
@@ -836,7 +836,7 @@ function initGame(){
     }
   }
   roundTotal=roundQueue.length;
-  if(!isWordPractice&&window.LearningReview&&LearningReview.registerRound)LearningReview.registerRound({report:roundReport,game:'reading',level:RG_LEVEL_TO_NUM[curLevel]||1,allItems:_reviewAllIdx,srsOwned:_reviewSrsOwned,selectedReview:_reviewSelected,idOf:function(i){return LearningReview.keyOfRef(rgReviewRef(i));},contentRefOf:rgReviewRef,retry:function(i){roundQueue.push(i);roundTotal=roundQueue.length;var qt=document.getElementById('qt');if(qt)qt.textContent=roundTotal;}});
+  if(!isWordPractice&&window.LearningReview&&LearningReview.registerRound)LearningReview.registerRound({report:roundReport,game:'reading',level:RG_LEVEL_TO_NUM[curLevel]||1,allItems:_reviewAllIdx,srsOwned:_reviewSrsOwned,selectedReview:_reviewSelected,idOf:function(i){return LearningReview.keyOfRef(rgReviewRef(i));},contentRefOf:rgReviewRef,checkpoint:function(completed){rgSaveResumeState(completed);},retry:function(i){roundQueue.push(i);roundTotal=roundQueue.length;var qt=document.getElementById('qt');if(qt)qt.textContent=roundTotal;}});
   cur=0;okC=0;badC=0;streak=0;maxStreak=0;roundScore=0;cleanC=0;roundHadGuide=false;
   document.getElementById('end').style.display='none';
   document.getElementById('game').style.display='flex';
@@ -1371,6 +1371,7 @@ function next(){
 }
 
 function nextWord(){
+  if(isWordPractice){rgAdvanceToNextWord();return;}
   if(window.LearningReview&&LearningReview.advance&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()){
     LearningReview.advance(roundReport,rgAdvanceToNextWord);
     return;
@@ -1384,7 +1385,7 @@ function rgAdvanceToNextWord(){
 }
 
 function endRound(){
-  rgClearResumeState(); // E3: จบรอบแล้ว ไม่มีอะไรให้ "續玩" ต่ออีก
+  if(!window.LearningReview||!LearningReview.runtimeEnabled())rgClearResumeState(); // E3: จบรอบแล้ว ไม่มีอะไรให้ "續玩" ต่ออีก
   document.getElementById('game').style.display='none';
   document.getElementById('end').style.display='flex';
   if(window.GameFlow)GameFlow.markResult('#end');
@@ -1427,11 +1428,11 @@ function endRound(){
   var submissionId=null;
   try{
     if(window.READING_AUTH && READING_AUTH.saveScore) submissionId=READING_AUTH.saveScore(weightedScore,1,'reading',rgWrongItemsFromLog(),{
-      difficulty:curLevel,
+      report:roundReport,difficulty:curLevel,
       items:roundLog.map(function(w){if(!w.contentKey)throw new Error('CATALOG_AUTHORITY_INCOMPLETE:report contentKey');return {key:w.contentKey,contentRef:{source:curLevel==='高'?'game_sentences':'game_words',key:w.contentKey},points:Number(w.pts)||0,wrong:Number(w.wrong)||0,guide:!!w.guide,failed:!!w.failed,mastered:!!w.mastered,learningEvidence:w.learningEvidence||null};}),
       roundBonus:roundBonus,srsBonus:0
     });
-  }catch(e){} // S29: server-authoritative score submission พร้อมหลักฐาน First Check ต่อ item
+  }catch(e){if(window.LearningReview&&LearningReview.blockRound)LearningReview.blockRound(roundReport,e);} // S29: server-authoritative score submission พร้อมหลักฐาน First Check ต่อ item
   if(roundReport&&window.RoundReport)RoundReport.finish(roundReport,{score:weightedScore,submission_id:submissionId});
   // ── weekly challenge + streak freeze ──
   var _maxCombo = maxStreak; // max combo ที่ทำได้ในรอบนี้

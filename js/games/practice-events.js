@@ -37,11 +37,14 @@
     try { return window.getSupabaseClient ? window.getSupabaseClient() : null; }
     catch (e) { return null; }
   }
-  function invoke(payload) {
+  function invoke(payload, owner) {
     var sb = client();
     if (!sb || !sb.functions || !sb.functions.invoke) return Promise.reject(new Error('practice_events_client_unavailable'));
     if (!window.NetworkGuard || !NetworkGuard.request) return Promise.reject(new Error('practice_events_network_guard_unavailable'));
-    var request = function () { return sb.functions.invoke('practice-events', { body: payload }); };
+    var request = function (_, options) {
+      if (owner && !ownerIsCurrent(owner)) throw new Error('practice_events_owner_changed');
+      return sb.functions.invoke('practice-events', { body: payload, signal: options && options.signal });
+    };
     return NetworkGuard.request(request, 'practice-events', {}, 12000, null);
   }
   function minimizedReport(report) {
@@ -109,8 +112,8 @@
     var ids = Object.keys(queue.entries);
     activeFlush = ids.reduce(function (chain, roundId) {
       return chain.then(function () {
-        if (!ownerIsCurrent(owner) || !queue.entries[roundId]) return;
-        return invoke(queue.entries[roundId]).then(function (result) {
+        if (!ownerIsCurrent(owner) || !queue.entries[roundId] || (queue.rejected && queue.rejected[roundId])) return;
+        return invoke(queue.entries[roundId], owner).then(function (result) {
           if (!ownerIsCurrent(owner)) return;
           if (result && !result.error && result.data && result.data.ok) {
             consumeGamification(owner, result.data.gamification);
@@ -118,12 +121,16 @@
             // stale snapshot must never erase reports queued during this call.
             removeQueuedRound(owner, roundId);
           } else if (permanentError(result)) {
-            removeQueuedRound(owner, roundId);
-            if (window.console && console.warn) console.warn('[practice-events] rejected:', result && (result.data || result.error));
+            // Rejected evidence remains pending for diagnosis; rejection is not an acknowledgement.
+            var latest = readQueue(owner);
+            latest.rejected = latest.rejected || {};
+            latest.rejected[roundId] = true;
+            writeQueue(owner, latest);
+            if (window.console && console.warn) console.warn('[practice-events] rejected: PRACTICE_SAVE_REJECTED');
           }
         }, function () {});
       });
-    }, Promise.resolve()).then(function () { return ownerIsCurrent(owner); });
+    }, Promise.resolve()).then(function () { return ownerIsCurrent(owner) && Object.keys(readQueue(owner).entries).length === 0; });
     activeFlush = activeFlush.then(function (value) { activeFlush = null; return value; }, function () { activeFlush = null; return false; });
     return activeFlush;
   }
@@ -133,7 +140,9 @@
     if (!owner || !payload) return Promise.resolve(false);
     var queue = readQueue(owner);
     queue.entries[payload.round_id] = payload;
+    if (queue.rejected) delete queue.rejected[payload.round_id];
     writeQueue(owner, queue);
+    if (JSON.stringify(readQueue(owner).entries[payload.round_id]) !== JSON.stringify(payload)) return Promise.resolve(false);
     return flush();
   }
   function status(items) {
@@ -142,7 +151,7 @@
     var payload = { action: 'status', items: items.slice(0, 30).map(function (item) {
       return { kind: item.kind, key: item.key };
     }) };
-    return invoke(payload).then(function (result) {
+    return invoke(payload, owner).then(function (result) {
       if (!ownerIsCurrent(owner)) return {};
       if (result && !result.error && result.data && result.data.ok) return result.data.items || {};
       throw new Error(String(result && result.data && result.data.error || 'practice_event_status_unavailable'));
@@ -151,7 +160,7 @@
   function gamificationStatus() {
     var owner = ownerSnapshot();
     if (!owner) return Promise.resolve({ current_streak: 0 });
-    return invoke({ action: 'gamification_status' }).then(function (result) {
+    return invoke({ action: 'gamification_status' }, owner).then(function (result) {
       if (!ownerIsCurrent(owner)) return {};
       if (result && !result.error && result.data && result.data.ok && result.data.gamification) {
         consumeGamification(owner, result.data.gamification);
