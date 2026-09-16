@@ -1,10 +1,11 @@
 # ประวัติงานดูแลเว็บ
 
-## 2026-09-16 — Login Free Review/SRS mixed-version compatibility (`SOURCE_PASS / PRODUCTION_EDGE_PENDING`)
+## 2026-09-16 — Login Free Review/SRS mixed-version compatibility (`PASS / PRODUCTION_V19_ACTIVE / LIVE_READ_ONLY_PASS`)
 
 - Production still serves the legacy `review_*` client while the current source also contains the not-yet-applied unified `learning_*` migration contract. The Production v18 Edge bundle routed both protocols to `phase1_login_free_learning_commit`, which is absent until that migration is applied, so legacy Review commits failed closed even though ordinary score persistence was repaired.
 - `score-submit` now keeps `learning_*` on the unified RPC and routes only legacy `review_queue` / `review_commit` through the already-deployed Review tables and `phase1_learning_review_commit`. Authentication, canonical server-side score verification, owner scoping, idempotency, rate limiting and the ordinary score fix remain unchanged. The unified migration/static rollout stays separately gated.
-- Added regression locks for the mixed-version routing. Focused backend, SRS, Review integration, Production-candidate and save/retry suites pass; `node scripts/check-site.js` passes all `1,107` local project files. This entry records source verification only; no Supabase Edge, database, Auth, account/player data, Cloudflare traffic or Production state changed.
+- Added regression locks for the mixed-version routing. Focused backend, SRS, Review integration, Production-candidate and save/retry suites pass; `node scripts/check-site.js` passes all `1,107` local project files. GitLab MR `!60` passed pipeline `#2853280186`, merged as `f905533b5336e7690539e97626d0ee5072a7a651`, and the resulting `main` pipeline `#2853287379` passed.
+- After exact approval, deployed only `score-submit` to Supabase Production project `qzkxlhpcputsvbqmtqfi` as ACTIVE version `19` with `verify_jwt=true` and bundle SHA-256 `5470f8fe131388dfcae91402f786d521d08dab2c127c52652d8aaea91c7691e8`. Production CORS preflight returns `200` for `https://mrtaihualin.com`, and an unauthenticated legacy `review_queue` request returns the expected `401 UNAUTHORIZED_NO_AUTH_HEADER`. A fresh logged-in Production Tone and Reading load using the still-live `learning-review.js?v=7` completed without browser warning/error; the read-only canary deliberately did not submit an answer or mutate player data. No database migration, Auth, account/player-data repair, Cloudflare release or traffic change occurred; recovery to preserved version `18` was not invoked.
 
 ## 2026-09-16 — Production score-submit entitlement projection repair (`PASS_CLOSED / PRODUCTION_V18_ACTIVE / REAL_ACCOUNT_PERSISTENCE_PASS`)
 
