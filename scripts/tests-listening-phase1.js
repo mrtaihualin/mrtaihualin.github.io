@@ -116,7 +116,7 @@ check('Listening DTO เก็บเฉพาะค่าที่ Submit แล
 check('จบรอบบันทึก account session เป็น game=listening', /READING_AUTH\.saveScore\(state\.primaryTotal \+ state\.typingBonusTotal, 1, 'listening'/.test(app));
 check('reading-auth รองรับ route/game listening', /listening-game/.test(auth) && /'listening'/.test(auth) && /score-submit/.test(auth));
 check('Listening keeps account reporting but loads neither SRS nor Review',
-  /reading-auth\.js\?v=34/.test(html) && /game-account\.js\?v=6/.test(html) && /practice-events\.js\?v=3/.test(html) &&
+  /reading-auth\.js\?v=35/.test(html) && /game-account\.js\?v=6/.test(html) && /practice-events\.js\?v=4/.test(html) &&
   !/(?:tone-server|learning-review)\.js/.test(html) && /typing-score\.js\?v=1/.test(html) && /listening-score\.js\?v=1/.test(html));
 check('Listening เก็บคำอธิบาย runtime เดิมไว้ แต่ OFF shell ซ่อน 玩法 ทุก surface',
   /id="lg-howto-modal"/.test(html) && /打字加分降到 0/.test(html) && /聽力分數降到 0/.test(html) &&

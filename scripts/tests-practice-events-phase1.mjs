@@ -77,7 +77,7 @@ check('personal content derives Played copy from server evidence, never provenan
 check('personal content exposes bounded status recovery', /PracticeEvents\.status\(requestItems\)/.test(personalContent) && /重新載入練習紀錄/.test(personalContent));
 check('Login Free activates the recorder on all Core 5 pages', ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html'].every((name) => {
   const html = read(name);
-  return /practice-events\.js\?v=3/.test(html) && /game-flow\.js\?v=13/.test(html);
+  return /practice-events\.js\?v=4/.test(html) && /game-flow\.js\?v=14/.test(html);
 }));
 check('personal content loads authenticated status evidence before its UI', /practice-events\.js\?v=2[\s\S]*personal-content\.js\?v=5/.test(read('vault.html')));
 
@@ -214,7 +214,7 @@ async function waitFor(predicate) {
   await tick();
   h.invocations[0].resolve({ data: null, error: { message: 'Edge Function returned a non-2xx status code', context: { status: 400 } } });
   await request;
-  check('Supabase HTTP 400 context is treated as permanent and removed from the queue', h.context.PracticeEvents.pendingCount() === 0);
+  check('Supabase HTTP 400 rejection retains evidence without acknowledging it', h.context.PracticeEvents.pendingCount() === 1);
 }
 
 {
@@ -223,7 +223,9 @@ async function waitFor(predicate) {
   await tick();
   h.invocations[0].resolve({ data: null, error: { message: 'Edge Function returned a non-2xx status code', context: { status: 409 } } });
   await request;
-  check('Supabase HTTP 409 context is treated as permanent and removed from the queue', h.context.PracticeEvents.pendingCount() === 0);
+  check('Supabase HTTP 409 rejection retains evidence without acknowledging it', h.context.PracticeEvents.pendingCount() === 1);
+  await h.context.PracticeEvents.flush();
+  check('permanently rejected evidence does not automatically loop', h.invocations.length === 1);
 }
 
 for (const statusCode of [401, 429, 500, 503]) {
@@ -249,6 +251,19 @@ for (const statusCode of [401, 429, 500, 503]) {
   h.invocations[0].resolve({ data: { ok: true, items: { 'word:กา': { played: true } } }, error: null });
   const result = await request;
   check('late Played status from an old owner is discarded', Object.keys(result).length === 0);
+}
+
+{
+  const h = runtimeHarness();
+  h.context.localStorage.setItem = () => { throw new Error('synthetic storage full'); };
+  const saved = await h.context.PracticeEvents.submitReport(report('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'));
+  check('unassured Played queue storage is not reported as an acknowledgement', saved === false && h.invocations.length === 0);
+}
+{
+  const h = runtimeHarness();
+  h.context.NetworkGuard.request = (request) => Promise.resolve().then(() => { h.setOwner('owner-b', 2); return request(); });
+  const saved = await h.context.PracticeEvents.submitReport(report('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'));
+  check('owner change before guarded dispatch sends no old Played report', saved === false && h.invocations.length === 0);
 }
 
 if (failures.length) {

@@ -118,7 +118,7 @@ test('Reading keeps reviewed syllable authority through the live answer object',
 });
 
 test('Reading loads the rebuilt crash-safe bundle with a fresh cache key', () => {
-  assert.match(html, /reading-game-app\.min\.js\?v=60/);
+  assert.match(html, /reading-game-app\.min\.js\?v=61/);
   assert.match(minified, /READING_FINAL_EXCEPTIONS=\{"อีเมล@中#noun-b-11":"ล"\}/);
   assert.match(minified, /function reviewedReadingVowel\(/);
   assert.match(minified, /function reviewedReadingFinal\(/);
@@ -358,7 +358,7 @@ test('resume report restore fails safe and cannot strand the question UI', () =>
   assert.strictEqual(restored.defaults.game_type, 'reading');
   const resume = block('function rgResumeContinue(', 'function rgResumeRestartSame(');
   assert.match(resume, /roundReport=rgRestoreRoundReport\(st\.report\)/);
-  assert.match(resume, /refreshUI\(\);\s*loadWord\(\)/);
+  assert.match(resume, /refreshUI\(\);\s*LearningReview\.advance\(roundReport,function\(\)\{if\(cur>=roundQueue\.length\)\{endRound\(\);return;\}loadWord\(\);\}\)/);
 });
 
 test('direct word practice bypasses a saved Resume without deleting it', () => {

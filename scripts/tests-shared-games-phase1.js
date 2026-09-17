@@ -563,7 +563,7 @@ test('Lego exposes only the locked minimum-release presentation', () => {
   assert.match(legoHtml, /onclick="legoEndGame\(\)">結束遊戲<\/button>/);
   assert.match(legoHtml, /onclick="legoContinueBuilding\(\)">繼續造句<\/button>/);
   assert.match(legoHtml, /id="lego-reveal-th"[\s\S]{0,180}id="lego-reveal-zh"/, 'reveal must retain the original full sentence and zh-TW translation order');
-  assert.match(legoHtml, /js\/games\/game-flow\.js\?v=13/, 'Lego Result must use the current countdown-free shared flow runtime');
+  assert.match(legoHtml, /js\/games\/game-flow\.js\?v=14/, 'Lego Result must use the current countdown-free shared flow runtime');
   for (const role of ['replay','print','detail-action','switch','cta','home']) {
     assert.match(legoHtml, new RegExp(`data-game-result-${role}="v1"`), `Lego Result missing ${role}`);
   }
@@ -704,7 +704,7 @@ test('mobile resume uses one compact shared-copy line and three horizontal actio
 
 test('all five games keep one current-round DTO identity with the Login Free canonical summary', () => {
   for (const g of games) {
-    const reportVersion = g.id === 'listening' ? 5 : 7;
+    const reportVersion = g.id === 'listening' ? 5 : 8;
     assert.match(g.htmlText, new RegExp(`js/games/round-report\\.js\\?v=${reportVersion}`), `${g.id}: missing Round Report DTO loader`);
     assert.match(g.htmlText, /js\/score\/learning-summary\.js\?v=1/, `${g.id}: Login Free summary runtime must be active`);
     assert.match(g.appText, /RoundReport\.(?:create|restore)/, `${g.id}: round identity is not wired`);
@@ -718,13 +718,13 @@ test('all six games use the shared A4 browser Print structure and daily Result a
   const roundReport = fs.readFileSync(path.join(root, 'js/games/round-report.js'), 'utf8');
   const gameFlow = fs.readFileSync(path.join(root, 'js/games/game-flow.js'), 'utf8');
   for (const g of games) {
-    const reportVersion = g.id === 'listening' ? 5 : 7;
+    const reportVersion = g.id === 'listening' ? 5 : 8;
     assert.match(g.htmlText, new RegExp(`js/games/round-report\\.js\\?v=${reportVersion}`), `${g.id}: must load shared print renderer`);
-    assert.match(g.htmlText, /js\/games\/game-flow\.js\?v=13/, `${g.id}: must load current countdown-free Result runtime`);
+    assert.match(g.htmlText, /js\/games\/game-flow\.js\?v=14/, `${g.id}: must load current countdown-free Result runtime`);
     assert.match(g.appText, /RoundReport\.openPrint/, `${g.id}: print action must use the shared renderer`);
   }
   assert.match(legoHtml, /js\/games\/round-report\.js\?v=3/);
-  assert.match(legoHtml, /js\/games\/game-flow\.js\?v=13/);
+  assert.match(legoHtml, /js\/games\/game-flow\.js\?v=14/);
   assert.match(legoApp, /RoundReport\.openPrint/);
   assert.match(roundReport, /@page\{size:A4 portrait/);
   assert.match(roundReport, /data-print-section=\\?"summary\\?"[\s\S]+data-print-section=\\?"activity\\?"[\s\S]+data-print-section=\\?"detail\\?"/);
@@ -885,7 +885,7 @@ test('Tone active-question guidance locks scoring while preserving the approved 
   assert.match(toneMin, /pageshow/, 'Tone: deployed minified bundle must include the page-return guard');
   assert.match(toneMin, /tfHandleInitialToneMistake/, 'Tone: deployed minified bundle must preserve the initial no-deduction handler');
   assert.doesNotMatch(toneMin, /聲調選擇錯誤/, 'Tone: deployed minified bundle must not retain the superseded initial scored-mistake branch');
-  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=91/, 'Tone: page must request the rebuilt shared-framework runtime version');
+  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=92/, 'Tone: page must request the rebuilt shared-framework runtime version');
 });
 
 test('Tone mobile touch surfaces keep Desktop gameplay free of keyboard-only copy', () => {

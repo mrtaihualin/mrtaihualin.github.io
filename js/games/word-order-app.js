@@ -68,7 +68,7 @@
   function woSrsKey(th){ return (th||'')+'@'+LEVEL_NUM; }
   function woReviewRef(i){return {source:'game_sentences',key:ADV_SENTENCES[i].th};}
   function woReviewOwns(th){try{return !!(window.LearningReview&&LearningReview.owns(roundReport,{source:'game_sentences',key:th}));}catch(e){return false;}}
-  function woRegisterRestoredReview(){try{if(!window.LearningReview||!roundReport)return;var all=ADV_SENTENCES.map(function(_,i){return i;}),selected=LearningReview.matchQueue({game:'word_order',level:LEVEL_NUM,items:SET,contentRefOf:woReviewRef}),srs=all.filter(function(i){return !!srsRecords[woSrsKey(ADV_SENTENCES[i].th)];}),seen=Object.create(null),duplicates=[];SET.forEach(function(i){var key=LearningReview.keyOfRef(woReviewRef(i));if(seen[key])duplicates.push(i);seen[key]=true;});LearningReview.registerRound({report:roundReport,game:'word_order',level:LEVEL_NUM,allItems:all,srsOwned:srs,selectedReview:selected,alreadyRetried:duplicates,idOf:function(i){return LearningReview.keyOfRef(woReviewRef(i));},contentRefOf:woReviewRef,retry:function(i){SET.push(i);var qt=document.getElementById('wo-qt');if(qt)qt.textContent=SET.length;}});}catch(e){}}
+  function woRegisterRestoredReview(){try{if(!window.LearningReview||!roundReport)return;var all=ADV_SENTENCES.map(function(_,i){return i;}),selected=LearningReview.matchQueue({game:'word_order',level:LEVEL_NUM,items:SET,contentRefOf:woReviewRef}),srs=all.filter(function(i){return !!srsRecords[woSrsKey(ADV_SENTENCES[i].th)];}),seen=Object.create(null),duplicates=[];SET.forEach(function(i){var key=LearningReview.keyOfRef(woReviewRef(i));if(seen[key])duplicates.push(i);seen[key]=true;});LearningReview.registerRound({report:roundReport,game:'word_order',level:LEVEL_NUM,allItems:all,srsOwned:srs,selectedReview:selected,alreadyRetried:duplicates,idOf:function(i){return LearningReview.keyOfRef(woReviewRef(i));},contentRefOf:woReviewRef,checkpoint:function(completed){woSaveResume(completed);},retry:function(i){SET.push(i);var qt=document.getElementById('wo-qt');if(qt)qt.textContent=SET.length;}});}catch(e){if(window.LearningReview&&LearningReview.blockRound)LearningReview.blockRound(roundReport,e);}}
   function woSentenceExists(sentThai){
     for(var i=0;i<ADV_SENTENCES.length;i++){ if(ADV_SENTENCES[i].th===sentThai) return true; }
     return false; // ไม่มีใน ADV_SENTENCES แล้ว = ประโยคผี → ข้าม
@@ -421,7 +421,7 @@
       for (var k in o) { if (Object.prototype.hasOwnProperty.call(o,k)) base[k] = o[k]; }
       roundLog.push(base);
       if(roundReport&&window.RoundReport)RoundReport.addItem(roundReport,{content_ref:{source:'game_sentences',key:base.th},question:base.th,meaning:base.zh,attempts:base.attempts,user_answer:base.userAnswer,correct_answer:base.correctAnswer,is_correct:!base.skipped&&!base.failed&&!base.guide&&base.wrong===0,is_skipped:!!base.skipped,skip_reason:base.skipped?'user_skip':null,wrong_count:base.wrong,item_score:base.pts,hint_used:!!base.guide,learning_evidence:base.learningEvidence,learning_action:base.learningAction||'answer',words:wordGlosses||[],srs_state:base.srsDue||null,mastered_state:!!base.mastered});
-    } catch(e){}
+    } catch(e){if(window.LearningReview&&LearningReview.blockRound)LearningReview.blockRound(roundReport,e);}
   }
   // 2026-07-13 Lin：ดึงประโยคที่พลาดในรอบนี้จาก roundLog ไปเก็บลง reading_sessions.wrong_items (ฐานข้อมูลจุดอ่อน)
   function rgWrongItemsFromLog(){
@@ -849,13 +849,15 @@
     var savedSentence = ADV_SENTENCES[SET[idx]];
     if (woResumeCompletedCurrent(state, savedSentence&&savedSentence.th)) idx++;
     if (window.GAME_ACCOUNT) { totalStars = GAME_ACCOUNT.getStars(); totalBadges = GAME_ACCOUNT.earnedBadges().length; }
-    if (idx >= SET.length) { finish(); return; }
-    refreshUI();
-    try { rgRenderGameBar(); } catch(e){}
-    document.getElementById('end').style.display = 'none';
-    document.getElementById('game').style.display = 'flex';
-    try{ if(window.gtag) gtag('event','game_start',{category:'game',game:'word_order',resumed:true}); }catch(e){}
-    loadSentence();
+    LearningReview.advance(roundReport,function(){
+      if (idx >= SET.length) { finish(); return; }
+      refreshUI();
+      try { rgRenderGameBar(); } catch(e){}
+      document.getElementById('end').style.display = 'none';
+      document.getElementById('game').style.display = 'flex';
+      try{ if(window.gtag) gtag('event','game_start',{category:'game',game:'word_order',resumed:true}); }catch(e){}
+      loadSentence();
+    });
   }
 
   function init(){
@@ -963,7 +965,7 @@
     cleanC = 0; curCombo = 0; maxCombo = 0;
     roundLog = [];
     roundReport = window.RoundReport?RoundReport.create({game_type:'wordorder',difficulty:'高',mode:'sentence'}):null;
-    if(window.LearningReview&&LearningReview.registerRound)LearningReview.registerRound({report:roundReport,game:'word_order',level:LEVEL_NUM,allItems:_reviewAllIdx,srsOwned:_reviewSrsOwned,selectedReview:_reviewSelected,idOf:function(i){return LearningReview.keyOfRef(woReviewRef(i));},contentRefOf:woReviewRef,retry:function(i){SET.push(i);var qt=document.getElementById('wo-qt');if(qt)qt.textContent=SET.length;}});
+    if(window.LearningReview&&LearningReview.registerRound)LearningReview.registerRound({report:roundReport,game:'word_order',level:LEVEL_NUM,allItems:_reviewAllIdx,srsOwned:_reviewSrsOwned,selectedReview:_reviewSelected,idOf:function(i){return LearningReview.keyOfRef(woReviewRef(i));},contentRefOf:woReviewRef,checkpoint:function(completed){woSaveResume(completed);},retry:function(i){SET.push(i);var qt=document.getElementById('wo-qt');if(qt)qt.textContent=SET.length;}});
     if (window.GAME_ACCOUNT) { totalStars = GAME_ACCOUNT.getStars(); totalBadges = GAME_ACCOUNT.earnedBadges().length; }
     refreshUI();
     try { rgRenderGameBar(); } catch(e){}
@@ -1391,6 +1393,7 @@
   };
 
   window.woNext = function(){
+    if(practiceMode){woAdvanceToNextSentence();return;}
     if(window.LearningReview&&LearningReview.advance&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()){
       LearningReview.advance(roundReport,woAdvanceToNextSentence);
       return;
@@ -1445,7 +1448,7 @@
   window.woCtaLogin = function(){ try{ var b=document.querySelector('#rg-login-slot button'); if(b){b.click();return;} }catch(e){} };
 
   function finish(){
-    woClearResume(); // E3: จบรอบแล้ว ไม่มีอะไรให้ resume ต่อ
+    if(!window.LearningReview||!LearningReview.runtimeEnabled())woClearResume(); // E3: จบรอบแล้ว ไม่มีอะไรให้ resume ต่อ
     document.getElementById('game').style.display = 'none';
     document.getElementById('end').style.display = 'flex';
     if(window.GameFlow)GameFlow.markResult('#end');
@@ -1508,13 +1511,13 @@
         var _woItemScore=roundLog.reduce(function(sum,w){return sum+(Number(w.pts)||0);},0);
         var _woSrsBonus=Math.max(0,score-roundBonus-_woItemScore);
         var _woSubmissionId=READING_AUTH.saveScore(weightedScore,1,'word_order',rgWrongItemsFromLog(),{
-          difficulty:'高',
+          report:roundReport,difficulty:'高',
           items:roundLog.map(function(w){return {key:w.th,contentRef:{source:'game_sentences',key:w.th},points:Number(w.pts)||0,wrong:Number(w.wrong)||0,guide:!!w.guide,failed:!!w.failed,mastered:!!w.mastered,learningEvidence:w.learningEvidence||null};}),
           roundBonus:roundBonus,srsBonus:_woSrsBonus
         });
         if(roundReport)roundReport.submission_id=_woSubmissionId||null;
       }
-    }catch(e){} // S29: คะแนน Core 5 ผ่าน score-submit เท่านั้น
+    }catch(e){if(window.LearningReview&&LearningReview.blockRound)LearningReview.blockRound(roundReport,e);} // S29: คะแนน Core 5 ผ่าน score-submit เท่านั้น
 
     // 每週挑戰 + 連續天數／護盾（跟其他遊戲共用同一套邏輯）
     try { rgChallengeBump(maxCombo, isPerfect); } catch(e){}

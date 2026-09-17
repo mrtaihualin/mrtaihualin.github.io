@@ -137,6 +137,9 @@
       total_items: Math.max(0, number(input.total_items, 0)),
       submission_id: input.submission_id || null,
       items: Array.isArray(input.items) ? input.items.map(item) : [],
+      learning_save: input.learning_save ? clone(input.learning_save) : null,
+      score_save: input.score_save ? clone(input.score_save) : null,
+      learning_exempt: input.learning_exempt === true,
       login_summary: input.login_summary ? clone(input.login_summary) : null
     };
     dispatchRoundEvent('gsh:round-start', report);

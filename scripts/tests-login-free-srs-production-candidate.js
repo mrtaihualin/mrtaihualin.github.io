@@ -26,11 +26,11 @@ pages.forEach(function (file) {
   var html = read(file);
   check(html.indexOf('js/core/minimum-guest-launch.js?v=25') !== -1, file + ' fetches the current Login Free launch gate');
   check(html.indexOf('js/core/supabase-config.js?v=11') !== -1, file + ' fetches the Login Free content-tier config');
-  check(html.indexOf('js/games/learning-review.js?v=8') !== -1, file + ' loads the canonical Learning Engine client');
+  check(html.indexOf('js/games/learning-review.js?v=9') !== -1, file + ' loads the canonical Learning Engine client');
   check((file === 'tone-finder.html') === (html.indexOf('js/games/tone-server.js?v=6') !== -1),
     file + ' keeps tone-round transport only where the Paid Tone gate exists');
   check(html.indexOf('game-account.js?v=6') !== -1, file + ' activates the server-authoritative Free account facade');
-  check(html.indexOf('practice-events.js?v=3') !== -1, file + ' activates durable Login Free reporting');
+  check(html.indexOf('practice-events.js?v=4') !== -1, file + ' activates durable Login Free reporting');
   check(html.indexOf('games-challenge-app.js') === -1, file + ' does not activate Challenge runtime');
 });
 [
@@ -47,12 +47,12 @@ check(read('js/core/login-surface.js').indexOf('js/core/supabase-config.js?v=11'
   'dynamically loaded account surfaces use the current config cache key');
 check(read('lego.html').indexOf('tone-server.js') === -1, 'Lego receives no SRS runtime');
 check(read('js/core/minimum-guest-launch.js').indexOf('login-surface.js?v=16') !== -1, 'SRS pages fetch the account-aware Login surface');
-check(read('js/core/login-surface.js').indexOf('reading-auth.js?v=34') !== -1, 'Login surface fetches the account-aware auth client');
-check(read('reading-game.html').indexOf('reading-auth.js?v=34') !== -1, 'Reading direct provider flow fetches the account-aware auth client');
-check(read('tone-finder.html').indexOf('tone-finder-game.min.js?v=91') !== -1, 'Tone fetches the current game runtime');
-check(read('reading-game.html').indexOf('reading-game-app.min.js?v=60') !== -1, 'Reading fetches the current game runtime');
-check(read('typing-game.html').indexOf('typing-game-app.min.js?v=59') !== -1, 'Typing fetches the current game runtime');
-check(read('word-order.html').indexOf('word-order-app.min.js?v=45') !== -1, 'Word Order fetches the current game runtime');
+check(read('js/core/login-surface.js').indexOf('reading-auth.js?v=35') !== -1, 'Login surface fetches the account-aware auth client');
+check(read('reading-game.html').indexOf('reading-auth.js?v=35') !== -1, 'Reading direct provider flow fetches the account-aware auth client');
+check(read('tone-finder.html').indexOf('tone-finder-game.min.js?v=92') !== -1, 'Tone fetches the current game runtime');
+check(read('reading-game.html').indexOf('reading-game-app.min.js?v=61') !== -1, 'Reading fetches the current game runtime');
+check(read('typing-game.html').indexOf('typing-game-app.min.js?v=60') !== -1, 'Typing fetches the current game runtime');
+check(read('word-order.html').indexOf('word-order-app.min.js?v=46') !== -1, 'Word Order fetches the current game runtime');
 
 [
   ['js/games/tone-finder-game.js', /tfMinimumGuestOnly\(\) && window\.LOGIN_FREE_SRS_PUBLIC_ENTRY !== true/],

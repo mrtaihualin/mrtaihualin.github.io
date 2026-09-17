@@ -73,7 +73,7 @@ check('Core apps contain no local Daily Streak writes or three-round daily goal'
   !/DAILY_GOAL_SETS\s*:\s*3/.test(coreApps) &&
   !/STREAK_FREEZE_EARN_EVERY\s*:/.test(coreApps));
 check('Login Free activates authoritative account and Played clients on all five games',
-  coreHtml.every((html) => /game-account\.js\?v=6/.test(html) && /practice-events\.js\?v=3/.test(html)));
+  coreHtml.every((html) => /game-account\.js\?v=6/.test(html) && /practice-events\.js\?v=4/.test(html)));
 check('Game Center loads the authoritative Streak facade without the report queue',
   /game-account\.js\?v=7/.test(hubHtml) && !/practice-events\.js/.test(hubHtml));
 check('Free game markup no longer exposes Star, badge, or freeze controls',

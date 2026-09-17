@@ -229,10 +229,40 @@
     activeResultReplay = replay ? { key: key, root: root, button: replay } : null;
     if (options.report) {
       attachReport(root, options.report);
+      if (window.LearningReview && LearningReview.runtimeEnabled && LearningReview.roundCurrent(options.report) && LearningReview.advanceResult) {
+        var report = options.report;
+        var gameId = { tone: 'tone-finder', reading: 'reading-game', typing: 'typing-game', wordorder: 'word-order', word_order: 'word-order' }[report.game_type];
+        var saved = window.GameResume && GameResume.load(gameId);
+        if (saved && saved.report && saved.report.round_id === report.round_id) {
+          saved.report = window.RoundReport ? RoundReport.snapshot(report) : report;
+          GameResume.save(gameId, saved);
+        }
+        var gate = { report: report, ready: false };
+        gate.complete = function () {
+          gate.ready = true;
+          var latest = window.GameResume && GameResume.load(gameId);
+          if (latest && latest.report && latest.report.round_id === report.round_id) GameResume.clear(gameId);
+          var requested = gate.requestedControl; gate.requestedControl = null;
+          if (requested) requested.click();
+        };
+        root.__gshResultSaveGate = gate;
+        if (!root.__gshResultSaveBound) {
+          root.__gshResultSaveBound = true;
+          root.addEventListener('click', function (event) {
+            var control = event.target && event.target.closest && event.target.closest('[data-game-result-replay],[data-game-result-switch],[data-game-result-home]');
+            var current = root.__gshResultSaveGate;
+            if (!control || !current || (current.ready && LearningReview.roundCurrent(current.report))) return;
+            event.preventDefault(); event.stopImmediatePropagation();
+            if (!current.requestedControl) current.requestedControl = control;
+            LearningReview.advanceResult(current.report, current.complete).catch(function () {});
+          }, true);
+        }
+        LearningReview.advanceResult(report, gate.complete).catch(function () {});
+      }
       // P1-D-05: a completed RoundReport is the only client-side source for
       // durable Played evidence. PracticeEvents performs its own Login,
       // schema, retry and owner-generation checks before writing anything.
-      if ((window.MRT_MINIMUM_GUEST_LAUNCH !== true || window.LOGIN_FREE_ACCOUNT_PUBLIC_ENTRY === true) && window.PracticeEvents && typeof window.PracticeEvents.submitReport === 'function') {
+      if (!(window.LearningReview && LearningReview.runtimeEnabled && LearningReview.roundCurrent(options.report)) && (window.MRT_MINIMUM_GUEST_LAUNCH !== true || window.LOGIN_FREE_ACCOUNT_PUBLIC_ENTRY === true) && window.PracticeEvents && typeof window.PracticeEvents.submitReport === 'function') {
         window.PracticeEvents.submitReport(options.report).catch(function () {});
       }
     }
