@@ -80,15 +80,15 @@ async function runtimeFor(fixture) {
         if (transportMode === 'delayed') {
           return new Promise(resolve => {
             releaseCommit = () => resolve({
-              data: { ok: true, from_state: 'normal', to_state: verified.score <= 3 ? 'retry_end_round' : 'weak_4d',
-                snapshot: { content_ref: body.item.content_ref, state: verified.score <= 3 ? 'retry_end_round' : 'weak_4d', state_token: 'next-token' } },
+              data: { ok: true, operation_id: body.operation_id, from_state: 'normal', to_state: verified.score <= 3 ? 'retry_end_round' : 'weak_4d',
+                snapshot: { item_id: 'fixture-item', content_ref: body.item.content_ref, state: verified.score <= 3 ? 'retry_end_round' : 'weak_4d', state_token: 'next-token' } },
               error: null,
             });
           });
         }
         return Promise.resolve({
-          data: { ok: true, from_state: 'normal', to_state: verified.score <= 3 ? 'retry_end_round' : 'weak_4d',
-            snapshot: { content_ref: body.item.content_ref, state: verified.score <= 3 ? 'retry_end_round' : 'weak_4d', state_token: 'next-token' } },
+          data: { ok: true, operation_id: body.operation_id, from_state: 'normal', to_state: verified.score <= 3 ? 'retry_end_round' : 'weak_4d',
+            snapshot: { item_id: 'fixture-item', content_ref: body.item.content_ref, state: verified.score <= 3 ? 'retry_end_round' : 'weak_4d', state_token: 'next-token' } },
           error: null,
         });
       },
@@ -268,7 +268,7 @@ for (const fixture of fixtures) {
   runtime.releaseCommit();
   await new Promise(resolve => setTimeout(resolve, 0));
   assert.equal(runtime.retryItems.length, 0, 'a stale acknowledgement cannot leak Retry across accounts');
-  assert.equal((await runtime.context.LearningReview.settle(runtime.report)).length, 0);
+  await assert.rejects(runtime.context.LearningReview.settle(runtime.report), { code: 'LEARNING_OWNER_CHANGED' });
 }
 
 console.log('LOGIN_FREE_LEARNING_CONTRACT_E2E_PASS 4_GAMES');

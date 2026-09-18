@@ -117,6 +117,8 @@ runTest(['scripts/tests-learning-score-verifier.mjs'], 'hidden five-game learnin
 runTest(['scripts/tests-learning-review-runtime.js'], 'Login Free Review cumulative-allocation/runtime tests');
 runTest(['scripts/tests-login-free-review-integration.js'], 'Login Free Review four-game integration/security tests');
 runTest(['scripts/tests-game-save-continuation.js'], 'Game save/continuation/reload regression tests');
+runTest(['scripts/tests-learning-catalog-transport.mjs'], 'Learning catalog bounded-read/diagnostic regressions');
+runTest(['scripts/tests-login-free-learning-contract-e2e.mjs'], 'Four-game learning acknowledgement contract');
 runTest(['scripts/tests-login-accessible-game-matrix.js'], 'Login-accessible game launch/session/recovery matrix');
 runTest(['scripts/tests-phase1-nickname-safety.js'], 'Phase 1 nickname safety/security tests');
 runTest(['scripts/tests-phase1-nickname-recovery.js'], 'Phase 1 nickname recovery source/SQL tests');
