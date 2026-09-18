@@ -6,6 +6,7 @@
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.112.3';
 import { validateCanonicalScoreEvidence, validateScoreSubmission } from './score-engine.mjs';
+import { readPublicLearningItems, learningReadFailure } from './learning-catalog.mjs';
 import { HIDDEN_REVIEW_SCORE_DEFAULT_ENABLED, verifyLearningScore, verifyRoundLearningScores } from './learning-score-verifier.mjs';
 import { classifyLearningState, LOGIN_FREE_LEARNING_ENGINE_VERSION } from '../_shared/login-free-learning-engine.mjs';
 
@@ -248,15 +249,13 @@ async function learningCatalog(admin: any, game: any, level: number) {
     content = await admin.from('game_words').select('content_key')
       .eq('level', levelCode).eq('status', 'active').in('access_tier', ['guest', 'login']).limit(1000);
   }
-  if (content.error) throw Object.assign(new Error('learning_queue_unavailable'), { code: 'learning_queue_unavailable' });
+  if (content.error) throw learningReadFailure('catalog_content', content);
   const source = sentence ? 'game_sentences' : 'game_words';
   const keys = Array.from(new Set((content.data || []).map((row: any) => String(sentence ? row.th : row.content_key || '')).filter(Boolean)));
   if (!keys.length) throw Object.assign(new Error('learning_catalog_empty'), { code: 'learning_catalog_empty' });
-  const learning = await admin.from('learning_items').select('item_id,content_source,content_key')
-    .is('owner_user_id', null).eq('content_source', source).in('content_key', keys).limit(2000);
-  if (learning.error) throw Object.assign(new Error('learning_queue_unavailable'), { code: 'learning_queue_unavailable' });
+  const learningRows = await readPublicLearningItems(admin, source, keys);
   const grouped = new Map<string, any[]>();
-  (learning.data || []).forEach((row: any) => {
+  learningRows.forEach((row: any) => {
     const list = grouped.get(row.content_key) || [];
     list.push(row); grouped.set(row.content_key, list);
   });
@@ -274,7 +273,8 @@ async function currentLearningSnapshot(admin: any, user: any, game: any, level: 
   const srs = await admin.from('tone_srs_state')
     .select('item_id,word,state_token,stage,due_date,ever_failed,mastered,updated_at')
     .eq('user_id', user.id).eq('game', game.database).eq('level', level).limit(2000);
-  if (review.error || srs.error) throw Object.assign(new Error('learning_queue_unavailable'), { code: 'learning_queue_unavailable' });
+  if (review.error) throw learningReadFailure('review_snapshot', review);
+  if (srs.error) throw learningReadFailure('srs_snapshot', srs);
 
   const reviewById = new Map((review.data || []).map((row: any) => [row.item_id, row]));
   const srsById = new Map((srs.data || []).filter((row: any) => row.item_id).map((row: any) => [row.item_id, row]));
@@ -325,7 +325,7 @@ async function handleLearningQueue(origin: string, body: any, user: any, admin: 
   const regular = shuffled(snapshots.filter((row) => row.bucket === 'regular_or_new'));
   const operations = await admin.from('phase1_learning_review_operations').select('operation_id', { count: 'exact', head: true })
     .eq('user_id', user.id).eq('game', game.database).eq('level', level);
-  if (operations.error) return reply(origin, { error: 'learning_queue_unavailable' }, 503);
+  if (operations.error) { learningReadFailure('operation_count', operations); return reply(origin, { error: 'learning_queue_unavailable' }, 503); }
   const completed = Number(operations.count || 0);
   const cap = Math.max(0, Math.floor(((completed % 5) + playSetSize) / 5));
   const selectedReview = reviewDue.slice(0, Math.min(cap, playSetSize));
@@ -455,7 +455,7 @@ serve(async (req) => {
     }
     if (isLearningAction) {
       try { return await handleLearningAction(origin, body, user, admin); }
-      catch (error) { return reply(origin, { error: error?.code || 'invalid_learning_request' }, 400); }
+      catch (error) { return reply(origin, { error: error?.code || 'invalid_learning_request' }, error?.status === 503 ? 503 : 400); }
     }
 
     let accepted;
