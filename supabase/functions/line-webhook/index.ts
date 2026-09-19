@@ -1,6 +1,6 @@
 // LINE webhook for Classroom add-class, student contact and other active LINE events.
-// Retired cancel/reschedule postbacks from historical chats are discarded before
-// database or Calendar access. Keep check_conflict, confirm_add_class, and
+// Retired cancel/reschedule postbacks from historical chats receive a safe reply
+// before database or Calendar access. Keep check_conflict, confirm_add_class, and
 // start_contact_student behavior intact.
 
 // deno-lint-ignore-file
@@ -8,6 +8,7 @@
 
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { forwardLineEventToSocialInbox } from '../_shared/line-social-inbox-forward.mjs';
 import {
   CALENDAR_TERMINAL_STATE,
   formatCalendarTerminalMessage,
@@ -17,6 +18,7 @@ import {
 
 const LINE_REPLY_URL = 'https://api.line.me/v2/bot/message/reply';
 const LINE_PUSH_URL = 'https://api.line.me/v2/bot/message/push';
+const SOCIAL_INBOX_WEBHOOK_URL = 'https://line-hook.mrtaihualin.com/webhooks/line';
 
 async function verifySignature(rawBody, signatureHeader, channelSecret) {
   const key = await crypto.subtle.importKey(
@@ -448,8 +450,8 @@ serve(async (req) => {
     console.error('[line-webhook] ⚠️ ยังไม่ได้ตั้งค่า LINE_CHANNEL_SECRET — ปฏิเสธ request ทั้งหมด (401) จนกว่าจะตั้ง secret นี้ ตั้งด้วย: supabase secrets set LINE_CHANNEL_SECRET=xxxxxxxx');
     return new Response('server not configured', { status: 401 });
   }
+  const sig = req.headers.get('x-line-signature') || '';
   {
-    const sig = req.headers.get('x-line-signature') || '';
     const ok = await verifySignature(rawBody, sig, channelSecret);
     // 🔴 2026-08-01 เพิ่ม log (เจอจริง: กดปุ่มแล้วเงียบสนิท หาสาเหตุไม่ได้เลย)
     //   เดิมบรรทัดนี้ return 401 แบบ "ไม่พูดอะไรสักคำ" → ใน log เห็นแค่ booted/shutdown
@@ -462,6 +464,19 @@ serve(async (req) => {
         + ' · แปลว่าค่า LINE_CHANNEL_SECRET ไม่ตรงกับ channel นี้ (หรือมีช่องว่าง/ขึ้นบรรทัดใหม่ติดมาตอนตั้งค่า)');
       return new Response('invalid signature', { status: 401 });
     }
+  }
+
+  // Preserve the deployed best-effort forwarding after LINE signature verification.
+  // Social Inbox downtime must not block Classroom or Calendar processing.
+  const inboxForward = forwardLineEventToSocialInbox(
+    fetch, SOCIAL_INBOX_WEBHOOK_URL, rawBody, sig,
+  ).then((result) => {
+    if (!result.ok && !result.skipped) {
+      console.error('[line-webhook] Social Inbox forward failed; status=' + result.status);
+    }
+  });
+  if (globalThis.EdgeRuntime && typeof globalThis.EdgeRuntime.waitUntil === 'function') {
+    globalThis.EdgeRuntime.waitUntil(inboxForward);
   }
 
   let payload;
