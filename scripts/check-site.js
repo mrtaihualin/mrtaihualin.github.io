@@ -176,6 +176,7 @@ runTest(['scripts/tests-phase1-calendar-reliability.mjs'], 'Phase 1 Calendar rat
 //  ซิงค์ตารางหลังย้าย · ระบบเก่าที่ลบถาวรห้ามกลับมา · รีเซ็ตธงเตือน · ปุ่ม LINE พก d=/t=)
 // ทดสอบแล้วว่าจับ regression ได้จริง (negative test 2 แบบ) ไม่ใช่ด่านหลอก
 runTest(['scripts/tests-classroom-behavioral.js'], 'classroom behavioral tests');
+runTest(['scripts/tests-classroom-retirement.js'], 'classroom retirement regression');
 // เพิ่ม 2026-08-14 — Textbook temporary client-side gate ต้องครอบสารบัญ+10 บท
 // และห้ามลามไปล็อก Teaching Pages ใน classroom/
 runTest(['scripts/tests-textbook-access-gate.js'], 'Textbook temporary gate tests');

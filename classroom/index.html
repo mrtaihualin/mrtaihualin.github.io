@@ -256,51 +256,6 @@
   </div>
 </div>
 
-<!-- ======= STUDENT: 申請改期 MODAL（2026-07-06 新增，2026-07-16 改：最多可以給 3 個時間選項，
-     讓老師從裡面挑一個，或都不方便再自己聯絡——不用一直來回猜時間）======= -->
-<div class="modal-overlay" id="classRequestModal">
-  <div class="modal" style="max-width:440px;">
-    <h3 id="classRequestModalTitle">🔄 申請改期</h3>
-    <p style="font-size:0.82rem;color:var(--ink-muted);margin-bottom:12px;font-family:'Noto Sans TC',sans-serif;line-height:1.6;">
-      最多可以提供 3 個你方便的新時間，老師會挑一個確認，或都不方便的話會另外聯絡你。送出後實際是否能改由老師確認後回覆你喔！
-    </p>
-    <label class="settings-label">選項 1（必填）</label>
-    <input class="settings-input" id="reqDateInput1" type="date" oninput="onReqScheduleChange(1)" />
-    <div style="display:flex;gap:6px;align-items:center;">
-      <select class="settings-input" id="reqTimeInput1_h" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('reqTimeInput1')"><option value="">--</option><option value="00">00</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option></select>
-      <span style="font-family:'Noto Sans TC',sans-serif;color:var(--ink-muted);font-weight:700;">:</span>
-      <select class="settings-input" id="reqTimeInput1_m" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('reqTimeInput1')"><option value="">--</option><option value="00">00</option><option value="30">30</option></select>
-    </div>
-    <input type="hidden" id="reqTimeInput1" value="" oninput="onReqScheduleChange(1)" />
-    <p id="reqScheduleHint1" style="display:none;font-size:0.8rem;color:var(--gold-deep);font-family:'Noto Sans TC',sans-serif;margin-top:-6px;margin-bottom:10px;"></p>
-
-    <label class="settings-label">選項 2（選填）</label>
-    <input class="settings-input" id="reqDateInput2" type="date" oninput="onReqScheduleChange(2)" />
-    <div style="display:flex;gap:6px;align-items:center;">
-      <select class="settings-input" id="reqTimeInput2_h" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('reqTimeInput2')"><option value="">--</option><option value="00">00</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option></select>
-      <span style="font-family:'Noto Sans TC',sans-serif;color:var(--ink-muted);font-weight:700;">:</span>
-      <select class="settings-input" id="reqTimeInput2_m" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('reqTimeInput2')"><option value="">--</option><option value="00">00</option><option value="30">30</option></select>
-    </div>
-    <input type="hidden" id="reqTimeInput2" value="" oninput="onReqScheduleChange(2)" />
-    <p id="reqScheduleHint2" style="display:none;font-size:0.8rem;color:var(--gold-deep);font-family:'Noto Sans TC',sans-serif;margin-top:-6px;margin-bottom:10px;"></p>
-
-    <label class="settings-label">選項 3（選填）</label>
-    <input class="settings-input" id="reqDateInput3" type="date" oninput="onReqScheduleChange(3)" />
-    <div style="display:flex;gap:6px;align-items:center;">
-      <select class="settings-input" id="reqTimeInput3_h" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('reqTimeInput3')"><option value="">--</option><option value="00">00</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option></select>
-      <span style="font-family:'Noto Sans TC',sans-serif;color:var(--ink-muted);font-weight:700;">:</span>
-      <select class="settings-input" id="reqTimeInput3_m" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('reqTimeInput3')"><option value="">--</option><option value="00">00</option><option value="30">30</option></select>
-    </div>
-    <input type="hidden" id="reqTimeInput3" value="" oninput="onReqScheduleChange(3)" />
-    <p id="reqScheduleHint3" style="display:none;font-size:0.8rem;color:var(--gold-deep);font-family:'Noto Sans TC',sans-serif;margin-top:-6px;margin-bottom:10px;"></p>
-
-    <div class="modal-footer">
-      <button class="btn-ghost" onclick="closeClassRequestModal()">取消</button>
-      <button class="btn-gold" id="reqSubmitBtn" onclick="submitClassRequest()">📤 送出申請</button>
-    </div>
-  </div>
-</div>
-
 <!-- ======= STUDENT: 申請加課 MODAL（2026-07-15 新增：給不固定/偶爾約課的學生自己提出想加的時間，
      老師確認沒有衝突後才會真的排進 Calendar，跟「申請改期」共用同一套審核清單）
      2026-07-20 改（Lin 要求：跟老師端「➕ 加課堂時間」一致）：一次可以「➕ 再加一筆時間」
@@ -325,102 +280,6 @@
   </div>
 </div>
 
-<!-- ======= STUDENT: 選擇要取消的課堂 MODAL（2026-07-14 新增，2026-07-14 改成跟老師端 pickLessonModal
-     同一種下拉選單體驗，Lin 要求兩邊一致）======= -->
-<div class="modal-overlay" id="cancelPickerModal">
-  <div class="modal" style="max-width:420px;">
-    <h3>❌ 選擇要取消的課堂</h3>
-    <p style="font-size:0.82rem;color:var(--ink-muted);margin-bottom:12px;font-family:'Noto Sans TC',sans-serif;line-height:1.6;">
-      只能取消「開課前 24 小時以上」的課堂；不到 24 小時的課堂請直接聯絡老師。
-    </p>
-    <label class="settings-label">你的近期上課時間（你自己的時區）</label>
-    <select class="settings-input" id="cancelPickerSelect" onchange="onCancelPickerSelectChange()"></select>
-    <p id="cancelPickerHint" style="display:none;font-size:0.8rem;color:var(--amber);font-family:'Noto Sans TC',sans-serif;margin-top:6px;"></p>
-    <div class="modal-footer">
-      <button class="btn-ghost" onclick="closeCancelPickerModal()">關閉</button>
-      <a class="btn-sm" id="cancelPickerContactBtn" style="display:none;background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;text-decoration:none;" target="_blank" rel="noopener">💬 聯絡老師</a>
-      <button class="btn-gold" id="cancelPickerSubmitBtn" onclick="submitCancelPickerChoice()">❌ 送出取消申請</button>
-    </div>
-  </div>
-</div>
-
-<!-- ======= STUDENT: 選擇要改期的課堂 MODAL（2026-07-16 稽核後新增，ORANGE#6）——
-     以前「申請改期」只能挑「下一堂課」，跟取消申請（可以挑好幾週的課）不一致，
-     學生一週上好幾天課的話只能改最近那一堂。現在重用 computeUpcomingOccurrences
-     跟取消申請一樣的下拉選單體驗，選好要改哪一堂之後才進到「填新時間」那一步。======= -->
-<div class="modal-overlay" id="reschedulePickerModal">
-  <div class="modal" style="max-width:420px;">
-    <h3>🔄 選擇要改期的課堂</h3>
-    <p style="font-size:0.82rem;color:var(--ink-muted);margin-bottom:12px;font-family:'Noto Sans TC',sans-serif;line-height:1.6;">
-      先選要改哪一堂課，下一步再填想改到的新時間（最多 3 個選項）。
-    </p>
-    <label class="settings-label">你的近期上課時間（你自己的時區）</label>
-    <select class="settings-input" id="reschedulePickerSelect" onchange="onReschedulePickerSelectChange()"></select>
-    <p id="reschedulePickerHint" style="display:none;font-size:0.8rem;color:var(--amber);font-family:'Noto Sans TC',sans-serif;margin-top:6px;"></p>
-    <div class="modal-footer">
-      <button class="btn-ghost" onclick="closeReschedulePickerModal()">關閉</button>
-      <button class="btn-gold" id="reschedulePickerNextBtn" onclick="proceedToRescheduleTimeOptions()">下一步 →</button>
-    </div>
-  </div>
-</div>
-
-<!-- ======= TEACHER: 其他方式 MODAL（2026-07-13 新增，處理「其他」按鈕）======= -->
-<div class="modal-overlay" id="otherOptionsModal">
-  <div class="modal" style="max-width:400px;">
-    <h3>⚙️ 其他方式</h3>
-    <p style="font-size:0.82rem;color:var(--ink-muted);margin-bottom:14px;font-family:'Noto Sans TC',sans-serif;line-height:1.6;">
-      不想讓系統自動處理 Calendar 的話，可以選這裡：
-    </p>
-    <button class="btn-add-student" style="width:100%;margin-bottom:10px;" onclick="handleContactMyself()">📞 我會自己聯絡學生</button>
-    <button class="btn-add-student" style="width:100%;" onclick="openProposeTimeModal()">🔁 提議新時間給學生</button>
-    <div class="modal-footer">
-      <button class="btn-ghost" onclick="closeOtherOptionsModal()">取消</button>
-    </div>
-  </div>
-</div>
-
-<!-- ======= TEACHER: 提議新時間 MODAL（2026-07-13 新增，2026-07-16 改：最多可以給 3 個時間選項，
-     學生選一個，或都不方便——都不方便會直接跳回來提醒老師自己聯絡學生）======= -->
-<div class="modal-overlay" id="proposeTimeModal">
-  <div class="modal" style="max-width:420px;">
-    <h3 id="proposeTimeModalTitle">🔁 提議新時間給學生</h3>
-    <p style="font-size:0.82rem;color:var(--ink-muted);margin-bottom:12px;font-family:'Noto Sans TC',sans-serif;line-height:1.6;">
-      最多可以給 3 個時間選項（泰國時間），送出後會傳 LINE 給學生選一個；學生都不方便的話會直接通知你要自己聯絡學生。
-    </p>
-    <label class="settings-label">選項 1（必填，泰國時間）</label>
-    <input class="settings-input" id="proposeDateInput1" type="date" />
-    <div style="display:flex;gap:6px;align-items:center;">
-      <select class="settings-input" id="proposeTimeInput1_h" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('proposeTimeInput1')"><option value="">--</option><option value="00">00</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option></select>
-      <span style="font-family:'Noto Sans TC',sans-serif;color:var(--ink-muted);font-weight:700;">:</span>
-      <select class="settings-input" id="proposeTimeInput1_m" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('proposeTimeInput1')"><option value="">--</option><option value="00">00</option><option value="30">30</option></select>
-    </div>
-    <input type="hidden" id="proposeTimeInput1" value="" />
-
-    <label class="settings-label">選項 2（選填，泰國時間）</label>
-    <input class="settings-input" id="proposeDateInput2" type="date" />
-    <div style="display:flex;gap:6px;align-items:center;">
-      <select class="settings-input" id="proposeTimeInput2_h" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('proposeTimeInput2')"><option value="">--</option><option value="00">00</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option></select>
-      <span style="font-family:'Noto Sans TC',sans-serif;color:var(--ink-muted);font-weight:700;">:</span>
-      <select class="settings-input" id="proposeTimeInput2_m" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('proposeTimeInput2')"><option value="">--</option><option value="00">00</option><option value="30">30</option></select>
-    </div>
-    <input type="hidden" id="proposeTimeInput2" value="" />
-
-    <label class="settings-label">選項 3（選填，泰國時間）</label>
-    <input class="settings-input" id="proposeDateInput3" type="date" />
-    <div style="display:flex;gap:6px;align-items:center;">
-      <select class="settings-input" id="proposeTimeInput3_h" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('proposeTimeInput3')"><option value="">--</option><option value="00">00</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option></select>
-      <span style="font-family:'Noto Sans TC',sans-serif;color:var(--ink-muted);font-weight:700;">:</span>
-      <select class="settings-input" id="proposeTimeInput3_m" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('proposeTimeInput3')"><option value="">--</option><option value="00">00</option><option value="30">30</option></select>
-    </div>
-    <input type="hidden" id="proposeTimeInput3" value="" />
-
-    <div class="modal-footer">
-      <button class="btn-ghost" onclick="closeProposeTimeModal()">取消</button>
-      <button class="btn-gold" id="proposeSubmitBtn" onclick="submitProposeTime()">📤 傳送給學生</button>
-    </div>
-  </div>
-</div>
-
 <!-- ======= TEACHER: 聯絡學生 MODAL（2026-07-16 新增，Lin 要求）======= -->
 <!-- LINE 沒有官方連結能直接打開「跟某個學生的對話」，與其亂猜網址連錯人，
      改成直接在這裡打字送出，走跟其他通知一樣的 notify-line（server 端用 token 查 line_user_id，安全）。 -->
@@ -433,43 +292,6 @@
     <div class="modal-footer">
       <button class="btn-ghost" id="contactStudentCancelBtn" onclick="closeContactStudentModal()">取消</button>
       <button class="btn-gold" id="contactStudentSendBtn" onclick="sendContactStudentMessage()">📤 傳送</button>
-    </div>
-  </div>
-</div>
-
-<!-- ======= TEACHER: 永久變更課表 MODAL（2026-07-13 新增）======= -->
-<div class="modal-overlay" id="permanentChangeModal">
-  <div class="modal" style="max-width:420px;">
-    <h3>📌 永久變更固定上課時間</h3>
-    <p style="font-size:0.82rem;color:#b45309;margin-bottom:12px;font-family:'Noto Sans TC',sans-serif;line-height:1.6;">
-      ⚠️ 這會影響「往後所有週」的課，不是只改一次。請確定已經跟學生說好了再送出。
-    </p>
-    <label class="settings-label">從哪一天開始，每週固定改到？（泰國時間）</label>
-    <input class="settings-input" id="permDateInput" type="date" />
-    <label class="settings-label">固定改到幾點？（泰國時間）</label>
-    <div style="display:flex;gap:6px;align-items:center;">
-      <select class="settings-input" id="permTimeInput_h" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('permTimeInput')"><option value="">--</option><option value="00">00</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option></select>
-      <span style="font-family:'Noto Sans TC',sans-serif;color:var(--ink-muted);font-weight:700;">:</span>
-      <select class="settings-input" id="permTimeInput_m" style="flex:1;text-align:center;margin-bottom:0;" onchange="syncTimeDropdown('permTimeInput')"><option value="">--</option><option value="00">00</option><option value="30">30</option></select>
-    </div>
-    <input type="hidden" id="permTimeInput" value="" />
-    <div class="modal-footer">
-      <button class="btn-ghost" onclick="closePermanentChangeModal()">取消</button>
-      <button class="btn-gold" onclick="submitPermanentChange()">📌 永久變更</button>
-    </div>
-  </div>
-</div>
-
-<!-- ======= TEACHER: 選擇要改期/取消的課堂 MODAL（2026-07-13 新增，Lin 要求自己選，不要系統自動猜）======= -->
-<div class="modal-overlay" id="pickLessonModal">
-  <div class="modal" style="max-width:420px;">
-    <h3 id="pickLessonTitle">📅 選擇課堂</h3>
-    <p style="font-size:0.82rem;color:var(--ink-muted);margin-bottom:12px;font-family:'Noto Sans TC',sans-serif;line-height:1.6;" id="pickLessonHint"></p>
-    <label class="settings-label">本輪剩餘課堂（泰國時間）</label>
-    <select class="settings-input" id="pickLessonSelect"></select>
-    <div class="modal-footer">
-      <button class="btn-ghost" onclick="closePickLessonModal()">取消</button>
-      <button class="btn-gold" onclick="confirmPickLesson()">下一步</button>
     </div>
   </div>
 </div>

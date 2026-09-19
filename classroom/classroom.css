@@ -130,8 +130,6 @@
     font-family: 'Noto Sans TC', sans-serif; white-space: nowrap;
   }
   .roster-badge-normal     { background: var(--green-light); color: var(--green-dark); }
-  .roster-badge-reschedule { background: var(--gold-light); color: var(--amber-dark); }
-  .roster-badge-cancel     { background: var(--red-light); color: var(--red-dark); }
   .roster-badge-add        { background: var(--gold-light); color: var(--gold-deep); }
   .roster-badge-lowquota   { background: var(--red-light); color: var(--red-dark); }
 

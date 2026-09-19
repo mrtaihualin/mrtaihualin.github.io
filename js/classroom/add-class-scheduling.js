@@ -201,7 +201,7 @@ function addClassDayRowBadgeHtml(kind) {
     return '<div style="background:var(--gold-light);color:var(--gold-deep);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.76rem;font-weight:700;margin-bottom:8px;">📌 學生自己申請的時間 — 確認後直接排進 Calendar，並用 LINE 通知學生結果</div>';
   }
   if (kind === 'teacher') {
-    return '<div style="background:var(--cream);color:var(--ink-muted);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.76rem;font-weight:700;margin-bottom:8px;">➕ 老師自己加的時間 — 確認後直接排進 Calendar，並用 LINE 通知學生（學生不方便的話，請他自己按「申請取消課堂」）</div>';
+    return '<div style="background:var(--cream);color:var(--ink-muted);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-family:\'Noto Sans TC\',sans-serif;font-size:0.76rem;font-weight:700;margin-bottom:8px;">➕ 老師自己加的時間 — 確認後直接排進 Calendar，並用 LINE 通知學生（學生不方便的話，請他直接用 LINE 聯絡老師）</div>';
   }
   return '';
 }
@@ -434,7 +434,7 @@ async function checkAddClassDayConflict() {
     // เลิกใช้ระบบ "ส่งไปให้นักเรียนกดยอมรับก่อน แล้วครูค่อยกลับมากดยืนยัน" ทั้งหมด
     // ตอนนี้ไม่ว่าจะเป็นคาบที่ "นักเรียนขอมาเอง" หรือ "ครูคิดเพิ่มเอง" → ครูกดยืนยัน = ลง Calendar ทันที
     // แล้วส่ง LINE บอกนักเรียนว่าเพิ่มให้แล้ว
-    // ถ้านักเรียนไม่สะดวก → นักเรียนกดปุ่ม "申請取消課堂" ที่มีอยู่แล้วเอง (ไม่ต้องมีปุ่ม 婉拒 อีก)
+    // ถ้านักเรียนไม่สะดวก → ติดต่อครูทาง LINE โดยตรง
     // ถ้าครูรับเวลาที่นักเรียนขอไม่ได้ → ครูกด "💬 聯繫學生" คุยใน LINE แล้วกดปิดคำขอ
     //   (ไม่มีระบบ "เสนอเวลาใหม่" ในเส้นทางเพิ่มคาบอีกต่อไป — ระบบขอเลื่อน/改期 ยังมีเหมือนเดิม ไม่แตะ)
     // → เลยเหลือปุ่มเดียว ไม่มีสาขาแยกอีกแล้ว
@@ -643,7 +643,7 @@ async function directConfirmAddClassRow(token, p, requestIdToFinalize) {
           //   เพราะปุ่มนั้นยกเลิกได้ทีละครั้ง ไม่ใช่ทั้งชุด → ชุดคาบประจำให้ทักครูตรงๆ (ตรงกับฝั่ง LINE)
           body: JSON.stringify({ to: { studentToken: token }, message: p.recurring
             ? ('✅ 老師幫你排好固定課了：' + studentTimeLabel + '\n已經加到課表了。如果這個時間不方便，請直接跟老師說一聲。')
-            : ('✅ 老師幫你排好一堂課：' + studentTimeLabel + '\n這堂課已經加到課表了。如果那個時間不方便，請到網站按「申請取消課堂」，或直接跟老師說一聲。') }),
+            : ('✅ 老師幫你排好一堂課：' + studentTimeLabel + '\n這堂課已經加到課表了。如果那個時間不方便，請直接用 LINE 聯絡老師。') }),
         });
         studentNotified = stuRes.ok;
         if (!stuRes.ok) studentNotifyErr = await lineNotifyErrorText(stuRes);
