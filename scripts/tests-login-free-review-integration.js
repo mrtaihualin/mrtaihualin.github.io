@@ -8,6 +8,7 @@ const root = path.join(__dirname, '..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 
 const edge = read('supabase/functions/score-submit/index.ts');
+const catalogTransport = read('supabase/functions/score-submit/learning-catalog.mjs');
 const runtime = read('js/games/learning-review.js');
 const report = read('js/games/round-report.js');
 const gate = read('js/core/minimum-guest-launch.js');
@@ -82,7 +83,7 @@ assert.match(edge, /legacy_srs_identity_ambiguous/);
 assert.doesNotMatch(edge, /p_user_id:\s*body\./);
 assert.doesNotMatch(edge, /item_id:\s*body\./);
 assert.match(edge, /p_expected_state_token: expectedToken/);
-assert.match(edge, /content_ref: \{ source, key \}/);
+assert.match(catalogTransport, /content_ref: \{ source, key \}/);
 assert.match(edge, /item\.wrong == null \? Number\(item\.wrong_count/);
 assert.match(edge, /item\.mode \|\| item\.linguistic\?\.answer_mode/);
 assert.match(edge, /new Set\(\['tone', 'reading', 'typing', 'word_order'\]\)/);
