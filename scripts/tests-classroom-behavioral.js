@@ -42,11 +42,13 @@ async function run() {
   await student.loadStudentNextClass('student');
   assert.match(elements.nextClassInfo.innerHTML, /聯絡老師/);
   assert.match(elements.nextClassInfo.innerHTML, /申請加課/);
+  assert.match(elements.nextClassInfo.innerHTML, /courseRecordToggleBtn[\s\S]*?➕ 申請加課<\/button>[\s\S]*?💬 聯絡老師<\/a>/);
   assert.doesNotMatch(elements.nextClassInfo.innerHTML, /取消課堂|申請改期/);
   scheduleRows = [];
   await student.loadStudentNextClass('student');
   assert.match(elements.nextClassInfo.innerHTML, /聯絡老師/);
   assert.match(elements.nextClassInfo.innerHTML, /申請加課/);
+  assert.match(elements.nextClassInfo.innerHTML, /courseRecordToggleBtn[\s\S]*?➕ 申請加課<\/button>[\s\S]*?💬 聯絡老師<\/a>/);
   await student.loadStudentPendingRequestStatus('student');
   assert.equal(elements.pendingRequestCard.innerHTML, '');
   assert.match(elements.pendingAddRequestCard.innerHTML, /加課申請處理中/);

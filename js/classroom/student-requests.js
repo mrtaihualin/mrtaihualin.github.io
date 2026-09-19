@@ -130,8 +130,8 @@ async function loadStudentNextClass(token) {
         // 不到 24 小時的那一堂會顯示「聯絡老師」而不是擋住整組功能。
         // 2026-07-18 加（Lin 要求）：「📅 我的課程記錄」移到這一排第一顆，點下去原地展開/收合
         '<button class="btn-sm" id="courseRecordToggleBtn" style="background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;" onclick="toggleCourseRecordPanel()">📅 我的課程記錄 ▼</button>' +
-        '<a class="btn-sm" href="' + LINE_OA_URL + '" target="_blank" rel="noopener" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;text-decoration:none;">💬 聯絡老師</a>' +
         '<button class="btn-sm" style="background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-deep) 100%);color:#fff;" onclick="openAddRequestModal(\'' + token + '\')">➕ 申請加課</button>' +
+        '<a class="btn-sm" href="' + LINE_OA_URL + '" target="_blank" rel="noopener" style="background:linear-gradient(135deg,var(--gold-bright),var(--gold-deep));color:#fff;text-decoration:none;">💬 聯絡老師</a>' +
       '</div>';
   } catch (e) {
     el.innerHTML = '<div style="color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;font-size:0.85rem;">載入失敗：' + (e.message || e) + '</div>';
