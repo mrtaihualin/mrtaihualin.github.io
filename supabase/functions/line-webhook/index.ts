@@ -496,8 +496,14 @@ serve(async (req) => {
       const params = new URLSearchParams(data);
       const action = params.get('action');
       actionForLog = action || 'unknown';
-      // Old LINE cards remain in chat history. Retired actions stop before any request or Calendar access.
-      if (RETIRED_CLASSROOM_POSTBACKS.has(action || '')) continue;
+      // Old LINE cards remain in chat history. Reply once, without request or Calendar access.
+      if (RETIRED_CLASSROOM_POSTBACKS.has(action || '')) {
+        if (channelToken && event.replyToken) {
+          await replyLine(channelToken, event.replyToken,
+            'ℹ️ 這顆舊的取消／改期按鈕已停用，沒有變更課表。請直接在 LINE 聯絡對方；需要調整時由老師到 Google Calendar 手動處理。');
+        }
+        continue;
+      }
       // 🔴 2026-08-01 เพิ่ม log (เจอจริง: กดปุ่มแล้วเงียบสนิท ไล่หาสาเหตุไม่ได้)
       //   ปุ่มที่ระบบไม่รู้จักจะตกไปที่ท้ายสุด "ไม่ทำอะไรเลย" แบบเงียบๆ (ดูคอมเมนต์ท้าย loop)
       //   บรรทัดนี้ทำให้รู้ทันทีว่า "ปุ่มถูกกดจริง และชื่อปุ่มที่ส่งมาคืออะไร"
@@ -513,7 +519,7 @@ serve(async (req) => {
           await replyLine(channelToken, event.replyToken,
             'ℹ️ 這顆按鈕已經停用了（這是以前的舊訊息）。\n' +
             '現在老師排課會直接排進課表，不需要你先按確認。\n' +
-            '如果時間不方便，請直接跟老師說一聲，或到網站按「申請取消課堂」。');
+            '如果時間不方便，請直接在 LINE 跟老師說一聲。');
         }
         continue;
       }
@@ -1080,7 +1086,7 @@ serve(async (req) => {
                   ? ('✅ 老師幫你排好固定課了：' + timeLabelAddC +
                      '\n已經加到課表了。如果這個時間不方便，請直接跟老師說一聲。')
                   : ('✅ 老師幫你排好一堂課：' + timeLabelAddC +
-                     '\n這堂課已經加到課表了。如果那個時間不方便，請到網站按「申請取消課堂」，或直接跟老師說一聲。'));
+                     '\n這堂課已經加到課表了。如果那個時間不方便，請直接在 LINE 跟老師說一聲。'));
               if (!pushResAddC.ok) {
                 console.error('[line-webhook] ⚠️ confirm_add_class: แจ้งนักเรียนไม่สำเร็จ:', pushResAddC.reason, 'request=', requestIdAddC);
                 replyMsgAddC = '✅ 已新增 Calendar 課程\n⚠️ 但 LINE 通知學生失敗（' + pushResAddC.reason + '），請自己再跟學生說一聲';

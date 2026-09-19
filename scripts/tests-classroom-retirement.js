@@ -2,6 +2,7 @@
 const fs = require('fs');
 const path = require('path');
 const assert = require('assert');
+const vm = require('vm');
 const root = path.resolve(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 
@@ -38,7 +39,51 @@ if (process.env.CLASSROOM_RETIREMENT_FINAL === '1') {
   assert.doesNotMatch(html, /id="(?:cancelPickerModal|reschedulePickerModal|permanentChangeModal|pickLessonModal)"/);
   assert.match(student, /href="' \+ LINE_OA_URL/);
   assert.match(webhook, /RETIRED_CLASSROOM_POSTBACKS/);
+  const retiredGuard = webhook.slice(webhook.indexOf("if (RETIRED_CLASSROOM_POSTBACKS.has(action || ''))"), webhook.indexOf("console.log('[line-webhook] 📩", webhook.indexOf("if (RETIRED_CLASSROOM_POSTBACKS.has(action || ''))")));
+  assert.match(retiredGuard, /await replyLine\(channelToken, event\.replyToken/);
+  assert.doesNotMatch(retiredGuard, /\.from\(|checkFreebusyConflictService\(|createCalendarEventById\(/);
+  assert.doesNotMatch(webhook, /到網站按「申請取消課堂」/);
   assert.match(rpc, /Classroom cancel\/reschedule requests are retired/);
 }
 
-console.log('classroom retirement regression PASS');
+async function verifyRetiredPostbacks() {
+  const actions = [
+    'accept_offer', 'decline_offer', 'confirm_reschedule_move',
+    'confirm_reschedule_pick', 'ack_teacher_cancel', 'confirm_cancel_delete',
+  ];
+  let handler;
+  const requests = [];
+  const context = {
+    serve: (fn) => { handler = fn; },
+    createClient: () => ({ from: () => { throw new Error('retired postback queried database'); } }),
+    Deno: { env: { get: (name) => name === 'LINE_CHANNEL_ACCESS_TOKEN' || name === 'LINE_CHANNEL_SECRET' ? 'fixture-value' : '' } },
+    fetch: async (url, options) => { requests.push({ url, options }); return { ok: true }; },
+    Response,
+    URLSearchParams,
+    console: { log: () => {}, warn: () => {}, error: () => {} },
+  };
+  const runnable = webhook
+    .replace(/^import \{ serve \}.*\n/m, '')
+    .replace(/^import \{ createClient \}.*\n/m, '')
+    .replace(/^import \{[\s\S]*?\} from '\.\.\/_shared\/calendar-reliability\.mjs';\n/m, '');
+  vm.runInNewContext(runnable, context);
+  context.verifySignature = async () => true;
+  const response = await handler({
+    method: 'POST', headers: { get: () => 'fixture-signature' },
+    text: async () => JSON.stringify({ events: actions.map((action, index) => ({
+      type: 'postback', replyToken: 'fixture-' + index,
+      postback: { data: 'action=' + action + '&request=old-id' },
+    })) }),
+  });
+  assert.equal(response.status, 200);
+  assert.equal(requests.length, actions.length);
+  requests.forEach(({ url, options }, index) => {
+    assert.equal(url, 'https://api.line.me/v2/bot/message/reply');
+    const payload = JSON.parse(options.body);
+    assert.equal(payload.replyToken, 'fixture-' + index);
+    assert.match(payload.messages[0].text, /已停用.*沒有變更課表/);
+  });
+}
+
+verifyRetiredPostbacks().then(() => console.log('classroom retirement regression PASS'))
+  .catch((error) => { console.error(error.message); process.exitCode = 1; });

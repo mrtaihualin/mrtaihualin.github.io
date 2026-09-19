@@ -197,7 +197,7 @@ function friendlyRequestError(msg) {
     return '這堂課系統裡沒有記錄上課時間，沒辦法自動判斷，請直接聯絡老師改期。';
   }
   if (m.indexOf('hours in advance') >= 0) {
-    return '這堂課距離上課不到 24 小時，沒辦法線上取消。\n你可以改用「🔄 申請改期」，或直接聯絡老師。';
+    return '這堂課目前無法在線上調整，請直接用 LINE 聯絡老師。';
   }
   if (m.indexOf('missing original_time') >= 0) {
     return '這堂課系統裡沒有記錄上課時間，沒辦法自動判斷，請直接聯絡老師。';
