@@ -736,7 +736,9 @@ function dispOpt(comp,x){ return x; }
 // ════════════════════════════════════════════
 // LEVEL SWITCH
 // ════════════════════════════════════════════
+var rgLevelSwitchRequest=0;
 function setLevel(lv){
+  var request=++rgLevelSwitchRequest;
   curLevel=lv;
   try{localStorage.setItem('rg_reading_level',lv);}catch(e){} // Lin 2026-07-12: จำระดับที่เลือกไว้ → รีเฟรชแล้วไม่ต้องเลือกใหม่
   document.querySelectorAll('.ltab').forEach(function(b){b.classList.remove('active');});
@@ -745,14 +747,35 @@ function setLevel(lv){
   // 高級 เล่นด้วยกลไก中級ตอนนี้ (เลิกใช้ระบบ adv-game เก่าแล้ว — Lin 2026-07-04)
   document.getElementById('bars-wrap').style.display='flex';
   document.getElementById('rg-stat-row').style.display='flex';
-  document.getElementById('game').style.display='flex';
+  var gameEl=document.getElementById('game');
+  gameEl.style.display='flex';
+  var started=false, go=function(){
+    if(started||request!==rgLevelSwitchRequest)return;
+    started=true;
+    gameEl.style.pointerEvents='';
+    gameEl.inert=false;
+    gameEl.removeAttribute('aria-busy');
+    initGame();
+  };
+  // Login Free needs the canonical queue before allocating a round. A timeout here
+  // starts initGame without a packet, which throws LEARNING_QUEUE_UNAVAILABLE.
+  if(window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()){
+    gameEl.style.pointerEvents='none';
+    gameEl.inert=true;
+    gameEl.setAttribute('aria-busy','true');
+    var ready=rgPrimeReview();
+    if(rgLoggedIn()&&!window.__rgSrsSyncedOnce)ready=Promise.all([rgSyncSrsFromServer(),ready]);
+    Promise.resolve(ready).then(go,function(error){
+      if(request===rgLevelSwitchRequest)console.error('[reading-game] level queue unavailable:',error);
+    });
+    return;
+  }
   // Lin 2026-07-13: เครื่องใหม่ที่เพิ่งล็อกอิน → รอ sync สั้นๆ (≤1.5วิ) ให้รอบแรกถูกต้อง เน็ตล่ม/ช้าไปต่อทันที ไม่ค้าง
   if(rgLoggedIn() && !window.__rgSrsSyncedOnce){
-    var started=false, go=function(){ if(started)return; started=true; initGame(); };
     try{ Promise.race([ Promise.all([rgSyncSrsFromServer(),rgPrimeReview()]), new Promise(function(r){setTimeout(r,1500);}) ]).then(go); }catch(e){ go(); }
     setTimeout(go,1600);
   } else {
-    try{Promise.race([rgPrimeReview(),new Promise(function(r){setTimeout(r,1500);})]).then(initGame);}catch(e){initGame();}
+    try{Promise.race([rgPrimeReview(),new Promise(function(r){setTimeout(r,1500);})]).then(go);}catch(e){go();}
   }
 }
 
@@ -2189,7 +2212,7 @@ document.addEventListener('keydown',function(e){
   var ae=document.activeElement;
   if(ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName))return; // เผื่อกำลังพิมพ์ในช่อง 我有問題 อยู่ ไม่ให้ไปชนกัน
   var gameEl=document.getElementById('game');
-  if(!gameEl || gameEl.style.display==='none')return;
+  if(!gameEl || gameEl.style.display==='none' || gameEl.getAttribute('aria-busy')==='true')return;
   var _hm=document.getElementById('rg-howto-modal');
   if(_hm && _hm.style.display==='flex')return;
   if(document.getElementById('rg-ask-ov'))return;
