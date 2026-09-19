@@ -6,7 +6,7 @@
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.112.3';
 import { validateCanonicalScoreEvidence, validateScoreSubmission } from './score-engine.mjs';
-import { readPublicLearningItems, learningReadFailure } from './learning-catalog.mjs';
+import { readLearningCatalog } from './learning-catalog.mjs';
 import { HIDDEN_REVIEW_SCORE_DEFAULT_ENABLED, verifyLearningScore, verifyRoundLearningScores } from './learning-score-verifier.mjs';
 import { classifyLearningState, LOGIN_FREE_LEARNING_ENGINE_VERSION } from '../_shared/login-free-learning-engine.mjs';
 
@@ -239,31 +239,20 @@ function shuffled<T>(input: T[]) {
   return rows;
 }
 
-async function learningCatalog(admin: any, game: any, level: number) {
-  const sentence = game.verifier === 'word_order' || level === 3;
-  let content;
-  if (sentence) {
-    content = await admin.from('game_sentences').select('th').limit(1000);
-  } else {
-    const levelCode = ({ 1: '初', 2: '中' } as Record<number, string>)[level];
-    content = await admin.from('game_words').select('content_key')
-      .eq('level', levelCode).eq('status', 'active').in('access_tier', ['guest', 'login']).limit(1000);
-  }
-  if (content.error) throw learningReadFailure('catalog_content', content);
-  const source = sentence ? 'game_sentences' : 'game_words';
-  const keys = Array.from(new Set((content.data || []).map((row: any) => String(sentence ? row.th : row.content_key || '')).filter(Boolean)));
-  if (!keys.length) throw Object.assign(new Error('learning_catalog_empty'), { code: 'learning_catalog_empty' });
-  const learningRows = await readPublicLearningItems(admin, source, keys);
-  const grouped = new Map<string, any[]>();
-  learningRows.forEach((row: any) => {
-    const list = grouped.get(row.content_key) || [];
-    list.push(row); grouped.set(row.content_key, list);
-  });
-  return keys.map((key) => {
-    const rows = grouped.get(key) || [];
-    if (rows.length !== 1) throw Object.assign(new Error('content_ref_not_unique'), { code: 'content_ref_not_unique' });
-    return { item_id: rows[0].item_id, content_ref: { source, key } };
-  });
+function learningCatalogMode(userId: string, game: any, level: number) {
+  const mode = String(Deno.env.get('LEARNING_CATALOG_RPC_MODE') || 'off').toLowerCase();
+  if (!['shadow', 'canary', 'on'].includes(mode)) return 'off';
+  const scopes = new Set(String(Deno.env.get('LEARNING_CATALOG_RPC_SCOPES') || '')
+    .split(',').map((value) => value.trim()).filter(Boolean));
+  if (!scopes.has('*') && !scopes.has(`${game.verifier}:${level}`)) return 'off';
+  if (mode === 'on') return 'on';
+  const users = new Set(String(Deno.env.get('LEARNING_CATALOG_RPC_CANARY_USER_IDS') || '')
+    .split(',').map((value) => value.trim().toLowerCase()).filter((value) => UUID_V4.test(value)));
+  return users.has(String(userId || '').toLowerCase()) ? mode : 'off';
+}
+
+async function learningCatalog(admin: any, user: any, game: any, level: number) {
+  return readLearningCatalog(admin, game.verifier, level, learningCatalogMode(user?.id, game, level));
 }
 
 async function currentLearningSnapshot(admin: any, user: any, game: any, level: number, catalog: any[], today: string) {
@@ -273,8 +262,7 @@ async function currentLearningSnapshot(admin: any, user: any, game: any, level: 
   const srs = await admin.from('tone_srs_state')
     .select('item_id,word,state_token,stage,due_date,ever_failed,mastered,updated_at')
     .eq('user_id', user.id).eq('game', game.database).eq('level', level).limit(2000);
-  if (review.error) throw learningReadFailure('review_snapshot', review);
-  if (srs.error) throw learningReadFailure('srs_snapshot', srs);
+  if (review.error || srs.error) throw Object.assign(new Error('learning_queue_unavailable'), { code: 'learning_queue_unavailable' });
 
   const reviewById = new Map((review.data || []).map((row: any) => [row.item_id, row]));
   const srsById = new Map((srs.data || []).filter((row: any) => row.item_id).map((row: any) => [row.item_id, row]));
@@ -318,14 +306,14 @@ async function handleLearningQueue(origin: string, body: any, user: any, admin: 
   if (!Number.isInteger(playSetSize) || playSetSize < 1 || playSetSize > 100) {
     return reply(origin, { error: 'invalid_play_set_size' }, 400);
   }
-  const catalog = await learningCatalog(admin, game, level);
+  const catalog = await learningCatalog(admin, user, game, level);
   const snapshots = await currentLearningSnapshot(admin, user, game, level, catalog, today);
   const reviewDue = snapshots.filter((row) => row.bucket === 'review_due');
   const srsDue = snapshots.filter((row) => row.bucket === 'srs_due');
   const regular = shuffled(snapshots.filter((row) => row.bucket === 'regular_or_new'));
   const operations = await admin.from('phase1_learning_review_operations').select('operation_id', { count: 'exact', head: true })
     .eq('user_id', user.id).eq('game', game.database).eq('level', level);
-  if (operations.error) { learningReadFailure('operation_count', operations); return reply(origin, { error: 'learning_queue_unavailable' }, 503); }
+  if (operations.error) return reply(origin, { error: 'learning_queue_unavailable' }, 503);
   const completed = Number(operations.count || 0);
   const cap = Math.max(0, Math.floor(((completed % 5) + playSetSize) / 5));
   const selectedReview = reviewDue.slice(0, Math.min(cap, playSetSize));
@@ -385,7 +373,7 @@ async function handleLearningAction(origin: string, body: any, user: any, admin:
   let expectedState = String(body.expected_state || '');
   let expectedToken = String(body.expected_state_token || '');
   if (action === 'review_commit' && (!expectedState || !expectedToken)) {
-    const catalog = await learningCatalog(admin, game, level);
+    const catalog = await learningCatalog(admin, user, game, level);
     const snapshots = await currentLearningSnapshot(admin, user, game, level, catalog, today);
     const current = snapshots.find((row) => row.content_ref.source === ref.source && row.content_ref.key === ref.key);
     expectedState = String(current?.state || ''); expectedToken = String(current?.state_token || '');
