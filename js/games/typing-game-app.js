@@ -385,7 +385,9 @@ function dispOpt(comp,x){
 // ════════════════════════════════════════════
 // LEVEL SWITCH
 // ════════════════════════════════════════════
+var tgLevelSwitchRequest=0;
 function setLevel(lv){
+  var request=++tgLevelSwitchRequest;
   tgCloseMobileKeyboard();
   try{ if(typeof gtag==='function') gtag('event','typing_game_level_change',{category:'game', level: lv}); }catch(e){}
   curLevel=lv;
@@ -400,14 +402,35 @@ function setLevel(lv){
   // The shared signed-in profile owns this optional legacy row and may replace it.
   // Its absence must never abort level changes or canonical round recovery.
   var _statRow=document.getElementById('rg-stat-row'); if(_statRow)_statRow.style.display='flex';
-  document.getElementById('game').style.display='flex';
+  var gameEl=document.getElementById('game');
+  gameEl.style.display='flex';
+  var started=false, go=function(){
+    if(started||request!==tgLevelSwitchRequest)return;
+    started=true;
+    gameEl.style.pointerEvents='';
+    gameEl.inert=false;
+    gameEl.removeAttribute('aria-busy');
+    initGame();
+  };
+  // Login Free needs the canonical queue before allocating a round. A timeout here
+  // starts initGame without a packet, which throws LEARNING_QUEUE_UNAVAILABLE.
+  if(window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()){
+    gameEl.style.pointerEvents='none';
+    gameEl.inert=true;
+    gameEl.setAttribute('aria-busy','true');
+    var ready=tgPrimeReview();
+    if(rgLoggedIn()&&!window.__tgSrsSyncedOnce)ready=Promise.all([tgSyncSrsFromServer(),ready]);
+    Promise.resolve(ready).then(go,function(error){
+      if(request===tgLevelSwitchRequest)console.error('[typing-game] level queue unavailable:',error);
+    });
+    return;
+  }
   // Lin 2026-07-13: เครื่องใหม่ที่เพิ่งล็อกอิน → รอ sync สั้นๆ (≤1.5วิ) ให้รอบแรกถูกต้อง เน็ตล่ม/ช้าไปต่อทันที ไม่ค้าง
   if(rgLoggedIn() && !window.__tgSrsSyncedOnce){
-    var started=false, go=function(){ if(started)return; started=true; initGame(); };
     try{ Promise.race([ Promise.all([tgSyncSrsFromServer(),tgPrimeReview()]), new Promise(function(r){setTimeout(r,1500);}) ]).then(go); }catch(e){ go(); }
     setTimeout(go,1600);
   } else {
-    try{Promise.race([tgPrimeReview(),new Promise(function(r){setTimeout(r,1500);})]).then(initGame);}catch(e){initGame();}
+    try{Promise.race([tgPrimeReview(),new Promise(function(r){setTimeout(r,1500);})]).then(go);}catch(e){go();}
   }
 }
 
@@ -2234,7 +2257,7 @@ function rgContBackspace(){
 document.addEventListener('keydown',function(e){
   if(!RG_TYPE.on)return;
   var gameEl=document.getElementById('game');
-  if(!gameEl || gameEl.style.display==='none')return;
+  if(!gameEl || gameEl.style.display==='none' || gameEl.getAttribute('aria-busy')==='true')return;
   var ae=document.activeElement;
   if(ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName))return;
   // โมดัลเปิดอยู่ (怎麼玩 / 我有問題 / 成就) → อย่าให้พิมพ์ทะลุไปโดนเกม — Lin 2026-07-02

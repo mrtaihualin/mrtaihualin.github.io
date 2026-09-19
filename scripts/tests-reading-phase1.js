@@ -118,7 +118,7 @@ test('Reading keeps reviewed syllable authority through the live answer object',
 });
 
 test('Reading loads the rebuilt crash-safe bundle with a fresh cache key', () => {
-  assert.match(html, /reading-game-app\.min\.js\?v=61/);
+  assert.match(html, /reading-game-app\.min\.js\?v=62/);
   assert.match(minified, /READING_FINAL_EXCEPTIONS=\{"อีเมล@中#noun-b-11":"ล"\}/);
   assert.match(minified, /function reviewedReadingVowel\(/);
   assert.match(minified, /function reviewedReadingFinal\(/);
