@@ -189,14 +189,10 @@ function rosterSubText(token) {
 }
 
 // 2026-08-02 加：算這位學生右邊的狀態 badge——優先順序（Lin 指定）：
-//   有申請（取消 > 改期 > 加課）> 課程快上完（≤1堂）> 正常。一人只顯示一個 badge。
+//   加課申請 > 課程快上完（≤1堂）> 正常。一人只顯示一個 badge。
 function computeRosterBadge(token) {
   var reqs = (window._pendingRequestsByToken && window._pendingRequestsByToken[token]) || [];
   if (reqs.length) {
-    var hasCancel = reqs.some(function(r) { return r.type === 'cancel'; });
-    var hasReschedule = reqs.some(function(r) { return r.type === 'reschedule'; });
-    if (hasCancel) return { cls: 'roster-badge-cancel', icon: '❌', label: '取消申請' };
-    if (hasReschedule) return { cls: 'roster-badge-reschedule', icon: '🔄', label: '改期申請' };
     return { cls: 'roster-badge-add', icon: '➕', label: '加課申請' };
   }
   var q = (window._rosterQuotaByToken && window._rosterQuotaByToken[token]) || null;
