@@ -40,7 +40,11 @@ function harness(config, runtime, primes) {
     localStorage: { setItem() {} },
     document: {
       querySelectorAll() { return [element]; },
-      getElementById(id) { return id === 'tg-resume-banner' ? null : id === 'game' ? game : element; },
+      getElementById(id) {
+        if (id === 'tg-resume-banner') return null;
+        if (config.name === 'Reading' && id === 'rg-stat-row') return null;
+        return id === 'game' ? game : element;
+      },
     },
     console: { error(...args) { errors.push(args); } },
     tgCloseMobileKeyboard() {},

@@ -746,7 +746,8 @@ function setLevel(lv){
   document.getElementById('end').style.display='none';
   // 高級 เล่นด้วยกลไก中級ตอนนี้ (เลิกใช้ระบบ adv-game เก่าแล้ว — Lin 2026-07-04)
   document.getElementById('bars-wrap').style.display='flex';
-  document.getElementById('rg-stat-row').style.display='flex';
+  var statRow=document.getElementById('rg-stat-row');
+  if(statRow)statRow.style.display='flex';
   var gameEl=document.getElementById('game');
   gameEl.style.display='flex';
   var started=false, go=function(){

@@ -1,5 +1,10 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-09-21 — Reading level-switch missing-stat-row guard (`SOURCE_PASS / PRODUCTION_ROLLED_BACK`)
+
+- The approved 382-file static candidate from `ec14cafd744d6357739402f797f58b6ac921eff0` was uploaded as immutable Cloudflare version `fb941bad-5c46-4e3c-825f-f3a8b044f130`. Exact-byte, route and denied-path checks passed, but the signed-out mobile browser postcheck reproduced a Reading Middle level-switch exception because the canonical Login surface removes the legacy `rg-stat-row` ID while `setLevel()` dereferenced it unconditionally. Traffic was automatically returned to preserved version `6335206e-16f8-46a5-8811-7efc2f6f972a`; two complete apex/WWW checks confirmed all 382 rollback bytes, 13 routes and denied paths. The failed candidate is inactive.
+- Reading now treats that optional legacy statistics row as absent-safe, matching the existing Typing guard. The level-readiness harness reproduces the missing-row layout, the focused Reading suite passes `23/23`, the complete site gate passes all 1,112 local files, and an isolated 390×844 browser run loads Guest content, switches to Middle, keeps the question and controls available, and reports no banner, page error or console error. Reading's runtime cache binding advances to `v63` so no browser can reuse the inactive failed `v62` bytes. No vocabulary/content, Supabase, Edge, Auth, account/player data or current Production change was made by this source fix; a new exact static package and approval are required before release.
+
 ## 2026-09-19 — Classroom cancel/reschedule retirement (`SOURCE_PASS / PRODUCTION_UNCHANGED`)
 
 - Removed student and teacher cancel/reschedule request controls and teacher permanent-change controls. Students now get a direct LINE contact link whether or not a next class is scheduled. The teacher handles agreed changes directly in Google Calendar. Removed the related request cards, modals, Calendar mutation handlers and obsolete LINE postback handlers. Historical cancel/reschedule rows remain stored.
