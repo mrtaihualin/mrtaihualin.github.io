@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -15,7 +16,7 @@ const rollback = path.join(root, 'supabase/recovery/paid-queue-193/rollback.sql'
 assert.equal(free.length, 200);
 assert.equal(paid189.length, 189);
 
-const temp = fs.mkdtempSync('/private/tmp/paid-193-db-');
+const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'paid-193-db-'));
 const data = path.join(temp, 'data');
 const socket = path.join(temp, 'socket');
 const fixture = path.join(temp, 'fixture.sql');
