@@ -1,5 +1,11 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-09-22 — Paid 193 Production-baseline reconciliation (`SOURCE_PASS / PRODUCTION_UNCHANGED / FRESH_APPROVAL_REQUIRED`)
+
+- The first Production precheck stopped before mutation because the forward/rollback SQL still guarded the historical pre-correction hashes. Read-only reconciliation proved that Production has the exact current 200/200 approved Free canonical records including `spellingSyllables`, and the exact 189/189 Paid baseline after the approved `หมื่น` vowel correction. Counts, ranks, the single owner entitlement, RLS/direct-browser denial and the sentence Roman precondition were already correct; no catalog repair is required.
+- Rebound only the Paid 193 migration and rollback guards to those verified current aggregate hashes. The exact 193 payload, Roman migration, owner-only Edge behavior, caps, entitlements, RLS and existing rows are unchanged. The isolated PostgreSQL fixture now seeds the current Free authority plus corrected Paid baseline, proves the additive 193 migration, fail-closed user-linked rollback and exact clean restoration, and the full required site gate passes all 1,127 local files.
+- No Production migration, Edge deployment, Cloudflare release, Auth/account mutation or user-data write occurred. The earlier Production approval was consumed by the failed precheck; the replacement migration/rollback hashes require fresh exact approval before restarting the ordered Production sequence.
+
 ## 2026-09-21 — Paid Sets 1–8 exact 193 central vocabulary integration (`SOURCE_PASS / PRODUCTION_APPROVAL_PENDING`)
 
 - Added the exact Lin-approved 193 semantic records from Sets 1–8 to the single protected vocabulary source as additive `paid-queue-193-v1`: `初 186 / 中 7`, 192 unique written forms, with only the approved `คัน=輛` and `คัน=癢` pair sharing a written form. The canonical queue target becomes 582 records total (`Free 200 + Paid 382`, Paid `初 369 / 中 13`). The six locked word fields, twelve locked syllable-structure fields, passed category paths and `รอตรวจรวม` audio state are retained record by record; no sentence content or game rule changed.

@@ -1,5 +1,6 @@
 -- Roll back only the exact Paid 193 additive batch.
 -- Fail closed when any Paid SRS state/operation references the batch so user history is never deleted.
+-- The retained-baseline hashes match the current canonical Free 200 plus corrected Paid 189.
 
 begin;
 lock table public.game_words in share row exclusive mode;
@@ -30,9 +31,9 @@ do $postcheck$
 begin
   if exists(select 1 from public.game_words where catalog_version='paid-queue-193-v1')
      or (select count(*) from public.game_words where status='active') <> 200
-     or (select md5(string_agg(record_hash, E'\n' order by content_key collate "C")) from public.game_words where status='active') <> '4be1d6442da1c2980b1e084aafc45394'
+     or (select md5(string_agg(record_hash, E'\n' order by content_key collate "C")) from public.game_words where status='active') <> 'c4f7b191b4e7c812ab4e348dccdf7ced'
      or (select count(*) from public.game_words where status='queued' and access_tier='paid') <> 189
-     or (select md5(string_agg(record_hash, E'\n' order by content_key collate "C")) from public.game_words where status='queued' and access_tier='paid') <> '2719d0ca5647c7b7ad52c5d12ac421c8'
+     or (select md5(string_agg(record_hash, E'\n' order by content_key collate "C")) from public.game_words where status='queued' and access_tier='paid') <> '8995b40864da1d4f6a04d483c13f3114'
      or (select count(*) from public.phase1_product_entitlements where entitlement='owner_all_access') <> 1 then
     raise exception 'Paid 193 rollback postcheck failed';
   end if;
