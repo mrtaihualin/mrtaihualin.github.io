@@ -11,6 +11,9 @@ workflow:
 default:
   image: node:22-bookworm
   interruptible: true
+  before_script:
+    - apt-get update -qq
+    - DEBIAN_FRONTEND=noninteractive apt-get install -y -qq postgresql-15
 
 variables:
   GIT_DEPTH: "0"
@@ -21,4 +24,4 @@ required-tests-and-write-set:
   script:
     - node scripts/tests-task-write-set.js
     - node scripts/check-task-write-set.js --gitlab
-    - node scripts/check-site.js
+    - runuser -u postgres -- env PATH="/usr/lib/postgresql/15/bin:$PATH" node scripts/check-site.js
