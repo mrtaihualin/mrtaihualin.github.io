@@ -28,7 +28,7 @@
     {
       th: 'ผมกินข้าวอยู่ที่บ้าน', zh: '我在家吃飯', readingTH: 'ผม-กิน-ข้าว-อยู่-ที่-บ้าน', wc: 6, politeF: null,
       words: [
-      { th: 'ผม', zh: '我', syls: [{cons:'ผ', vowel:'โอะ', final:'ม', tone_name:'จัตวา', th:'ผม', en:'phǎm'}] },
+      { th: 'ผม', zh: '我', syls: [{cons:'ผ', vowel:'โอะ', final:'ม', tone_name:'จัตวา', th:'ผม', en:'phǒm'}] },
       { th: 'กิน', zh: '吃', syls: [{cons:'ก', vowel:'อิ', final:'น', tone_name:'สามัญ', th:'กิน', en:'gin'}] },
       { th: 'ข้าว', zh: '飯', syls: [{cons:'ข', vowel:'อา', tone:'้', final:'ว', tone_name:'โท', th:'ข้าว', en:'khâao'}] },
       { th: 'อยู่', zh: '在（進行）', syls: [{cons:'ย', lead:'อ', vowel:'อู', tone:'่', tone_name:'เอก', th:'อยู่', en:'yùu'}] },
@@ -59,7 +59,7 @@
     {
       th: 'ผมอยากเรียนภาษาไทย', zh: '我想學泰語', readingTH: 'ผม-อยาก-เรียน-พา-สา-ไทย', wc: 6, politeF: null,
       words: [
-      { th: 'ผม', zh: '我', syls: [{cons:'ผ', vowel:'โอะ', final:'ม', tone_name:'จัตวา', th:'ผม', en:'phǎm'}] },
+      { th: 'ผม', zh: '我', syls: [{cons:'ผ', vowel:'โอะ', final:'ม', tone_name:'จัตวา', th:'ผม', en:'phǒm'}] },
       { th: 'อยาก', zh: '想', syls: [{cons:'ย', lead:'อ', vowel:'อา', final:'ก', tone_name:'เอก', th:'อยาก', en:'yàak'}] },
       { th: 'เรียน', zh: '學', syls: [{cons:'ร', vowel:'เอีย', final:'น', tone_name:'สามัญ', th:'เรียน', en:'rian'}] },
       { th: 'ภาษาไทย', zh: '泰語', syls: [{cons:'ภ', consRead:'พ', vowel:'อา', tone_name:'สามัญ', th:'ภา', en:'phaa'}, {cons:'ษ', consRead:'ส', vowel:'อา', tone_name:'จัตวา', th:'ษา', en:'sǎa'}, {cons:'ท', vowel:'ไอ', final:'ย', tone_name:'สามัญ', th:'ไทย', en:'thai'}] }
@@ -87,7 +87,7 @@
     {
       th: 'ผมไม่รู้จะทำยังไง', zh: '我不知道該怎麼辦', readingTH: 'ผม-ไม่-รู้-จะ-ทำ-ยัง-ไง', wc: 7, politeF: null,
       words: [
-      { th: 'ผม', zh: '我', syls: [{cons:'ผ', vowel:'โอะ', final:'ม', tone_name:'จัตวา', th:'ผม', en:'phǎm'}] },
+      { th: 'ผม', zh: '我', syls: [{cons:'ผ', vowel:'โอะ', final:'ม', tone_name:'จัตวา', th:'ผม', en:'phǒm'}] },
       { th: 'ไม่', zh: '不', syls: [{cons:'ม', vowel:'ไอ', tone:'่', tone_name:'โท', th:'ไม่', en:'mâi'}] },
       { th: 'รู้', zh: '知道', syls: [{cons:'ร', vowel:'อู', tone:'้', tone_name:'ตรี', th:'รู้', en:'rúu'}] },
       { th: 'จะ', zh: '將／該', syls: [{cons:'จ', vowel:'อะ', tone_name:'เอก', th:'จะ', en:'jà'}] },
@@ -129,9 +129,9 @@
     {
       th: 'ผมไม่ชอบกินผัก', zh: '我不喜歡吃菜', readingTH: 'ผม-ไม่-ชอบ-กิน-ผัก', wc: 5, politeF: null,
       words: [
-      { th: 'ผม', zh: '我', syls: [{cons:'ผ', vowel:'โอะ', final:'ม', tone_name:'จัตวา', th:'ผม', en:'phǎm'}] },
+      { th: 'ผม', zh: '我', syls: [{cons:'ผ', vowel:'โอะ', final:'ม', tone_name:'จัตวา', th:'ผม', en:'phǒm'}] },
       { th: 'ไม่', zh: '不', syls: [{cons:'ม', vowel:'ไอ', tone:'่', tone_name:'โท', th:'ไม่', en:'mâi'}] },
-      { th: 'ชอบ', zh: '喜歡', syls: [{cons:'ช', vowel:'ออ', final:'บ', tone_name:'โท', th:'ชอบ', en:'châop'}] },
+      { th: 'ชอบ', zh: '喜歡', syls: [{cons:'ช', vowel:'ออ', final:'บ', tone_name:'โท', th:'ชอบ', en:'chôp'}] },
       { th: 'กิน', zh: '吃', syls: [{cons:'ก', vowel:'อิ', final:'น', tone_name:'สามัญ', th:'กิน', en:'gin'}] },
       { th: 'ผัก', zh: '菜', syls: [{cons:'ผ', vowel:'อะ', final:'ก', tone_name:'เอก', th:'ผัก', en:'phàk'}] }
       ]
@@ -209,7 +209,7 @@
     {
       th: 'ผมอยากพักผ่อน', zh: '我想休息', readingTH: 'ผม-อยาก-พัก-ผ่อน', wc: 4, politeF: null,
       words: [
-      { th: 'ผม', zh: '我', syls: [{cons:'ผ', vowel:'โอะ', final:'ม', tone_name:'จัตวา', th:'ผม', en:'phǎm'}] },
+      { th: 'ผม', zh: '我', syls: [{cons:'ผ', vowel:'โอะ', final:'ม', tone_name:'จัตวา', th:'ผม', en:'phǒm'}] },
       { th: 'อยาก', zh: '想', syls: [{cons:'ย', lead:'อ', vowel:'อา', final:'ก', tone_name:'เอก', th:'อยาก', en:'yàak'}] },
       { th: 'พักผ่อน', zh: '休息', syls: [{cons:'พ', vowel:'อะ', final:'ก', tone_name:'ตรี', th:'พัก', en:'phák'}, {cons:'ผ', vowel:'ออ', tone:'่', final:'น', tone_name:'เอก', th:'ผ่อน', en:'phòn'}] }
       ]
@@ -234,7 +234,7 @@
     {
       th: 'ผมเอาข้าวผัดกุ้ง', zh: '我要蝦炒飯', readingTH: 'ผม-เอา-ข้าว-ผัด-กุ้ง', wc: 5, politeF: null,
       words: [
-      { th: 'ผม', zh: '我', syls: [{cons:'ผ', vowel:'โอะ', final:'ม', tone_name:'จัตวา', th:'ผม', en:'phǎm'}] },
+      { th: 'ผม', zh: '我', syls: [{cons:'ผ', vowel:'โอะ', final:'ม', tone_name:'จัตวา', th:'ผม', en:'phǒm'}] },
       { th: 'เอา', zh: '要（拿／取）', syls: [{cons:'อ', vowel:'เอา', tone_name:'สามัญ', th:'เอา', en:'ao'}] },
       { th: 'ข้าวผัด', zh: '炒飯', syls: [{cons:'ข', vowel:'อา', tone:'้', final:'ว', tone_name:'โท', th:'ข้าว', en:'khâao'}, {cons:'ผ', vowel:'อะ', final:'ด', tone_name:'เอก', th:'ผัด', en:'phàt'}] },
       { th: 'กุ้ง', zh: '蝦', syls: [{cons:'ก', vowel:'อุ', tone:'้', final:'ง', tone_name:'โท', th:'กุ้ง', en:'gûng'}] }
@@ -284,7 +284,7 @@
       { th: 'เรา', zh: '我們', syls: [{cons:'ร', vowel:'เอา', tone_name:'สามัญ', th:'เรา', en:'rao'}] },
       { th: 'ดื่ม', zh: '喝', syls: [{cons:'ด', vowel:'อื', tone:'่', final:'ม', tone_name:'เอก', th:'ดื่ม', en:'dèum'}] },
       { th: 'กาแฟ', zh: '咖啡', syls: [{cons:'ก', vowel:'อา', tone_name:'สามัญ', th:'กา', en:'gaa'}, {cons:'ฟ', vowel:'แอ', tone_name:'สามัญ', th:'แฟ', en:'fae'}] },
-      { th: 'ทุก', zh: '每', syls: [{cons:'ท', vowel:'อุ', final:'ก', tone_name:'ตรี', th:'ทุก', en:'túk'}] },
+      { th: 'ทุก', zh: '每', syls: [{cons:'ท', vowel:'อุ', final:'ก', tone_name:'ตรี', th:'ทุก', en:'thúk'}] },
       { th: 'เช้า', zh: '早上', syls: [{cons:'ช', vowel:'เอา', tone:'้', tone_name:'ตรี', th:'เช้า', en:'cháo'}] }
       ]
     },
@@ -293,7 +293,7 @@
       words: [
       { th: 'วันนี้', zh: '今天', syls: [{cons:'ว', vowel:'อะ', final:'น', tone_name:'สามัญ', th:'วัน', en:'wan'}, {cons:'น', vowel:'อี', tone:'้', tone_name:'ตรี', th:'นี้', en:'níi'}] },
       { th: 'ผม', zh: '我（男性自稱）', syls: [{cons:'ผ', vowel:'โอะ', final:'ม', tone_name:'จัตวา', th:'ผม', en:'phǒm'}] },
-      { th: 'ทำงาน', zh: '工作', syls: [{cons:'ท', vowel:'อำ', tone_name:'สามัญ', th:'ทำ', en:'tam'}, {cons:'ง', vowel:'อา', final:'น', tone_name:'สามัญ', th:'งาน', en:'ngaan'}] },
+      { th: 'ทำงาน', zh: '工作', syls: [{cons:'ท', vowel:'อำ', tone_name:'สามัญ', th:'ทำ', en:'tham'}, {cons:'ง', vowel:'อา', final:'น', tone_name:'สามัญ', th:'งาน', en:'ngaan'}] },
       { th: 'ที่', zh: '在（地點）', syls: [{cons:'ท', vowel:'อี', tone:'่', tone_name:'โท', th:'ที่', en:'thîi'}] },
       { th: 'บ้าน', zh: '家', syls: [{cons:'บ', vowel:'อา', tone:'้', final:'น', tone_name:'โท', th:'บ้าน', en:'bâan'}] }
       ]
