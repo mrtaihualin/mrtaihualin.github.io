@@ -1,5 +1,12 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-09-21 — Paid Sets 1–8 exact 193 central vocabulary integration (`SOURCE_PASS / PRODUCTION_APPROVAL_PENDING`)
+
+- Added the exact Lin-approved 193 semantic records from Sets 1–8 to the single protected vocabulary source as additive `paid-queue-193-v1`: `初 186 / 中 7`, 192 unique written forms, with only the approved `คัน=輛` and `คัน=癢` pair sharing a written form. The canonical queue target becomes 582 records total (`Free 200 + Paid 382`, Paid `初 369 / 中 13`). The six locked word fields, twelve locked syllable-structure fields, passed category paths and `รอตรวจรวม` audio state are retained record by record; no sentence content or game rule changed.
+- The guarded migration requires the exact existing Free 200 and Paid 189 hashes/counts/ranks plus the single `owner_all_access` entitlement, rejects any content-key or written-form collision, inserts only the 193 new queued Paid rows and reasserts RLS/direct-browser denial. Existing 389 rows, IDs, hashes, ranks, entitlements and user data are not updated. The recovery SQL deletes only this exact batch and fails closed if either Paid SRS table references one of its content keys.
+- The existing Paid Tone owner-only gate is unchanged; only its queued-content caps advance to `初 369 / 中 13`. Guest, Login Free, every non-owner account and every other game keep their current behavior. The deterministic source/hash tests pass, an isolated PostgreSQL fixture proves additive migration, immutable 389 baseline, browser-role denial, user-linked rollback protection and exact clean rollback, and the required complete site gate passes all 1,123 local files.
+- No Supabase Production migration, Edge deployment, static release, account/player write, real-user verification or Human runtime PASS occurred. Those HIGH-risk actions remain blocked pending Lin's exact approval of the immutable Git artifact, target, precheck, rollout order and rollback.
+
 ## 2026-09-21 — Central sentence library v1 (`PRODUCTION_DATABASE_PASS / RUNTIME_UNCHANGED`)
 
 - Added one additive migration over the existing `game_sentences` catalog: immutable sentence IDs, vocabulary-parity sentence/word/syllable structure, per-game readiness, exact Word Order occurrences/answer order, record-integrity hashes and legacy sentence-text aliases. No parallel per-game sentence store, content inference, Learning Item rewrite, saved/history mutation or deletion is included.

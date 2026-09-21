@@ -14,12 +14,17 @@ const migration = read('supabase/migrations/20260905085037_queue_approved_paid_v
 const edge = read('supabase/functions/game-content/index.ts');
 const payloadSha256 = '02715eed20083f19124820c9306fc525db0d8c775f3fd68615902022bb96c327';
 
-assert.strictEqual(manifest.state, 'queued-inactive');
+assert.strictEqual(manifest.schemaVersion, 2);
+assert.strictEqual(manifest.state, 'queued-owner-only');
 assert.strictEqual(manifest.accessTier, 'paid');
-assert.strictEqual(manifest.runtimeConsumption, 'not-authorized');
-assert.strictEqual(manifest.recordCount, 189);
-assert.deepStrictEqual(manifest.levelCounts, { '初': 183, '中': 6 });
-assert.strictEqual(new Set(manifest.contentKeys).size, 189);
+assert.strictEqual(manifest.runtimeConsumption, 'tone-owner_all_access-only');
+assert.strictEqual(manifest.migrationState, 'source-ready-production-pending');
+assert.strictEqual(manifest.recordCount, 382);
+assert.deepStrictEqual(manifest.levelCounts, { '初': 369, '中': 13 });
+assert.strictEqual(new Set(manifest.contentKeys).size, 382);
+assert.strictEqual(manifest.batches[0].catalogVersion, 'paid-queue-189-v1');
+assert.strictEqual(manifest.batches[0].recordCount, 189);
+assert.deepStrictEqual(manifest.batches[0].levelCounts, { '初': 183, '中': 6 });
 assert.strictEqual(freeCatalog.catalogVersion, 'free-200-v1');
 assert.strictEqual(freeCatalog.approvedRecordCount, 200);
 assert.deepStrictEqual(freeCatalog.levelCounts, { '初': 100, '中': 100 });
@@ -33,7 +38,7 @@ assert(match, 'migration must embed the exact approved Paid queue payload');
 assert.strictEqual(crypto.createHash('sha256').update(match[1]).digest('hex'), payloadSha256);
 const payload = JSON.parse(match[1]);
 assert.strictEqual(payload.length, 189);
-assert.deepStrictEqual(payload.map((row) => row.content_key), manifest.contentKeys);
+assert.deepStrictEqual(payload.map((row) => row.content_key), manifest.contentKeys.slice(0, 189));
 assert.strictEqual(new Set(freeCatalog.records.map((row) => row.contentKey).filter((key) => manifest.contentKeys.includes(key))).size, 0);
 assert.strictEqual(freeCatalog.records.length + payload.length, 389);
 assert.strictEqual(payload.filter((row) => row.level === '初').length, 183);
@@ -66,5 +71,6 @@ assert.match(migration, /revoke all on table public\.game_words from public,anon
 assert.match(edge, /wordStatuses = paidTone \? \['queued'\] : \['active'\]/);
 assert.match(edge, /wordTiers = paidTone \? \['paid'\]/);
 assert.match(edge, /requestBody\?\.paid_beta === true[\s\S]+owner_all_access/);
+assert.match(edge, /paid:\s*{\s*'初':\s*369,\s*'中':\s*13,\s*sentences:\s*40\s*}/);
 
-console.log('✅ Paid vocabulary queue 189 is central, protected and runtime-inactive');
+console.log('✅ Original Paid 189 remains byte-exact inside the protected owner-only Paid queue');

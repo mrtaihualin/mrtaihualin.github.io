@@ -18,8 +18,8 @@
 //   初        50 คำ        100 คำ
 //   中        50 คำ        100 คำ
 //   高(ประโยค) 20 ประโยค    40 ประโยค
-//   (ยังไม่มีระบบสมาชิกจ่ายเงิน — เกินเพดานคนล็อกอินตอนนี้ "ไม่มีใครเข้าถึงได้เลย" กันไว้
-//   สำหรับแพ็กเกจจ่ายเงินในอนาคต ตามที่ Lin ยืนยัน)
+//   Paid private beta: Tone เท่านั้น, queued Paid 初 369 / 中 13, และต้องเป็นบัญชีเดียวที่มี
+//   owner_all_access; ผู้ใช้ Guest/Login Free และเกมอื่นยังใช้สัญญาเดิมทั้งหมด
 //
 // วิธี deploy: ใช้ migration ปัจจุบันที่บันทึก canonical_record ที่ Lin ตรวจแล้วเท่านั้น
 // แล้ว deploy Edge Function นี้ ห้ามใช้ตัวนำเข้าที่สร้าง/คำนวณช่องภาษาใหม่
@@ -40,7 +40,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.112.3';
 const CAPS = {
   anon:  { '初': 50,  '中': 50,  sentences: 20 },
   login: { '初': 100, '中': 100, sentences: 40 },
-  paid:  { '初': 183, '中': 6, sentences: 40 },
+  paid:  { '初': 369, '中': 13, sentences: 40 },
 };
 const GAME_SURFACES = new Set(['tone', 'reading', 'typing', 'word_order', 'listening']);
 const REQUIRED_CATALOG_STRING_FIELDS = [
