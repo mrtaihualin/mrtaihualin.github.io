@@ -45,7 +45,7 @@ const tiered = [
   },
   {
     page: 'reading-game.html', game: 'reading', app: 'js/games/reading-game-app.js',
-    boot: /GameContentLoader\.boot\(\['js\/games\/reading-game-app\.min\.js\?v=62'\], \{game:'reading'\}\)/,
+    boot: /GameContentLoader\.boot\(\['js\/games\/reading-game-app\.min\.js\?v=63'\], \{game:'reading'\}\)/,
     resume: /GameResume\.save\(RG_RESUME_ID/,
   },
   {
