@@ -13,5 +13,6 @@
 - Empty lookup tables may be intentional. Do not invent Skill/tag/formula/price/quota/game-compatibility values that Product authority has not locked.
 - Plan, Price, Entitlement and Grant remain separate models; do not collapse them into a `paid=true` flag.
 - Content changes must inspect downstream evidence/state and synchronize the established game-content plus item-identity pipelines under their separate authorization gates.
+- During the central sentence-library transition, existing sentence-text `learning_items.content_key` values remain unchanged. `game_sentence_key_aliases` bridges those historical keys to the new immutable sentence `content_key`; changing Learning Item keys or user-linked history requires a separately verified compatibility cutover and must preserve `learning_items.item_id` plus key history.
 - When a user-linked table begins storing real data, add it to account export in the same authorized change.
 - Production counts, deploy status and open work belong in the Current Checklist/evidence, not here.
