@@ -4,7 +4,7 @@
   "catalogVersion": "paid-queue-193-v1",
   "state": "queued-owner-only-candidate",
   "accessTier": "paid",
-  "runtimeScope": "tone-owner_all_access-only",
+  "runtimeScope": "all-six-owner_all_access-only",
   "sourceRefs": [
     "PD-VOCAB-OLD-COMPLETION-SETS-01-08-2026-09-09",
     "PD-VOCAB-REVIEW-TEMPLATE-STRICT-2026-09-10-G",

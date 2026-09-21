@@ -79,24 +79,24 @@ for (const item of tiered) {
 }
 
 const listening = read('listening-game.html');
-assert.match(listening, /data-listening-availability="coming-soon"/);
-assert.match(listening, /id="listening-coming-soon"/);
-assert.match(listening, /即將開幕/);
-assert.doesNotMatch(listening, /GameContentLoader\.boot\(/);
+assert.match(listening, /GameContentLoader\.boot\(\['js\/games\/listening-game-app\.js\?v=20'\], \{game:'listening'\}\)/);
+assert.doesNotMatch(listening, /coming-soon|即將開幕/);
 assert.doesNotMatch(listening, /js\/games\/(?:learning-review|tone-server)\.js/);
-assert.match(listening, /Preserved paused runtime:[^\n]*Do not boot/);
-console.log('N/A listening launch=PARKED_NONBLANK auth_restore=N/A resume=N/A error=N/A learning_loop=EXCLUDED');
+assert.match(listening, /js\/core\/auth-widget\.js\?v=24/);
+console.log('PASS listening launch=PASS auth_restore=PASS resume=PASS error=PASS learning_loop=EXCLUDED');
 
 const lego = read('lego.html');
 const legoApp = read('js/games/lego-game-app.js');
 assert.match(lego, /data-gsh-game="lego"/);
 assert.match(lego, /id="buildPanel"/);
-assert.match(lego, /js\/games\/lego-game-app\.js\?v=14/);
+assert.match(lego, /GameContentLoader\.boot\(\['js\/games\/lego-game-app\.js\?v=15'\], \{game:'lego'\}\)/);
+assert.match(lego, /js\/games\/game-content-client\.js\?v=23/);
+assert.match(lego, /js\/core\/auth-widget\.js\?v=24/);
 assert.match(lego, /id="lego-resume-banner"/);
 assert.match(lego, /id="lego-flow-error"[^>]*role="alert"/);
 assert.match(legoApp, /GameResume\.save\('lego'/);
 assert.match(legoApp, /function legoShowLockedError\(\)/);
-assert.doesNotMatch(lego, /js\/games\/(?:game-content-client|learning-review|tone-server)\.js/);
-console.log('PASS lego launch=PASS auth_restore=N/A resume=PASS error=PASS learning_loop=N/A');
+assert.doesNotMatch(lego, /js\/games\/(?:learning-review|tone-server)\.js/);
+console.log('PASS lego launch=PASS auth_restore=PASS resume=PASS error=PASS learning_loop=N/A');
 
-console.log('LOGIN_ACCESSIBLE_GAME_MATRIX_PASS inventory=6 playable=5 parked=1 login_tiered=4');
+console.log('LOGIN_ACCESSIBLE_GAME_MATRIX_PASS inventory=6 playable=6 parked=0 login_tiered=4');

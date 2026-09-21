@@ -29,69 +29,63 @@ const SLOTS=[
   {id:'end',   label:'句尾', opt:true,  c:'end'},
 ];
 
-const LOCATION_WORDS=[
-  {th:'ห้าง',zh:'商場'},
-  {th:'บ้านเพื่อน',zh:'朋友的家'},
-  {th:'เซเว่น',zh:'便利商店'},
-  {th:'ร้านอาหาร',zh:'餐廳'},
-];
-const SLEEP_LOCATION={th:'อยู่บ้าน',zh:'家裡'};
+// ════════ CENTRAL VOCABULARY ROLE FILTER ════════
+// WORDS_MASTER is injected only after game-content has authenticated the player and
+// returned the one entitled catalog. Lego never owns or falls back to another word store.
+const CENTRAL_CATALOG=Array.isArray(window.WORDS_MASTER)
+  ?window.WORDS_MASTER.map(row=>row&&row.catalog).filter(Boolean):[];
+if(!CENTRAL_CATALOG.length)throw new Error('lego: central vocabulary unavailable');
 
-// ════════ WORDS (with semantic tags) ════════
+function legoCategoryPaths(record){
+  return record&&Array.isArray(record.categoryPaths)?record.categoryPaths:[];
+}
+function legoHasType(record,type){return String(record&&record.type||'').includes(type);}
+function legoHasCategory(record,fragment){
+  return legoCategoryPaths(record).some(path=>String(path).includes(fragment));
+}
+function legoRoleWord(record){
+  return {th:record.word,zh:record.zhTW,contentKey:record.contentKey,catalog:record};
+}
+function legoUniqueRole(records){
+  const seen=new Set();
+  return records.filter(record=>record&&record.contentKey&&!seen.has(record.contentKey)&&seen.add(record.contentKey)).map(legoRoleWord);
+}
+
+const CENTRAL_NOUNS=legoUniqueRole(CENTRAL_CATALOG.filter(record=>legoHasType(record,'名詞')||legoHasCategory(record,'名詞')));
+const CENTRAL_SUBJECTS=legoUniqueRole(CENTRAL_CATALOG.filter(record=>
+  legoHasType(record,'名詞')||legoHasCategory(record,'名詞')||legoHasType(record,'สรรพนาม')));
+const CENTRAL_VERBS=legoUniqueRole(CENTRAL_CATALOG.filter(record=>
+  legoHasType(record,'動詞')||legoHasType(record,'กริยา')||legoCategoryPaths(record).includes('動詞')));
+const LOCATION_WORDS=legoUniqueRole(CENTRAL_CATALOG.filter(record=>legoHasCategory(record,'地點')||legoHasCategory(record,'住宅')));
+const PERSON_WORDS=legoUniqueRole(CENTRAL_CATALOG.filter(record=>
+  legoHasCategory(record,'人物')||legoHasCategory(record,'家庭')||legoHasCategory(record,'職業')||legoHasType(record,'สรรพนาม')));
+const TIME_WORDS=legoUniqueRole(CENTRAL_CATALOG.filter(record=>
+  legoHasType(record,'時間詞')||legoHasCategory(record,'時間詞')||record.category==='時間'));
+if(!CENTRAL_NOUNS.length||!CENTRAL_SUBJECTS.length||!CENTRAL_VERBS.length)throw new Error('lego: central vocabulary roles incomplete');
+
+// Only grammar controls stay local. Every Thai vocabulary choice comes from the
+// authenticated central catalog above.
 const WORDS={
-  time:[
-    {th:'ตอนนี้',  zh:'現在'},
-    {th:'วันนี้',  zh:'今天'},
-    {th:'พรุ่งนี้', zh:'明天'},
-  ],
-  subj:[
-    {th:'เรา',  zh:'我／我們'},
-    {th:'ผม',  zh:'我（男）'},
-    {th:'พี่',  zh:'我（哥姐）'},
-  ],
+  time:TIME_WORDS,
+  subj:CENTRAL_SUBJECTS,
   modal:[
-    {th:'อยาก',    zh:'想'},
-    {th:'จะ',      zh:'要'},
-    {th:'กำลัง',   zh:'正在'},
+    {th:'อยาก',zh:'想',contentKey:'grammar:modal:อยาก'},
+    {th:'จะ',zh:'要',contentKey:'grammar:modal:จะ'},
+    {th:'กำลัง',zh:'正在',contentKey:'grammar:modal:กำลัง'},
   ],
-  verb:[
-    {th:'กิน',      zh:'吃',      objTags:['food']},
-    {th:'ไป',       zh:'去',      objTags:[]},
-    {th:'ไปกิน',    zh:'去吃',    objTags:['food']},
-    {th:'นอน',      zh:'睡',      objTags:[]},
-    {th:'ไปนอน',    zh:'去睡',    objTags:[]},
-    {th:'ซื้อ',     zh:'買',      objTags:['buy']},
-    {th:'ไปซื้อ',   zh:'去買',    objTags:['buy']},
-  ],
-  obj:[
-    {th:'ข้าว',       zh:'飯', tags:['food']},
-    {th:'ขนม',        zh:'零食', tags:['food']},
-    {th:'ผลไม้',      zh:'水果', tags:['food']},
-    {th:'ไก่ย่าง',    zh:'烤雞', tags:['food']},
-    {th:'ก๋วยเตี๋ยว', zh:'麵', tags:['food']},
-    {th:'ของกิน',     zh:'食物', tags:['food']},
-    {th:'เสื้อ',      zh:'衣服', tags:['buy']},
-    {th:'รองเท้า',    zh:'鞋', tags:['buy']},
-    {th:'กระเป๋า',    zh:'包包', tags:['buy']},
-    {th:'กางเกง',     zh:'褲子', tags:['buy']},
-    {th:'ตั๋ว',       zh:'票', tags:['buy']},
-  ],
+  verb:CENTRAL_VERBS,
+  obj:CENTRAL_NOUNS,
   prog:[
-    {th:'อยู่', zh:'（進行中）'},
+    {th:'อยู่',zh:'（進行中）',contentKey:'grammar:progressive:อยู่'},
   ],
-  adv:[
-    {th:'พ่อ',zh:'爸爸'},
-    {th:'แม่',zh:'媽媽'},
-    {th:'เพื่อน',zh:'朋友'},
-    {th:'แฟน',zh:'男／朋友'},
-  ],
+  adv:PERSON_WORDS,
   end:[
-    {th:'นะ',zh:'喔'},
-    {th:'นะครับ',zh:'喔'},
-    {th:'นะคะ',zh:'喔'},
-    {th:'อะ',zh:'強調語氣'},
-    {th:'ครับ',zh:'男生禮貌助詞'},
-    {th:'ค่ะ',zh:'女生禮貌助詞'},
+    {th:'นะ',zh:'喔',contentKey:'grammar:ending:นะ'},
+    {th:'นะครับ',zh:'喔',contentKey:'grammar:ending:นะครับ'},
+    {th:'นะคะ',zh:'喔',contentKey:'grammar:ending:นะคะ'},
+    {th:'อะ',zh:'強調語氣',contentKey:'grammar:ending:อะ'},
+    {th:'ครับ',zh:'男生禮貌助詞',contentKey:'grammar:ending:ครับ'},
+    {th:'ค่ะ',zh:'女生禮貌助詞',contentKey:'grammar:ending:ค่ะ'},
   ],
 };
 
@@ -107,41 +101,31 @@ function createSessionPool(){
 }
 
 // ════════ COMPATIBILITY: obj ←→ verb ════════
-function getAllowedObjTags(){
-  const v=state.verb;
-  if(!v) return null; // no verb selected → no restriction
-  const def=WORDS.verb.find(x=>x.th===v.th);
-  if(!def||def.objTags===undefined) return null;
-  return def.objTags; // [] = no obj, [...] = restricted
+const LOCATION_OBJECT_VERBS=new Set(['ไป','มา','เที่ยว','อยู่']);
+function objectPoolForVerb(verb){return verb&&LOCATION_OBJECT_VERBS.has(verb.th)?LOCATION_WORDS:WORDS.obj;}
+function getObjectPool(){
+  return objectPoolForVerb(state.verb);
 }
-
 function isObjCompatible(word){
-  const allowed=getAllowedObjTags();
-  if(allowed===null) return true;
-  if(allowed.length===0) return false;
-  return (word.tags||[]).some(t=>allowed.includes(t));
+  if(!state.verb||!word)return false;
+  return objectPoolForVerb(state.verb).some(item=>item.contentKey===word.contentKey);
+}
+function getPoolForSlot(slotId){
+  if(slotId==='obj')return getObjectPool();
+  if(slotId==='advObj')return LOCATION_WORDS;
+  return sessionPool[slotId]||WORDS[slotId]||[];
 }
 
 // ════════ EXAMPLES (updated for new slot structure) ════════
-const SUBJ_EXTRA=[
-  {th:'เขา',      zh:'他／她'},
-  {th:'น้อง',     zh:'弟弟妹妹'},
-  {th:'พ่อของเรา',zh:'我爸爸'},
-];
-
-function findWord(slotId,th){
-  if(slotId==='advObj'){
-    return LOCATION_WORDS.concat([SLEEP_LOCATION]).find(x=>x.th===th)||null;
-  }
-  let w=(WORDS[slotId]||[]).find(x=>x.th===th);
-  if(!w&&slotId==='subj') w=SUBJ_EXTRA.find(x=>x.th===th);
-  return w;
+function findWord(slotId,ref){
+  const pool=slotId==='obj'?(sessionPool.obj||WORDS.obj||[]):getPoolForSlot(slotId);
+  const key=ref&&ref.contentKey;
+  if(key)return pool.find(word=>word.contentKey===key)||null;
+  const matches=pool.filter(word=>word.th===(ref&&ref.th||ref));
+  return matches.length===1?matches[0]:null;
 }
 
-const EXAMPLES=[
-  {zh:'現在我正在商場吃飯',
-   parts:[['time','ตอนนี้'],['subj','ผม'],['modal','กำลัง'],['verb','กิน'],['obj','ข้าว'],['prog','อยู่'],['adv','ที่'],['advObj','ห้าง'],['end','ครับ']],tag:'p3'},
-];
+const EXAMPLES=[];
 
 // ════════ LEVELS ════════
 const LEVELS={
@@ -217,10 +201,9 @@ function setLevel(k){
 function activeSlots(){
   const verb=state.verb&&state.verb.th;
   return SLOTS.filter(s=>{
-    if(s.id==='obj') return ['กิน','ไปกิน','ซื้อ','ไปซื้อ'].includes(verb);
-    if(s.id==='advObj') return verb==='ไป'||verb==='นอน';
-    if(s.id==='adv') return verb==='ไป'&&!!state.advObj;
-    if(s.id==='prog'||s.id==='end') return ['กิน','ไปกิน','ซื้อ','ไปซื้อ'].includes(verb);
+    if(s.id==='obj') return !!verb;
+    if(s.id==='advObj') return !!verb&&!LOCATION_OBJECT_VERBS.has(verb);
+    if(s.id==='adv'||s.id==='prog'||s.id==='end') return !!verb;
     return true;
   });
 }
@@ -234,18 +217,11 @@ function renderBaseplate(){
   bp.innerHTML=activeSlots().map(s=>{
     const w=state[s.id];
     const depUnmet=s.dep&&!state[s.dep];
-    // 動詞不帶受詞 → 受詞格整格鎖住
-    const allowedTags=(s.id==='obj')?getAllowedObjTags():null;
-    const objLocked=(s.id==='obj')&&allowedTags!==null&&allowedTags.length===0;
-
     let label=s.label;
 
     // ── slot button ──
     let btn;
-    if(objLocked){
-      btn=`<div class="slot-btn dep-locked" role="button" tabindex="0" onclick="toast('「${state.verb.th}」不需要受詞')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toast('「${state.verb.th}」不需要受詞')}">
-        <span class="splus" style="font-size:13px">不需受詞</span></div>`;
-    }else if(w){
+    if(w){
       btn=`<div class="slot-btn filled" role="button" tabindex="0" onclick="toggleMenu('${s.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleMenu('${s.id}')}">
         <span class="sth">${w.th}</span><span class="szh">${w.zh}</span></div>`;
     }else if(depUnmet){
@@ -257,9 +233,7 @@ function renderBaseplate(){
     }
 
     // ── dropdown content ──
-    const pool=(s.id==='advObj')
-      ?(state.verb&&state.verb.th==='นอน'?[SLEEP_LOCATION]:LOCATION_WORDS)
-      :(s.id==='obj'?(sessionPool.obj||[]).filter(isObjCompatible):(sessionPool[s.id]||[]));
+    const pool=getPoolForSlot(s.id);
     let opts=`<div class="pool-badge">本輪 ${pool.length} 詞</div>`;
 
     if(depUnmet){
@@ -272,7 +246,7 @@ function renderBaseplate(){
           onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomSubj();}">
           <button onclick="try{if(window.gtag)gtag('event','lego_custom_subject_add',{category:'game'});}catch(e){}addCustomSubj()">加入</button></div>`;
       }
-      const customAllowed=['time','subj','adv'].includes(s.id)||(s.id==='advObj'&&state.verb&&state.verb.th==='ไป');
+      const customAllowed=['time','subj','adv'].includes(s.id)||(s.id==='advObj'&&state.verb&&!LOCATION_OBJECT_VERBS.has(state.verb.th));
       if(customAllowed){
         opts+=`<div class="opt-custom"><span>ใส่เอง</span><input type="text" id="legoCustomTh-${s.id}" placeholder="自訂泰文…"
           onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomWord('${s.id}');}">
@@ -284,9 +258,10 @@ function renderBaseplate(){
         opts+=`<div class="opt-clear" role="button" tabindex="0" onclick="try{if(window.gtag)gtag('event','lego_slot_clear',{category:'game',slot:'${s.id}'});}catch(e){}clearSlot('${s.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();try{if(window.gtag)gtag('event','lego_slot_clear',{category:'game',slot:'${s.id}'});}catch(e){}clearSlot('${s.id}')}">— 清除 —</div>`;
       }
       pool.forEach(o=>{
-        const sel=(w&&w.th===o.th)?' sel':'';
+        const sel=(w&&w.contentKey===o.contentKey)?' sel':'';
+        const ref=encodeURIComponent(o.contentKey||o.th);
         let disabled=false, label2=o.zh;
-        opts+=`<div class="opt${sel}${disabled?' disabled':''}" ${disabled?'':`role="button" tabindex="0" onclick="pickWord('${s.id}','${o.th}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();pickWord('${s.id}','${o.th}')}"`}>
+        opts+=`<div class="opt${sel}${disabled?' disabled':''}" ${disabled?'':`role="button" tabindex="0" onclick="pickWord('${s.id}','${ref}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();pickWord('${s.id}','${ref}')"`}>
           <span class="oth">${o.th}</span><span class="ozh">${label2}</span></div>`;
       });
     }
@@ -341,6 +316,8 @@ function renderOut(){
     if(!w) return;
     if(s.id==='adv'){
       thParts.push('กับ'+w.th); zhParts.push('和・'+w.zh);
+    }else if(s.id==='advObj'){
+      thParts.push('ที่'+w.th); zhParts.push('在・'+w.zh);
     }else{
       thParts.push(w.th); zhParts.push(w.zh);
     }
@@ -362,10 +339,9 @@ function render(){renderBaseplate();renderOut();}
 // ════════ ACTIONS ════════
 function toggleMenu(id){openSlot=openSlot===id?null:id;applyOpen();}
 
-function pickWord(id,th){
-  let word;
-  if(id==='advObj') word=(state.verb&&state.verb.th==='นอน'?[SLEEP_LOCATION]:LOCATION_WORDS).find(w=>w.th===th);
-  else word=(sessionPool[id]||WORDS[id]||[]).find(w=>w.th===th);
+function pickWord(id,encodedRef){
+  const ref=decodeURIComponent(encodedRef||'');
+  const word=getPoolForSlot(id).find(item=>(item.contentKey||item.th)===ref);
   if(!word) return;
   state[id]=word;
   if(id==='modal'){
@@ -378,8 +354,7 @@ function pickWord(id,th){
       toast('受詞與動詞不符，已自動清除');
     }
     state.adv=null;state.advObj=null;
-    if(['ไป','นอน','ไปนอน'].includes(word.th)){state.obj=null;state.prog=null;state.end=null;}
-    else if(!state.modal) state.prog=WORDS.prog[0];
+    if(!state.modal) state.prog=WORDS.prog[0];
   }
   openSlot=null;
   render();
@@ -406,7 +381,7 @@ function addCustomSubj(){
 
 function addCustomWord(id){
   if(!['time','subj','adv','advObj'].includes(id))return;
-  if(id==='advObj'&&(!state.verb||state.verb.th!=='ไป'))return;
+  if(id==='advObj'&&(!state.verb||LOCATION_OBJECT_VERBS.has(state.verb.th)))return;
   const thInput=document.getElementById('legoCustomTh-'+id);
   const zhInput=document.getElementById('legoCustomZh-'+id);
   const th=(thInput&&thInput.value||'').trim();
@@ -442,7 +417,7 @@ function legoSerializedBuilder(){
   const builder={};
   SLOTS.forEach(slot=>{
     const word=state[slot.id];
-    builder[slot.id]=word?{th:String(word.th||''),zh:String(word.zh||''),custom:word.custom===true,customType:word.customType||''}:null;
+    builder[slot.id]=word?{contentKey:String(word.contentKey||''),th:String(word.th||''),zh:String(word.zh||''),custom:word.custom===true,customType:word.customType||''}:null;
   });
   return builder;
 }
@@ -485,36 +460,15 @@ function legoNormalizeBuilder(saved){
       const customType=slot.id==='subj'&&raw.customType==='name'?'name':'custom';
       word={th:raw.th,zh:customType==='name'?raw.th:raw.zh,custom:true,customType:customType};
     }
-    else if(slot.id==='advObj')word=LOCATION_WORDS.concat([SLEEP_LOCATION]).find(item=>item.th===raw.th)||null;
-    else word=(WORDS[slot.id]||[]).find(item=>item.th===raw.th&&item.custom!==true)||null;
+    else word=findWord(slot.id,{contentKey:typeof raw.contentKey==='string'?raw.contentKey:'',th:raw.th});
     if(!word)return null;
     restored[slot.id]=word;
   }
   const verb=restored.verb&&restored.verb.th;
-  const objectBranch=['กิน','ไปกิน','ซื้อ','ไปซื้อ'].includes(verb);
-  if(restored.obj){
-    const verbDef=WORDS.verb.find(word=>word.th===verb);
-    const allowed=verbDef&&Array.isArray(verbDef.objTags)?verbDef.objTags:[];
-    if(!objectBranch||!(restored.obj.tags||[]).some(tag=>allowed.includes(tag)))restored.obj=null;
-  }
-  if(objectBranch){
-    restored.adv=null;restored.advObj=null;
-    if(!restored.modal)restored.prog=WORDS.prog[0];
-    else if(restored.modal.th!=='กำลัง')restored.prog=null;
-  }else if(verb==='ไป'){
-    restored.obj=null;restored.prog=null;restored.end=null;
-    if(restored.advObj&&restored.advObj.th===SLEEP_LOCATION.th)restored.advObj=null;
-    if(!restored.advObj)restored.adv=null;
-  }else if(verb==='นอน'){
-    restored.obj=null;restored.prog=null;restored.end=null;restored.adv=null;
-    if(restored.advObj&&restored.advObj.th!==SLEEP_LOCATION.th)restored.advObj=null;
-  }else if(verb==='ไปนอน'){
-    restored.obj=null;restored.prog=null;restored.end=null;restored.adv=null;restored.advObj=null;
-  }else{
-    restored.obj=null;restored.end=null;restored.adv=null;restored.advObj=null;
-    if(!restored.modal)restored.prog=WORDS.prog[0];
-    else if(restored.modal.th!=='กำลัง')restored.prog=null;
-  }
+  if(restored.obj&&!objectPoolForVerb(restored.verb).some(item=>item.contentKey===restored.obj.contentKey))restored.obj=null;
+  if(LOCATION_OBJECT_VERBS.has(verb))restored.advObj=null;
+  if(!restored.modal)restored.prog=WORDS.prog[0];
+  else if(restored.modal.th!=='กำลัง')restored.prog=null;
   return restored;
 }
 
@@ -581,10 +535,6 @@ function legoResumeNewSession(){
 
 function legoCurrentSentence(){
   if(!state.subj||!state.verb) return null;
-  const verb=state.verb.th;
-  if(['กิน','ไปกิน','ซื้อ','ไปซื้อ'].includes(verb)&&!state.obj) return null;
-  if(verb==='ไป'&&!state.advObj) return null;
-  if(['กิน','ไปกิน','ซื้อ','ไปซื้อ'].includes(verb)&&!state.modal&&!state.prog) return null;
   const th=(document.getElementById('sentTh').textContent||'').trim();
   if(!th) return null;
   const customWords=SLOTS.map(s=>state[s.id]).filter(word=>word&&word.custom===true);

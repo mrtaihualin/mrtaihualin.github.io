@@ -1,6 +1,6 @@
 // ════════════════════════════════════════════════════════════
 // Supabase Edge Function: game-content
-// หน้าที่: จุดเดียวที่เกมคำศัพท์ (reading/tone-finder/typing/word-order/listening)
+// หน้าที่: จุดเดียวที่เกมคำศัพท์ (reading/tone-finder/typing/word-order/listening/lego)
 //   ดึงคำ/ประโยคมาใช้ — แทนที่การโหลด data/words-data.js, data/adv-sentences.js ตรงๆ
 //   (ของเดิมเป็นไฟล์ public เปิด URL ตรงๆ เห็นครบทุกคำ/ทุกประโยคเสมอ ไม่ว่าจะล็อกอินหรือไม่
 //   — เพดานเดิมเป็นแค่ JS ตัดอาร์เรย์ฝั่ง browser ไม่ใช่ด่านความปลอดภัยจริง)
@@ -18,8 +18,8 @@
 //   初        50 คำ        100 คำ
 //   中        50 คำ        100 คำ
 //   高(ประโยค) 20 ประโยค    40 ประโยค
-//   Paid private beta: Tone เท่านั้น, queued Paid 初 369 / 中 13, และต้องเป็นบัญชีเดียวที่มี
-//   owner_all_access; ผู้ใช้ Guest/Login Free และเกมอื่นยังใช้สัญญาเดิมทั้งหมด
+//   Paid owner runtime: เกมทั้ง 6 ใช้คลังกลาง Paid 193 ชุดเดียว (初 186 / 中 7)
+//   เมื่อบัญชีมี owner_all_access; Guest/Login Free ยังคงใช้ Free 200 เดิม
 //
 // วิธี deploy: ใช้ migration ปัจจุบันที่บันทึก canonical_record ที่ Lin ตรวจแล้วเท่านั้น
 // แล้ว deploy Edge Function นี้ ห้ามใช้ตัวนำเข้าที่สร้าง/คำนวณช่องภาษาใหม่
@@ -40,9 +40,10 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.112.3';
 const CAPS = {
   anon:  { '初': 50,  '中': 50,  sentences: 20 },
   login: { '初': 100, '中': 100, sentences: 40 },
-  paid:  { '初': 369, '中': 13, sentences: 40 },
+  paid:  { '初': 186, '中': 7, sentences: 40 },
 };
-const GAME_SURFACES = new Set(['tone', 'reading', 'typing', 'word_order', 'listening']);
+const PAID_RUNTIME_CATALOG_VERSION = 'paid-queue-193-v1';
+const GAME_SURFACES = new Set(['tone', 'reading', 'typing', 'word_order', 'listening', 'lego']);
 const REQUIRED_CATALOG_STRING_FIELDS = [
   'contentKey', 'reviewSet', 'word', 'spellingTH', 'readingTH', 'roman', 'zhTW',
   'level', 'type', 'category', 'audioStatus',
@@ -142,20 +143,27 @@ serve(async (req) => {
     const { data: userData } = await userClient.auth.getUser();
     const admin = createClient(SUPABASE_URL, SERVICE_KEY); // service_role — ข้าม RLS ได้ ใช้อ่านตารางล็อกเท่านั้น
     const user = userData?.user || null;
-    // First private-beta tranche: only the already-established owner entitlement may
-    // receive queued Paid vocabulary, and only on Tone. Every other surface keeps the
-    // current Guest/Login contract unchanged.
-    let paidTone = false;
-    if (user && requestedGame === 'tone' && requestBody?.paid_beta === true) {
+    // The already-established owner entitlement receives the one Current Paid catalog
+    // on every protected game surface. The browser cannot select a different Paid batch.
+    let paidAccess = false;
+    if (user && requestedGame && GAME_SURFACES.has(requestedGame)) {
       const entitlement = await readWithTransientAuthRetry(() => admin.from('phase1_product_entitlements')
         .select('entitlement').eq('user_id', user.id).eq('entitlement', 'owner_all_access').limit(2));
       if (entitlement.error) return json({ error: 'entitlement_unavailable' }, 503, origin);
-      paidTone = entitlement.data?.length === 1;
+      paidAccess = entitlement.data?.length === 1;
     }
-    const tier = paidTone ? 'paid' : (user ? 'login' : 'anon');
+    const tier = paidAccess ? 'paid' : (user ? 'login' : 'anon');
     const caps = CAPS[tier];
-    const wordStatuses = paidTone ? ['queued'] : ['active'];
-    const wordTiers = paidTone ? ['paid'] : (tier === 'login' ? ['guest', 'login'] : ['guest']);
+    const wordStatuses = paidAccess ? ['queued'] : ['active'];
+    const wordTiers = paidAccess ? ['paid'] : (tier === 'login' ? ['guest', 'login'] : ['guest']);
+    const wordQuery = (level) => {
+      let query = admin.from('game_words')
+        .select('catalog:canonical_record')
+        .eq('level', level).in('status', wordStatuses)
+        .in('access_tier', wordTiers);
+      if (paidAccess) query = query.eq('catalog_version', PAID_RUNTIME_CATALOG_VERSION);
+      return query.order('rank', { ascending: true }).limit(caps[level]);
+    };
 
     // ── rate limit เกราะเสริมแบบ fail-closed — ถ้าด่านตรวจล่ม ห้ามปล่อยข้อมูลออก ──
     // คนล็อกอิน → คีย์ตาม user id (ปลอมไม่ได้) · คนไม่ล็อกอิน → คีย์ตาม IP (x-forwarded-for)
@@ -172,16 +180,8 @@ serve(async (req) => {
     // ไม่กระทบความปลอดภัย แค่กิน DB เกินจำเป็นเล็กน้อยเฉพาะตอนโดนบล็อกเท่านั้น)
     const [rl, w1, w2, sent] = await Promise.all([
       admin.rpc('game_content_rl_check', { p_key: rlKey, p_limit: 60, p_window: 60 }),
-      readWithTransientAuthRetry(() => admin.from('game_words')
-        .select('catalog:canonical_record')
-        .eq('level', '初').in('status', wordStatuses)
-        .in('access_tier', wordTiers)
-        .order('rank', { ascending: true }).limit(caps['初'])),
-      readWithTransientAuthRetry(() => admin.from('game_words')
-        .select('catalog:canonical_record')
-        .eq('level', '中').in('status', wordStatuses)
-        .in('access_tier', wordTiers)
-        .order('rank', { ascending: true }).limit(caps['中'])),
+      readWithTransientAuthRetry(() => wordQuery('初')),
+      readWithTransientAuthRetry(() => wordQuery('中')),
       readWithTransientAuthRetry(() => admin.from('game_sentences')
         .select('th,zh,reading_th,wc,polite_f,words')
         .order('rank', { ascending: true }).limit(caps.sentences)),
@@ -279,7 +279,7 @@ serve(async (req) => {
     };
 
     let paidSrsState = [];
-    if (paidTone) {
+    if (paidAccess && requestedGame === 'tone') {
       const state = await readWithTransientAuthRetry(() => admin.from('phase2_paid_srs_states')
         .select('game,level,content_key,phase,next_checkpoint,due_on,mastered,active_challenge,ever_failed,reschedule_pending')
         .eq('user_id', user.id).eq('game', 'tone'));
@@ -288,7 +288,7 @@ serve(async (req) => {
     }
 
     return json({ tier, game: requestedGame || null, words, sentences, audioAvailable, capped,
-      paidSrsState: paidTone ? paidSrsState : undefined }, 200, origin);
+      paidSrsState: paidAccess && requestedGame === 'tone' ? paidSrsState : undefined }, 200, origin);
   } catch (e) {
     return json({ error: String((e && e.message) || e) }, 500, origin);
   }

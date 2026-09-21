@@ -52,28 +52,23 @@ GAME_PAGES.forEach((page) => {
   if (text === null) { fail(`A: ${page}`, 'ไม่พบไฟล์'); return; }
   const hasLoaderScript = /src=["']js\/games\/game-content-client\.js/.test(text);
   const hasBootCall = /GameContentLoader\.boot\(/.test(text);
-  const isPausedListening = page === 'listening-game.html' &&
-    /data-listening-availability="coming-soon"/.test(text) &&
-    /Preserved paused runtime: js\/games\/listening-game-app\.js\?v=19/.test(text);
   const hasOldDataScript = /src=["']data\/(words-data|adv-sentences)\.js/.test(text);
   if (!hasLoaderScript) fail(`A: ${page}`, 'ไม่โหลด js/games/game-content-client.js');
-  if (!hasBootCall && !isPausedListening) fail(`A: ${page}`, 'ไม่เรียก GameContentLoader.boot(...)');
+  if (!hasBootCall) fail(`A: ${page}`, 'ไม่เรียก GameContentLoader.boot(...)');
   if (hasOldDataScript) fail(`A: ${page}`, 'ยังโหลด data/words-data.js หรือ data/adv-sentences.js ตรงๆ (ช่องโหว่เดิมที่แก้ไปแล้วอาจกลับมา)');
-  if (hasLoaderScript && (hasBootCall || isPausedListening) && !hasOldDataScript) {
-    ok(isPausedListening ? `A: ${page} เก็บ runtime ไว้แต่ไม่ boot ระหว่างขึ้น 即將開幕` : `A: ${page} โหลดผ่าน game-content-client.js อย่างเดียว`);
-  }
+  if (hasLoaderScript && hasBootCall && !hasOldDataScript) ok(`A: ${page} โหลดผ่าน game-content-client.js อย่างเดียว`);
 });
 
-// lego.html ตั้งใจไม่ใช้ระบบนี้ (คนละคลังข้อมูล) — เช็คว่าไม่มีร่องรอยเก่าหลงเหลือที่จะ error เงียบ
+// Lego must use the same authenticated central catalog and never a separate public store.
 {
   const legoHtml = read('lego.html');
   if (legoHtml === null) fail('A: lego.html', 'ไม่พบไฟล์');
   else {
     const usesLoader = /GameContentLoader\.boot\(/.test(legoHtml);
     const usesOldData = /src=["']data\/(words-data|adv-sentences)\.js/.test(legoHtml);
-    if (usesLoader) notes.push('lego.html เรียก GameContentLoader.boot() ทั้งที่เดิมไม่ใช้ระบบนี้ — ตรวจว่าตั้งใจเปลี่ยนหรือไม่');
+    if (!usesLoader) fail('A: lego.html', 'ไม่เรียก GameContentLoader.boot() เพื่อใช้คลังกลาง');
     if (usesOldData) fail('A: lego.html', 'ยังโหลด data/words-data.js หรือ data/adv-sentences.js ตรงๆ');
-    if (!usesLoader && !usesOldData) ok('A: lego.html ไม่ผูกกับระบบ game-content (ตามที่ออกแบบไว้ — คนละคลังข้อมูล)');
+    if (usesLoader && !usesOldData) ok('A: lego.html ใช้ game-content คลังกลางเดียว');
   }
 }
 
@@ -174,8 +169,8 @@ GAME_PAGES.forEach((page) => {
     }
 
     // tier ต้องมาจาก auth.getUser() ของ JWT ใน Authorization header เท่านั้น ห้ามอ่าน body.tier/isLoggedIn
-    const tierFromAuth = /const tier\s*=\s*paidTone\s*\?\s*'paid'\s*:\s*\(user\s*\?\s*'login'\s*:\s*'anon'\)/.test(fn) &&
-      /requestBody\?\.paid_beta === true[\s\S]+owner_all_access/.test(fn);
+    const tierFromAuth = /const tier\s*=\s*paidAccess\s*\?\s*'paid'\s*:\s*\(user\s*\?\s*'login'\s*:\s*'anon'\)/.test(fn) &&
+      /requestedGame && GAME_SURFACES\.has\(requestedGame\)[\s\S]+owner_all_access/.test(fn);
     const readsBodyForTier = /req\.json\(\)/.test(fn) && /body\.(tier|isLoggedIn)/.test(fn);
     if (!tierFromAuth) fail('C: game-content/index.ts', 'tier ต้องมาจาก auth.getUser() และ Paid ต้องผ่าน owner entitlement');
     else ok('C: game-content/index.ts ตัดสิน Guest/Login จาก auth และ Paid จาก owner entitlement');
@@ -187,7 +182,8 @@ GAME_PAGES.forEach((page) => {
     if (!retryHelper) fail('C: game-content/index.ts', 'ไม่มี bounded retry สำหรับ transient service-role 401');
     else ok('C: game-content retry เฉพาะ transient 401 แบบ bounded และยัง fail-closed');
     const retriedReads = (fn.match(/readWithTransientAuthRetry\(\(\) => admin\.from\(/g) || []).length;
-    if (retriedReads !== 6) fail('C: game-content/index.ts', 'protected content/entitlement/state reads ต้องใช้ bounded retry ครบ 6 จุด');
+    const retriedWordQueries = (fn.match(/readWithTransientAuthRetry\(\(\) => wordQuery\(/g) || []).length;
+    if (retriedReads !== 4 || retriedWordQueries !== 2) fail('C: game-content/index.ts', 'protected content/entitlement/state reads ต้องใช้ bounded retry ครบ 6 จุด');
     else ok('C: game-content protected content/entitlement/state reads ใช้ bounded retryครบ 6 จุด');
     if (!/Promise\.all\(\[\s*admin\.rpc\('game_content_rl_check'/.test(fn)) fail('C: game-content/index.ts', 'rate-limit RPC ต้องไม่ถูก retry จนนับซ้ำ');
     else ok('C: game-content rate-limit RPC ไม่ถูก retry ซ้ำ');

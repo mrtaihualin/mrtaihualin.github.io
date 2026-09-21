@@ -16,17 +16,19 @@ const review = read('js/games/learning-review.js');
 const tone = read('js/games/tone-finder-game.js');
 const page = read('tone-finder.html');
 
-assert.match(content, /requestBody\?\.paid_beta === true/);
 assert.match(content, /entitlement', 'owner_all_access'/);
-assert.match(content, /wordStatuses = paidTone \? \['queued'\] : \['active'\]/);
-assert.match(content, /paidSrsState: paidTone \? paidSrsState : undefined/);
+assert.match(content, /wordStatuses = paidAccess \? \['queued'\] : \['active'\]/);
+assert.match(content, /paidAccess && requestedGame === 'tone'/);
+assert.match(content, /paidSrsState: paidAccess && requestedGame === 'tone' \? paidSrsState : undefined/);
 assert.match(content, /const exactWrittenSegments = \(record\) =>/);
 assert.match(content, /record\.spellingTH\.split\('-'\)/);
 assert.match(round, /phase2_paid_srs_commit/);
 assert.match(round, /paidContent[\s\S]+owner_all_access/);
 assert.match(score, /row\?\.status !== 'active'/);
 assert.match(review, /root\.GAME_CONTENT_TIER === 'login'/);
-assert.match(loader, /paid-beta=1/);
+assert.doesNotMatch(loader, /paid-beta=1|paid_beta/);
+assert.match(loader, /PAID_CONTENT_ACCESS = data\.tier === 'paid'/);
+assert.match(loader, /PAID_SRS_PRIVATE_BETA = data\.tier === 'paid' && game === 'tone'/);
 assert.match(loader, /function exactWrittenSegments\(record\)/);
 assert.match(tone, /tf_paid_srs_v1/);
 assert.match(tone, /Paid progress is server-authoritative/);
@@ -34,8 +36,8 @@ assert.match(tone, /paidUnavailable\s*=\s*n === '3' && !!window\.PAID_SRS_PRIVAT
 assert.match(tone, /window\.PAID_SRS_PRIVATE_BETA && Number\(level\) === 3/);
 assert.match(tone, /if \(_paidRecord\.reschedulePending\) _paidRecord\.mastered = true/);
 assert.match(page, /game-content-client\.js\?v=22/);
-assert.match(page, /learning-review\.js\?v=7/);
-assert.match(page, /tone-finder-game\.min\.js\?v=89/);
+assert.match(page, /learning-review\.js\?v=9/);
+assert.match(page, /tone-finder-game\.min\.js\?v=92/);
 
 const nextWordMatch = tone.match(/nextWord:\s*function\(\)\s*\{([\s\S]*?)\n\s*\},\n\s*downloadSummary:/);
 assert.ok(nextWordMatch, 'Tone nextWord runtime must remain extractable for the Paid commit regression');

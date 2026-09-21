@@ -115,11 +115,20 @@ coreFive.forEach(function (file) {
   ok(!/(?:reading|typing|listening|word-order|lego)-board\.html/.test(html), file + ' does not expose a leaderboard route');
 });
 var legoHtml = read('lego.html');
-accountBundles.forEach(function (bundle) { ok(legoHtml.indexOf(bundle) === -1, 'Lego does not execute Core 5 ' + bundle); });
+['game-account.js','phase1-canonical-state.js'].forEach(function (bundle) {
+  ok(legoHtml.indexOf(bundle) !== -1, 'Lego restores owner identity for central vocabulary via ' + bundle);
+});
+['learning-summary.js','practice-events.js'].forEach(function (bundle) {
+  ok(legoHtml.indexOf(bundle) === -1, 'Lego does not enter the four-game Login Free learning loop via ' + bundle);
+});
+ok(legoHtml.indexOf('auth-widget.js?v=24') !== -1 && legoHtml.indexOf('reading-auth.js?v=35') !== -1,
+  'Lego exposes login and restores the authenticated owner session');
 ok(legoHtml.indexOf('study-plan-core.js?v=2') !== -1 && legoHtml.indexOf('study-plan.js?v=5') !== -1,
   'Lego executes the separately authorized Free Time Auto Plan');
-['tone-finder.html','reading-game.html','typing-game.html','word-order.html'].forEach(function (file) {
-  ok(read(file).indexOf('tone-server.js?v=6') !== -1, file + ' executes only the approved Login Free SRS transport');
+ok(read('tone-finder.html').indexOf('tone-server.js?v=6') !== -1, 'Tone executes the Paid Tone SRS transport');
+['reading-game.html','typing-game.html','word-order.html'].forEach(function (file) {
+  ok(read(file).indexOf('tone-server.js') === -1 && read(file).indexOf('learning-review.js?v=9') !== -1,
+    file + ' uses only the Login Free Learning Engine transport');
 });
 ok(read('lego.html').indexOf('tone-server.js') === -1, 'Lego keeps SRS transport parked');
 ok(read('listening-game.html').indexOf('tone-server.js') === -1 && read('listening-game.html').indexOf('learning-review.js') === -1,

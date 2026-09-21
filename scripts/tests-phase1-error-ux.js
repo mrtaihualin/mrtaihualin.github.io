@@ -95,8 +95,8 @@ function audioRuntimeHarness(invokeResults, playResults, enabled) {
   };
   sandbox.window = sandbox;
   const runtime = enabled === false
-    ? audio
-    : audio.replace('var GAME_AUDIO_ENABLED = false;', 'var GAME_AUDIO_ENABLED = true;');
+    ? audio.replace('var GAME_AUDIO_ENABLED = true;', 'var GAME_AUDIO_ENABLED = false;')
+    : audio;
   vm.runInNewContext(runtime, sandbox, { filename: 'protected-word-audio.js' });
   sandbox.WordAudio.setAvailability(['กา']);
   return {
@@ -165,8 +165,8 @@ test('LINE callback bounds every remote stage and reports uncertain results trut
 test('protected audio request has a bounded ten-second wait', () => {
   assert.match(audio, /NetworkGuard\.request[\s\S]{0,220}game-audio[\s\S]{0,220}10000/);
 });
-test('temporary global game-audio switch defaults off and owns every network/play boundary', () => {
-  assert.match(audio, /var GAME_AUDIO_ENABLED = false/);
+test('entitlement-bound game audio defaults on and still owns every network/play boundary', () => {
+  assert.match(audio, /var GAME_AUDIO_ENABLED = true/);
   assert.match(audio, /functions\\\/v1\\\/game-audio/);
   assert.match(audio, /storage\\\/v1\\\/object/);
   assert.match(audio, /assets\\\/flashcard-audio/);
@@ -205,7 +205,7 @@ test('parked account sources and active Login callback preserve current failure 
   ['leaderboard.html','listening-board.html','my-progress.html','reading-board.html',
     'typing-board.html','word-order-board.html','vault.html']
     .forEach((page) => assert.match(read(page), /auth-widget\.js\?v=24/, page));
-  assert.doesNotMatch(read('lego.html'), /auth-widget\.js/, 'lego.html');
+  assert.match(read('lego.html'), /auth-widget\.js\?v=24/, 'lego.html');
   ['listening-game.html','tone-finder.html','typing-game.html','word-order.html','reading-game.html']
     .forEach((page) => assert.match(read(page), /auth-widget\.js\?v=24/, page));
   assert.match(read('leaderboard.html'), /leaderboard\.js\?v=13/);

@@ -324,12 +324,8 @@
     } catch (e) { return null; }
   }
 
-  var GAME_SURFACES = { tone: true, reading: true, typing: true, word_order: true, listening: true };
+  var GAME_SURFACES = { tone: true, reading: true, typing: true, word_order: true, listening: true, lego: true };
   var LOGIN_FREE_LEARNING_GAMES = { tone: true, reading: true, typing: true, word_order: true };
-  function paidBetaRequested(game) {
-    if (game !== 'tone' || !global.location) return false;
-    return /(?:^|[?&])paid-beta=1(?:&|$)/.test(String(global.location.search || ''));
-  }
   function contentAccessToken(cfg, game) {
     var minimumGuest = typeof global.isMinimumGuestOnly === 'function' && global.isMinimumGuestOnly();
     if (minimumGuest) return Promise.resolve(cfg.anonKey);
@@ -363,7 +359,6 @@
       return Promise.reject(new Error('NETWORK_GUARD_UNAVAILABLE'));
     }
     var requestBody = game ? { game: game, contract: 'canonical-v1' } : { contract: 'canonical-v1' };
-    if (paidBetaRequested(game)) requestBody.paid_beta = true;
     return contentAccessToken(cfg, game).then(function (token) {
       return global.NetworkGuard.request(fetch, cfg.url + '/functions/v1/game-content', {
         method: 'POST',
@@ -599,7 +594,8 @@
       return whenDeferredConfigReady().then(function () { return fetchGameContent(game); })
         .then(function (data) { return whenLoginFreeCanonicalReady(data, game); }).then(function (data) {
         global.GAME_CONTENT_TIER = data.tier || 'anon';
-        global.PAID_SRS_PRIVATE_BETA = data.tier === 'paid';
+        global.PAID_CONTENT_ACCESS = data.tier === 'paid';
+        global.PAID_SRS_PRIVATE_BETA = data.tier === 'paid' && game === 'tone';
         if (global.PAID_SRS_PRIVATE_BETA) {
           if (!Array.isArray(data.paidSrsState)) throw new Error('game-content: paid SRS state contract unavailable');
           var paidState = {};

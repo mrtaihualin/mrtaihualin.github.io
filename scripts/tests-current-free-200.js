@@ -112,12 +112,14 @@ assert.deepStrictEqual(new Set(guestKeys.concat(loginKeys)), contentKeys, 'Free 
   keys.forEach((key) => assert.strictEqual(catalog.records.find((row) => row.contentKey === key).level, level));
 }));
 
-assert.match(edge, /wordStatuses = paidTone \? \['queued'\] : \['active'\]/,
+assert.match(edge, /wordStatuses = paidAccess \? \['queued'\] : \['active'\]/,
   'Guest and Login Free runtime must remain active-only');
-assert.match(edge, /wordTiers = paidTone \? \['paid'\] : \(tier === 'login' \? \['guest', 'login'\] : \['guest'\]\)/,
+assert.match(edge, /wordTiers = paidAccess \? \['paid'\] : \(tier === 'login' \? \['guest', 'login'\] : \['guest'\]\)/,
   'runtime must keep Guest 100 and Login Free additional 100 boundaries');
-assert.match(edge, /requestBody\?\.paid_beta === true[\s\S]+owner_all_access/,
-  'Paid vocabulary must remain behind the explicit Lin-only server gate');
+assert.match(edge, /requestedGame && GAME_SURFACES\.has\(requestedGame\)[\s\S]+owner_all_access/,
+  'Paid vocabulary must remain behind the owner-only server gate');
+assert.match(edge, /query = query\.eq\('catalog_version', PAID_RUNTIME_CATALOG_VERSION\)/,
+  'Paid runtime must select one exact central catalog version');
 assert.match(edge, /select\('catalog:canonical_record'\)/,
   'runtime must forward only the reviewed canonical record');
 assert.doesNotMatch(edge, /runtimeSpelling|spellingParts|\.map\(toWord\)/,

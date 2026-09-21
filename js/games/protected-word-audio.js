@@ -3,9 +3,9 @@
 (function (global) {
   'use strict';
 
-  // Temporary public GAME-audio kill switch. Flip only this source constant to restore
-  // the preserved audio runtime after a separately authorized re-enable decision.
-  var GAME_AUDIO_ENABLED = false;
+  // Audio stays entitlement-bound: the server exposes availability only for words in
+  // the same authenticated central catalog returned to the current game session.
+  var GAME_AUDIO_ENABLED = true;
   var available = Object.create(null);
   var signed = Object.create(null);
   var audioByText = Object.create(null);
