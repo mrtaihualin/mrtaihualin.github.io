@@ -1,10 +1,11 @@
 # ประวัติงานดูแลเว็บ
 
-## 2026-09-21 — Central sentence library v1 (`SOURCE_PASS / LOCAL_DATABASE_PASS / PRODUCTION_UNCHANGED`)
+## 2026-09-21 — Central sentence library v1 (`PRODUCTION_DATABASE_PASS / RUNTIME_UNCHANGED`)
 
 - Added one additive migration over the existing `game_sentences` catalog: immutable sentence IDs, vocabulary-parity sentence/word/syllable structure, per-game readiness, exact Word Order occurrences/answer order, record-integrity hashes and legacy sentence-text aliases. No parallel per-game sentence store, content inference, Learning Item rewrite, saved/history mutation or deletion is included.
 - The current 30 sentences pass the exact Word Order content invariant. Typing stays explicitly `incomplete` where reviewed Roman, tone/live-dead and typing-policy data is absent; Tone, Reading and Listening remain `pending_contract`, so missing fields cannot silently unlock a game.
-- A disposable local PostgreSQL instance compiled and committed the migration, verified the canonical nested structure, alias resolution, immutable identity, server-only grants and incomplete-surface rejection, then was removed. The focused contract passes `7/7`; `git diff --check` and the complete `1,117`-file site gate pass. No game/runtime cutover, Supabase migration, Edge deploy, account/player data or Production state changed.
+- A disposable local PostgreSQL instance compiled and committed the migration, verified the canonical nested structure, alias resolution, immutable identity, server-only grants and incomplete-surface rejection, then was removed. The focused contract passes `7/7`; `git diff --check` and the complete `1,117`-file site gate pass.
+- With Lin's exact approval, MR `!69` migration artifact SHA-256 `a92516d4053db34ef481ea2252966159a6110999ed44a212841cf0829bf77f12` was applied only to Supabase Production `qzkxlhpcputsvbqmtqfi` as ledger version `20260921150007 central_sentence_library_v1`. Postcheck preserves all `30` sentence legacy-column bytes at aggregate hash `8a0858ab822b8ee132bc85d9dcdddc09`, all `30` Learning Item identities, `14` sentence practice events and zero sentence saved/memory rows; canonical/alias/Word Order invariants pass `30/30`, browser roles remain denied, service-role access remains present and scoped advisors add only the intentional server-gated RLS/no-policy INFO plus a new-index-unused INFO. No game/static/Edge/Auth/Listening activation, account/player-data mutation, deletion or runtime cutover occurred.
 
 ## 2026-09-21 — Reading level-switch missing-stat-row guard (`SOURCE_PASS / PRODUCTION_ROLLED_BACK`)
 
