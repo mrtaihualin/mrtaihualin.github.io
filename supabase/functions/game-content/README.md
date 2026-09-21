@@ -10,6 +10,14 @@
 - Current source caps must be read from the deployed/source version and treated as implementation state only.
 - Test/deploy results belong in the Current Checklist or `MAINTENANCE.md`, not in this invariant file.
 
+## Central sentence library transition
+
+- `game_sentences` remains the one physical sentence catalog. Do not create a second per-game sentence store.
+- The source-only `central_sentence_library_v1` migration adds immutable `content_key`, canonical metadata, per-game readiness, and legacy-text aliases without deleting or rewriting Learning Items, saved items, scores, or history.
+- A sentence may be released to one game only when that game's exact required fields are complete and its readiness is `ready`. Missing data blocks only that surface and must never be inferred by the Edge Function.
+- The first installed readiness contract is Word Order. Typing remains `incomplete` until the vocabulary-parity syllable fields are explicit and reviewed; Tone, Reading, and Listening remain `pending_contract`.
+- Existing Edge/static behavior stays unchanged until a separate compatibility cutover proves old text keys and new canonical keys resolve to the same stable sentence. Production database apply and every runtime cutover remain separate approval gates.
+
 ## Sense-scoped vocabulary rollout
 
 The source candidate in `20260902003107_vocab_sense_safe_game_scope.sql` is not permission to

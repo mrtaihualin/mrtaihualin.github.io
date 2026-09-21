@@ -1,5 +1,11 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-09-21 — Central sentence library v1 (`SOURCE_PASS / LOCAL_DATABASE_PASS / PRODUCTION_UNCHANGED`)
+
+- Added one additive migration over the existing `game_sentences` catalog: immutable sentence IDs, vocabulary-parity sentence/word/syllable structure, per-game readiness, exact Word Order occurrences/answer order, record-integrity hashes and legacy sentence-text aliases. No parallel per-game sentence store, content inference, Learning Item rewrite, saved/history mutation or deletion is included.
+- The current 30 sentences pass the exact Word Order content invariant. Typing stays explicitly `incomplete` where reviewed Roman, tone/live-dead and typing-policy data is absent; Tone, Reading and Listening remain `pending_contract`, so missing fields cannot silently unlock a game.
+- A disposable local PostgreSQL instance compiled and committed the migration, verified the canonical nested structure, alias resolution, immutable identity, server-only grants and incomplete-surface rejection, then was removed. The focused contract passes `7/7`; `git diff --check` and the complete `1,117`-file site gate pass. No game/runtime cutover, Supabase migration, Edge deploy, account/player data or Production state changed.
+
 ## 2026-09-21 — Reading level-switch missing-stat-row guard (`SOURCE_PASS / PRODUCTION_ROLLED_BACK`)
 
 - The approved 382-file static candidate from `ec14cafd744d6357739402f797f58b6ac921eff0` was uploaded as immutable Cloudflare version `fb941bad-5c46-4e3c-825f-f3a8b044f130`. Exact-byte, route and denied-path checks passed, but the signed-out mobile browser postcheck reproduced a Reading Middle level-switch exception because the canonical Login surface removes the legacy `rg-stat-row` ID while `setLevel()` dereferenced it unconditionally. Traffic was automatically returned to preserved version `6335206e-16f8-46a5-8811-7efc2f6f972a`; two complete apex/WWW checks confirmed all 382 rollback bytes, 13 routes and denied paths. The failed candidate is inactive.
