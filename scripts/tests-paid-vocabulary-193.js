@@ -131,6 +131,9 @@ assert.strictEqual(md5(sortedNewHashes), source.recordHashMd5);
 assert.strictEqual(md5(combinedHashes), source.combinedPaidRecordHashMd5);
 
 assert.match(migration, /Existing Paid 189 precheck failed/);
+assert.match(migration, /c4f7b191b4e7c812ab4e348dccdf7ced/);
+assert.match(migration, /8995b40864da1d4f6a04d483c13f3114/);
+assert.match(migration, /68fa6e62e25e55f48c38bad7db812391/);
 assert.match(migration, /count\(distinct \(word,zh,level\)\).*<> 193/);
 assert.match(migration, /count\(distinct word\).*<> 192/);
 assert.match(migration, /join _paid_queue_193 p using\(word\)/);
@@ -146,6 +149,8 @@ assert.doesNotMatch(migration, /delete\s+from\s+public\.game_words/i);
 assert.match(rollback, /phase2_paid_srs_states/);
 assert.match(rollback, /phase2_paid_srs_operations/);
 assert.match(rollback, /user-linked SRS data exists/);
+assert.match(rollback, /c4f7b191b4e7c812ab4e348dccdf7ced/);
+assert.match(rollback, /8995b40864da1d4f6a04d483c13f3114/);
 assert.match(rollback, /delete from public\.game_words where catalog_version='paid-queue-193-v1'/);
 assert.match(rollback, /count\(\*\) from public\.game_words where status='queued' and access_tier='paid'\) <> 189/);
 assert.doesNotMatch(rollback, /delete from public\.phase2_paid_srs/i);

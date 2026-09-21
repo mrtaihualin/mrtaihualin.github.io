@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -9,12 +10,31 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (name) => fs.readFileSync(path.join(root, name), 'utf8');
 const extract = (sql, tag) => JSON.parse(sql.match(new RegExp(`jsonb_to_recordset\\(\\$${tag}\\$(\\[[\\s\\S]*?\\])\\$${tag}\\$::jsonb\\)`))[1]);
 
-const free = extract(read('supabase/migrations/20260903072554_canonical_free_200_catalog.sql'), 'catalog');
+const sha256 = (value) => crypto.createHash('sha256').update(value).digest('hex');
+const md5 = (rows) => crypto.createHash('md5')
+  .update(rows.slice().sort((a, b) => Buffer.from(a.content_key).compare(Buffer.from(b.content_key)))
+    .map((row) => row.record_hash).join('\n'))
+  .digest('hex');
+const freeSeed = extract(read('supabase/migrations/20260903072554_canonical_free_200_catalog.sql'), 'catalog');
+const freeAuthority = JSON.parse(read('data/approved-vocabulary-catalog.json')).records;
+const freeByKey = new Map(freeAuthority.map((record) => [record.contentKey, record]));
+const free = freeSeed.map((row) => {
+  const canonical = freeByKey.get(row.content_key);
+  assert.ok(canonical, `missing current Free authority for ${row.content_key}`);
+  return { ...row, canonical_record: canonical, record_hash: sha256(JSON.stringify(canonical)) };
+});
 const paid189 = extract(read('supabase/migrations/20260905085037_queue_approved_paid_vocabulary_189.sql'), 'paidqueue');
+const correctedPaid = paid189.find((row) => row.content_key === 'หมื่น@初#numeral');
+assert.ok(correctedPaid);
+correctedPaid.syls[0].vowel = 'อื';
+correctedPaid.canonical_record.syllables[0].vowel = 'อื';
+correctedPaid.record_hash = 'dba54c6b1fc876b5dd94a13d28484fcff6ffb102e06e828d4472227ce1e34164';
 const migration = path.join(root, 'supabase/migrations/20260921155538_queue_approved_paid_vocabulary_193.sql');
 const rollback = path.join(root, 'supabase/recovery/paid-queue-193/rollback.sql');
 assert.equal(free.length, 200);
 assert.equal(paid189.length, 189);
+assert.equal(md5(free), 'c4f7b191b4e7c812ab4e348dccdf7ced');
+assert.equal(md5(paid189), '8995b40864da1d4f6a04d483c13f3114');
 
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'paid-193-db-'));
 const data = path.join(temp, 'data');

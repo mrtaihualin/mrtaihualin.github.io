@@ -1,5 +1,7 @@
 -- Add the exact 193 Lin-approved Sets 1-8 semantic records to the protected Paid queue.
 -- Existing Free 200, Paid 189 IDs/hashes/ranks, entitlements, RLS and user data remain unchanged.
+-- The baseline hashes bind the current canonical Free 200 (including spellingSyllables)
+-- and the approved Paid หมื่น vowel correction already present in Production.
 
 begin;
 
@@ -10,13 +12,13 @@ begin
   if (select count(*) from public.game_words where status='active') <> 200
      or (select count(*) from public.game_words where status='active' and access_tier='guest') <> 100
      or (select count(*) from public.game_words where status='active' and access_tier='login') <> 100
-     or (select md5(string_agg(record_hash, E'\n' order by content_key collate "C")) from public.game_words where status='active') <> '4be1d6442da1c2980b1e084aafc45394' then
+     or (select md5(string_agg(record_hash, E'\n' order by content_key collate "C")) from public.game_words where status='active') <> 'c4f7b191b4e7c812ab4e348dccdf7ced' then
     raise exception 'Free 200 precheck failed; Paid 193 mutation stopped';
   end if;
   if (select count(*) from public.game_words where status='queued' and access_tier='paid') <> 189
      or (select count(*) from public.game_words where status='queued' and access_tier='paid' and level='初') <> 183
      or (select count(*) from public.game_words where status='queued' and access_tier='paid' and level='中') <> 6
-     or (select md5(string_agg(record_hash, E'\n' order by content_key collate "C")) from public.game_words where status='queued' and access_tier='paid') <> '2719d0ca5647c7b7ad52c5d12ac421c8'
+     or (select md5(string_agg(record_hash, E'\n' order by content_key collate "C")) from public.game_words where status='queued' and access_tier='paid') <> '8995b40864da1d4f6a04d483c13f3114'
      or (select max(rank) from public.game_words where status='queued' and access_tier='paid' and level='初') <> 283
      or (select max(rank) from public.game_words where status='queued' and access_tier='paid' and level='中') <> 106 then
     raise exception 'Existing Paid 189 precheck failed; Paid 193 mutation stopped';
@@ -71,15 +73,15 @@ grant select on table public.game_words to service_role;
 do $postcheck$
 begin
   if (select count(*) from public.game_words where status='active') <> 200
-     or (select md5(string_agg(record_hash, E'\n' order by content_key collate "C")) from public.game_words where status='active') <> '4be1d6442da1c2980b1e084aafc45394'
+     or (select md5(string_agg(record_hash, E'\n' order by content_key collate "C")) from public.game_words where status='active') <> 'c4f7b191b4e7c812ab4e348dccdf7ced'
      or (select count(*) from public.game_words where status='queued' and access_tier='paid') <> 382
      or (select count(*) from public.game_words where status='queued' and access_tier='paid' and level='初') <> 369
      or (select count(*) from public.game_words where status='queued' and access_tier='paid' and level='中') <> 13
      or (select count(*) from public.game_words where catalog_version='paid-queue-189-v1') <> 189
-     or (select md5(string_agg(record_hash, E'\n' order by content_key collate "C")) from public.game_words where catalog_version='paid-queue-189-v1') <> '2719d0ca5647c7b7ad52c5d12ac421c8'
+     or (select md5(string_agg(record_hash, E'\n' order by content_key collate "C")) from public.game_words where catalog_version='paid-queue-189-v1') <> '8995b40864da1d4f6a04d483c13f3114'
      or (select count(*) from public.game_words where catalog_version='paid-queue-193-v1') <> 193
      or (select md5(string_agg(record_hash, E'\n' order by content_key collate "C")) from public.game_words where catalog_version='paid-queue-193-v1') <> '906441641a315015fbf64d1ebf78d863'
-     or (select md5(string_agg(record_hash, E'\n' order by content_key collate "C")) from public.game_words where status='queued' and access_tier='paid') <> 'f4e59a59df655386002c7b0f01583d3d'
+     or (select md5(string_agg(record_hash, E'\n' order by content_key collate "C")) from public.game_words where status='queued' and access_tier='paid') <> '68fa6e62e25e55f48c38bad7db812391'
      or (select count(*) from public.phase1_product_entitlements where entitlement='owner_all_access') <> 1 then
     raise exception 'Central catalog 582 postcheck failed';
   end if;

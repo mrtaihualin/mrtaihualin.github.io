@@ -9,8 +9,8 @@ The SQL deletes only the 193 rows whose catalog version and aggregate record has
 Immutable artifact SHA-256 values:
 
 - Approved 193 source: `1c496779e3f0aabb4b031d8892bef44f71041495b18daf0d7201fd6415e05a72`
-- Forward migration: `43e2f2e5291f79e4fa6d612d3065b96b658970551b10ddf2b66a0c070d89a26d`
-- Rollback SQL: `aae0e7e3b5c8df8bce0458180fee3e453e5b86e7b9a3212f2fb0afc2ef4f511f`
+- Forward migration: `e1ab2eb1e0e4ad76a288bb61ba5ef642c7667690e9b094d7694d3a62c2a4c2c2`
+- Rollback SQL: `3480a6ced92ee436d0a4a9c42dd6845310ccfe1b7b701b84568743e587ab0efb`
 - Owner-only Edge source: `0b507e35356984c32d3fcc5a65f9f5fda791faae837963ce9e74ecb848f9ff90`
 
 Local verification:
