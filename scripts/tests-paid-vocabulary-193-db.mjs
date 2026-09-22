@@ -65,9 +65,7 @@ create table public.game_words (
   zh text,
   level text not null,
   category text,
-  syls jsonb,
   reading_th text,
-  read_syls jsonb,
   rank integer not null,
   spelling_th text,
   audio_status text,
@@ -88,10 +86,10 @@ create table public.phase1_product_entitlements (
 );
 insert into public.phase1_product_entitlements values ('00000000-0000-4000-8000-000000000001','owner_all_access');
 insert into public.game_words(
-  content_key,word,en,zh,level,category,syls,reading_th,read_syls,rank,spelling_th,audio_status,type,subcategory,
+  content_key,word,en,zh,level,category,reading_th,rank,spelling_th,audio_status,type,subcategory,
   status,access_tier,catalog_version,record_hash,canonical_record
 )
-select content_key,word,en,zh,level,category,syls,reading_th,null,rank,spelling_th,audio_status,type,subcategory,
+select content_key,word,en,zh,level,category,reading_th,rank,spelling_th,audio_status,type,subcategory,
        status,access_tier,catalog_version,record_hash,canonical_record
 from jsonb_to_recordset($fixture$${fixtureRows}$fixture$::jsonb) as x(
   content_key text, word text, en text, zh text, level text, category text, type text, subcategory text,
@@ -99,11 +97,11 @@ from jsonb_to_recordset($fixture$${fixtureRows}$fixture$::jsonb) as x(
   catalog_version text, record_hash text, canonical_record jsonb, status text
 );
 insert into public.game_words(
-  content_key,word,en,zh,level,category,syls,reading_th,rank,spelling_th,audio_status,type,
+  content_key,word,en,zh,level,category,reading_th,rank,spelling_th,audio_status,type,
   status,access_tier,catalog_version,record_hash,canonical_record
 )
 select
-  '__retired_history_fixture__@初','ห้าง',en,'歷史測試資料','初',category,syls,reading_th,rank,spelling_th,
+  '__retired_history_fixture__@初','ห้าง',en,'歷史測試資料','初',category,reading_th,rank,spelling_th,
   audio_status,type,'history','paid','retired-history-fixture',record_hash,canonical_record
 from public.game_words
 order by id
