@@ -17,7 +17,7 @@ const tone = read('js/games/tone-finder-game.js');
 const page = read('tone-finder.html');
 
 assert.match(content, /entitlement', 'owner_all_access'/);
-assert.match(content, /wordStatuses = paidAccess \? \['queued'\] : \['active'\]/);
+assert.match(content, /selectWords\(level, \['queued'\], \['paid'\], PAID_RUNTIME_CATALOG_VERSIONS, PAID_ONLY_CAPS\[level\]\)/);
 assert.match(content, /paidAccess && requestedGame === 'tone'/);
 assert.match(content, /paidSrsState: paidAccess && requestedGame === 'tone' \? paidSrsState : undefined/);
 assert.match(content, /const exactWrittenSegments = \(record\) =>/);

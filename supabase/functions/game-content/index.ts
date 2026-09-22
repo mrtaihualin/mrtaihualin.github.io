@@ -18,8 +18,8 @@
 //   初        50 คำ        100 คำ
 //   中        50 คำ        100 คำ
 //   高(ประโยค) 20 ประโยค    40 ประโยค
-//   Paid owner runtime: เกมทั้ง 6 ใช้ Paid ทั้งสอง batch ในคลังกลางเดียวกัน
-//   รวม 382 semantic records (初 369 / 中 13); คำเขียนเหมือนกันแต่คนละความหมาย
+//   Paid owner runtime: เกมทั้ง 6 ใช้ Free 200 + Paid ทั้งสอง batch ในคลังกลางเดียวกัน
+//   รวม 582 semantic records (初 469 / 中 113); คำเขียนเหมือนกันแต่คนละความหมาย
 //   คงเป็นคนละ record ด้วย contentKey ที่ต่างกัน
 //   เมื่อบัญชีมี owner_all_access; Guest/Login Free ยังคงใช้ Free 200 เดิม
 //
@@ -42,8 +42,10 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.112.3';
 const CAPS = {
   anon:  { '初': 50,  '中': 50,  sentences: 20 },
   login: { '初': 100, '中': 100, sentences: 40 },
-  paid:  { '初': 369, '中': 13, sentences: 40 },
+  paid:  { '初': 469, '中': 113, sentences: 40 },
 };
+const FREE_RUNTIME_CATALOG_VERSION = 'free-200-v1';
+const PAID_ONLY_CAPS = { '初': 369, '中': 13 };
 const PAID_RUNTIME_CATALOG_VERSIONS = ['paid-queue-189-v1', 'paid-queue-193-v1'];
 const GAME_SURFACES = new Set(['tone', 'reading', 'typing', 'word_order', 'listening', 'lego']);
 const REQUIRED_CATALOG_STRING_FIELDS = [
@@ -145,8 +147,9 @@ serve(async (req) => {
     const { data: userData } = await userClient.auth.getUser();
     const admin = createClient(SUPABASE_URL, SERVICE_KEY); // service_role — ข้าม RLS ได้ ใช้อ่านตารางล็อกเท่านั้น
     const user = userData?.user || null;
-    // The already-established owner entitlement receives the exact union of both reviewed
-    // Paid batches on every protected game surface. The browser cannot select either batch.
+    // The already-established owner entitlement receives Free 200 plus the exact union of
+    // both reviewed Paid batches on every protected game surface. The browser cannot select
+    // a tier or batch, and same-written/different-meaning records remain distinct by contentKey.
     let paidAccess = false;
     if (user && requestedGame && GAME_SURFACES.has(requestedGame)) {
       const entitlement = await readWithTransientAuthRetry(() => admin.from('phase1_product_entitlements')
@@ -156,15 +159,31 @@ serve(async (req) => {
     }
     const tier = paidAccess ? 'paid' : (user ? 'login' : 'anon');
     const caps = CAPS[tier];
-    const wordStatuses = paidAccess ? ['queued'] : ['active'];
-    const wordTiers = paidAccess ? ['paid'] : (tier === 'login' ? ['guest', 'login'] : ['guest']);
-    const wordQuery = (level) => {
+    const selectWords = (level, statuses, tiers, catalogVersions, limit) => {
       let query = admin.from('game_words')
         .select('catalog:canonical_record')
-        .eq('level', level).in('status', wordStatuses)
-        .in('access_tier', wordTiers);
-      if (paidAccess) query = query.in('catalog_version', PAID_RUNTIME_CATALOG_VERSIONS);
-      return query.order('rank', { ascending: true }).limit(caps[level]);
+        .eq('level', level).in('status', statuses)
+        .in('access_tier', tiers);
+      query = catalogVersions.length === 1
+        ? query.eq('catalog_version', catalogVersions[0])
+        : query.in('catalog_version', catalogVersions);
+      return query.order('rank', { ascending: true }).limit(limit);
+    };
+    const wordQuery = async (level) => {
+      if (!paidAccess) {
+        const freeTiers = tier === 'login' ? ['guest', 'login'] : ['guest'];
+        return selectWords(level, ['active'], freeTiers, [FREE_RUNTIME_CATALOG_VERSION], caps[level]);
+      }
+      const [freeWords, paidWords] = await Promise.all([
+        selectWords(level, ['active'], ['guest', 'login'], [FREE_RUNTIME_CATALOG_VERSION], CAPS.login[level]),
+        selectWords(level, ['queued'], ['paid'], PAID_RUNTIME_CATALOG_VERSIONS, PAID_ONLY_CAPS[level]),
+      ]);
+      const failed = [freeWords, paidWords].find((result) => result.error);
+      if (failed) return failed;
+      if (freeWords.data?.length !== CAPS.login[level] || paidWords.data?.length !== PAID_ONLY_CAPS[level]) {
+        return { data: null, error: { message: 'owner_catalog_incomplete' }, status: 500 };
+      }
+      return { data: [...freeWords.data, ...paidWords.data], error: null, status: 200 };
     };
 
     // ── rate limit เกราะเสริมแบบ fail-closed — ถ้าด่านตรวจล่ม ห้ามปล่อยข้อมูลออก ──

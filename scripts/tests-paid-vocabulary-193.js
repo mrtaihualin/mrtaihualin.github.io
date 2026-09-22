@@ -47,8 +47,9 @@ assert.deepStrictEqual(next.rows.map((row) => row.canonical_record), source.reco
 assert.deepStrictEqual(next.rows.map((row) => row.content_key), manifest.contentKeys.slice(189));
 assert.strictEqual(manifest.recordCount, 382);
 assert.deepStrictEqual(manifest.levelCounts, { '初': 369, '中': 13 });
-assert.deepStrictEqual(manifest.runtimeCatalogVersions, ['paid-queue-189-v1', 'paid-queue-193-v1']);
-assert.strictEqual(manifest.runtimeRecordCount, 382);
+assert.strictEqual(manifest.runtimeFreeCatalogVersion, 'free-200-v1');
+assert.deepStrictEqual(manifest.runtimePaidCatalogVersions, ['paid-queue-189-v1', 'paid-queue-193-v1']);
+assert.strictEqual(manifest.runtimeRecordCount, 582);
 
 const lockedWordFields = ['word', 'spellingTH', 'readingTH', 'roman', 'zhTW', 'level'];
 const lockedStructureFields = [
@@ -158,12 +159,12 @@ assert.match(rollback, /delete from public\.game_words where catalog_version='pa
 assert.match(rollback, /count\(\*\) from public\.game_words where status='queued' and access_tier='paid'\) <> 189/);
 assert.doesNotMatch(rollback, /delete from public\.phase2_paid_srs/i);
 
-assert.match(edge, /paid:\s*{\s*'初':\s*369,\s*'中':\s*13,\s*sentences:\s*40\s*}/);
+assert.match(edge, /paid:\s*{\s*'初':\s*469,\s*'中':\s*113,\s*sentences:\s*40\s*}/);
 assert.match(edge, /GAME_SURFACES = new Set\(\['tone', 'reading', 'typing', 'word_order', 'listening', 'lego'\]\)/);
+assert.match(edge, /FREE_RUNTIME_CATALOG_VERSION = 'free-200-v1'/);
 assert.match(edge, /PAID_RUNTIME_CATALOG_VERSIONS = \['paid-queue-189-v1', 'paid-queue-193-v1'\]/);
 assert.match(edge, /requestedGame && GAME_SURFACES\.has\(requestedGame\)[\s\S]+owner_all_access/);
-assert.match(edge, /const wordStatuses = paidAccess \? \['queued'\] : \['active'\]/);
-assert.match(edge, /const wordTiers = paidAccess \? \['paid'\]/);
-assert.match(edge, /query = query\.in\('catalog_version', PAID_RUNTIME_CATALOG_VERSIONS\)/);
+assert.match(edge, /selectWords\(level, \['active'\], \['guest', 'login'\], \[FREE_RUNTIME_CATALOG_VERSION\], CAPS\.login\[level\]\)/);
+assert.match(edge, /selectWords\(level, \['queued'\], \['paid'\], PAID_RUNTIME_CATALOG_VERSIONS, PAID_ONLY_CAPS\[level\]\)/);
 
-console.log('✅ Exact Paid 193 joins unchanged Paid 189 as the owner Paid 382 runtime across all six games; Free 200 remains unchanged');
+console.log('✅ Exact Paid 193 joins unchanged Paid 189 and Free 200 as the owner 582 runtime across all six games');

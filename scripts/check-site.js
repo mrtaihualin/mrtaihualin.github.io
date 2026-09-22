@@ -140,7 +140,7 @@ runTest(['scripts/tests-game-level-readiness.js'], 'Login Free game level queue 
 runTest(['scripts/tests-reading-current-vocabulary.js'], 'Reading Current 389 full-set answer audit');
 runTest(['scripts/tests-paid-vocabulary-queue.js'], 'Inactive Paid vocabulary queue migration tests');
 runTest(['scripts/tests-paid-vocabulary-193.js'], 'Exact Paid 193 central catalog integration tests');
-runTest(['scripts/tests-paid-vocabulary-single-store.js'], 'Paid 382 union single-store all-six-game runtime tests');
+runTest(['scripts/tests-paid-vocabulary-single-store.js'], 'Free 200 plus Paid 382 single-store all-six-game runtime tests');
 runTest(['scripts/tests-paid-vocabulary-193-db.mjs'], 'Exact Paid 193 database migration and rollback tests');
 runTest(['scripts/tests-word-order-phase1.js'], 'Phase 1 Word Order tests');
 runTest(['scripts/tests-account-export-phase1.js'], 'Phase 1 account-export tests');

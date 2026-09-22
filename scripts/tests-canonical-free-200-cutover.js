@@ -109,10 +109,10 @@ assert.throws(
   );
 });
 
-assert.match(edge, /wordStatuses = paidAccess \? \['queued'\] : \['active'\]/);
-assert.match(edge, /wordTiers = paidAccess \? \['paid'\] : \(tier === 'login' \? \['guest', 'login'\] : \['guest'\]\)/);
+assert.match(edge, /const freeTiers = tier === 'login' \? \['guest', 'login'\] : \['guest'\]/);
 assert.match(edge, /requestedGame && GAME_SURFACES\.has\(requestedGame\)[\s\S]+owner_all_access/);
-assert.match(edge, /query = query\.in\('catalog_version', PAID_RUNTIME_CATALOG_VERSIONS\)/);
+assert.match(edge, /selectWords\(level, \['active'\], \['guest', 'login'\], \[FREE_RUNTIME_CATALOG_VERSION\], CAPS\.login\[level\]\)/);
+assert.match(edge, /selectWords\(level, \['queued'\], \['paid'\], PAID_RUNTIME_CATALOG_VERSIONS, PAID_ONLY_CAPS\[level\]\)/);
 assert.match(edge, /select\('catalog:canonical_record'\)/);
 assert.doesNotMatch(edge, /runtimeSpelling|spellingParts|\.map\(toWord\)|computeTone|getInitClass|getVowelType/);
 
