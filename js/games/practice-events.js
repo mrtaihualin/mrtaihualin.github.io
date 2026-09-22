@@ -55,7 +55,7 @@
       game_type: String(report.game_type || ''),
       completed_at: String(report.ended_at),
       items: report.items.map(function (item, index) {
-        return {
+        var normalized = {
           ordinal: index + 1,
           content_ref: {
             source: item && item.content_ref && item.content_ref.source,
@@ -68,6 +68,8 @@
           hint_used: item && item.hint_used == null ? null : !!item.hint_used,
           listen_count: item && item.listen_count == null ? null : Math.max(0, Number(item.listen_count) || 0)
         };
+        if (item && item.skip_reason != null) normalized.skip_reason = String(item.skip_reason);
+        return normalized;
       })
     };
   }

@@ -183,7 +183,9 @@ try {
     insert into auth.users(id) values ('00000000-0000-4000-8000-000000000011');
     insert into learning_items(item_id) values
       ('11000000-0000-4000-8000-000000000001'),
-      ('11000000-0000-4000-8000-000000000002');
+      ('11000000-0000-4000-8000-000000000002'),
+      ('11000000-0000-4000-8000-000000000003'),
+      ('11000000-0000-4000-8000-000000000004');
     set role service_role;
     select phase1_practice_events_record(
       '00000000-0000-4000-8000-000000000011',
@@ -197,20 +199,45 @@ try {
       'tone_finder', pg_catalog.now(), repeat('b', 64),
       '[{"item_id":"11000000-0000-4000-8000-000000000002","ordinal":1,"is_correct":true,"is_practice":true,"is_skipped":true,"wrong_count":0,"hint_used":true,"listen_count":null}]'::jsonb
     );
+    select phase1_practice_events_record(
+      '00000000-0000-4000-8000-000000000011',
+      '11000000-0000-4000-8000-000000000013',
+      'tone_finder', pg_catalog.now(), repeat('c', 64),
+      '[{"item_id":"11000000-0000-4000-8000-000000000003","ordinal":1,"is_correct":true,"skip_reason":"user_skip","wrong_count":0,"hint_used":false,"listen_count":null}]'::jsonb
+    );
+    do $$ declare r jsonb; begin
+      r := phase1_practice_events_record(
+        '00000000-0000-4000-8000-000000000011',
+        '11000000-0000-4000-8000-000000000014',
+        'tone_finder', pg_catalog.now(), repeat('d', 64),
+        '[{"item_id":"11000000-0000-4000-8000-000000000004","ordinal":1,"is_correct":true,"skip_reason":"unknown","wrong_count":0,"hint_used":false,"listen_count":null}]'::jsonb
+      );
+      if r ->> 'reason' <> 'invalid_items' then raise exception 'invalid skip_reason accepted %', r; end if;
+    end $$;
     reset role;
     do $$ begin
       if not exists (
         select 1 from practice_events
         where user_id = '00000000-0000-4000-8000-000000000011'
-          and result = 'practice' and is_correct is false
+          and result = 'practice' and is_correct is null
           and meta ->> 'is_practice' = 'true' and meta ->> 'is_skipped' = 'false'
       ) then raise exception 'neutral practice evidence missing'; end if;
       if not exists (
         select 1 from practice_events
         where user_id = '00000000-0000-4000-8000-000000000011'
-          and result = 'skipped' and is_correct is false
+          and result = 'skipped' and is_correct is null
           and meta ->> 'is_practice' = 'true' and meta ->> 'is_skipped' = 'true'
       ) then raise exception 'neutral skipped evidence missing'; end if;
+      if not exists (
+        select 1 from practice_events
+        where user_id = '00000000-0000-4000-8000-000000000011'
+          and result = 'skipped' and is_correct is null
+          and meta ->> 'skip_reason' = 'user_skip' and meta ->> 'is_skipped' = 'true'
+      ) then raise exception 'legacy skip_reason evidence missing'; end if;
+      if exists (
+        select 1 from practice_events
+        where session_id = '11000000-0000-4000-8000-000000000014'
+      ) then raise exception 'invalid skip_reason row inserted'; end if;
     end $$;
   `);
   console.log('PostgreSQL fixture: neutral Played outcomes PASS');

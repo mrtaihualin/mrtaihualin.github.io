@@ -29,6 +29,20 @@ begin
     return jsonb_build_object('ok', false, 'reason', 'invalid_items');
   end if;
 
+  -- Preserve the installed skip-reason contract while adding explicit neutral flags.
+  if exists (
+    select 1
+    from jsonb_array_elements(p_items) as checked(value)
+    where checked.value -> 'skip_reason' is not null
+      and checked.value -> 'skip_reason' <> 'null'::jsonb
+      and (
+        jsonb_typeof(checked.value -> 'skip_reason') <> 'string'
+        or checked.value ->> 'skip_reason' not in ('user_skip', 'audio_unavailable')
+      )
+  ) then
+    return jsonb_build_object('ok', false, 'reason', 'invalid_items');
+  end if;
+
   perform pg_catalog.pg_advisory_xact_lock(
     pg_catalog.hashtextextended(p_user_id::text || ':' || p_round_id::text || ':' || p_surface_code, 0)
   );
@@ -56,11 +70,13 @@ begin
     (entry.value ->> 'item_id')::uuid,
     p_surface_code,
     case
-      when coalesce((entry.value ->> 'is_skipped')::boolean, false) then false
-      when coalesce((entry.value ->> 'is_practice')::boolean, false) then false
+      when entry.value ->> 'skip_reason' is not null then null
+      when coalesce((entry.value ->> 'is_skipped')::boolean, false) then null
+      when coalesce((entry.value ->> 'is_practice')::boolean, false) then null
       else (entry.value ->> 'is_correct')::boolean
     end,
     case
+      when entry.value ->> 'skip_reason' is not null then 'skipped'
       when coalesce((entry.value ->> 'is_skipped')::boolean, false) then 'skipped'
       when coalesce((entry.value ->> 'is_practice')::boolean, false) then 'practice'
       when (entry.value ->> 'is_correct')::boolean then 'correct'
@@ -74,9 +90,11 @@ begin
       'ordinal', (entry.value ->> 'ordinal')::integer,
       'wrong_count', (entry.value ->> 'wrong_count')::integer,
       'is_practice', coalesce((entry.value ->> 'is_practice')::boolean, false),
-      'is_skipped', coalesce((entry.value ->> 'is_skipped')::boolean, false),
+      'is_skipped', entry.value ->> 'skip_reason' is not null
+        or coalesce((entry.value ->> 'is_skipped')::boolean, false),
       'hint_used', entry.value -> 'hint_used',
       'listen_count', entry.value -> 'listen_count',
+      'skip_reason', entry.value -> 'skip_reason',
       'client_completed_at', p_client_completed_at
     ),
     pg_catalog.now()
