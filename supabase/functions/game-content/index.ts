@@ -18,7 +18,9 @@
 //   初        50 คำ        100 คำ
 //   中        50 คำ        100 คำ
 //   高(ประโยค) 20 ประโยค    40 ประโยค
-//   Paid owner runtime: เกมทั้ง 6 ใช้คลังกลาง Paid 193 ชุดเดียว (初 186 / 中 7)
+//   Paid owner runtime: เกมทั้ง 6 ใช้ Paid ทั้งสอง batch ในคลังกลางเดียวกัน
+//   รวม 382 semantic records (初 369 / 中 13); คำเขียนเหมือนกันแต่คนละความหมาย
+//   คงเป็นคนละ record ด้วย contentKey ที่ต่างกัน
 //   เมื่อบัญชีมี owner_all_access; Guest/Login Free ยังคงใช้ Free 200 เดิม
 //
 // วิธี deploy: ใช้ migration ปัจจุบันที่บันทึก canonical_record ที่ Lin ตรวจแล้วเท่านั้น
@@ -40,9 +42,9 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.112.3';
 const CAPS = {
   anon:  { '初': 50,  '中': 50,  sentences: 20 },
   login: { '初': 100, '中': 100, sentences: 40 },
-  paid:  { '初': 186, '中': 7, sentences: 40 },
+  paid:  { '初': 369, '中': 13, sentences: 40 },
 };
-const PAID_RUNTIME_CATALOG_VERSION = 'paid-queue-193-v1';
+const PAID_RUNTIME_CATALOG_VERSIONS = ['paid-queue-189-v1', 'paid-queue-193-v1'];
 const GAME_SURFACES = new Set(['tone', 'reading', 'typing', 'word_order', 'listening', 'lego']);
 const REQUIRED_CATALOG_STRING_FIELDS = [
   'contentKey', 'reviewSet', 'word', 'spellingTH', 'readingTH', 'roman', 'zhTW',
@@ -143,8 +145,8 @@ serve(async (req) => {
     const { data: userData } = await userClient.auth.getUser();
     const admin = createClient(SUPABASE_URL, SERVICE_KEY); // service_role — ข้าม RLS ได้ ใช้อ่านตารางล็อกเท่านั้น
     const user = userData?.user || null;
-    // The already-established owner entitlement receives the one Current Paid catalog
-    // on every protected game surface. The browser cannot select a different Paid batch.
+    // The already-established owner entitlement receives the exact union of both reviewed
+    // Paid batches on every protected game surface. The browser cannot select either batch.
     let paidAccess = false;
     if (user && requestedGame && GAME_SURFACES.has(requestedGame)) {
       const entitlement = await readWithTransientAuthRetry(() => admin.from('phase1_product_entitlements')
@@ -161,7 +163,7 @@ serve(async (req) => {
         .select('catalog:canonical_record')
         .eq('level', level).in('status', wordStatuses)
         .in('access_tier', wordTiers);
-      if (paidAccess) query = query.eq('catalog_version', PAID_RUNTIME_CATALOG_VERSION);
+      if (paidAccess) query = query.in('catalog_version', PAID_RUNTIME_CATALOG_VERSIONS);
       return query.order('rank', { ascending: true }).limit(caps[level]);
     };
 

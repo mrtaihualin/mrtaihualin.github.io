@@ -1,12 +1,14 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "queueId": "approved-paid-vocabulary-queue",
   "state": "queued-owner-only",
   "accessTier": "paid",
-  "runtimeConsumption": "all-six-owner_all_access-paid193-only",
-  "runtimeCatalogVersion": "paid-queue-193-v1",
-  "runtimeRecordCount": 193,
-  "supersedesRuntimeCatalogVersion": "paid-queue-189-v1",
+  "runtimeConsumption": "all-six-owner_all_access-paid382-union",
+  "runtimeCatalogVersions": [
+    "paid-queue-189-v1",
+    "paid-queue-193-v1"
+  ],
+  "runtimeRecordCount": 382,
   "migrationState": "source-ready-production-pending",
   "recordCount": 382,
   "levelCounts": {
