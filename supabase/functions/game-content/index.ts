@@ -37,6 +37,7 @@
 
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.112.3';
+import { OWNER_CATALOG_SPECS, matchesExactCatalogSlice } from './catalog-integrity.mjs';
 
 // เพดานเนื้อหา — ปรับตัวเลขได้ตรงนี้ที่เดียว ไม่ต้องแก้โค้ดฝั่งเว็บ (ดูตารางที่คอมเมนต์หัวไฟล์)
 const CAPS = {
@@ -45,8 +46,6 @@ const CAPS = {
   paid:  { '初': 469, '中': 113, sentences: 40 },
 };
 const FREE_RUNTIME_CATALOG_VERSION = 'free-200-v1';
-const PAID_ONLY_CAPS = { '初': 369, '中': 13 };
-const PAID_RUNTIME_CATALOG_VERSIONS = ['paid-queue-189-v1', 'paid-queue-193-v1'];
 const GAME_SURFACES = new Set(['tone', 'reading', 'typing', 'word_order', 'listening', 'lego']);
 const REQUIRED_CATALOG_STRING_FIELDS = [
   'contentKey', 'reviewSet', 'word', 'spellingTH', 'readingTH', 'roman', 'zhTW',
@@ -174,16 +173,20 @@ serve(async (req) => {
         const freeTiers = tier === 'login' ? ['guest', 'login'] : ['guest'];
         return selectWords(level, ['active'], freeTiers, [FREE_RUNTIME_CATALOG_VERSION], caps[level]);
       }
-      const [freeWords, paidWords] = await Promise.all([
-        selectWords(level, ['active'], ['guest', 'login'], [FREE_RUNTIME_CATALOG_VERSION], CAPS.login[level]),
-        selectWords(level, ['queued'], ['paid'], PAID_RUNTIME_CATALOG_VERSIONS, PAID_ONLY_CAPS[level]),
-      ]);
-      const failed = [freeWords, paidWords].find((result) => result.error);
+      const catalogResults = await Promise.all(OWNER_CATALOG_SPECS.map((spec) => {
+        const expected = spec.levels[level];
+        // Read one beyond the reviewed count so an overfilled catalog cannot be hidden by truncation.
+        return selectWords(level, spec.statuses, spec.tiers, [spec.catalogVersion], expected.count + 1);
+      }));
+      const failed = catalogResults.find((result) => result.error);
       if (failed) return failed;
-      if (freeWords.data?.length !== CAPS.login[level] || paidWords.data?.length !== PAID_ONLY_CAPS[level]) {
-        return { data: null, error: { message: 'owner_catalog_incomplete' }, status: 500 };
+      for (let index = 0; index < OWNER_CATALOG_SPECS.length; index += 1) {
+        const expected = OWNER_CATALOG_SPECS[index].levels[level];
+        if (!await matchesExactCatalogSlice(catalogResults[index].data, expected)) {
+          return { data: null, error: { message: 'owner_catalog_mismatch' }, status: 500 };
+        }
       }
-      return { data: [...freeWords.data, ...paidWords.data], error: null, status: 200 };
+      return { data: catalogResults.flatMap((result) => result.data), error: null, status: 200 };
     };
 
     // ── rate limit เกราะเสริมแบบ fail-closed — ถ้าด่านตรวจล่ม ห้ามปล่อยข้อมูลออก ──

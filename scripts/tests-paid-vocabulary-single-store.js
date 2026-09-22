@@ -5,6 +5,7 @@ const assert = require('assert');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const { pathToFileURL } = require('url');
 
 const root = path.resolve(__dirname, '..');
 const read = (name) => fs.readFileSync(path.join(root, name), 'utf8');
@@ -13,10 +14,16 @@ const source = JSON.parse(sourceText);
 const freeCatalog = JSON.parse(read('data/approved-vocabulary-catalog.json'));
 const manifest = JSON.parse(read('data/approved-paid-vocabulary-queue.json'));
 const oldMigration = read('supabase/migrations/20260905085037_queue_approved_paid_vocabulary_189.sql');
+const paid189Correction = read('supabase/migrations/20260914034434_correct_paid_vocabulary_muen_vowel.sql');
 const oldMatch = oldMigration.match(/jsonb_to_recordset\(\$paidqueue\$(\[[\s\S]*?\])\$paidqueue\$::jsonb\)/);
 assert(oldMatch, 'Paid 189 migration must retain its exact embedded payload');
 const old = JSON.parse(oldMatch[1]).map((row) => row.canonical_record);
-const paid = old.concat(source.records);
+const paid189Runtime = JSON.parse(JSON.stringify(old));
+const correctedMuen = paid189Runtime.find((record) => record.contentKey === 'หมื่น@初#numeral');
+assert.strictEqual(correctedMuen.syllables[0].vowel, 'อือ');
+assert.match(paid189Correction, /content_key='หมื่น@初#numeral'[\s\S]+jsonb_set\(canonical_record,'\{syllables,0,vowel\}',to_jsonb\('อื'::text\),false\)/);
+correctedMuen.syllables[0].vowel = 'อื';
+const paid = paid189Runtime.concat(source.records);
 const ownerCatalog = freeCatalog.records.concat(paid);
 const edge = read('supabase/functions/game-content/index.ts');
 const client = read('js/games/game-content-client.js');
@@ -82,15 +89,13 @@ for (const records of Object.values(roles)) {
 }
 
 assert.match(edge, /FREE_RUNTIME_CATALOG_VERSION = 'free-200-v1'/);
-assert.match(edge, /PAID_RUNTIME_CATALOG_VERSIONS = \['paid-queue-189-v1', 'paid-queue-193-v1'\]/);
 assert.match(edge, /paid:\s*{\s*'初':\s*469,\s*'中':\s*113,\s*sentences:\s*40\s*}/);
-assert.match(edge, /PAID_ONLY_CAPS = \{ '初': 369, '中': 13 \}/);
 assert.match(edge, /GAME_SURFACES = new Set\(\['tone', 'reading', 'typing', 'word_order', 'listening', 'lego'\]\)/);
-assert.match(edge, /selectWords\(level, \['active'\], \['guest', 'login'\], \[FREE_RUNTIME_CATALOG_VERSION\], CAPS\.login\[level\]\)/);
-assert.match(edge, /selectWords\(level, \['queued'\], \['paid'\], PAID_RUNTIME_CATALOG_VERSIONS, PAID_ONLY_CAPS\[level\]\)/);
-assert.match(edge, /freeWords\.data\?\.length !== CAPS\.login\[level\] \|\| paidWords\.data\?\.length !== PAID_ONLY_CAPS\[level\]/);
-assert.match(edge, /owner_catalog_incomplete/);
-assert.match(edge, /data: \[\.\.\.freeWords\.data, \.\.\.paidWords\.data\]/);
+assert.match(edge, /OWNER_CATALOG_SPECS\.map\(\(spec\) =>/);
+assert.match(edge, /selectWords\(level, spec\.statuses, spec\.tiers, \[spec\.catalogVersion\], expected\.count \+ 1\)/);
+assert.match(edge, /matchesExactCatalogSlice\(catalogResults\[index\]\.data, expected\)/);
+assert.match(edge, /owner_catalog_mismatch/);
+assert.match(edge, /data: catalogResults\.flatMap\(\(result\) => result\.data\)/);
 assert.doesNotMatch(edge, /paidTone|paid_beta/);
 
 assert.match(client, /GAME_SURFACES = \{ tone: true, reading: true, typing: true, word_order: true, listening: true, lego: true \}/);
@@ -119,4 +124,59 @@ assert.match(audio, /var GAME_AUDIO_ENABLED = true/);
 assert.doesNotMatch(listeningPage, /coming-soon|即將開幕|Preserved paused runtime/);
 assert.match(listeningPage, /GameContentLoader\.boot\(\['js\/games\/listening-game-app\.js\?v=20'\], \{game:'listening'\}\)/);
 
-console.log('FREE_200_PLUS_PAID_382_SINGLE_CENTRAL_STORE_ALL_SIX_GAMES_PASS');
+async function verifyRuntimeCatalogIntegrity() {
+  const integrityUrl = pathToFileURL(path.join(root, 'supabase/functions/game-content/catalog-integrity.mjs')).href;
+  const { OWNER_CATALOG_SPECS, matchesExactCatalogSlice } = await import(integrityUrl);
+  assert.deepStrictEqual(OWNER_CATALOG_SPECS.map((spec) => [spec.catalogVersion, spec.levels['初'].count, spec.levels['中'].count]), [
+    ['free-200-v1', 100, 100],
+    ['paid-queue-189-v1', 183, 6],
+    ['paid-queue-193-v1', 186, 7],
+  ]);
+  const recordsByVersion = new Map([
+    ['free-200-v1', freeCatalog.records],
+    ['paid-queue-189-v1', paid189Runtime],
+    ['paid-queue-193-v1', source.records],
+  ]);
+  const cloneRows = (records) => records.map((catalog) => ({ catalog: JSON.parse(JSON.stringify(catalog)) }));
+
+  for (const spec of OWNER_CATALOG_SPECS) {
+    for (const level of ['初', '中']) {
+      const records = recordsByVersion.get(spec.catalogVersion).filter((record) => record.level === level);
+      const expected = spec.levels[level];
+      const rows = cloneRows(records);
+      assert.strictEqual(await matchesExactCatalogSlice(rows, expected), true,
+        `${spec.catalogVersion}/${level}: reviewed slice must pass`);
+      assert.strictEqual(await matchesExactCatalogSlice(rows.slice(0, -1), expected), false,
+        `${spec.catalogVersion}/${level}: missing row must fail closed`);
+      assert.strictEqual(await matchesExactCatalogSlice(rows.concat(cloneRows([records[0]])), expected), false,
+        `${spec.catalogVersion}/${level}: extra row must fail closed`);
+
+      const substituted = cloneRows(records);
+      substituted[0].catalog.contentKey += '#unexpected';
+      assert.strictEqual(await matchesExactCatalogSlice(substituted, expected), false,
+        `${spec.catalogVersion}/${level}: substituted identity must fail closed`);
+
+      const altered = cloneRows(records);
+      altered[0].catalog.zhTW += '（unexpected）';
+      assert.strictEqual(await matchesExactCatalogSlice(altered, expected), false,
+        `${spec.catalogVersion}/${level}: altered reviewed payload must fail closed`);
+    }
+  }
+
+  for (const level of ['初', '中']) {
+    const paid189Spec = OWNER_CATALOG_SPECS.find((spec) => spec.catalogVersion === 'paid-queue-189-v1');
+    const paid189 = paid189Runtime.filter((record) => record.level === level);
+    const paid193 = source.records.filter((record) => record.level === level);
+    const imbalanced = cloneRows(paid189);
+    imbalanced[imbalanced.length - 1] = cloneRows([paid193[0]])[0];
+    assert.strictEqual(await matchesExactCatalogSlice(imbalanced, paid189Spec.levels[level]), false,
+      `paid catalog imbalance at ${level} must fail closed`);
+  }
+}
+
+verifyRuntimeCatalogIntegrity()
+  .then(() => console.log('FREE_200_PLUS_PAID_382_SINGLE_CENTRAL_STORE_ALL_SIX_GAMES_PASS'))
+  .catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });

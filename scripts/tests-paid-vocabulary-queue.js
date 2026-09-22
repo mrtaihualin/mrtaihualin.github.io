@@ -12,6 +12,7 @@ const manifest = JSON.parse(read('data/approved-paid-vocabulary-queue.json'));
 const freeCatalog = JSON.parse(read('data/approved-vocabulary-catalog.json'));
 const migration = read('supabase/migrations/20260905085037_queue_approved_paid_vocabulary_189.sql');
 const edge = read('supabase/functions/game-content/index.ts');
+const integrity = read('supabase/functions/game-content/catalog-integrity.mjs');
 const payloadSha256 = '02715eed20083f19124820c9306fc525db0d8c775f3fd68615902022bb96c327';
 
 assert.strictEqual(manifest.schemaVersion, 4);
@@ -75,8 +76,8 @@ assert.match(migration, /revoke all on table public\.game_words from public,anon
 assert.match(edge, /requestedGame && GAME_SURFACES\.has\(requestedGame\)[\s\S]+owner_all_access/);
 assert.match(edge, /paid:\s*{\s*'初':\s*469,\s*'中':\s*113,\s*sentences:\s*40\s*}/);
 assert.match(edge, /FREE_RUNTIME_CATALOG_VERSION = 'free-200-v1'/);
-assert.match(edge, /PAID_RUNTIME_CATALOG_VERSIONS = \['paid-queue-189-v1', 'paid-queue-193-v1'\]/);
-assert.match(edge, /selectWords\(level, \['active'\], \['guest', 'login'\], \[FREE_RUNTIME_CATALOG_VERSION\], CAPS\.login\[level\]\)/);
-assert.match(edge, /selectWords\(level, \['queued'\], \['paid'\], PAID_RUNTIME_CATALOG_VERSIONS, PAID_ONLY_CAPS\[level\]\)/);
+assert.match(integrity, /catalogVersion: 'free-200-v1'[\s\S]+catalogVersion: 'paid-queue-189-v1'[\s\S]+catalogVersion: 'paid-queue-193-v1'/);
+assert.match(edge, /selectWords\(level, spec\.statuses, spec\.tiers, \[spec\.catalogVersion\], expected\.count \+ 1\)/);
+assert.match(edge, /matchesExactCatalogSlice/);
 
 console.log('✅ Original Paid 189 remains byte-exact and joins Free 200 plus Paid 193 in the protected owner-only 582 runtime');

@@ -3112,3 +3112,9 @@ node scripts/check-site.js
 - All 582 `contentKey` values and `(word, zhTW, level)` records are unique across 575 written forms. The seven same-written/different-meaning forms (`ผม`, `เขา`, `หนู`, `เงิน`, `ร้อง`, `อุ่น`, `คัน`) remain distinct and are not treated as duplicates.
 - The owner read fails closed unless it receives exactly Free `100/100` plus Paid `369/13` for `初/中`. Focused access/game/SRS suites and the complete `node scripts/check-site.js` gate pass across all 1,128 repository files, including disposable PostgreSQL migration/rollback checks.
 - MR `!73` and its Paid-382 Edge hash are superseded as a Production candidate. Production SQL, Edge, Cloudflare traffic, Auth, entitlement and player data remain unchanged while this 582-record correction is verified and frozen.
+
+# 2026-09-22 — Owner catalog exact-set fail-closed guard
+
+- Tightened only the owner-side `game-content` catalog admission guard after an independent review found that a query capped at the expected count could hide an extra or substituted row. Guest/Login Free selectors, game clients, rules, scoring, SRS, audio and vocabulary payloads are unchanged.
+- The owner path now reads Free 200, Paid 189 and Paid 193 independently for each level with `expected + 1`, then verifies the exact canonical-record set hash for all six slices before joining them into the existing 582-record response. Missing, extra, cross-batch, substituted-key or altered-payload variants fail closed.
+- Added behavioral regressions against the shared runtime integrity helper for every reviewed slice and each failure mode. This remains a source/MR correction only; no merge, Supabase deployment, database/Auth/data mutation or Cloudflare traffic change occurred.

@@ -22,7 +22,9 @@ Frozen artifact SHA-256 values:
 - Roman rollback SQL: `9d906d33eabb6bdc19ab32e4f81c4b2dda69c7505e159184b11459c382673117`
 - Superseded Paid-193-only Edge source: `38b9e1c4ffc15c813cac30632059bee52d11ec7240f5ccf2b7e0c8f7148beb99`
 - Superseded Paid-382-union Edge source: `66570b391a5fbd9d6633b63696124b5e666cb10709fec550ec7fa07fbd1576d7`
-- Free-200-plus-Paid-382 Edge source candidate: `ddda0eae371ca092cbb6cb27ade4d804e77eca1252a09386f9f9f223a0ffada3`
+- Superseded Free-200-plus-Paid-382 Edge source candidate: `ddda0eae371ca092cbb6cb27ade4d804e77eca1252a09386f9f9f223a0ffada3`
+- Exact-set guarded Edge entry candidate: `b16e64b40facb2680c4f840f8756fc70ec5c908581dfd31e815158690a8dcd84`
+- Exact-set integrity helper candidate: `2a1e633c6e891675fe581b7f5ee0b6a1852d7625fb48fe576f505b32ccd1dc02`
 - Prior verified Edge source: `0b507e35356984c32d3fcc5a65f9f5fda791faae837963ce9e74ecb848f9ff90`
 
 The exact static candidate commit and the immediately prior Cloudflare deployment ID must be recorded after the MR commit is frozen and before requesting Production approval. A missing identifier blocks mutation.

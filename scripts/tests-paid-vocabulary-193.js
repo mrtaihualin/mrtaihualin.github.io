@@ -24,6 +24,7 @@ const oldMigration = read('supabase/migrations/20260905085037_queue_approved_pai
 const migration = read('supabase/migrations/20260921155538_queue_approved_paid_vocabulary_193.sql');
 const rollback = read('supabase/recovery/paid-queue-193/rollback.sql');
 const edge = read('supabase/functions/game-content/index.ts');
+const integrity = read('supabase/functions/game-content/catalog-integrity.mjs');
 const old = extractPayload(oldMigration, 'paidqueue').rows;
 const next = extractPayload(migration, 'paid193');
 
@@ -162,9 +163,9 @@ assert.doesNotMatch(rollback, /delete from public\.phase2_paid_srs/i);
 assert.match(edge, /paid:\s*{\s*'初':\s*469,\s*'中':\s*113,\s*sentences:\s*40\s*}/);
 assert.match(edge, /GAME_SURFACES = new Set\(\['tone', 'reading', 'typing', 'word_order', 'listening', 'lego'\]\)/);
 assert.match(edge, /FREE_RUNTIME_CATALOG_VERSION = 'free-200-v1'/);
-assert.match(edge, /PAID_RUNTIME_CATALOG_VERSIONS = \['paid-queue-189-v1', 'paid-queue-193-v1'\]/);
+assert.match(integrity, /catalogVersion: 'free-200-v1'[\s\S]+catalogVersion: 'paid-queue-189-v1'[\s\S]+catalogVersion: 'paid-queue-193-v1'/);
 assert.match(edge, /requestedGame && GAME_SURFACES\.has\(requestedGame\)[\s\S]+owner_all_access/);
-assert.match(edge, /selectWords\(level, \['active'\], \['guest', 'login'\], \[FREE_RUNTIME_CATALOG_VERSION\], CAPS\.login\[level\]\)/);
-assert.match(edge, /selectWords\(level, \['queued'\], \['paid'\], PAID_RUNTIME_CATALOG_VERSIONS, PAID_ONLY_CAPS\[level\]\)/);
+assert.match(edge, /selectWords\(level, spec\.statuses, spec\.tiers, \[spec\.catalogVersion\], expected\.count \+ 1\)/);
+assert.match(edge, /matchesExactCatalogSlice/);
 
 console.log('✅ Exact Paid 193 joins unchanged Paid 189 and Free 200 as the owner 582 runtime across all six games');
