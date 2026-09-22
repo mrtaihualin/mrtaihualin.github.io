@@ -9,6 +9,7 @@ const path = require('path');
 const root = path.resolve(__dirname, '..');
 const catalogPath = path.join(root, 'data/approved-vocabulary-catalog.json');
 const edgePath = path.join(root, 'supabase/functions/game-content/index.ts');
+const integrityPath = path.join(root, 'supabase/functions/game-content/catalog-integrity.mjs');
 const EXPECTED_CATALOG_SHA256 = '98a81f936b522838593a6da3fa8861c270fa81211e8dbc4c10f94dfd122c2787';
 const EXPECTED_REVIEW_SET_COUNTS = Object.freeze({
   'pronouns-i-you-he': 5,
@@ -43,6 +44,7 @@ function nonEmpty(value, label) {
 
 const catalogText = fs.readFileSync(catalogPath, 'utf8');
 const edge = fs.readFileSync(edgePath, 'utf8');
+const integrity = fs.readFileSync(integrityPath, 'utf8');
 assert.strictEqual(sha256(catalogText), EXPECTED_CATALOG_SHA256, 'STOP_AND_REPORT_TO_LIN: Current Free 200 catalog changed');
 
 const catalog = JSON.parse(catalogText);
@@ -112,14 +114,18 @@ assert.deepStrictEqual(new Set(guestKeys.concat(loginKeys)), contentKeys, 'Free 
   keys.forEach((key) => assert.strictEqual(catalog.records.find((row) => row.contentKey === key).level, level));
 }));
 
-assert.match(edge, /wordStatuses = paidAccess \? \['queued'\] : \['active'\]/,
-  'Guest and Login Free runtime must remain active-only');
-assert.match(edge, /wordTiers = paidAccess \? \['paid'\] : \(tier === 'login' \? \['guest', 'login'\] : \['guest'\]\)/,
+assert.match(edge, /const freeTiers = tier === 'login' \? \['guest', 'login'\] : \['guest'\]/,
   'runtime must keep Guest 100 and Login Free additional 100 boundaries');
 assert.match(edge, /requestedGame && GAME_SURFACES\.has\(requestedGame\)[\s\S]+owner_all_access/,
   'Paid vocabulary must remain behind the owner-only server gate');
-assert.match(edge, /query = query\.in\('catalog_version', PAID_RUNTIME_CATALOG_VERSIONS\)/,
-  'Paid runtime must select the exact two reviewed central catalog versions');
+assert.match(edge, /OWNER_CATALOG_SPECS\.map\(\(spec\) =>/,
+  'owner runtime must validate each reviewed catalog independently');
+assert.match(edge, /expected\.count \+ 1/,
+  'owner runtime must detect an overfilled catalog instead of truncating it');
+assert.match(integrity, /catalogVersion: 'free-200-v1'[\s\S]+?'初':[\s\S]+?count: 100[\s\S]+?'中':[\s\S]+?count: 100/,
+  'owner runtime must include the exact Free 200 catalog by level');
+assert.match(integrity, /catalogVersion: 'paid-queue-189-v1'[\s\S]+catalogVersion: 'paid-queue-193-v1'/,
+  'owner runtime must include both reviewed Paid batches separately');
 assert.match(edge, /select\('catalog:canonical_record'\)/,
   'runtime must forward only the reviewed canonical record');
 assert.doesNotMatch(edge, /runtimeSpelling|spellingParts|\.map\(toWord\)/,

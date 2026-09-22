@@ -11,6 +11,7 @@ const root = path.resolve(__dirname, '..');
 const read = (name) => fs.readFileSync(path.join(root, name), 'utf8');
 const catalog = JSON.parse(read('data/approved-vocabulary-catalog.json'));
 const edge = read('supabase/functions/game-content/index.ts');
+const integrity = read('supabase/functions/game-content/catalog-integrity.mjs');
 const client = read('js/games/game-content-client.js');
 const cleanupMigration = read('supabase/migrations/20260910010000_remove_vocabulary_second_judge.sql');
 
@@ -109,10 +110,10 @@ assert.throws(
   );
 });
 
-assert.match(edge, /wordStatuses = paidAccess \? \['queued'\] : \['active'\]/);
-assert.match(edge, /wordTiers = paidAccess \? \['paid'\] : \(tier === 'login' \? \['guest', 'login'\] : \['guest'\]\)/);
+assert.match(edge, /const freeTiers = tier === 'login' \? \['guest', 'login'\] : \['guest'\]/);
 assert.match(edge, /requestedGame && GAME_SURFACES\.has\(requestedGame\)[\s\S]+owner_all_access/);
-assert.match(edge, /query = query\.in\('catalog_version', PAID_RUNTIME_CATALOG_VERSIONS\)/);
+assert.match(integrity, /catalogVersion: 'free-200-v1'[\s\S]+catalogVersion: 'paid-queue-189-v1'[\s\S]+catalogVersion: 'paid-queue-193-v1'/);
+assert.match(edge, /selectWords\(level, spec\.statuses, spec\.tiers, \[spec\.catalogVersion\], expected\.count \+ 1\)/);
 assert.match(edge, /select\('catalog:canonical_record'\)/);
 assert.doesNotMatch(edge, /runtimeSpelling|spellingParts|\.map\(toWord\)|computeTone|getInitClass|getVowelType/);
 

@@ -9,6 +9,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (name) => fs.readFileSync(path.join(root, name), 'utf8');
 
 const content = read('supabase/functions/game-content/index.ts');
+const contentIntegrity = read('supabase/functions/game-content/catalog-integrity.mjs');
 const round = read('supabase/functions/tone-round/index.ts');
 const score = read('supabase/functions/score-submit/index.ts');
 const loader = read('js/games/game-content-client.js');
@@ -17,7 +18,8 @@ const tone = read('js/games/tone-finder-game.js');
 const page = read('tone-finder.html');
 
 assert.match(content, /entitlement', 'owner_all_access'/);
-assert.match(content, /wordStatuses = paidAccess \? \['queued'\] : \['active'\]/);
+assert.match(contentIntegrity, /catalogVersion: 'paid-queue-189-v1'[\s\S]+catalogVersion: 'paid-queue-193-v1'/);
+assert.match(content, /matchesExactCatalogSlice/);
 assert.match(content, /paidAccess && requestedGame === 'tone'/);
 assert.match(content, /paidSrsState: paidAccess && requestedGame === 'tone' \? paidSrsState : undefined/);
 assert.match(content, /const exactWrittenSegments = \(record\) =>/);

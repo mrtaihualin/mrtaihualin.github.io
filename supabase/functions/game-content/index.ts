@@ -18,8 +18,8 @@
 //   初        50 คำ        100 คำ
 //   中        50 คำ        100 คำ
 //   高(ประโยค) 20 ประโยค    40 ประโยค
-//   Paid owner runtime: เกมทั้ง 6 ใช้ Paid ทั้งสอง batch ในคลังกลางเดียวกัน
-//   รวม 382 semantic records (初 369 / 中 13); คำเขียนเหมือนกันแต่คนละความหมาย
+//   Paid owner runtime: เกมทั้ง 6 ใช้ Free 200 + Paid ทั้งสอง batch ในคลังกลางเดียวกัน
+//   รวม 582 semantic records (初 469 / 中 113); คำเขียนเหมือนกันแต่คนละความหมาย
 //   คงเป็นคนละ record ด้วย contentKey ที่ต่างกัน
 //   เมื่อบัญชีมี owner_all_access; Guest/Login Free ยังคงใช้ Free 200 เดิม
 //
@@ -37,14 +37,15 @@
 
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.112.3';
+import { OWNER_CATALOG_SPECS, matchesExactCatalogSlice } from './catalog-integrity.mjs';
 
 // เพดานเนื้อหา — ปรับตัวเลขได้ตรงนี้ที่เดียว ไม่ต้องแก้โค้ดฝั่งเว็บ (ดูตารางที่คอมเมนต์หัวไฟล์)
 const CAPS = {
   anon:  { '初': 50,  '中': 50,  sentences: 20 },
   login: { '初': 100, '中': 100, sentences: 40 },
-  paid:  { '初': 369, '中': 13, sentences: 40 },
+  paid:  { '初': 469, '中': 113, sentences: 40 },
 };
-const PAID_RUNTIME_CATALOG_VERSIONS = ['paid-queue-189-v1', 'paid-queue-193-v1'];
+const FREE_RUNTIME_CATALOG_VERSION = 'free-200-v1';
 const GAME_SURFACES = new Set(['tone', 'reading', 'typing', 'word_order', 'listening', 'lego']);
 const REQUIRED_CATALOG_STRING_FIELDS = [
   'contentKey', 'reviewSet', 'word', 'spellingTH', 'readingTH', 'roman', 'zhTW',
@@ -145,8 +146,9 @@ serve(async (req) => {
     const { data: userData } = await userClient.auth.getUser();
     const admin = createClient(SUPABASE_URL, SERVICE_KEY); // service_role — ข้าม RLS ได้ ใช้อ่านตารางล็อกเท่านั้น
     const user = userData?.user || null;
-    // The already-established owner entitlement receives the exact union of both reviewed
-    // Paid batches on every protected game surface. The browser cannot select either batch.
+    // The already-established owner entitlement receives Free 200 plus the exact union of
+    // both reviewed Paid batches on every protected game surface. The browser cannot select
+    // a tier or batch, and same-written/different-meaning records remain distinct by contentKey.
     let paidAccess = false;
     if (user && requestedGame && GAME_SURFACES.has(requestedGame)) {
       const entitlement = await readWithTransientAuthRetry(() => admin.from('phase1_product_entitlements')
@@ -156,15 +158,35 @@ serve(async (req) => {
     }
     const tier = paidAccess ? 'paid' : (user ? 'login' : 'anon');
     const caps = CAPS[tier];
-    const wordStatuses = paidAccess ? ['queued'] : ['active'];
-    const wordTiers = paidAccess ? ['paid'] : (tier === 'login' ? ['guest', 'login'] : ['guest']);
-    const wordQuery = (level) => {
+    const selectWords = (level, statuses, tiers, catalogVersions, limit) => {
       let query = admin.from('game_words')
         .select('catalog:canonical_record')
-        .eq('level', level).in('status', wordStatuses)
-        .in('access_tier', wordTiers);
-      if (paidAccess) query = query.in('catalog_version', PAID_RUNTIME_CATALOG_VERSIONS);
-      return query.order('rank', { ascending: true }).limit(caps[level]);
+        .eq('level', level).in('status', statuses)
+        .in('access_tier', tiers);
+      query = catalogVersions.length === 1
+        ? query.eq('catalog_version', catalogVersions[0])
+        : query.in('catalog_version', catalogVersions);
+      return query.order('rank', { ascending: true }).limit(limit);
+    };
+    const wordQuery = async (level) => {
+      if (!paidAccess) {
+        const freeTiers = tier === 'login' ? ['guest', 'login'] : ['guest'];
+        return selectWords(level, ['active'], freeTiers, [FREE_RUNTIME_CATALOG_VERSION], caps[level]);
+      }
+      const catalogResults = await Promise.all(OWNER_CATALOG_SPECS.map((spec) => {
+        const expected = spec.levels[level];
+        // Read one beyond the reviewed count so an overfilled catalog cannot be hidden by truncation.
+        return selectWords(level, spec.statuses, spec.tiers, [spec.catalogVersion], expected.count + 1);
+      }));
+      const failed = catalogResults.find((result) => result.error);
+      if (failed) return failed;
+      for (let index = 0; index < OWNER_CATALOG_SPECS.length; index += 1) {
+        const expected = OWNER_CATALOG_SPECS[index].levels[level];
+        if (!await matchesExactCatalogSlice(catalogResults[index].data, expected)) {
+          return { data: null, error: { message: 'owner_catalog_mismatch' }, status: 500 };
+        }
+      }
+      return { data: catalogResults.flatMap((result) => result.data), error: null, status: 200 };
     };
 
     // ── rate limit เกราะเสริมแบบ fail-closed — ถ้าด่านตรวจล่ม ห้ามปล่อยข้อมูลออก ──
