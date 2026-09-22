@@ -1,5 +1,11 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-09-22 — Typing local playability audit (`SOURCE_PASS / CONTENT_REVIEW_DEFERRED / PRODUCTION_UNCHANGED`)
+
+- ตรวจ Typing ต่อจาก Reading checkpoint `7bb0f44` โดยจำกัดขอบเขตที่การพิมพ์/ตรวจคำ, item/data transport, save/continuation, error/recovery และ complete-round gates; ไม่แก้ keyboard button renderer, Product rule, UI, คำศัพท์, Auth, Supabase/Edge/DB หรือ Production และไม่ทำ Human matrix ซ้ำ
+- Verification: Typing focused `30/30`, shared game system `53/53`, save/continuation `53/53`, network recovery `29/29`, error UX `18/18`, neutral Skip `7/7`, Login-accessible matrix, owner-switch `9/9` และ browser full completion `15/15` ผ่าน. Typing เล่นจบเส้นทาง entry → พิมพ์คำ → Next ด้วย Enter → Skip → Result → replay บน Desktop, Portrait และ Landscape โดยไม่มี runtime error; ไม่พบ source defect จึงไม่มี runtime file ถูกแก้
+- ความถูกต้องของภาษาและคลังคำศัพท์ยังไม่ถูกปิดงาน เพราะคลังกำลังอัปเดตและต้องให้ Lin ตรวจ 100% ก่อน publish. หลักฐานนี้ยืนยันเฉพาะว่า current local runtime ผ่านการเล่นจบและ failure/recovery gates; ไม่ใช่ Production หรือ Human content PASS
+
 ## 2026-09-22 — Paid 193 Production-baseline reconciliation (`SOURCE_PASS / PRODUCTION_UNCHANGED / FRESH_APPROVAL_REQUIRED`)
 
 - The first Production precheck stopped before mutation because the forward/rollback SQL still guarded the historical pre-correction hashes. Read-only reconciliation proved that Production has the exact current 200/200 approved Free canonical records including `spellingSyllables`, and the exact 189/189 Paid baseline after the approved `หมื่น` vowel correction. Counts, ranks, the single owner entitlement, RLS/direct-browser denial and the sentence Roman precondition were already correct; no catalog repair is required.
