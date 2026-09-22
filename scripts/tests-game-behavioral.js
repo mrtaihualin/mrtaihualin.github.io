@@ -11,7 +11,7 @@
  *      โหลดข้อมูลผ่าน game-content-client.js เท่านั้น ไม่มี <script src="data/words-data.js"> หลงเหลือ
  *   B) ยามเฝ้าประตูถูกเรียกจริงในจุดที่ควรบล็อกก่อนให้เล่น/ให้แต้ม
  *      (lego-daily-limit ก่อน startTest, LearningReview.advance ใน Login Free learning loop)
- *   C) เพดานเนื้อหาใน Edge Function game-content ตรงกับที่ CLAUDE.md บันทึกไว้ (50/100, 20/40)
+ *   C) เพดานเนื้อหาใน Edge Function game-content ตรงกับ Product Decision ล่าสุด (50/100, 20/42)
  *      + tier ต้องมาจาก JWT ฝั่งเซิร์ฟเวอร์เท่านั้น ห้ามอ่านจาก body ที่ client ส่งมา
  *
  * ข้อจำกัด (บอกตรงๆ): เช็คนี้เป็น "อ่านโค้ดหาความเข้าใจผิด/regression" ไม่ใช่พิสูจน์ว่า
@@ -160,7 +160,7 @@ GAME_PAGES.forEach((page) => {
       const capsBlock = capsMatch[1];
       const expect = [
         [/anon:\s*{\s*'初':\s*50,\s*'中':\s*50,\s*sentences:\s*20\s*}/, 'anon 初=50 中=50 sentences=20'],
-        [/login:\s*{\s*'初':\s*100,\s*'中':\s*100,\s*sentences:\s*40\s*}/, 'login 初=100 中=100 sentences=40'],
+        [/login:\s*{\s*'初':\s*100,\s*'中':\s*100,\s*sentences:\s*42\s*}/, 'login 初=100 中=100 sentences=42'],
       ];
       expect.forEach(([re, label]) => {
         if (!re.test(capsBlock)) fail('C: game-content CAPS', `ไม่ตรงกับที่ CLAUDE.md บันทึกไว้ (${label}) — ตรวจว่าเอกสารหรือโค้ดที่ผิด`);

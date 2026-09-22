@@ -20,14 +20,14 @@ vm.runInContext(source, context, { filename: 'data/adv-sentences.js' });
 
 const sentences = context.ADV_SENTENCES;
 assert.ok(Array.isArray(sentences));
-assert.equal(sentences.length, 30);
+assert.equal(sentences.length, 42);
 
 const occurrences = sentences.flatMap((sentence) =>
   sentence.words.flatMap((word) => (word.syls || []).map((syllable) => ({ sentence, word, syllable }))),
 );
 
 const expected = new Map([
-  ['ผม', ['phǒm', 8]],
+  ['ผม', ['phǒm', 10]],
   ['ทำ', ['tham', 3]],
   ['ชอบ', ['chôp', 2]],
   ['ทุก', ['thúk', 2]],

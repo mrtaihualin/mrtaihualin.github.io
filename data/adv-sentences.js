@@ -308,6 +308,124 @@
       { th: 'ด้วยกัน', zh: '一起', syls: [{cons:'ด', vowel:'อัว', tone:'้', final:'ย', tone_name:'โท', th:'ด้วย', en:'dûay'}, {cons:'ก', vowel:'อะ', final:'น', tone_name:'สามัญ', th:'กัน', en:'gan'}] },
       { th: 'ไหม', zh: '嗎（疑問）', syls: [{cons:'ม', lead:'ห', vowel:'ไอ', tone_name:'จัตวา', th:'ไหม', en:'mǎi'}] }
       ]
+    },
+    {
+      th: 'ผมอยากกินผัดไทย', zh: '我想吃泰式炒河粉', readingTH: 'ผม-อยาก-กิน-ผัด-ไทย', wc: 5, politeF: null,
+      words: [
+      { th: 'ผม', zh: '我', syls: [{cons:'ผ', vowel:'โอะ', final:'ม', tone_name:'จัตวา', th:'ผม', en:'phǒm'}] },
+      { th: 'อยาก', zh: '想要', syls: [{cons:'ย', lead:'อ', vowel:'อา', final:'ก', tone_name:'เอก', th:'อยาก', en:'yàak'}] },
+      { th: 'กิน', zh: '吃', syls: [{cons:'ก', vowel:'อิ', final:'น', tone_name:'สามัญ', th:'กิน', en:'gin'}] },
+      { th: 'ผัดไทย', zh: '泰式炒河粉', syls: [{cons:'ผ', vowel:'อะ', final:'ด', tone_name:'เอก', th:'ผัด', en:'phàt'}, {cons:'ท', vowel:'ไอ', final:'ย', tone_name:'สามัญ', th:'ไทย', en:'thai'}] }
+      ]
+    },
+    {
+      th: 'พรุ่งนี้เช้าอยากไปเซเว่น', zh: '明天早上想去7-11', readingTH: 'พรุ่ง-นี้-เช้า-อยาก-ไป-เซ-เว่น', wc: 7, politeF: 'ค่ะ',
+      words: [
+      { th: 'พรุ่งนี้เช้า', zh: '明天早上', syls: [{cons:'พ', cluster:'ร', vowel:'อุ', tone:'่', final:'ง', tone_name:'โท', th:'พรุ่ง', en:'phrûng'}, {cons:'น', vowel:'อี', tone:'้', tone_name:'ตรี', th:'นี้', en:'níi'}, {cons:'ช', vowel:'เอา', tone:'้', tone_name:'ตรี', th:'เช้า', en:'cháo'}] },
+      { th: 'อยาก', zh: '想要', syls: [{cons:'ย', lead:'อ', vowel:'อา', final:'ก', tone_name:'เอก', th:'อยาก', en:'yàak'}] },
+      { th: 'ไป', zh: '去', syls: [{cons:'ป', vowel:'ไอ', tone_name:'สามัญ', th:'ไป', en:'bpai'}] },
+      { th: 'เซเว่น', zh: '7-11便利商店', syls: [{cons:'ซ', vowel:'เอ', tone_name:'สามัญ', th:'เซ', en:'see'}, {cons:'ว', vowel:'เอะ', tone:'่', final:'น', tone_name:'โท', th:'เว่น', en:'wên'}] }
+      ]
+    },
+    {
+      th: 'หนูอยากไปกินข้าวกับเพื่อน', zh: '我想跟朋友去吃飯', readingTH: 'หนู-อยาก-ไป-กิน-ข้าว-กับ-เพื่อน', wc: 7, politeF: 'ค่ะ',
+      words: [
+      { th: 'หนู', zh: '我（女生對長輩自稱）', syls: [{cons:'น', lead:'ห', vowel:'อู', tone_name:'จัตวา', th:'หนู', en:'nǔu'}] },
+      { th: 'อยาก', zh: '想要', syls: [{cons:'ย', lead:'อ', vowel:'อา', final:'ก', tone_name:'เอก', th:'อยาก', en:'yàak'}] },
+      { th: 'ไป', zh: '去', syls: [{cons:'ป', vowel:'ไอ', tone_name:'สามัญ', th:'ไป', en:'bpai'}] },
+      { th: 'กินข้าว', zh: '吃飯', syls: [{cons:'ก', vowel:'อิ', final:'น', tone_name:'สามัญ', th:'กิน', en:'gin'}, {cons:'ข', vowel:'อา', tone:'้', final:'ว', tone_name:'โท', th:'ข้าว', en:'khâao'}] },
+      { th: 'กับ', zh: '和／跟', syls: [{cons:'ก', vowel:'อะ', final:'บ', tone_name:'เอก', th:'กับ', en:'gàp'}] },
+      { th: 'เพื่อน', zh: '朋友', syls: [{cons:'พ', vowel:'เอือ', tone:'่', final:'น', tone_name:'โท', th:'เพื่อน', en:'phûean'}] }
+      ]
+    },
+    {
+      th: 'พรุ่งนี้พี่อยากไปเที่ยวกับเพื่อน', zh: '明天我想跟朋友去玩', readingTH: 'พรุ่ง-นี้-พี่-อยาก-ไป-เที่ยว-กับ-เพื่อน', wc: 8, politeF: 'ค่ะ',
+      words: [
+      { th: 'พรุ่งนี้', zh: '明天', syls: [{cons:'พ', cluster:'ร', vowel:'อุ', tone:'่', final:'ง', tone_name:'โท', th:'พรุ่ง', en:'phrûng'}, {cons:'น', vowel:'อี', tone:'้', tone_name:'ตรี', th:'นี้', en:'níi'}] },
+      { th: 'พี่', zh: '我（對晚輩自稱）', syls: [{cons:'พ', vowel:'อี', tone:'่', tone_name:'โท', th:'พี่', en:'phîi'}] },
+      { th: 'อยาก', zh: '想要', syls: [{cons:'ย', lead:'อ', vowel:'อา', final:'ก', tone_name:'เอก', th:'อยาก', en:'yàak'}] },
+      { th: 'ไปเที่ยว', zh: '去玩／去旅行', syls: [{cons:'ป', vowel:'ไอ', tone_name:'สามัญ', th:'ไป', en:'bpai'}, {cons:'ท', vowel:'เอีย', tone:'่', final:'ว', tone_name:'โท', th:'เที่ยว', en:'thîao'}] },
+      { th: 'กับ', zh: '和／跟', syls: [{cons:'ก', vowel:'อะ', final:'บ', tone_name:'เอก', th:'กับ', en:'gàp'}] },
+      { th: 'เพื่อน', zh: '朋友', syls: [{cons:'พ', vowel:'เอือ', tone:'่', final:'น', tone_name:'โท', th:'เพื่อน', en:'phûean'}] }
+      ]
+    },
+    {
+      th: 'วันนี้เราอยากนอนอยู่โรงแรม', zh: '今天我想待在飯店休息', readingTH: 'วัน-นี้-เรา-อยาก-นอน-อยู่-โรง-แรม', wc: 8, politeF: 'ค่ะ',
+      words: [
+      { th: 'วันนี้', zh: '今天', syls: [{cons:'ว', vowel:'อะ', final:'น', tone_name:'สามัญ', th:'วัน', en:'wan'}, {cons:'น', vowel:'อี', tone:'้', tone_name:'ตรี', th:'นี้', en:'níi'}] },
+      { th: 'เรา', zh: '我（同輩口語）', syls: [{cons:'ร', vowel:'เอา', tone_name:'สามัญ', th:'เรา', en:'rao'}] },
+      { th: 'อยาก', zh: '想要', syls: [{cons:'ย', lead:'อ', vowel:'อา', final:'ก', tone_name:'เอก', th:'อยาก', en:'yàak'}] },
+      { th: 'นอน', zh: '睡覺／休息', syls: [{cons:'น', vowel:'ออ', final:'น', tone_name:'สามัญ', th:'นอน', en:'norn'}] },
+      { th: 'อยู่', zh: '待在／位於', syls: [{cons:'ย', lead:'อ', vowel:'อู', tone:'่', tone_name:'เอก', th:'อยู่', en:'yùu'}] },
+      { th: 'โรงแรม', zh: '飯店', syls: [{cons:'ร', vowel:'โอ', final:'ง', tone_name:'สามัญ', th:'โรง', en:'roong'}, {cons:'ร', vowel:'แอ', final:'ม', tone_name:'สามัญ', th:'แรม', en:'raem'}] }
+      ]
+    },
+    {
+      th: 'ตอนเช้าอยากกินกาแฟ', zh: '早上想喝咖啡', readingTH: 'ตอน-เช้า-อยาก-กิน-กา-แฟ', wc: 6, politeF: 'ค่ะ',
+      words: [
+      { th: 'ตอนเช้า', zh: '早上', syls: [{cons:'ต', vowel:'ออ', final:'น', tone_name:'สามัญ', th:'ตอน', en:'dton'}, {cons:'ช', vowel:'เอา', tone:'้', tone_name:'ตรี', th:'เช้า', en:'cháo'}] },
+      { th: 'อยาก', zh: '想要', syls: [{cons:'ย', lead:'อ', vowel:'อา', final:'ก', tone_name:'เอก', th:'อยาก', en:'yàak'}] },
+      { th: 'กิน', zh: '喝（口語搭配咖啡）', syls: [{cons:'ก', vowel:'อิ', final:'น', tone_name:'สามัญ', th:'กิน', en:'gin'}] },
+      { th: 'กาแฟ', zh: '咖啡', syls: [{cons:'ก', vowel:'อา', tone_name:'สามัญ', th:'กา', en:'gaa'}, {cons:'ฟ', vowel:'แอ', tone_name:'สามัญ', th:'แฟ', en:'fae'}] }
+      ]
+    },
+    {
+      th: 'เย็นนี้ผมอยากดูหนังกับเพื่อน', zh: '今天下午我想跟朋友去看電影', readingTH: 'เย็น-นี้-ผม-อยาก-ดู-หนัง-กับ-เพื่อน', wc: 8, politeF: null,
+      words: [
+      { th: 'เย็นนี้', zh: '今天傍晚／今晚', syls: [{cons:'ย', vowel:'เอะ', final:'น', tone_name:'สามัญ', th:'เย็น', en:'yen'}, {cons:'น', vowel:'อี', tone:'้', tone_name:'ตรี', th:'นี้', en:'níi'}] },
+      { th: 'ผม', zh: '我', syls: [{cons:'ผ', vowel:'โอะ', final:'ม', tone_name:'จัตวา', th:'ผม', en:'phǒm'}] },
+      { th: 'อยาก', zh: '想要', syls: [{cons:'ย', lead:'อ', vowel:'อา', final:'ก', tone_name:'เอก', th:'อยาก', en:'yàak'}] },
+      { th: 'ดูหนัง', zh: '看電影', syls: [{cons:'ด', vowel:'อู', tone_name:'สามัญ', th:'ดู', en:'duu'}, {cons:'น', lead:'ห', vowel:'อะ', final:'ง', tone_name:'จัตวา', th:'หนัง', en:'nǎng'}] },
+      { th: 'กับ', zh: '和／跟', syls: [{cons:'ก', vowel:'อะ', final:'บ', tone_name:'เอก', th:'กับ', en:'gàp'}] },
+      { th: 'เพื่อน', zh: '朋友', syls: [{cons:'พ', vowel:'เอือ', tone:'่', final:'น', tone_name:'โท', th:'เพื่อน', en:'phûean'}] }
+      ]
+    },
+    {
+      th: 'พี่อยากกลับบ้านแล้วเหรอ', zh: '你想回家了嗎', readingTH: 'พี่-อยาก-กลับ-บ้าน-แล้ว-เหรอ', wc: 6, politeF: 'คะ',
+      words: [
+      { th: 'พี่', zh: '你（稱呼年長者）', syls: [{cons:'พ', vowel:'อี', tone:'่', tone_name:'โท', th:'พี่', en:'phîi'}] },
+      { th: 'อยาก', zh: '想要', syls: [{cons:'ย', lead:'อ', vowel:'อา', final:'ก', tone_name:'เอก', th:'อยาก', en:'yàak'}] },
+      { th: 'กลับบ้าน', zh: '回家', syls: [{cons:'ก', cluster:'ล', vowel:'อะ', final:'บ', tone_name:'เอก', th:'กลับ', en:'glàp'}, {cons:'บ', vowel:'อา', tone:'้', final:'น', tone_name:'โท', th:'บ้าน', en:'bâan'}] },
+      { th: 'แล้ว', zh: '了', syls: [{cons:'ล', vowel:'แอ', tone:'้', final:'ว', tone_name:'ตรี', th:'แล้ว', en:'láew'}] },
+      { th: 'เหรอ', zh: '嗎／是嗎', syls: [{cons:'ร', lead:'ห', vowel:'เออ', tone_name:'จัตวา', th:'เหรอ', en:'rǒe'}] }
+      ]
+    },
+    {
+      th: 'ตอนนี้เราอยากไปเที่ยวแล้ว', zh: '我現在想去玩了', readingTH: 'ตอน-นี้-เรา-อยาก-ไป-เที่ยว-แล้ว', wc: 7, politeF: 'ค่ะ',
+      words: [
+      { th: 'ตอนนี้', zh: '現在', syls: [{cons:'ต', vowel:'ออ', final:'น', tone_name:'สามัญ', th:'ตอน', en:'dton'}, {cons:'น', vowel:'อี', tone:'้', tone_name:'ตรี', th:'นี้', en:'níi'}] },
+      { th: 'เรา', zh: '我（同輩口語）', syls: [{cons:'ร', vowel:'เอา', tone_name:'สามัญ', th:'เรา', en:'rao'}] },
+      { th: 'อยาก', zh: '想要', syls: [{cons:'ย', lead:'อ', vowel:'อา', final:'ก', tone_name:'เอก', th:'อยาก', en:'yàak'}] },
+      { th: 'ไปเที่ยว', zh: '去玩／去旅行', syls: [{cons:'ป', vowel:'ไอ', tone_name:'สามัญ', th:'ไป', en:'bpai'}, {cons:'ท', vowel:'เอีย', tone:'่', final:'ว', tone_name:'โท', th:'เที่ยว', en:'thîao'}] },
+      { th: 'แล้ว', zh: '了', syls: [{cons:'ล', vowel:'แอ', tone:'้', final:'ว', tone_name:'ตรี', th:'แล้ว', en:'láew'}] }
+      ]
+    },
+    {
+      th: 'อยากนอนแล้วเหรอ', zh: '想睡覺了嗎', readingTH: 'อยาก-นอน-แล้ว-เหรอ', wc: 4, politeF: 'คะ',
+      words: [
+      { th: 'อยาก', zh: '想要', syls: [{cons:'ย', lead:'อ', vowel:'อา', final:'ก', tone_name:'เอก', th:'อยาก', en:'yàak'}] },
+      { th: 'นอน', zh: '睡覺', syls: [{cons:'น', vowel:'ออ', final:'น', tone_name:'สามัญ', th:'นอน', en:'norn'}] },
+      { th: 'แล้ว', zh: '了', syls: [{cons:'ล', vowel:'แอ', tone:'้', final:'ว', tone_name:'ตรี', th:'แล้ว', en:'láew'}] },
+      { th: 'เหรอ', zh: '嗎／是嗎', syls: [{cons:'ร', lead:'ห', vowel:'เออ', tone_name:'จัตวา', th:'เหรอ', en:'rǒe'}] }
+      ]
+    },
+    {
+      th: 'อยากกลับบ้านแล้วหรือยัง', zh: '想回家了嗎', readingTH: 'อยาก-กลับ-บ้าน-แล้ว-หรือ-ยัง', wc: 6, politeF: 'คะ',
+      words: [
+      { th: 'อยาก', zh: '想要', syls: [{cons:'ย', lead:'อ', vowel:'อา', final:'ก', tone_name:'เอก', th:'อยาก', en:'yàak'}] },
+      { th: 'กลับบ้าน', zh: '回家', syls: [{cons:'ก', cluster:'ล', vowel:'อะ', final:'บ', tone_name:'เอก', th:'กลับ', en:'glàp'}, {cons:'บ', vowel:'อา', tone:'้', final:'น', tone_name:'โท', th:'บ้าน', en:'bâan'}] },
+      { th: 'แล้ว', zh: '了', syls: [{cons:'ล', vowel:'แอ', tone:'้', final:'ว', tone_name:'ตรี', th:'แล้ว', en:'láew'}] },
+      { th: 'หรือยัง', zh: '了嗎／還沒', syls: [{cons:'ร', lead:'ห', vowel:'อื', tone_name:'จัตวา', th:'หรือ', en:'rǔue'}, {cons:'ย', vowel:'อะ', final:'ง', tone_name:'สามัญ', th:'ยัง', en:'yang'}] }
+      ]
+    },
+    {
+      th: 'อยากไปซื้อของหรือเปล่า', zh: '想去買東西嗎', readingTH: 'อยาก-ไป-ซื้อ-ของ-หรือ-เปล่า', wc: 6, politeF: 'คะ',
+      words: [
+      { th: 'อยาก', zh: '想要', syls: [{cons:'ย', lead:'อ', vowel:'อา', final:'ก', tone_name:'เอก', th:'อยาก', en:'yàak'}] },
+      { th: 'ไป', zh: '去', syls: [{cons:'ป', vowel:'ไอ', tone_name:'สามัญ', th:'ไป', en:'bpai'}] },
+      { th: 'ซื้อของ', zh: '買東西', syls: [{cons:'ซ', vowel:'อื', tone:'้', tone_name:'ตรี', th:'ซื้อ', en:'súe'}, {cons:'ข', vowel:'ออ', final:'ง', tone_name:'จัตวา', th:'ของ', en:'khǒng'}] },
+      { th: 'หรือเปล่า', zh: '嗎／是不是', syls: [{cons:'ร', lead:'ห', vowel:'อื', tone_name:'จัตวา', th:'หรือ', en:'rǔue'}, {cons:'ป', cluster:'ล', vowel:'เอา', tone:'่', tone_name:'เอก', th:'เปล่า', en:'plào'}] }
+      ]
     }
   ];
 
