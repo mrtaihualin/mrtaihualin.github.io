@@ -10,6 +10,14 @@
 - Current source caps must be read from the deployed/source version and treated as implementation state only.
 - Test/deploy results belong in the Current Checklist or `MAINTENANCE.md`, not in this invariant file.
 
+## Current Paid vocabulary selector
+
+- For the existing `owner_all_access` entitlement, the source runtime selects the exact union of `paid-queue-189-v1` and `paid-queue-193-v1` on Tone, Reading, Typing, Word Order, Listening and Lego.
+- The union contains 382 semantic records (`初 369 + 中 13`). It contains 379 distinct written forms because `ร้อง`, `อุ่น` and `คัน` each have two Lin-approved meanings.
+- Identical Thai spelling is not a duplicate when meaning differs. Runtime identity, deduplication and history linkage must preserve each reviewed `contentKey`; no game may collapse records by `word` alone.
+- Guest and Login Free remain on `free-200-v1`. The browser may choose only the game surface; it may not choose a Paid batch, catalog version or tier.
+- This source contract does not authorize a Production Edge deployment, database migration, Cloudflare release or traffic change.
+
 ## Central sentence library transition
 
 - `game_sentences` remains the one physical sentence catalog. Do not create a second per-game sentence store.
