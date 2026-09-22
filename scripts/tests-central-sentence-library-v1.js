@@ -67,9 +67,9 @@ vm.createContext(context);
 vm.runInContext(sentenceSource, context, { filename: 'data/adv-sentences.js' });
 const sentences = context.ADV_SENTENCES;
 
-check('current 30 sentence records remain exact Word Order-ready content', () => {
+check('current 42 sentence records remain exact Word Order-ready content', () => {
   assert.ok(Array.isArray(sentences));
-  assert.equal(sentences.length, 30);
+  assert.equal(sentences.length, 42);
   const seen = new Set();
   sentences.forEach((sentence) => {
     assert.equal(typeof sentence.th, 'string');
