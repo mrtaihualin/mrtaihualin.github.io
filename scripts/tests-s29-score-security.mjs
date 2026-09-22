@@ -168,6 +168,33 @@ const toneHintUsedPerfectBonus = structuredClone(toneHintUsedRoundBonus);
 toneHintUsedPerfectBonus.evidence.roundBonus = 70;
 toneHintUsedPerfectBonus.client_score = 110;
 rejects(toneHintUsedPerfectBonus, 'invalid_perfect_bonus');
+const toneSkippedRoundBonus = payload('tone', '初', 10, 20);
+toneSkippedRoundBonus.evidence.items[0].skipped = true;
+toneSkippedRoundBonus.evidence.items[0].points = 0;
+toneSkippedRoundBonus.client_score = 60;
+rejects(toneSkippedRoundBonus, 'invalid_round_bonus');
+const toneSkippedPerfectBonus = structuredClone(toneSkippedRoundBonus);
+toneSkippedPerfectBonus.evidence.roundBonus = 70;
+toneSkippedPerfectBonus.client_score = 110;
+rejects(toneSkippedPerfectBonus, 'invalid_perfect_bonus');
+const toneSkippedWithPoints = payload('tone', '初', 10, 0);
+toneSkippedWithPoints.evidence.items[0].skipped = true;
+rejects(toneSkippedWithPoints, 'score_evidence_mismatch');
+const normalizedToneSkip = payload('tone', '初', 10, 0);
+normalizedToneSkip.evidence.items[0].skipped = true;
+normalizedToneSkip.evidence.items[0].points = 0;
+normalizedToneSkip.client_score = 40;
+assert.strictEqual(validateScoreSubmission(normalizedToneSkip).evidence.items[0].skipped, true);
+for (const unchanged of [
+  validateScoreSubmission(payload('tone', '初', 10)),
+  validateScoreSubmission(payload('reading', '初', 10)),
+  validateScoreSubmission(payload('typing', '初', 10)),
+]) {
+  assert.strictEqual(
+    Object.prototype.hasOwnProperty.call(unchanged.evidence.items[0], 'skipped'),
+    false,
+  );
+}
 const fakeSrs = payload('tone', '初', 10);
 fakeSrs.evidence.srsBonus = 15;
 fakeSrs.evidence.items.forEach((entry) => { entry.wrong = 1; });

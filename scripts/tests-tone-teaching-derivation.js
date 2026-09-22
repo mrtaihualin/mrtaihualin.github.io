@@ -116,6 +116,21 @@ initialWrongSandbox.tfHandleDeduceMistake('ตัวเลือกผิด', '
 assert.strictEqual(initialWrongSandbox.session.currentWordDeduct, 1);
 assert.strictEqual(initialWrongSandbox.session.currentWordMistakes, 1);
 assert.strictEqual(initialWrongSandbox.session.currentWordMistakesTotal, 1);
+assert.strictEqual(initialWrongSandbox.session.combo, 0);
+assert.strictEqual(initialWrongSandbox.TF_WORDSCORE.score(initialWrongSandbox.session), 7);
+
+initialWrongSandbox.session.combo = 4;
+initialWrongSandbox.session.currentWordGuideUsed = true;
+initialWrongSandbox.session.currentWordDeduct = 1;
+initialWrongSandbox.session.currentWordMistakes = 0;
+initialWrongSandbox.session.currentWordMistakesTotal = 0;
+initialWrongSandbox.session.curWordAllFirstTry = true;
+initialWrongSandbox.tfHandleDeduceMistake('ฝึกผิด', 'ฝึก推導ผิด');
+assert.strictEqual(initialWrongSandbox.session.currentWordDeduct, 1);
+assert.strictEqual(initialWrongSandbox.session.currentWordMistakes, 1);
+assert.strictEqual(initialWrongSandbox.session.currentWordMistakesTotal, 1);
+assert.strictEqual(initialWrongSandbox.session.combo, 4);
+assert.strictEqual(initialWrongSandbox.session.curWordAllFirstTry, true);
 assert.strictEqual(initialWrongSandbox.TF_WORDSCORE.score(initialWrongSandbox.session), 7);
 
 const guideSandbox = {
@@ -506,7 +521,8 @@ assert.match(source, /function navigateToInflection\(\)/);
 assert.match(source, /if \(tfCurWordNoTools\(\)\) tfForceRevealZero\(\);\s*else navigateToInflection\(\);/);
 assert.match(source, /tfHandleInitialToneMistake\(entry\);[\s\S]{0,260}navigateToInflection\(\);/);
 assert.doesNotMatch(source.slice(initialToneMistakeStart, initialToneMistakeEnd), /recordMistake|TF_WORDSCORE\.onWrong|TF_WORDSCORE\.onNextStep/);
-assert.match(source.slice(deduceMistakeStart, deduceMistakeEnd), /recordMistake\([\s\S]{0,120}TF_WORDSCORE\.onWrong\(session\)/);
+assert.match(source.slice(deduceMistakeStart, deduceMistakeEnd), /recordMistake\([\s\S]{0,420}TF_WORDSCORE\.onWrong\(session\)/);
+assert.match(source.slice(deduceMistakeStart, deduceMistakeEnd), /if \(session\.currentWordGuideUsed\)[\s\S]{0,260}return;[\s\S]{0,80}TF_WORDSCORE\.onWrong\(session\)/);
 assert.match(source, /function tfScoreDeduce\(\)[\s\S]{0,1500}TF_WORDSCORE\.score\(session\)/);
 assert.match(source, /function tfScoreDeduce\(\)[\s\S]{0,700}currentWordDeduct[\s\S]{0,180}tfScoreFirstTry\(\)/);
 assert.match(source, /if \(TF_WORDSCORE\.isDead\(session\)\) \{\s*tfForceRevealZero\(\);/);

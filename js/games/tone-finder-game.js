@@ -1454,6 +1454,12 @@ function tfUseHint(keys) {
 function tfHandleDeduceMistake(choiceLabel, errMsg) {
   if (!session || tfCurWordIsParticle()) { showError(errMsg); return; }
   recordMistake(choiceLabel, errMsg);
+  if (session.currentWordGuideUsed) {
+    tfUpdateWordScoreGauge();
+    showError(errMsg);
+    tfMinaToast('wrong', { throttle: true, chance: 0.5 });
+    return;
+  }
   TF_WORDSCORE.onWrong(session);
   session.combo = 0;
   if (tfCurWordIsMulti()) session.curWordAllFirstTry = false;
