@@ -65,10 +65,10 @@ end
 $payload_check$;
 
 insert into public.game_words(
-  content_key,word,en,zh,level,category,syls,reading_th,read_syls,rank,spelling_th,audio_status,type,subcategory,
+  content_key,word,en,zh,level,category,reading_th,rank,spelling_th,audio_status,type,subcategory,
   access_tier,catalog_version,record_hash,canonical_record,status,updated_at
 )
-select content_key,word,en,zh,level,category,syls,reading_th,null,rank,spelling_th,audio_status,type,subcategory,
+select content_key,word,en,zh,level,category,reading_th,rank,spelling_th,audio_status,type,subcategory,
        access_tier,catalog_version,record_hash,canonical_record,'queued',now()
 from _paid_queue_193;
 
