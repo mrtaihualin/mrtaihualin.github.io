@@ -98,6 +98,16 @@ from jsonb_to_recordset($fixture$${fixtureRows}$fixture$::jsonb) as x(
   syls jsonb, spelling_th text, reading_th text, audio_status text, rank integer, access_tier text,
   catalog_version text, record_hash text, canonical_record jsonb, status text
 );
+insert into public.game_words(
+  content_key,word,en,zh,level,category,syls,reading_th,rank,spelling_th,audio_status,type,
+  status,access_tier,catalog_version,record_hash,canonical_record
+)
+select
+  '__retired_history_fixture__@初','ห้าง',en,'歷史測試資料','初',category,syls,reading_th,rank,spelling_th,
+  audio_status,type,'history','paid','retired-history-fixture',record_hash,canonical_record
+from public.game_words
+order by id
+limit 1;
 create table public.phase2_paid_srs_states(content_key text not null references public.game_words(content_key) on delete restrict);
 create table public.phase2_paid_srs_operations(content_key text not null references public.game_words(content_key) on delete restrict);
 create table public._paid_193_baseline as select id,content_key,record_hash,rank,status,access_tier,catalog_version from public.game_words;
@@ -121,6 +131,7 @@ try {
   assert.equal(psql("select count(*) from public.game_words where catalog_version='paid-queue-193-v1';"), '193');
   assert.equal(psql("select count(*) from public.game_words where catalog_version='paid-queue-193-v1' and level='初';"), '186');
   assert.equal(psql("select count(*) from public.game_words where catalog_version='paid-queue-193-v1' and level='中';"), '7');
+  assert.equal(psql("select count(*) from public.game_words where catalog_version='retired-history-fixture' and status='history';"), '1');
   assert.equal(psql("select count(*) from public.game_words g join public._paid_193_baseline b using(content_key) where row(g.id,g.record_hash,g.rank,g.status,g.access_tier,g.catalog_version) is distinct from row(b.id,b.record_hash,b.rank,b.status,b.access_tier,b.catalog_version);"), '0');
   assert.equal(psql("select relrowsecurity from pg_class where oid='public.game_words'::regclass;"), 't');
   assert.equal(psql("select has_table_privilege('anon','public.game_words','select') or has_table_privilege('authenticated','public.game_words','select');"), 'f');
@@ -140,6 +151,7 @@ try {
   assert.equal(psql("select count(*) from public.game_words where catalog_version='paid-queue-193-v1';"), '0');
   assert.equal(psql("select count(*) from public.game_words where status='active';"), '200');
   assert.equal(psql("select count(*) from public.game_words where status='queued' and access_tier='paid';"), '189');
+  assert.equal(psql("select count(*) from public.game_words where catalog_version='retired-history-fixture' and status='history';"), '1');
   assert.equal(psql("select count(*) from public.game_words g join public._paid_193_baseline b using(content_key) where row(g.id,g.record_hash,g.rank,g.status,g.access_tier,g.catalog_version) is distinct from row(b.id,b.record_hash,b.rank,b.status,b.access_tier,b.catalog_version);"), '0');
   assert.equal(psql("select has_table_privilege('anon','public.game_words','select') or has_table_privilege('authenticated','public.game_words','select');"), 'f');
   console.log('Paid 193 exact rollback restores protected 389 baseline: PASS');

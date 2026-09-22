@@ -52,8 +52,14 @@ begin
   if exists(select 1 from public.game_words g join _paid_queue_193 p using(content_key)) then
     raise exception 'Paid 193 content_key collides with the existing central catalog';
   end if;
-  if exists(select 1 from public.game_words g join _paid_queue_193 p using(word)) then
-    raise exception 'Paid 193 written form collides with the existing central catalog; semantic review required';
+  if exists(
+    select 1
+    from public.game_words g
+    join _paid_queue_193 p
+      on p.word=g.word and p.zh=g.zh and p.level=g.level
+    where g.status in ('active','queued')
+  ) then
+    raise exception 'Paid 193 semantic record collides with the current central catalog';
   end if;
 end
 $payload_check$;
