@@ -326,6 +326,8 @@
 
   var GAME_SURFACES = { tone: true, reading: true, typing: true, word_order: true, listening: true, lego: true };
   var LOGIN_FREE_LEARNING_GAMES = { tone: true, reading: true, typing: true, word_order: true };
+  var AUTH_SESSION_TIMEOUT_MS = 5000;
+  var APP_SCRIPT_TIMEOUT_MS = 15000;
   function contentAccessToken(cfg, game) {
     var minimumGuest = typeof global.isMinimumGuestOnly === 'function' && global.isMinimumGuestOnly();
     if (minimumGuest) return Promise.resolve(cfg.anonKey);
@@ -343,11 +345,19 @@
     if (!client || !client.auth || typeof client.auth.getSession !== 'function') {
       return Promise.resolve(cfg.anonKey);
     }
-    return Promise.resolve(client.auth.getSession()).then(function (result) {
+    return global.NetworkGuard.request(function () {
+      return client.auth.getSession();
+    }, 'game-content-auth-session', {}, AUTH_SESSION_TIMEOUT_MS, null).then(function (result) {
       var session = result && result.data && result.data.session;
       var token = session && session.access_token;
       return typeof token === 'string' && token ? token : cfg.anonKey;
-    }).catch(function () { return cfg.anonKey; });
+    }).catch(function (error) {
+      // Preserve the existing anonymous fallback for an ordinary session-read error,
+      // but a session read that never settles is a recoverable boot failure. Continuing
+      // as Guest after an indeterminate timeout could start the wrong learning tier.
+      if (error && error.code === 'NETWORK_TIMEOUT') throw error;
+      return cfg.anonKey;
+    });
   }
 
   function fetchGameContent(game) {
@@ -522,10 +532,28 @@
   function injectScript(src) {
     return new Promise(function (resolve, reject) {
       var s = document.createElement('script');
+      var settled = false;
+      var timer = null;
+      function finish(error) {
+        if (settled) return;
+        settled = true;
+        if (timer) clearTimeout(timer);
+        s.onload = null;
+        s.onerror = null;
+        if (error) reject(error);
+        else resolve();
+      }
       s.src = src;
-      s.onload = function () { resolve(); };
-      s.onerror = function () { reject(new Error('โหลดสคริปต์เกมไม่สำเร็จ: ' + src)); };
-      document.body.appendChild(s);
+      s.onload = function () { finish(); };
+      s.onerror = function () { finish(new Error('โหลดสคริปต์เกมไม่สำเร็จ: ' + src)); };
+      timer = setTimeout(function () {
+        if (s.parentNode) s.parentNode.removeChild(s);
+        var error = new Error('NETWORK_TIMEOUT: game script ' + src);
+        error.code = 'NETWORK_TIMEOUT';
+        finish(error);
+      }, APP_SCRIPT_TIMEOUT_MS);
+      try { document.body.appendChild(s); }
+      catch (error) { finish(error); }
     });
   }
 

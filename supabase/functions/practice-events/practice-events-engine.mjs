@@ -67,10 +67,14 @@ export function normalizeRecordBody(body) {
     const ordinal = integer(raw.ordinal == null ? index + 1 : raw.ordinal, 1, 100);
     if (seen.has(ordinal)) throw new Error('duplicate_ordinal');
     seen.add(ordinal);
+    const isPractice = !!raw.is_practice;
+    const isSkipped = !!raw.is_skipped;
     return {
       ordinal,
       content_ref: normalizeRef(raw.content_ref),
-      is_correct: !!raw.is_correct,
+      is_correct: !!raw.is_correct && !isPractice && !isSkipped,
+      is_practice: isPractice,
+      is_skipped: isSkipped,
       wrong_count: integer(raw.wrong_count == null ? 0 : raw.wrong_count, 0, 1000),
       hint_used: raw.hint_used == null ? null : !!raw.hint_used,
       listen_count: raw.listen_count == null ? null : integer(raw.listen_count, 0, 1000),

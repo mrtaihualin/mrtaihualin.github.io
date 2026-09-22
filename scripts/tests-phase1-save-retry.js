@@ -96,7 +96,7 @@ test('Login Core exposes idempotent SRS and Review transaction clients', () => {
     assert.match(html, /reading-auth\.js\?v=35/);
     assert.match(html, /learning-review\.js\?v=9/);
     assert.match(html, /game-account\.js\?v=6/);
-    assert.match(html, /practice-events\.js\?v=4/);
+    assert.match(html, /practice-events\.js\?v=5/);
     if (page === 'tone-finder.html') assert.match(html, /tone-server\.js\?v=6/);
     else assert.doesNotMatch(html, /tone-server\.js/);
   });

@@ -318,7 +318,7 @@ test('Four games expose Login Free learning runtimes while Listening, Paid and L
     assert.match(html, /phase1-canonical-state\.js\?v=3/, page + ' canonical runtime active');
     assert.match(html, /game-account\.js\?v=6/, page + ' GameAccount runtime active');
     assert.match(html, /reading-auth\.js\?v=35/, page + ' Login Free account runtime');
-    assert.match(html, /practice-events\.js\?v=4/, page + ' durable report runtime');
+    assert.match(html, /practice-events\.js\?v=5/, page + ' durable report runtime');
     assert.match(html, /learning-review\.js\?v=\d+/, page + ' Review runtime');
   }
   const reading = read('reading-game.html');
@@ -335,7 +335,7 @@ test('Four games expose Login Free learning runtimes while Listening, Paid and L
   }
   assert.match(read('lego.html'), /game-account\.js\?v=6/);
   assert.match(read('lego.html'), /auth-widget\.js\?v=24/);
-  assert.match(read('tone-finder.html'), /tone-finder-game\.min\.js\?v=92/);
+  assert.match(read('tone-finder.html'), /tone-finder-game\.min\.js\?v=99/);
   assert.match(read('reading-game.html'), /reading-game-app\.min\.js\?v=63/);
   assert.match(read('typing-game.html'), /typing-game-app\.min\.js\?v=61/);
   assert.match(read('word-order.html'), /word-order-app\.min\.js\?v=46/);

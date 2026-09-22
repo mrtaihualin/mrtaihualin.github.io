@@ -705,7 +705,7 @@ test('mobile resume uses one compact shared-copy line and three horizontal actio
 
 test('all five games keep one current-round DTO identity with the Login Free canonical summary', () => {
   for (const g of games) {
-    const reportVersion = g.id === 'listening' ? 5 : 8;
+    const reportVersion = g.id === 'listening' ? 5 : g.id === 'tone' ? 10 : 8;
     assert.match(g.htmlText, new RegExp(`js/games/round-report\\.js\\?v=${reportVersion}`), `${g.id}: missing Round Report DTO loader`);
     assert.match(g.htmlText, /js\/score\/learning-summary\.js\?v=1/, `${g.id}: Login Free summary runtime must be active`);
     assert.match(g.appText, /RoundReport\.(?:create|restore)/, `${g.id}: round identity is not wired`);
@@ -719,7 +719,7 @@ test('all six games use the shared A4 browser Print structure and daily Result a
   const roundReport = fs.readFileSync(path.join(root, 'js/games/round-report.js'), 'utf8');
   const gameFlow = fs.readFileSync(path.join(root, 'js/games/game-flow.js'), 'utf8');
   for (const g of games) {
-    const reportVersion = g.id === 'listening' ? 5 : 8;
+    const reportVersion = g.id === 'listening' ? 5 : g.id === 'tone' ? 10 : 8;
     assert.match(g.htmlText, new RegExp(`js/games/round-report\\.js\\?v=${reportVersion}`), `${g.id}: must load shared print renderer`);
     assert.match(g.htmlText, /js\/games\/game-flow\.js\?v=14/, `${g.id}: must load current countdown-free Result runtime`);
     assert.match(g.appText, /RoundReport\.openPrint/, `${g.id}: print action must use the shared renderer`);
@@ -780,7 +780,7 @@ test('Guest/Login Free reports contain facts only and no personalized analysis o
   assert.match(toneSummary, /tfDesktopOrPortrait\(\)[\s\S]{0,180}user_answer[\s\S]{0,100}correct_answer/, 'Tone Result must name the wrong and correct answers on Desktop/Portrait');
   assert.match(toneSummary, /class="tf-score-summary-formula"/, 'Tone Result must separate the weighted-score formula from the total');
   assert.match(toneSummary, /class="tf-result-reward-row"[\s\S]{0,300}tf-score-summary-bonus[\s\S]{0,300}tf-streak-chip/, 'Tone Result must keep reward and streak in one visual row');
-  assert.match(toneSummary, /reportResults\.length === total[\s\S]{0,180}!r\.is_skipped && r\.is_correct[\s\S]{0,180}!r\.skipped && r\.firstTry/, 'Tone Result count must use the same first-time-correct evidence as its detail rows');
+  assert.match(toneSummary, /reportResults\.length === total[\s\S]{0,220}!tfResultIsNeutral\(r\) && r\.is_correct[\s\S]{0,220}!tfResultIsNeutral\(r\) && r\.firstTry/, 'Tone Result count must use the same neutral-safe Clean evidence as its detail rows and fallback');
   assert.doesNotMatch(toneSummary, /perfectCount\s*=\s*results\.filter\(function\(r\)\{ return !r\.skipped && r\.mistakes === 0;/, 'Tone Result must not treat a wrong initial guess as first-time correct');
   assert.match(toneSummary, /class="gsh-end-actions tf-result-actions"/, 'Tone Result must expose its scoped action layout');
   assert.match(games.find((g) => g.id === 'tone').htmlText, /\.tf-result-actions\[data-game-result-actions-normalized="v1"\] \{\s*display:none !important; height:0 !important; margin:0 !important;/, 'Tone Result must not leave the emptied normalized action wrapper as a visual gap');
@@ -848,18 +848,22 @@ test('Typing has native mobile input while Listening typed mode is keyboard-focu
   assert.match(games.find((g) => g.id === 'listening').appText, /typeInput\.focus/);
 });
 
-test('Tone active-question guidance locks scoring while preserving the approved teaching derivation', () => {
+test('Tone Hint creates one-word Free Practice while preserving the approved teaching derivation', () => {
   const toneGame = games.find((g) => g.id === 'tone');
   const tone = toneGame.appText;
   const toneMin = fs.readFileSync(path.join(root, 'js/games/tone-finder-game.min.js'), 'utf8');
-  assert.match(tone, /currentWordGuideUsed\s*=\s*!!tfGuideMode/, 'Tone: next question must inherit the latest guide state');
+  assert.match(tone, /function tfAdvanceCommittedWord\(\)[\s\S]{0,120}tfResetGuideForNextUnit\(\)[\s\S]{0,120}tfResetWordScoring\(\)/, 'Tone: every next word must return to Challenge with Hint off');
+  assert.match(tone, /function startSetSession\(words, opts\)[\s\S]{0,180}tfResetGuideForNextUnit\(\)/, 'Tone: every new round must start in Challenge with Hint off');
   assert.match(tone, /tfGuideMode\s*\|\|\s*\(session\s*&&\s*session\.currentWordGuideUsed\)/, 'Tone: toggling guidance off must not restore scoring');
   assert.match(tone, /function tfLockCurrentWordForGuide\(\)[\s\S]{0,600}session\.score\s*=\s*Math\.max\(0,[\s\S]{0,120}- awarded\)/, 'Tone: points already awarded in the active question must be revoked');
+  assert.doesNotMatch(tone.slice(tone.indexOf('function tfLockCurrentWordForGuide()'), tone.indexOf('// คำปัจจุบันเป็นหลายพยางค์ไหม')), /session\.combo\s*=/, 'Tone: Free Practice must preserve Combo');
+  assert.match(tone, /function tfUseHint\(keys\)[\s\S]{0,260}tfLockCurrentWordForGuide\(\)[\s\S]{0,120}session\.hintUsed\s*=\s*true/, 'Tone: the question-mark Hint must make the whole word Free Practice');
+  assert.doesNotMatch(tone.slice(tone.indexOf('function tfUseHint(keys)'), tone.indexOf('function tfHandleDeduceMistake', tone.indexOf('function tfUseHint(keys)'))), /onPeek|onWrong|tfForceRevealZero/, 'Tone: Hint must not consume the derivation mistake ladder');
   assert.match(tone, /S\.step\s*!==\s*'result'/, 'Tone: changing the default on a completed answer must not rewrite that result');
   assert.match(tone, /S\s*=\s*ns;\s*if \(tfGuideMode\) tfLockCurrentWordForGuide\(\);\s*render\(\);/, 'Tone: a carried guide state must lock the next active syllable before render');
   assert.match(tone, /wordScore\s*=\s*session\.currentWordGuideUsed\s*\?\s*0\s*:/, 'Tone: multi-syllable questions must remain zero after guidance');
   assert.match(tone, /hintUsed:\s*!!session\.hintUsed\s*\|\|\s*!!session\.currentWordGuideUsed/, 'Tone: Result evidence must record active guidance');
-  assert.match(tone, /currentWordGuideIntroPending\s*=\s*!!tfGuideMode\s*&&\s*!tfCurWordNoTools\(\)/, 'Tone: a new guided question must stop at the intro gate');
+  assert.match(tone, /currentWordGuideIntroPending\s*=\s*!!tfGuideMode\s*&&\s*!tfCurWordNoTools\(\)/, 'Tone: the current guided question must stop at the intro gate');
   assert.match(tone, /currentWordGuideIntroPending[\s\S]{0,500}開始推導/, 'Tone: the intro gate must expose the approved derivation action');
   assert.match(tone, /id="tf-guide-start-btn"[\s\S]{0,220}開始推導/, 'Tone: derivation action must expose a stable Enter target');
   assert.match(tone, /tfOrdinaryDesktop\(\) \? document\.getElementById\('tf-guide-start-btn'\)/, 'Tone: Desktop Enter must prefer guided Start and never infer Skip');
@@ -869,13 +873,18 @@ test('Tone active-question guidance locks scoring while preserving the approved 
   assert.match(tone, /var newTone = nextStep === 'result' \? catalogToneNumber\(\) : null/, 'Tone: derivation must never become a second tone authority');
   assert.match(tone, /guessRow\s*=\s*\(tfDesktopOrPortrait\(\)\s*&&\s*initialGuess\s*==\s*null\)\s*\?\s*''/, 'Tone: guided Result must not invent an uncertain choice on Desktop or Portrait');
   assert.match(tone, /TF\.skipCurrentWord\(\)[^>]*>跳過<\/button>/, 'Tone: Desktop gameplay must expose neutral 跳過');
-  assert.match(tone, /function tfHandleInitialToneMistake\(entry\)[\s\S]{0,260}session\.curWordWrongGuess\s*=\s*true[\s\S]{0,160}session\.combo\s*=\s*0[\s\S]{0,180}tfUpdateWordScoreGauge\(\)/, 'Tone: a wrong initial 1–5 choice must cut combo without dropping the score ladder');
+  assert.match(tone, /function tfHandleInitialToneMistake\(entry\)[\s\S]{0,260}session\.curWordWrongGuess\s*=\s*true[\s\S]{0,180}tfUpdateWordScoreGauge\(\)/, 'Tone: a wrong initial 1–5 choice must enter teaching without dropping the score ladder');
+  assert.doesNotMatch(tone.slice(tone.indexOf('function tfHandleInitialToneMistake(entry)'), tone.indexOf('function stepSessionGuess()', tone.indexOf('function tfHandleInitialToneMistake(entry)'))), /session\.combo\s*=\s*0|curWordAllFirstTry\s*=\s*false/, 'Tone: a wrong initial 1–5 choice must preserve Combo and Clean eligibility');
+  assert.match(tone, /function tfScoreDeduce\(\)[\s\S]{0,700}currentWordDeduct[\s\S]{0,180}tfScoreFirstTry\(\)/, 'Tone: a clean teaching path after the initial guess must receive normal Clean scoring');
   assert.doesNotMatch(tone, /聲調選擇錯誤/, 'Tone: a wrong initial 1–5 choice must not be recorded as a scored mistake');
   assert.match(tone, /function tfHandleDeduceMistake\(choiceLabel, errMsg\)[\s\S]{0,220}recordMistake\(choiceLabel, errMsg\)[\s\S]{0,120}TF_WORDSCORE\.onWrong\(session\)/, 'Tone: the first wrong answer inside derivation must begin the score deduction ladder');
   assert.match(tone, /function tfResetWordScoring\(\)[\s\S]{0,220}currentWordMistakesTotal\s*=\s*0/, 'Tone: each new word must reset its total mistake evidence');
+  assert.match(tone, /var hadNeutralResult\s*=\s*scoredResults\.some\(tfResultIsNeutral\)[\s\S]{0,220}sessionBonus\(total, perfectCount\)/, 'Tone: a round containing any neutral result must receive no completion or perfect bonus');
+  assert.match(tone, /needReview:\s*!session\.currentWordGuideUsed\s*&&/, 'Tone: Free Practice must not enter Retry or Review');
+  assert.match(tone, /if \(_tfResult\.hintUsed\) roundReport\.learning_exempt = true/, 'Tone: Free Practice must not be committed to Login Free learning state');
   assert.match(tone, /function recordMistake\([\s\S]{0,900}currentWordMistakesTotal\s*=\s*\(session\.currentWordMistakesTotal \|\| 0\) \+ 1/, 'Tone: every real wrong answer must update the total mistake evidence');
   assert.match(tone, /function tfCommitWordAndAdvance\(opts\)[\s\S]{0,260}var mistakes = session\.currentWordMistakesTotal/, 'Tone: Result must retain mistake totals across syllables');
-  assert.match(tone, /skipCurrentWord:\s*function\(\)[\s\S]{0,1500}is_skipped:\s*true[\s\S]{0,240}skip_reason:\s*'user_skip'/, 'Tone: Skip must create neutral result evidence');
+  assert.match(tone, /skipCurrentWord:\s*function\(\)[\s\S]{0,2500}is_skipped:\s*true[\s\S]{0,240}skip_reason:\s*'user_skip'/, 'Tone: Skip must create neutral result evidence');
   assert.match(tone, /if \(S\.step === 'session-guess' && !tfCurWordNoTools\(\)\)[\s\S]{0,120}currentWordGuideIntroPending\s*=\s*true/, 'Tone: enabling guidance during an active question must return to the explicit start gate');
   assert.match(tone, /function tfArmGuideIntroForPageReturn\(\)[\s\S]{0,400}currentWordGuideIntroPending\s*=\s*true/, 'Tone: returning to a preserved page must re-arm the guided-question gate');
   assert.match(toneMin, /currentWordGuideUsed/, 'Tone: deployed minified bundle must include the zero-lock state');
@@ -884,7 +893,7 @@ test('Tone active-question guidance locks scoring while preserving the approved 
   assert.match(toneMin, /pageshow/, 'Tone: deployed minified bundle must include the page-return guard');
   assert.match(toneMin, /tfHandleInitialToneMistake/, 'Tone: deployed minified bundle must preserve the initial no-deduction handler');
   assert.doesNotMatch(toneMin, /聲調選擇錯誤/, 'Tone: deployed minified bundle must not retain the superseded initial scored-mistake branch');
-  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=92/, 'Tone: page must request the rebuilt shared-framework runtime version');
+  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=99/, 'Tone: page must request the rebuilt gameplay runtime version');
 });
 
 test('Tone mobile touch surfaces keep Desktop gameplay free of keyboard-only copy', () => {
@@ -907,7 +916,7 @@ test('Tone mobile touch surfaces keep Desktop gameplay free of keyboard-only cop
   assert.match(tone.htmlText, /點選 1–5 就可以。/, 'Portrait Tour must not advertise computer keyboard controls');
 });
 
-test('active Desktop D4-D5 keeps manual question/result flow and optional Hint carry-off', () => {
+test('active Desktop D4-D5 keeps manual question/result flow and optional current-word Hint-off', () => {
   const tone = games.find((g) => g.id === 'tone');
   const reading = games.find((g) => g.id === 'reading');
   const typing = games.find((g) => g.id === 'typing');

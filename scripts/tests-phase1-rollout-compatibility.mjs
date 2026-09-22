@@ -195,7 +195,7 @@ await test('server-only RPC least privilege closes browser execute without touch
 await test('rollout bridge remains preserved while Login Free activates account clients', () => {
   assert.match(read('tone-finder.html'), /tone-server\.js\?v=6/);
   assert.match(read('tone-finder.html'), /game-account\.js\?v=6/);
-  assert.match(read('tone-finder.html'), /practice-events\.js\?v=4/);
+  assert.match(read('tone-finder.html'), /practice-events\.js\?v=5/);
   assert.match(read('lego.html'), /lego-game-app\.js\?v=15/);
   assert.match(legoEdge, /compatibility: request\.legacyCompatibility \? 'legacy-no-id' : 'explicit-id'/);
 });

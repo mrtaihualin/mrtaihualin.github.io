@@ -45,7 +45,7 @@ test('Tone stale remembered entry is neutralized and every surface renders neutr
   assert.match(tone, /function tfNeutralSkipSurface\(\) \{\s*return true;\s*\}/);
   assert.match(tone, /markKnown: function\(\) \{\s*return this\.skipCurrentWord\(\);\s*\}/);
   assert.doesNotMatch(tone, /tone_finder_mark_known_click/);
-  assert.match(tone, /skipCurrentWord:\s*function\(\)[\s\S]{0,1500}is_skipped:\s*true/);
+  assert.match(tone, /skipCurrentWord:\s*function\(\)[\s\S]{0,2500}is_skipped:\s*true/);
 });
 
 test('Reading and Typing Skip log neutral evidence then advance without SRS calls', () => {

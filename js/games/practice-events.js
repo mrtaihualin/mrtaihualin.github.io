@@ -61,7 +61,9 @@
             source: item && item.content_ref && item.content_ref.source,
             key: item && item.content_ref && item.content_ref.key
           },
-          is_correct: !!(item && item.is_correct),
+          is_correct: !!(item && item.is_correct) && !(item && (item.is_practice || item.is_skipped)),
+          is_practice: !!(item && item.is_practice),
+          is_skipped: !!(item && item.is_skipped),
           wrong_count: Math.max(0, Number(item && item.wrong_count) || 0),
           hint_used: item && item.hint_used == null ? null : !!item.hint_used,
           listen_count: item && item.listen_count == null ? null : Math.max(0, Number(item.listen_count) || 0)

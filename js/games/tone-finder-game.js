@@ -404,9 +404,9 @@ var TF_SCORE = {
 // ===== TF_WORDSCORE (Lin 2026-07-04) — state คะแนนต่อคำ บันได [10,7,4,1,0] · pure logic ทดสอบได้จริง =====
 //  ทำงานบนคะแนน/สถานะ UI เท่านั้น; ไม่คำนวณคำตอบภาษา
 //  กติกา (ยืนยันกับ Lin ผ่านหลอดคะแนน 2026-07-04):
-//   • เดาเสียงปุ่ม 1–5 ผิดในหน้าหลัก = ไม่หักคะแนน; ตัดคอมโบแล้วเข้า推導
+//   • เดาเสียงปุ่ม 1–5 ผิดในหน้าหลัก = โอกาสเรียน ไม่หักคะแนน/คอมโบ/Clean แล้วเข้า推導
 //   • เลือกขั้น推導ผิด = เริ่มหัก 1 ขั้น
-//   • ปุ่ม ? ฟรีหนึ่งครั้งหลังตอบผิดในขั้นนั้น มิฉะนั้นหัก 1 ขั้น
+//   • เปิดปุ่ม ? = คำนี้เป็น Free Practice ไม่หักบันไดและไม่เปลี่ยน Combo
 //   • หักครบ 4 (แต้มเหลือ 0) = เฉลยค่าจากคลัง + SRS รีเซ็ต day1
 var TF_WORDSCORE = {
   LADDER: [10, 7, 4, 1, 0],
@@ -420,6 +420,7 @@ var TF_WORDSCORE = {
     return s;
   },
   onPeek: function (s) {
+    // Compatibility only: active Hint uses tfLockCurrentWordForGuide() and does not call this ladder path.
     if (s.stepWrong && !s.stepFreePeekUsed) { s.stepFreePeekUsed = true; return false; }
     s.currentWordDeduct = (s.currentWordDeduct || 0) + 1;
     return true;
@@ -1008,8 +1009,8 @@ function tfRepaintReading() {
 
 // ════════════════════════════════════════════════════════════
 // ── โหมด 提示: เปิดดูค่าที่ตรวจแล้วโดยตรง
-//   และ **เปิดโหมดนี้ = ไม่ได้อะไรเลย** ไม่มีคะแนน ไม่มีดาว ไม่มีความคืบหน้าทบทวน (SRS) ไม่มีสตรีค/แบดจ์/ชาเลนจ์
-// ค่าจำใช้คีย์เดียวกับเกมอ่าน/เกมพิมพ์ (rg_guide_mode) → ตั้งครั้งเดียวเหมือนกันทุกเกม
+//   คำที่เปิด提示เป็น Free Practice: ไม่คิดคะแนน/โบนัส ไม่เปลี่ยน Combo และไม่อัปเดต SRS/Retry/Review
+//   ทุกคำใหม่กลับเป็น Challenge และปิด提示เสมอ
 // ════════════════════════════════════════════════════════════
 var tfGuideMode = (function () { try { return localStorage.getItem('rg_guide_mode') === '1'; } catch (e) { return false; } })();
 
@@ -1019,6 +1020,12 @@ function tfSyncGuideBtn() {
   b.textContent = tfGuideMode ? '💡' : '🔥';
   b.title = tfGuideMode ? '有提示（純練習・完全不計分）' : '無提示（挑戰・正常計分）';
   b.setAttribute('aria-label', b.title);
+}
+
+function tfResetGuideForNextUnit() {
+  tfGuideMode = false;
+  try { localStorage.setItem('rg_guide_mode', '0'); } catch (e) {}
+  tfSyncGuideBtn();
 }
 
 // Highlight the one reviewed teaching choice for the current 推導 step.
@@ -1041,7 +1048,7 @@ function tfApplyGuideHints() {
 
 // ป้ายบอกโหมด (เหมือนเกมอ่าน) — ให้ผู้เล่นรู้ตัวว่ากำลังเล่นแบบไม่คิดคะแนนอยู่
 function tfGuideNoteHtml() {
-  if (!tfGuideMode) return '';
+  if (!tfGuideMode && !(session && session.currentWordGuideUsed)) return '';
   return '<div class="tf-guide-note">💡 <b>練習模式</b>・純練習不計分（沒有分數、星星與複習進度）</div>';
 }
 
@@ -1151,14 +1158,14 @@ function tfResetWordScoring() {
   session.currentWordMistakes = 0;
   session.currentWordMistakesTotal = 0; // รวมทุกพยางค์เพื่อให้ Result/SRS ตรงกับการตอบจริง
   session.currentWordDeduction = 0;
-  session.currentWordDeduct = 0;      // Lin 2026-07-04: ขั้นบันไดคะแนน (กดผิด+แอบดูที่โดนหัก)
+  session.currentWordDeduct = 0;      // ขั้นบันไดคะแนนจากการเลือกผิดใน推導เท่านั้น
   session.stepWrong = false;
   session.stepFreePeekUsed = false;
   session.currentWordScored = false;
   session.currentWordFirstTry = false;
   session.currentWordScore = 0;
-  // P12-A-03: the hint state carries into the next question, but once a
-  // question has exposed Choice-style guidance it can never score again.
+  // Snapshot only the current word: once guidance is exposed, this whole word
+  // remains Free Practice even if the player toggles the visible Hint off.
   session.currentWordGuideUsed = !!tfGuideMode;
   // ── คำหลายพยางค์: คิดคะแนนรายพยางค์ ──
   session.curWordAllFirstTry = true;   // จริงตราบที่ทุกพยางค์ยังถูกครั้งแรก
@@ -1176,7 +1183,9 @@ function tfResetWordScoring() {
 }
 
 function tfLockCurrentWordForGuide() {
-  if (!session || session.currentWordGuideUsed) return;
+  if (!session) return;
+  session.currentWordGolden = false;
+  if (session.currentWordGuideUsed) return;
   // A multi-syllable item can enter the next active syllable with guidance
   // enabled from the preceding reveal. Lock the whole current item before
   // that guidance is exposed, including any earlier provisional points.
@@ -1187,7 +1196,6 @@ function tfLockCurrentWordForGuide() {
   session.currentWordFirstTry = false;
   session.curWordAllFirstTry = false;
   session.currentWordGuideUsed = true;
-  session.combo = 0;
   try { tfUpdateScoreHud(); } catch (e) {}
 }
 
@@ -1392,6 +1400,7 @@ function tfScoreDeduce() {
   if (!session) return;
   var noSoftPoints = !!session.curWordIsKnownCheck || !tfSoftPointsAllowed(session.words[session.index]);
   if (noSoftPoints) {
+    var freePractice = !!session.currentWordGuideUsed;
     if (tfCurWordIsMulti()) {
       if (session.scoredSyls) session.scoredSyls[S.selectedSyl] = true;
       session.curWordAllFirstTry = false;
@@ -1399,7 +1408,13 @@ function tfScoreDeduce() {
       session.currentWordScored = true;
     }
     session.currentWordFirstTry = false;
-    if (!tfCurWordIsParticle()) session.combo = 0;
+    if (!freePractice && !tfCurWordIsParticle()) session.combo = 0;
+    return;
+  }
+  // เดาเสียงครั้งแรกผิด/ไม่มั่นใจเป็นโอกาสเรียน ไม่ใช่ความผิดในการ推導
+  // ถ้าผ่านเส้นทางสอนโดยไม่ตอบผิดเลย ให้คะแนน Clean เหมือนตอบถูกตรงๆ
+  if ((session.currentWordDeduct || 0) === 0 && !session.currentWordGuideUsed) {
+    tfScoreFirstTry();
     return;
   }
   var gold = tfGoldenMult();
@@ -1429,18 +1444,9 @@ function tfScoreDeduce() {
 function tfUseHint(keys) {
   if (tfCurWordIsParticle()) { showTip(keys); return; }
   if (session) {
-    var charged = TF_WORDSCORE.onPeek(session);
-    if (charged) {
-      session.combo = 0;
-      session.hintUsed = true;
-      if (tfCurWordIsMulti()) session.curWordAllFirstTry = false;
-      tfUpdateWordScoreGauge();
-      if (TF_WORDSCORE.isDead(session)) {
-        showTip(keys);
-        tfForceRevealZero();
-        return;
-      }
-    }
+    tfLockCurrentWordForGuide();
+    session.hintUsed = true;
+    render();
   }
   showTip(keys);
 }
@@ -1557,7 +1563,9 @@ function tfCommitWordAndAdvance(opts) {
   var firstTry = (isMulti ? (!!session.curWordAllFirstTry && allScored) : !!session.currentWordFirstTry) && !session.currentWordGuideUsed;
   // คอมโบสำหรับคำหลายพยางค์: คิดตอนจบคำ (พยางค์เดียวคิดไปแล้วใน tfScoreFirstTry)
   if (isMulti && !opts.forced) {
-    if (firstTry) {
+    if (session.currentWordGuideUsed) {
+      // Free Practice ไม่เพิ่มและไม่ตัด Combo
+    } else if (firstTry) {
       session.combo = (session.combo || 0) + 1;
       if (session.combo > (session.maxCombo || 0)) session.maxCombo = session.combo;
       if (session.combo === 3 || session.combo === 5 || session.combo === 8) {
@@ -1593,30 +1601,39 @@ function tfCommitWordAndAdvance(opts) {
     golden: !!session.currentWordGolden,
     forced: !!opts.forced,
     learningEvidence: { componentWrongCounts: (session.learningComponentWrongCounts && session.learningComponentWrongCounts.length) ? session.learningComponentWrongCounts.slice() : [Math.min(session.currentWordDeduct || mistakes || 0, 4)] },
-    needReview: !!opts.forced || mistakes > 0 || !firstTry
+    needReview: !session.currentWordGuideUsed && (!!opts.forced || mistakes > 0 || !firstTry)
   });
   if (roundReport && window.RoundReport) {
     var _tfResult = session.results[session.results.length - 1];
     var _tfSentence = selectedLevel === 3 && advSentenceCtx && advSentenceCtx.th;
     var _tfRec = tfSrsLoggedIn() ? tfGetSrsRecord(entry, selectedLevel) : null;
-    RoundReport.addItem(roundReport, {
-      content_ref: _tfSentence ? { source: 'game_sentences', key: _tfSentence } : { source: 'game_words', key: tfWordContentKey(entry) },
-      question: entry.word, meaning: entry.zh || '', attempts: _tfResult.attempts,
-      user_answer: _tfResult.attempts.length ? _tfResult.attempts[_tfResult.attempts.length - 1].answer : '',
-      correct_answer: TONES[tone] ? TONES[tone].zh : String(tone || ''),
-      is_correct: mistakes === 0 && firstTry && !opts.forced,
-      wrong_count: mistakes, item_score: _tfResult.score, hint_used: _tfResult.hintUsed,
-      learning_evidence: _tfResult.learningEvidence,
-      linguistic: { reading_th: entry.readingTH || '', syls: entry.syls || null, correct_tone: tone },
-      words: (_tfSentence && advSentenceCtx.words) ? advSentenceCtx.words.map(function(w){return {th:w.th||'',zh:w.zh||''};}) : [],
-      learning_action: session.curWordIsKnownCheck ? 'known_check' : 'answer',
-      srs_state: _tfRec && (_tfRec.dueDate || _tfRec.stage) || null,
-      mastered_state: !!(_tfRec && _tfRec.mastered)
-    });
+    // LearningReview ฟัง event ของ RoundReport ทันที จึงยกเว้นเฉพาะคำ Free Practice
+    // แล้วคืนสถานะรอบเดิมทันที เพื่อไม่ให้คำ Challenge อื่นในรอบถูกยกเว้นตามไปด้วย
+    var _tfRoundWasLearningExempt = roundReport.learning_exempt === true;
+    if (_tfResult.hintUsed) roundReport.learning_exempt = true;
+    try {
+      RoundReport.addItem(roundReport, {
+        content_ref: _tfSentence ? { source: 'game_sentences', key: _tfSentence } : { source: 'game_words', key: tfWordContentKey(entry) },
+        question: entry.word, meaning: entry.zh || '', attempts: _tfResult.attempts,
+        user_answer: _tfResult.attempts.length ? _tfResult.attempts[_tfResult.attempts.length - 1].answer : '',
+        correct_answer: TONES[tone] ? TONES[tone].zh : String(tone || ''),
+        is_correct: mistakes === 0 && firstTry && !opts.forced,
+        is_practice: _tfResult.hintUsed,
+        wrong_count: mistakes, item_score: _tfResult.score, hint_used: _tfResult.hintUsed,
+        learning_evidence: _tfResult.learningEvidence,
+        linguistic: { reading_th: entry.readingTH || '', syls: entry.syls || null, correct_tone: tone },
+        words: (_tfSentence && advSentenceCtx.words) ? advSentenceCtx.words.map(function(w){return {th:w.th||'',zh:w.zh||''};}) : [],
+        learning_action: session.curWordIsKnownCheck ? 'known_check' : 'answer',
+        srs_state: _tfRec && (_tfRec.dueDate || _tfRec.stage) || null,
+        mastered_state: !!(_tfRec && _tfRec.mastered)
+      });
+    } finally {
+      roundReport.learning_exempt = _tfRoundWasLearningExempt;
+    }
   }
   // ── สเปก 2026-07-03 ข้อ 3+4: อัปเดต SRS ต่อคำ/ประโยค + แจกดาวเงินตอน mastered ──
   // ทำงานเฉพาะตอนล็อกอิน (ข้อ 0) · หน่วย SRS = ทั้งคำ/ประโยค ไม่ใช่รายพยางค์ → ใช้ entry.word ทั้งก้อน
-  try { if (!entry.isParticle && tfSrsLoggedIn()) tfProcessSrsOnWordCommit(entry, mistakes, firstTry, !!opts.forced); } catch (e) {}
+  try { if (!entry.isParticle && !session.currentWordGuideUsed && tfSrsLoggedIn()) tfProcessSrsOnWordCommit(entry, mistakes, firstTry, !!opts.forced); } catch (e) {}
   if(window.LearningReview&&LearningReview.advance&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()){
     LearningReview.advance(roundReport,tfAdvanceCommittedWord);
     return;
@@ -1626,6 +1643,7 @@ function tfCommitWordAndAdvance(opts) {
 
 function tfAdvanceCommittedWord() {
   session.index++;
+  tfResetGuideForNextUnit();
   tfResetWordScoring();
   session.initialGuess = undefined;
   session.finalAnswer = undefined;
@@ -1654,9 +1672,9 @@ function tfLevelWordCount(level) {
 }
 
 // ── สเปก 2026-07-03 ข้อ 3+4+5: อัปเดต SRS ของคำ/ประโยคนี้ตอนจบ (เรียกจาก tfCommitWordAndAdvance) ──
-// "สะอาด" ต้องถูกครั้งแรกทั้งหน่วย (ทุกพยางค์/ทุกคำในประโยค) + ไม่แอบดู + ไม่นับ forced (เฉลยเพราะผิดครบ 3)
+// "สะอาด" ต้องถูกครั้งแรกทั้งหน่วย (ทุกพยางค์/ทุกคำในประโยค) และไม่นับ forced (เฉลยเพราะผิดครบ 3)
 // clean round → New → Day 1 → Day 7 → Mastered ตาม Phase 1
-// ไม่ clean (ผิด/แอบดู/forced) → รีเซ็ตกลับ day 1 เข้าคิวใหม่ (กันโกงข้อ 5: ห้ามเร่งขั้นเร็วกว่ากำหนด)
+// Free Practice ไม่เรียกฟังก์ชันนี้; ไม่ clean จากการตอบผิด/forced จึงค่อยรีเซ็ตกลับ day 1
 function tfProcessSrsOnWordCommit(entry, mistakes, firstTry, forced) {
   if (!entry || !entry.word) return;
   if (!tfSrsLoggedIn()) return; // Guest Free ไม่มี SRS และห้ามนำรอบก่อน Login ไปนับย้อนหลัง
@@ -1707,7 +1725,7 @@ function tfProcessSrsOnWordCommit(entry, mistakes, firstTry, forced) {
 
   // known-check (กดปุ่ม "✓ 已記得") = พิสูจน์ 1 ครั้งแบบรอบตัดสิน (กฎเดิม ไม่ใช่ SRS checkpoint ปกติ)
   //   ตอบถูกสะอาดครั้งเดียว → ตัดคำออกถาวร (mastered) แต่ "ห้ามแจกดาวเงิน/แต้ม/bump เพดาน" (ต่างจาก mastered จริงที่ผ่านครบ 3 รอบ)
-  //   ตอบผิด/แอบดู/forced → resetOnFail กลับ day1 เข้าคิว SRS ปกติ (ไม่ตัดคำ)
+  //   ตอบผิด/forced → resetOnFail กลับ day1 เข้าคิว SRS ปกติ (ไม่ตัดคำ)
   if (wasKnownCheck) {
     if (cleanThisRound) {
       rec.mastered = true;   // ตัดออกจาก SRS ถาวร — ไม่เรียก advanceOnClean/addHardStars จึงไม่ได้ดาว ไม่ bump เพดาน
@@ -1745,7 +1763,7 @@ function tfProcessSrsOnWordCommit(entry, mistakes, firstTry, forced) {
       } catch (e) {}
     }
   } else {
-    // ผิด/แอบดู/forced (รวมถึงรอบตัดสิน Day 7) → กลับจุดเริ่ม SRS เข้าคิวใหม่
+    // ผิด/forced (รวมถึงรอบตัดสิน Day 7) → กลับจุดเริ่ม SRS เข้าคิวใหม่
     rec = TF_SRS.resetOnFail(rec);
   }
   tfSetSrsRecord(entry, selectedLevel, rec);
@@ -1798,6 +1816,10 @@ function tfGoToSummary() {
   render();
 }
 
+function tfResultIsNeutral(result) {
+  return !!(result && (result.is_practice || result.is_skipped || result.hintUsed || result.hint_used || result.skipped));
+}
+
 // คิดโบนัสจบชุด + perfect + อัปเดต Daily Streak (กันคิดซ้ำด้วย sessionScored)
 function tfApplySessionBonus() {
   if (!session || session.sessionScored) return;
@@ -1805,23 +1827,15 @@ function tfApplySessionBonus() {
   var total = scoredResults.length;
   // ── สถิติคำผิดรายคำ (ทุกโหมด) ──
   if (total > 0) tfRecordWordWrong(scoredResults);
-  var perfectCount = scoredResults.filter(function (r) { return r.firstTry; }).length;
-  var bonus = TF_SCORE.sessionBonus(total, perfectCount);
-  var isPerfect = (total > 0 && perfectCount === total && !session.hadSkip);
-  // Lin 2026-07-25: โหมด 提示 = ไม่ได้อะไรเลย → ข้ามโบนัสจบชุด/สตรีค/ดาว/แบดจ์/ชาเลนจ์ทั้งหมด (สถิติคำผิดยังเก็บปกติ ไม่ใช่รางวัล)
-  if (tfGuideMode) {
-    session.bonusAwarded = 0; session.isPerfect = isPerfect;
-    session.starsEarned = 0;
-    try { session.totalStars = (window.GAME_ACCOUNT) ? GAME_ACCOUNT.getStars() : 0; } catch (e) { session.totalStars = 0; }
-    session.newBadges = []; session.streakResult = null;
-    session.sessionScored = true;
-    try { tfRenderExtBar(); } catch (e) {}
-    return;
-  }
+  var perfectCount = scoredResults.filter(function (r) { return r.firstTry && !tfResultIsNeutral(r); }).length;
+  var hadNeutralResult = scoredResults.some(tfResultIsNeutral);
+  var bonus = hadNeutralResult ? 0 : TF_SCORE.sessionBonus(total, perfectCount);
+  var isPerfect = (total > 0 && perfectCount === total && !session.hadSkip && !hadNeutralResult);
+  session.bonusAwarded = 0;
+  session.isPerfect = isPerfect;
   if (bonus > 0) {
     session.score += bonus;
     session.bonusAwarded = bonus;
-    session.isPerfect = isPerfect;
     setTimeout(function () {
       tfScorePop(bonus, { big: true, confetti: true });
     }, 200);
@@ -2341,12 +2355,13 @@ function buildReportInner() {
   var levelChar = ({1:'初',2:'中',3:'高'})[selectedLevel] || '—';
   var loggedIn = tfSrsLoggedIn();
   var total = reportItems.length;
-  var perfectCount = reportItems.filter(function(r){ return r.is_correct; }).length;
+  var perfectCount = reportItems.filter(function(r){ return !tfResultIsNeutral(r) && r.is_correct; }).length;
   var weightedScore = roundReport ? roundReport.score : TF_SCORE.weightedScore(session.score || 0, selectedLevel);
 
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function statusLabel(r){
-    if (r.is_skipped) return '<span style="color:#8B6310;">跳過</span>';
+    if (r.is_skipped || r.skipped) return '<span style="color:#8B6310;">跳過</span>';
+    if (tfResultIsNeutral(r)) return '<span style="color:#8B6310;">純練習</span>';
     if (loggedIn && r.mastered_state) return '<span style="color:#8B6310;">✓ 已精通</span>';
     if (!r.is_correct) return '<span style="color:#c62828;">✗ 答錯</span>';
     return '<span style="color:#2e7d32;">✓ 答對</span>';
@@ -2442,12 +2457,11 @@ function stepSessionSummary() {
   var scoreResults = results.filter(function (r) { return !(r.entry && r.entry.isParticle); });
   var total = scoreResults.length;
   var reportResults = roundReport && roundReport.items ? roundReport.items : [];
-  // The visible Result table treats a wrong first guess as not first-time correct,
-  // even when the later derivation has no additional mistakes. Keep the headline
-  // count on that same evidence instead of counting only derivation mistakes.
+  // Result uses the same Clean evidence as scoring: an initial miss followed by
+  // a mistake-free teaching path remains correct; Free Practice does not.
   var perfectCount = reportResults.length === total
-    ? reportResults.filter(function(r){ return !r.is_skipped && r.is_correct; }).length
-    : scoreResults.filter(function(r){ return !r.skipped && r.firstTry; }).length;
+    ? reportResults.filter(function(r){ return !tfResultIsNeutral(r) && r.is_correct; }).length
+    : scoreResults.filter(function(r){ return !tfResultIsNeutral(r) && r.firstTry; }).length;
   // ส่งคะแนนจริง (ถ่วงน้ำหนักระดับ) เข้า Supabase/leaderboard — ไม่ใช่ perfectCount เดิม
   var weightedScore = TF_SCORE.weightedScore(session.score || 0, selectedLevel);
   gtag('event','tone_finder_complete',{category:'game',score: weightedScore, total: total, perfect: perfectCount, raw_score: session.score || 0, level: selectedLevel});
@@ -2470,11 +2484,13 @@ function stepSessionSummary() {
     var tone = r.linguistic && r.linguistic.correct_tone;
     var tl = TONES[tone] || {};
     var ok = r.is_correct;
-    var resultTxt = r.is_skipped ? '跳過' : (ok ? '✓' : '✗ ×'+r.wrong_count);
-    if (tfDesktopOrPortrait() && !r.is_skipped && !ok) {
+    var isSkip = !!r.is_skipped || !!r.skipped;
+    var isNeutral = tfResultIsNeutral(r);
+    var resultTxt = isSkip ? '跳過' : (isNeutral ? '純練習' : (ok ? '✓' : '✗ ×'+r.wrong_count));
+    if (tfDesktopOrPortrait() && !isNeutral && !ok) {
       resultTxt = '✗ ' + (r.user_answer || '—') + ' → ' + (r.correct_answer || '—');
     }
-    var resultColor = r.is_skipped ? '#8B6310' : (ok ? '#7ec87e' : '#ff7c7c');
+    var resultColor = isNeutral ? '#8B6310' : (ok ? '#7ec87e' : '#ff7c7c');
     return '<tr>' +
       '<td style="color:#bbb;font-size:12px;width:24px;">'+(i+1)+'</td>' +
       '<td class="tf-sum-th">'+r.question+'<div style="font-size:10px;font-weight:400;color:#999;">作答：'+(r.user_answer||'—')+'<br>正解：'+(r.correct_answer||'—')+'</div></td>' +
@@ -2562,12 +2578,15 @@ function stepMistakeReview() {
   if (!roundReport || !roundReport.items) return '';
   var listSource = roundReport.items;
   var itemsHtml = listSource.map(function (r) {
-    var isWrong = !r.is_correct;
+    var isSkip = !!r.is_skipped || !!r.skipped;
+    var isNeutral = tfResultIsNeutral(r);
+    var isWrong = !r.is_correct && !isNeutral;
+    var statusText = isSkip ? '跳過' : (isNeutral ? '純練習' : (r.is_correct ? '✓ 答對' : '✗ 答錯'));
     return '<div class="gsh-mistake-item' + (isWrong ? ' gsh-mistake-wrong' : '') + '">' +
       '<div class="gsh-mistake-q">' + (r.question || '—') + (r.meaning ? '　<span style="font-weight:400;color:#999;font-size:13px;">' + r.meaning + '</span>' : '') + '</div>' +
       '<div class="gsh-mistake-row">正確聲調：<b>' + (r.correct_answer || '—') + '</b></div>' +
       '<div class="gsh-mistake-row">你的答案：<b>' + (r.user_answer || '（未作答）') + '</b></div>' +
-      '<div class="gsh-mistake-row">狀態：<b>' + (r.is_correct?'✓ 答對':'✗ 答錯') + '</b>・答錯 <b>' + (r.wrong_count || 0) + '</b> 次・得分 <b>' + (r.item_score || 0) + '</b>' + (r.hint_used ? '　💡 使用提示' : '') + '</div>' +
+      '<div class="gsh-mistake-row">狀態：<b>' + statusText + '</b>・答錯 <b>' + (r.wrong_count || 0) + '</b> 次・得分 <b>' + (r.item_score || 0) + '</b>' + (r.hint_used ? '　💡 使用提示' : '') + '</div>' +
       (r.linguistic&&r.linguistic.reading_th?'<div class="gsh-mistake-row">讀音：<b>'+r.linguistic.reading_th+'</b></div>':'')+
       (r.attempts&&r.attempts.length>1?'<div class="gsh-mistake-row">送出紀錄：'+r.attempts.map(function(a){return a.answer;}).join(' → ')+'</div>':'')+
       (r.words&&r.words.length?'<div class="gsh-mistake-row">逐字：'+r.words.map(function(w){return w.th+'＝'+w.zh;}).join('・')+'</div>':'')+
@@ -2861,6 +2880,7 @@ function tfRestoreSavedProgress(data) {
 }
 
 function startSetSession(words, opts) {
+  tfResetGuideForNextUnit();
   // Lin 2026-07-30: เดิมล้าง advSentenceCtx แบบไม่มีเงื่อนไขทุกครั้ง → ตอน TF.startAdvSentence เรียกฟังก์ชันนี้ (ซึ่งเรียก render() ข้างในตั้งแต่บรรทัดท้ายฟังก์ชัน)
   // แล้วค่อยตั้ง advSentenceCtx ใหม่ "หลัง" ฟังก์ชันนี้ return กลับไป ทำให้ render() รอบแรก (คำแรกของประโยค高級) เห็น advSentenceCtx เป็น null ก่อนเสมอ
   // → ประโยคเต็มไม่โชว์ตั้งแต่คำแรก (โชว์แค่คำเดียว) ตามที่ Lin แจ้ง — แก้โดยให้ TF.startAdvSentence ตั้ง advSentenceCtx "ก่อน" เรียกฟังก์ชันนี้ พร้อมส่ง opts.isAdvSentence=true มากันไม่ให้บรรทัดนี้ล้างทับ
@@ -3089,13 +3109,11 @@ function s2bDeadLow() {
     '</div>' + footer();
 }
 
-// Lin 2026-09-15: เดาเสียง 1–5 ผิดก่อนเข้า推導ไม่นับผิดและไม่ลดบันไดคะแนน
-// ยังตัดคอมโบ/สิทธิ์ first-try ตามเดิม; คะแนนเริ่มลดเมื่อตอบผิดภายใน推導เท่านั้น
+// เดาเสียง 1–5 ผิดก่อนเข้า推導เป็นโอกาสเรียน: ไม่หักคะแนน/คอมโบ/Clean
+// คะแนนเริ่มลดเมื่อตอบผิดภายใน推導เท่านั้น
 function tfHandleInitialToneMistake(entry) {
   if (!session) return;
   session.curWordWrongGuess = true;
-  if (!entry.isParticle) session.combo = 0;
-  if (tfCurWordIsMulti()) session.curWordAllFirstTry = false;
   tfUpdateWordScoreGauge();
 }
 
@@ -3144,7 +3162,7 @@ function stepSessionGuess() {
     session.currentWordToneAttempts = session.currentWordToneAttempts || [];
     session.currentWordToneAttempts.push({answer:'不確定',is_correct:false,syllable:tfCurWordIsMulti()?(S.selectedSyl+1):1});
     try { session.curWordGuesses = session.curWordGuesses || {}; session.curWordGuesses[tfCurWordIsMulti() ? S.selectedSyl : 0] = 0; } catch(e){}  // Phase 4: จำ "ไม่มั่นใจ" รายพยางค์
-    if (session) { session.curWordWrongGuess = true; if (!tfCurWordIsParticle()) session.combo = 0; }
+    if (session) session.curWordWrongGuess = true;
     navigateToInflection();
   });
 
@@ -3929,8 +3947,31 @@ var TF = {
   // Neutral skip on all supported layouts: no answer, score, Combo, SRS, or countdown.
   skipCurrentWord: function() {
     if (!session || !tfNeutralSkipSurface()) return;
+    var _skipNow = Date.now();
+    // A physical double-click can land on the freshly rendered Skip button for
+    // the next word. Keep the commit locked while LearningReview saves, then
+    // retain a short cross-render cooldown so one gesture advances once only.
+    if (session.skipCommitPending || _skipNow < (Number(session.skipCommitCooldownUntil) || 0)) return;
     var entry = session.words[session.index];
     if (!entry) return;
+    var _skipSession = session;
+    var _skipIndex = session.index;
+    var _skipAdvanced = false;
+    _skipSession.skipCommitPending = true;
+    _skipSession.skipCommitCooldownUntil = _skipNow + 500;
+    function _advanceSkippedWordOnce() {
+      if (_skipAdvanced) return;
+      _skipAdvanced = true;
+      try {
+        // A late save callback belongs only to the exact session/question that
+        // created it. Level changes, replay, restore, or exit must not advance
+        // whatever session happens to be global when the callback returns.
+        if (session !== _skipSession || session.index !== _skipIndex || session.words[_skipIndex] !== entry) return;
+        tfAdvanceCommittedWord();
+      }
+      finally { _skipSession.skipCommitPending = false; }
+    }
+    var usedGuide = !!session.hintUsed || !!session.currentWordGuideUsed;
     var awarded = Math.max(0, Number(session.currentWordScore) || 0);
     if (awarded) session.score = Math.max(0, (Number(session.score) || 0) - awarded);
     session.currentWordScore = 0;
@@ -3943,7 +3984,7 @@ var TF = {
       initialGuess: undefined,
       finalAnswer: undefined,
       attempts: [],
-      hintUsed: false,
+      hintUsed: usedGuide,
       score: 0,
       firstTry: false,
       golden: false,
@@ -3962,20 +4003,21 @@ var TF = {
         user_answer: '',
         correct_answer: '',
         is_correct: false,
+        is_practice: usedGuide,
         is_skipped: true,
         skip_reason: 'user_skip',
         wrong_count: 0,
         item_score: 0,
-        hint_used: false,
+        hint_used: usedGuide,
         linguistic: { reading_th: entry.readingTH || '', syls: entry.syls || null },
         words: (_skipSentence && advSentenceCtx.words) ? advSentenceCtx.words.map(function(w){return {th:w.th||'',zh:w.zh||''};}) : []
       });
     }
     if(window.LearningReview&&LearningReview.advance&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()){
-      LearningReview.advance(roundReport,tfAdvanceCommittedWord);
+      LearningReview.advance(roundReport,_advanceSkippedWordOnce);
       return;
     }
-    tfAdvanceCommittedWord();
+    _advanceSkippedWordOnce();
   },
   // 高級：เริ่มเล่นประโยคเต็ม 1 ประโยค — words[] ของประโยคกลายเป็น session เดียว (Lin 2026-07-03)
   // ใช้ startSetSession เดิมทุกอย่าง (คำทอง/คอมโบ/โบนัสจบชุด) แค่ส่ง entry object ตรงๆ ไม่ query WORD_LIST + ห้ามสลับลำดับคำ
@@ -4222,7 +4264,8 @@ var TF = {
       '', '練習記錄：', '----------'
     ];
     items.forEach(function(r,i){
-      lines.push((i+1)+'. '+(r.is_correct?'✓':'✗')+' '+r.question+' ('+r.meaning+') — 作答：'+(r.user_answer||'—')+' ／正解：'+(r.correct_answer||'—')+(r.wrong_count?' ／選錯'+r.wrong_count+'次':''));
+      var status = r.is_skipped ? '跳過' : (r.is_practice ? '純練習' : (r.is_correct ? '✓' : '✗'));
+      lines.push((i+1)+'. '+status+' '+r.question+' ('+r.meaning+') — 作答：'+(r.user_answer||'—')+' ／正解：'+(r.correct_answer||'—')+(r.wrong_count?' ／選錯'+r.wrong_count+'次':''));
     });
     var blob = new Blob([lines.join('\n')], {type:'text/plain;charset=utf-8'});
     var url = URL.createObjectURL(blob);

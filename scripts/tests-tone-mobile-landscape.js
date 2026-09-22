@@ -132,7 +132,7 @@ test('Tone preserves three left, three right and reveal actions in the right slo
   assert.match(stage, /children\.length === 6 \? 3/);
   assert.match(stage, /mountExistingNode\(uncertain, container\)/);
   assert.match(stage, /function syncToneRevealActions\([\s\S]{0,900}result-audio[\s\S]{0,260}result-english[\s\S]{0,260}result-next/);
-  assert.match(toneApp, /skipCurrentWord:\s*function\(\)[\s\S]{0,1500}is_skipped:\s*true/);
+  assert.match(toneApp, /skipCurrentWord:\s*function\(\)[\s\S]{0,2500}is_skipped:\s*true/);
   assert.match(css, /--gsh-ml-position-two-size:\s*clamp\(64px, 22\.5dvh, 88px\)/);
   assert.match(css, /data-gsh-game="tone"[^}]+--gsh-ml-tone-choice:\s*var\(--gsh-ml-position-two-size\)/);
   assert.match(css, /data-gsh-ml-split="tone"[^}]+align-content:\s*center/);

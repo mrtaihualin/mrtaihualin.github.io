@@ -190,7 +190,7 @@ test('Core 5 expose Login Core and retain audio recovery', () => {
     assert.match(html, /auth-widget\.js\?v=24/);
     assert.match(html, /reading-auth\.js\?v=35/);
     assert.match(html, /game-account\.js\?v=6/);
-    assert.match(html, /practice-events\.js\?v=4/);
+    assert.match(html, /practice-events\.js\?v=5/);
     assert.match(html, /protected-word-audio\.js\?v=4/);
   });
   const reading = read('reading-game.html');
@@ -198,7 +198,7 @@ test('Core 5 expose Login Core and retain audio recovery', () => {
   assert.match(reading, /reading-auth\.js\?v=35/);
   assert.match(reading, /game-account\.js\?v=6/);
   assert.match(reading, /learning-summary\.js\?v=1/);
-  assert.match(reading, /practice-events\.js\?v=4/);
+  assert.match(reading, /practice-events\.js\?v=5/);
   assert.match(reading, /protected-word-audio\.js\?v=4/);
 });
 test('parked account sources and active Login callback preserve current failure handling', () => {

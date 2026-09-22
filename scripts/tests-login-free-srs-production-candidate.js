@@ -30,7 +30,7 @@ pages.forEach(function (file) {
   check((file === 'tone-finder.html') === (html.indexOf('js/games/tone-server.js?v=6') !== -1),
     file + ' keeps tone-round transport only where the Paid Tone gate exists');
   check(html.indexOf('game-account.js?v=6') !== -1, file + ' activates the server-authoritative Free account facade');
-  check(html.indexOf('practice-events.js?v=4') !== -1, file + ' activates durable Login Free reporting');
+  check(html.indexOf('practice-events.js?v=5') !== -1, file + ' activates durable Login Free reporting');
   check(html.indexOf('games-challenge-app.js') === -1, file + ' does not activate Challenge runtime');
 });
 [
@@ -49,7 +49,7 @@ check(read('lego.html').indexOf('tone-server.js') === -1, 'Lego receives no SRS 
 check(read('js/core/minimum-guest-launch.js').indexOf('login-surface.js?v=16') !== -1, 'SRS pages fetch the account-aware Login surface');
 check(read('js/core/login-surface.js').indexOf('reading-auth.js?v=35') !== -1, 'Login surface fetches the account-aware auth client');
 check(read('reading-game.html').indexOf('reading-auth.js?v=35') !== -1, 'Reading direct provider flow fetches the account-aware auth client');
-check(read('tone-finder.html').indexOf('tone-finder-game.min.js?v=92') !== -1, 'Tone fetches the current game runtime');
+check(read('tone-finder.html').indexOf('tone-finder-game.min.js?v=99') !== -1, 'Tone fetches the current game runtime');
 check(read('reading-game.html').indexOf('reading-game-app.min.js?v=63') !== -1, 'Reading fetches the current game runtime');
 check(read('typing-game.html').indexOf('typing-game-app.min.js?v=61') !== -1, 'Typing fetches the current game runtime');
 check(read('word-order.html').indexOf('word-order-app.min.js?v=46') !== -1, 'Word Order fetches the current game runtime');

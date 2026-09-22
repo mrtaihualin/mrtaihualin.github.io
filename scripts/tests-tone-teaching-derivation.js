@@ -24,12 +24,38 @@ const initialToneMistakeStart = source.indexOf('function tfHandleInitialToneMist
 const initialToneMistakeEnd = source.indexOf('function stepSessionGuess()', initialToneMistakeStart);
 const deduceMistakeStart = source.indexOf('function tfHandleDeduceMistake(choiceLabel, errMsg)');
 const deduceMistakeEnd = source.indexOf('// เผยคำตอบจาก canonical catalog', deduceMistakeStart);
+const guideLockStart = source.indexOf('function tfLockCurrentWordForGuide()');
+const guideLockEnd = source.indexOf('// คำปัจจุบันเป็นหลายพยางค์ไหม', guideLockStart);
+const useHintStart = source.indexOf('function tfUseHint(keys)');
+const useHintEnd = source.indexOf('function tfHandleDeduceMistake(choiceLabel, errMsg)', useHintStart);
+const resetGuideStart = source.indexOf('function tfResetGuideForNextUnit()');
+const resetGuideEnd = source.indexOf('// Highlight the one reviewed teaching choice', resetGuideStart);
+const scoreEngineStart = source.indexOf('var TF_SCORE_CFG = {');
+const scoreEngineEnd = source.indexOf('// ===== TF_WORDSCORE', scoreEngineStart);
+const sessionBonusStart = source.indexOf('function tfResultIsNeutral(result)');
+const neutralHelperEnd = source.indexOf('function tfApplySessionBonus()', sessionBonusStart);
+const sessionBonusEnd = source.indexOf('function act(fn)', sessionBonusStart);
+const skipStart = source.indexOf('  skipCurrentWord: function() {');
+const skipEnd = source.indexOf('\n  },\n  // 高級', skipStart);
+const reportInnerStart = source.indexOf('function buildReportInner()');
+const reportInnerEnd = source.indexOf('function buildReportHTML()', reportInnerStart);
+const sessionSummaryStart = source.indexOf('function stepSessionSummary()');
+const sessionSummaryEnd = source.indexOf('function stepMistakeReview()', sessionSummaryStart);
 assert.ok(defsStart >= 0 && defsEnd > defsStart && teachingStart >= 0 && teachingEnd > teachingStart);
 assert.ok(wordScoreStart >= 0 && wordScoreEnd > wordScoreStart);
 assert.ok(forceRevealStart >= 0 && forceRevealEnd > forceRevealStart);
 assert.ok(startSessionStart >= 0 && startSessionEnd > startSessionStart);
 assert.ok(initialToneMistakeStart >= 0 && initialToneMistakeEnd > initialToneMistakeStart);
 assert.ok(deduceMistakeStart >= 0 && deduceMistakeEnd > deduceMistakeStart);
+assert.ok(guideLockStart >= 0 && guideLockEnd > guideLockStart);
+assert.ok(useHintStart >= 0 && useHintEnd > useHintStart);
+assert.ok(resetGuideStart >= 0 && resetGuideEnd > resetGuideStart);
+assert.ok(scoreEngineStart >= 0 && scoreEngineEnd > scoreEngineStart);
+assert.ok(sessionBonusStart >= 0 && sessionBonusEnd > sessionBonusStart);
+assert.ok(neutralHelperEnd > sessionBonusStart);
+assert.ok(skipStart >= 0 && skipEnd > skipStart);
+assert.ok(reportInnerStart >= 0 && reportInnerEnd > reportInnerStart);
+assert.ok(sessionSummaryStart >= 0 && sessionSummaryEnd > sessionSummaryStart);
 
 const sandbox = {
   __syllable: null,
@@ -79,8 +105,8 @@ vm.runInContext(source.slice(deduceMistakeStart, deduceMistakeEnd), initialWrong
 
 initialWrongSandbox.tfHandleInitialToneMistake({ isParticle: false });
 assert.strictEqual(initialWrongSandbox.session.curWordWrongGuess, true);
-assert.strictEqual(initialWrongSandbox.session.combo, 0);
-assert.strictEqual(initialWrongSandbox.session.curWordAllFirstTry, false);
+assert.strictEqual(initialWrongSandbox.session.combo, 4);
+assert.strictEqual(initialWrongSandbox.session.curWordAllFirstTry, true);
 assert.strictEqual(initialWrongSandbox.session.currentWordDeduct, 0);
 assert.strictEqual(initialWrongSandbox.session.currentWordMistakes, 0);
 assert.strictEqual(initialWrongSandbox.session.currentWordMistakesTotal, 0);
@@ -91,6 +117,300 @@ assert.strictEqual(initialWrongSandbox.session.currentWordDeduct, 1);
 assert.strictEqual(initialWrongSandbox.session.currentWordMistakes, 1);
 assert.strictEqual(initialWrongSandbox.session.currentWordMistakesTotal, 1);
 assert.strictEqual(initialWrongSandbox.TF_WORDSCORE.score(initialWrongSandbox.session), 7);
+
+const guideSandbox = {
+  session: {
+    score: 25,
+    combo: 4,
+    currentWordScore: 10,
+    curWordSylRawSum: 10,
+    currentWordFirstTry: true,
+    curWordAllFirstTry: true,
+    currentWordGuideUsed: false,
+    hintUsed: false,
+    currentWordGolden: true
+  },
+  __tips: 0,
+  __renderCount: 0,
+  tfCurWordIsParticle() { return false; },
+  tfUpdateScoreHud() {},
+  render() { guideSandbox.__renderCount += 1; },
+  showTip() { guideSandbox.__tips += 1; }
+};
+vm.createContext(guideSandbox);
+vm.runInContext(source.slice(guideLockStart, guideLockEnd), guideSandbox);
+vm.runInContext(source.slice(useHintStart, useHintEnd), guideSandbox);
+guideSandbox.tfUseHint(['high']);
+assert.strictEqual(guideSandbox.session.score, 15);
+assert.strictEqual(guideSandbox.session.currentWordScore, 0);
+assert.strictEqual(guideSandbox.session.currentWordGuideUsed, true);
+assert.strictEqual(guideSandbox.session.hintUsed, true);
+assert.strictEqual(guideSandbox.session.currentWordGolden, false);
+assert.strictEqual(guideSandbox.session.combo, 4);
+assert.strictEqual(guideSandbox.__renderCount, 1);
+assert.strictEqual(guideSandbox.__tips, 1);
+
+const guideResetSandbox = {
+  tfGuideMode: true,
+  __stored: null,
+  localStorage: { setItem(key, value) { guideResetSandbox.__stored = [key, value]; } },
+  tfSyncGuideBtn() {}
+};
+vm.createContext(guideResetSandbox);
+vm.runInContext(source.slice(resetGuideStart, resetGuideEnd), guideResetSandbox);
+guideResetSandbox.tfResetGuideForNextUnit();
+assert.strictEqual(guideResetSandbox.tfGuideMode, false);
+assert.deepStrictEqual(Array.from(guideResetSandbox.__stored), ['rg_guide_mode', '0']);
+
+const bonusSandbox = {
+  session: null,
+  setTimeout(fn) { fn(); },
+  tfRecordWordWrong() {},
+  tfApplyStreakOnSetComplete() { return null; },
+  tfUpdateBadgesOnSetComplete() { return []; },
+  tfChallengeBump() {},
+  tfRenderExtBar() {},
+  tfScorePop() {}
+};
+bonusSandbox.window = bonusSandbox;
+vm.createContext(bonusSandbox);
+vm.runInContext(source.slice(scoreEngineStart, scoreEngineEnd), bonusSandbox);
+vm.runInContext(source.slice(sessionBonusStart, sessionBonusEnd), bonusSandbox);
+bonusSandbox.session = {
+  results: Array.from({ length: 5 }, () => ({ firstTry: true, hintUsed: false })),
+  score: 50,
+  hardStarsEarned: 0,
+  maxCombo: 5
+};
+bonusSandbox.tfApplySessionBonus();
+assert.strictEqual(bonusSandbox.session.bonusAwarded, 70);
+assert.strictEqual(bonusSandbox.session.score, 120);
+assert.strictEqual(bonusSandbox.session.isPerfect, true);
+
+const neutralSessionShapes = [
+  ['hintUsed', { firstTry: true, hintUsed: true }],
+  ['hint_used', { firstTry: true, hint_used: true }],
+  ['skipped', { firstTry: true, skipped: true }],
+  ['is_skipped', { firstTry: true, is_skipped: true }],
+  ['is_practice', { firstTry: true, is_practice: true }]
+];
+for (const [label, neutralResult] of neutralSessionShapes) {
+  bonusSandbox.session = {
+    results: [neutralResult],
+    score: 10,
+    hardStarsEarned: 0,
+    maxCombo: 1
+  };
+  bonusSandbox.tfApplySessionBonus();
+  assert.strictEqual(bonusSandbox.session.bonusAwarded, 0, `${label} neutral-only round must receive no bonus`);
+  assert.strictEqual(bonusSandbox.session.score, 10, `${label} neutral-only round must not change score`);
+  assert.strictEqual(bonusSandbox.session.isPerfect, false, `${label} neutral-only round must not be Perfect`);
+}
+
+bonusSandbox.session = {
+  results: [
+    { firstTry: true, hintUsed: false },
+    { firstTry: true, hintUsed: false },
+    { firstTry: false, hintUsed: true },
+    { firstTry: true, hintUsed: false },
+    { firstTry: true, hintUsed: false }
+  ],
+  score: 40,
+  hardStarsEarned: 0,
+  maxCombo: 4
+};
+bonusSandbox.tfApplySessionBonus();
+assert.strictEqual(bonusSandbox.session.results.length, 5);
+assert.strictEqual(bonusSandbox.session.bonusAwarded, 0);
+assert.strictEqual(bonusSandbox.session.score, 40);
+assert.strictEqual(bonusSandbox.session.isPerfect, false);
+
+const skipSandbox = {
+  session: {
+    words: [
+      { word: 'กา', zh: '合成測試', readingTH: 'กา' },
+      { word: 'นา', zh: '合成測試二', readingTH: 'นา' }
+    ],
+    index: 0,
+    score: 40,
+    combo: 4,
+    currentWordScore: 0,
+    curWordSylRawSum: 0,
+    currentWordGuideUsed: true,
+    hintUsed: true,
+    results: Array.from({ length: 4 }, () => ({ firstTry: true, hintUsed: false })),
+    hardStarsEarned: 0,
+    maxCombo: 4
+  },
+  selectedLevel: 1,
+  advSentenceCtx: null,
+  roundReport: { items: [] },
+  tfNeutralSkipSurface() { return true; },
+  catalogToneNumber() { return 1; },
+  tfWordContentKey() { return 'synthetic@初'; },
+  RoundReport: { addItem(report, item) { report.items.push(item); } },
+  advances: 0,
+  tfAdvanceCommittedWord() { skipSandbox.advances += 1; skipSandbox.session.index += 1; },
+  setTimeout(fn) { fn(); },
+  tfRecordWordWrong() {},
+  tfApplyStreakOnSetComplete() { return null; },
+  tfUpdateBadgesOnSetComplete() { return []; },
+  tfChallengeBump() {},
+  tfRenderExtBar() {},
+  tfScorePop() {}
+};
+skipSandbox.window = skipSandbox;
+vm.createContext(skipSandbox);
+vm.runInContext(source.slice(scoreEngineStart, scoreEngineEnd), skipSandbox);
+vm.runInContext(source.slice(sessionBonusStart, sessionBonusEnd), skipSandbox);
+vm.runInContext(source.slice(skipStart, skipEnd).replace(/^\s*skipCurrentWord:\s*/, 'var skipCurrentWord = ') + '\n};', skipSandbox);
+skipSandbox.skipCurrentWord();
+skipSandbox.skipCurrentWord();
+assert.strictEqual(skipSandbox.session.results[4].hintUsed, true);
+assert.strictEqual(skipSandbox.roundReport.items[0].hint_used, true);
+assert.strictEqual(skipSandbox.session.results.length, 5, 'rapid double Skip must record one neutral result');
+assert.strictEqual(skipSandbox.roundReport.items.length, 1, 'rapid double Skip must emit one report item');
+assert.strictEqual(skipSandbox.advances, 1, 'rapid double Skip must advance one word');
+skipSandbox.tfApplySessionBonus();
+assert.strictEqual(skipSandbox.session.bonusAwarded, 0);
+assert.strictEqual(skipSandbox.session.score, 40);
+
+const oldAsyncSession = {
+  words: [
+    { word: 'เก่า', zh: '舊回合', readingTH: 'เก่า' },
+    { word: 'เก่าสอง', zh: '舊回合二', readingTH: 'เก่า-สอง' }
+  ],
+  index: 0,
+  score: 0,
+  combo: 0,
+  currentWordScore: 0,
+  curWordSylRawSum: 0,
+  currentWordGuideUsed: false,
+  hintUsed: false,
+  results: []
+};
+skipSandbox.session = oldAsyncSession;
+skipSandbox.pendingSkipAdvance = null;
+skipSandbox.LearningReview = {
+  runtimeEnabled() { return true; },
+  advance(report, callback) { skipSandbox.pendingSkipAdvance = callback; }
+};
+skipSandbox.skipCurrentWord();
+assert.strictEqual(oldAsyncSession.results.length, 1, 'async Skip must record the old question once');
+assert.strictEqual(oldAsyncSession.index, 0, 'async Skip must wait for the save acknowledgement');
+assert.strictEqual(oldAsyncSession.skipCommitPending, true, 'async Skip must stay locked while save is pending');
+const freshSession = {
+  words: [
+    { word: 'ใหม่', zh: '新回合', readingTH: 'ใหม่' },
+    { word: 'ใหม่สอง', zh: '新回合二', readingTH: 'ใหม่-สอง' }
+  ],
+  index: 0,
+  score: 0,
+  combo: 0,
+  currentWordScore: 0,
+  curWordSylRawSum: 0,
+  currentWordGuideUsed: false,
+  hintUsed: false,
+  results: []
+};
+skipSandbox.session = freshSession;
+skipSandbox.pendingSkipAdvance();
+skipSandbox.pendingSkipAdvance();
+assert.strictEqual(freshSession.index, 0, 'late old-session Skip callback must not advance a fresh session');
+assert.strictEqual(freshSession.results.length, 0, 'late old-session Skip callback must not add fresh-session evidence');
+assert.strictEqual(oldAsyncSession.skipCommitPending, false, 'ignored late callback must release only its old-session lock');
+skipSandbox.LearningReview.runtimeEnabled = function () { return false; };
+skipSandbox.skipCurrentWord();
+assert.strictEqual(freshSession.index, 1, 'fresh session must not inherit the old Skip lock');
+assert.strictEqual(freshSession.results.length, 1, 'fresh session must still record its own Skip');
+
+const isolatedNeutralReportItems = [
+  {
+    question: '練習優先', meaning: '合成測試', attempts: [], user_answer: '', correct_answer: '第五聲',
+    is_correct: true, is_practice: true, is_skipped: false, hint_used: false, wrong_count: 0, item_score: 0,
+    linguistic: { correct_tone: 5 }
+  },
+  {
+    question: '跳過優先', meaning: '合成測試', attempts: [], user_answer: '', correct_answer: '第五聲',
+    is_correct: true, is_practice: false, is_skipped: true, hint_used: false, wrong_count: 0, item_score: 0,
+    linguistic: { correct_tone: 5 }
+  },
+  {
+    question: '提示優先', meaning: '合成測試', attempts: [], user_answer: '', correct_answer: '第五聲',
+    is_correct: true, is_practice: false, is_skipped: false, hint_used: true, wrong_count: 0, item_score: 0,
+    linguistic: { correct_tone: 5 }
+  }
+];
+
+const reportModelSandbox = {
+  session: { results: [] },
+  roundReport: { items: isolatedNeutralReportItems, score: 0 },
+  selectedLevel: 1,
+  TONES: { 5: { zh: '第五聲', color: '#000' } },
+  TF_SCORE: { weightedScore(score) { return score; } },
+  RoundReport: { loginSectionsHtml() { return ''; } },
+  tfSrsLoggedIn() { return false; },
+  Date
+};
+reportModelSandbox.window = reportModelSandbox;
+vm.createContext(reportModelSandbox);
+vm.runInContext(source.slice(sessionBonusStart, neutralHelperEnd), reportModelSandbox);
+vm.runInContext(source.slice(reportInnerStart, reportInnerEnd), reportModelSandbox);
+const reportModelHtml = reportModelSandbox.buildReportInner();
+assert.match(reportModelHtml, /一次答對題數<\/td><td[^>]*>0 \/ 3<\/td>/, 'Tone report model must exclude isolated contradictory practice/Skip/Hint flags from Clean');
+assert.match(reportModelHtml, /跳過優先[\s\S]{0,500}<span[^>]*>跳過<\/span>/, 'Hint → Skip must keep Skip priority in Tone report rows');
+assert.match(reportModelHtml, /提示優先[\s\S]{0,500}<span[^>]*>純練習<\/span>/, 'isolated Tone hint_used must render as neutral practice, never correct');
+
+function renderToneSummary(reportItems, scoreResults) {
+  const events = [];
+  const summarySandbox = {
+    session: {
+      results: scoreResults,
+      score: 0,
+      bonusAwarded: 0,
+      submissionLinked: true,
+      isPerfect: false,
+      newBadges: [],
+      streakResult: { state: { streak: 0 }, events: {} }
+    },
+    roundReport: { items: reportItems },
+    selectedLevel: 1,
+    TONES: { 5: { zh: '第五聲', color: '#000' } },
+    TF_SCORE: { weightedScore(score) { return score; } },
+    TF_SCORE_CFG: { LEVEL_WEIGHT: { 1: 1 } },
+    gtag() { events.push(Array.from(arguments)); },
+    tfDesktopOrPortrait() { return false; },
+    tfLoadStreak() { return { streak: 0 }; },
+    tfMinaSay() { return ''; },
+    tfMinaBubble() { return ''; },
+    tfBadgeIcon() { return ''; },
+    Math,
+    Number
+  };
+  summarySandbox.window = summarySandbox;
+  vm.createContext(summarySandbox);
+  vm.runInContext(source.slice(sessionBonusStart, neutralHelperEnd), summarySandbox);
+  vm.runInContext(source.slice(sessionSummaryStart, sessionSummaryEnd), summarySandbox);
+  return { html: summarySandbox.stepSessionSummary(), events };
+}
+
+const reportModelScoreResults = isolatedNeutralReportItems.map(function (row) {
+  return { entry: { word: row.question }, firstTry: true, mistakes: 0, score: 0 };
+});
+const scoreResultsWithNeutralFlags = [
+  { entry: { word: 'hintUsed' }, firstTry: true, hintUsed: true, mistakes: 0, score: 0 },
+  { entry: { word: 'skipped' }, firstTry: true, skipped: true, mistakes: 0, score: 0 },
+  { entry: { word: 'is_practice' }, firstTry: true, is_practice: true, mistakes: 0, score: 0 },
+  { entry: { word: 'is_skipped' }, firstTry: true, is_skipped: true, mistakes: 0, score: 0 },
+  { entry: { word: 'hint_used' }, firstTry: true, hint_used: true, mistakes: 0, score: 0 }
+];
+const resultModel = renderToneSummary(isolatedNeutralReportItems, reportModelScoreResults);
+assert.match(resultModel.html, /class="tf-sum-score gsh-end-score">0 \/ 3<\/div>/, 'Tone Result report model must exclude isolated contradictory practice/Skip/Hint flags from Clean');
+assert.strictEqual(resultModel.events[0][2].perfect, 0, 'Tone Result analytics must use the neutral-safe report count');
+
+const resultFallback = renderToneSummary([], scoreResultsWithNeutralFlags);
+assert.match(resultFallback.html, /class="tf-sum-score gsh-end-score">0 \/ 5<\/div>/, 'Tone Result fallback must exclude canonical, DTO, and snake_case neutral flags from Clean');
+assert.strictEqual(resultFallback.events[0][2].perfect, 0, 'Tone fallback analytics must use the neutral-safe count');
 
 const firstMultiRecord = catalog.records.find((record) => record.level === '中' && record.syllables.length > 1);
 assert.ok(firstMultiRecord, 'canonical intermediate multi-syllable fixture is required');
@@ -107,6 +427,7 @@ const firstWordSandbox = {
   S: null,
   __reveal: null,
   tfRollGolden() { return false; },
+  tfResetGuideForNextUnit() { firstWordSandbox.tfGuideMode = false; },
   tfSetupSrsFlagsForCurrentWord() {},
   tfCurWordNoTools() { return false; },
   tfSaveResumeState() {},
@@ -187,8 +508,22 @@ assert.match(source, /tfHandleInitialToneMistake\(entry\);[\s\S]{0,260}navigateT
 assert.doesNotMatch(source.slice(initialToneMistakeStart, initialToneMistakeEnd), /recordMistake|TF_WORDSCORE\.onWrong|TF_WORDSCORE\.onNextStep/);
 assert.match(source.slice(deduceMistakeStart, deduceMistakeEnd), /recordMistake\([\s\S]{0,120}TF_WORDSCORE\.onWrong\(session\)/);
 assert.match(source, /function tfScoreDeduce\(\)[\s\S]{0,1500}TF_WORDSCORE\.score\(session\)/);
+assert.match(source, /function tfScoreDeduce\(\)[\s\S]{0,700}currentWordDeduct[\s\S]{0,180}tfScoreFirstTry\(\)/);
 assert.match(source, /if \(TF_WORDSCORE\.isDead\(session\)\) \{\s*tfForceRevealZero\(\);/);
 assert.match(source, /session\.initialGuess = 0;[\s\S]{0,650}navigateToInflection\(\);/);
+assert.match(source, /function tfAdvanceCommittedWord\(\)[\s\S]{0,120}tfResetGuideForNextUnit\(\)[\s\S]{0,120}tfResetWordScoring\(\)/);
+assert.match(source, /function startSetSession\(words, opts\)[\s\S]{0,180}tfResetGuideForNextUnit\(\)/);
+assert.match(source, /function tfResultIsNeutral\(result\)[\s\S]{0,180}result\.is_practice[\s\S]{0,180}result\.hint_used[\s\S]{0,180}result\.skipped/);
+assert.match(source, /var perfectCount\s*=\s*scoredResults\.filter[\s\S]{0,180}!tfResultIsNeutral\(r\)[\s\S]{0,220}hadNeutralResult[\s\S]{0,220}sessionBonus\(total, perfectCount\)/);
+assert.match(source, /needReview:\s*!session\.currentWordGuideUsed\s*&&/);
+assert.match(source, /is_practice:\s*_tfResult\.hintUsed/);
+assert.match(source, /isNeutral\s*\?\s*'純練習'/);
+assert.match(source, /var isWrong\s*=\s*!r\.is_correct\s*&&\s*!isNeutral/);
+assert.match(source, /if \(!entry\.isParticle && !session\.currentWordGuideUsed && tfSrsLoggedIn\(\)\)/);
+assert.match(source, /if \(_tfResult\.hintUsed\) roundReport\.learning_exempt = true;/);
+assert.match(source, /finally \{\s*roundReport\.learning_exempt = _tfRoundWasLearningExempt;/);
+assert.doesNotMatch(source.slice(guideLockStart, guideLockEnd), /session\.combo\s*=/);
+assert.doesNotMatch(source.slice(useHintStart, useHintEnd), /TF_WORDSCORE\.onPeek|tfForceRevealZero/);
 assert.match(source, /startGuidedQuestion:[\s\S]{0,420}navigateToInflection\(\)/);
 assert.match(source, /var newTone = nextStep === 'result' \? catalogToneNumber\(\) : null/);
 assert.doesNotMatch(source, /\bTH\.|TH_ENGINE|computeTone|TONE_OVERRIDE|getInitClass|getVowelType|isLiveWord/);

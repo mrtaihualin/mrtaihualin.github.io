@@ -99,7 +99,7 @@ function normalizeItem(game, item) {
       !refKey || refKey.trim() !== refKey || refKey !== key) fail('invalid_content_ref');
   const points = finiteInt(item.points, 'invalid_item_points', 0, ITEM_CAP[game]);
   const wrong = finiteInt(item.wrong, 'invalid_wrong_count', 0, 100);
-  const guide = item.guide === true;
+  const guide = item.guide === true || (game === 'tone' && item.hint_used === true);
   const failed = item.failed === true;
   const mastered = item.mastered === true;
 
@@ -157,7 +157,7 @@ export function validateScoreSubmission(body) {
   const cleanItems = items.filter((item) => item.wrong === 0 && !item.guide && !item.failed).length;
   const perfectEligible = cleanItems === items.length;
   if (roundBonus === 70 && !perfectEligible) fail('invalid_perfect_bonus');
-  if ((game === 'reading' || game === 'typing') && items.some((item) => item.guide) && roundBonus !== 0) {
+  if ((game === 'tone' || game === 'reading' || game === 'typing') && items.some((item) => item.guide) && roundBonus !== 0) {
     fail('invalid_round_bonus');
   }
   if ((game === 'reading' || game === 'typing' || game === 'listening') && srsBonus !== 0) fail('invalid_srs_bonus');

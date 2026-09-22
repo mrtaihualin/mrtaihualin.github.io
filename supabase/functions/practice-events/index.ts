@@ -83,6 +83,8 @@ async function record(admin: any, userId: string, normalized: any) {
     item_id: ids[index],
     ordinal: item.ordinal,
     is_correct: item.is_correct,
+    ...(item.is_practice ? { is_practice: true } : {}),
+    ...(item.is_skipped ? { is_skipped: true } : {}),
     wrong_count: item.wrong_count,
     hint_used: item.hint_used,
     listen_count: item.listen_count,
