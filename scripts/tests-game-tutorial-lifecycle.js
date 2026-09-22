@@ -155,15 +155,15 @@ for (const [file, game, resume, howto, resumeId] of pages) {
 const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
 const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
 assert.match(legoHtml, /js\/games\/game-tutorial-lifecycle\.js\?v=2/);
-assert.match(legoHtml, /js\/games\/lego-game-app\.js\?v=14/);
+assert.match(legoHtml, /js\/games\/lego-game-app\.js\?v=15/);
 assert.ok(legoHtml.includes("window.__legoHadGuestResumeAtLoad=!!localStorage.getItem('gsh_resume_lego')"));
 assert.match(legoApp, /seenKey:'howto_tour_seen_lego'/);
 assert.ok(legoApp.includes('window.__legoHadGuestResumeAtLoad===true'));
 assert.ok(legoApp.includes("blockers:['#lego-resume-banner','#lego-howto-modal']"));
 
 const listening = fs.readFileSync(path.join(root, 'listening-game.html'), 'utf8');
-assert.match(listening, /data-listening-availability="coming-soon"/);
-assert.match(listening, /body\[data-listening-availability="coming-soon"\] \.mrt-login-howto,[\s\S]{0,220}#lg-howto-modal\{display:none!important;\}/);
+assert.match(listening, /GameContentLoader\.boot\(\['js\/games\/listening-game-app\.js\?v=20'\], \{game:'listening'\}\)/);
+assert.doesNotMatch(listening, /data-listening-availability="coming-soon"/);
 
 const browserHarness = fs.readFileSync(path.join(root, 'scripts/browser-tests/game-tutorial-lifecycle.html'), 'utf8');
 assert.match(browserHarness, /name:'Desktop', width:1440, height:900/);
@@ -176,10 +176,6 @@ assert.match(browserHarness, /load\(config, 8300\)/);
 assert.match(browserHarness, /tour stays hidden while Resume owns the screen/);
 assert.match(browserHarness, /automatic tour does not overlap manual 玩法/);
 assert.match(browserHarness, /existing Guest Resume suppresses automatic tutorial and migrates seen state/);
-const listeningHarness = fs.readFileSync(path.join(root, 'scripts/browser-tests/listening-off-consistency.html'), 'utf8');
-assert.match(listeningHarness, /width:844px; height:390px/);
-assert.match(listeningHarness, /\.mrt-login-howto,#lg-howto-btn,#lg-howto-modal/);
-assert.match(listeningHarness, /listening-game-app\\\.js/);
 const completionHarness = fs.readFileSync(path.join(root, 'scripts/browser-tests/game-full-completion-regression.html'), 'utf8');
 for (const [file] of pages.concat([['lego.html']])) assert.ok(completionHarness.includes(`page:'${file}'`));
 assert.match(completionHarness, /name:'Desktop', width:1440, height:900/);

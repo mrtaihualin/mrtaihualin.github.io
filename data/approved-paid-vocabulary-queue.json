@@ -3,7 +3,10 @@
   "queueId": "approved-paid-vocabulary-queue",
   "state": "queued-owner-only",
   "accessTier": "paid",
-  "runtimeConsumption": "tone-owner_all_access-only",
+  "runtimeConsumption": "all-six-owner_all_access-paid193-only",
+  "runtimeCatalogVersion": "paid-queue-193-v1",
+  "runtimeRecordCount": 193,
+  "supersedesRuntimeCatalogVersion": "paid-queue-189-v1",
   "migrationState": "source-ready-production-pending",
   "recordCount": 382,
   "levelCounts": {
@@ -25,7 +28,7 @@
     {
       "catalogVersion": "paid-queue-193-v1",
       "sourceRef": "data/approved-paid-vocabulary-193.json",
-      "sourceSha256": "6571597779ae7ddfeca3a3e4eff730569c50fb5f2916cc3f515b0cd62745226e",
+      "sourceSha256": "08ec682040da7474ca7b338255172e130b9a37477b3588de5257179353627d01",
       "recordCount": 193,
       "uniqueWrittenCount": 192,
       "levelCounts": {

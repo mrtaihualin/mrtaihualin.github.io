@@ -75,14 +75,14 @@ gtag("config","G-DKVQE30982");window.GA_CATEGORY="game";</script>
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
-<title>泰語聽力練習室・即將開幕 — 泰華眼裡的泰語教學</title>
-<meta name="description" content="泰語聽力練習室目前暫停開放，完成準備後再正式開幕。">
+<title>泰語聽力練習室 — 泰華眼裡的泰語教學</title>
+<meta name="description" content="免費泰語聽力練習室：聽發音選出或輸入正確泰文，練耳朵也練拼寫。">
 <link rel="canonical" href="https://www.mrtaihualin.com/listening-game.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="泰華眼裡的泰語教學">
 <meta property="og:locale" content="zh_TW">
-<meta property="og:title" content="泰語聽力練習室・即將開幕 — 泰華眼裡的泰語教學">
-<meta property="og:description" content="泰語聽力練習室目前暫停開放，完成準備後再正式開幕。">
+<meta property="og:title" content="泰語聽力練習室 — 泰華眼裡的泰語教學">
+<meta property="og:description" content="聽發音選出或輸入正確泰文，練耳朵也練拼寫。">
 <meta property="og:url" content="https://www.mrtaihualin.com/listening-game.html">
 <meta property="og:image" content="https://www.mrtaihualin.com/assets/share-card.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -92,7 +92,7 @@ gtag("config","G-DKVQE30982");window.GA_CATEGORY="game";</script>
   "@type": "WebApplication",
   "additionalType": "https://schema.org/LearningResource",
   "name": "泰語聽力練習室",
-  "description": "泰語聽力練習室目前暫停開放，完成準備後再正式開幕。",
+  "description": "免費泰語聽力練習室：聽發音選出或輸入正確泰文，練耳朵也練拼寫。",
   "url": "https://www.mrtaihualin.com/listening-game.html",
   "applicationCategory": "EducationalApplication",
   "operatingSystem": "Web",
@@ -110,8 +110,8 @@ gtag("config","G-DKVQE30982");window.GA_CATEGORY="game";</script>
   }
 }
 </script>
-<meta name="twitter:title" content="泰語聽力練習室・即將開幕 — 泰華眼裡的泰語教學">
-<meta name="twitter:description" content="泰語聽力練習室目前暫停開放，完成準備後再正式開幕。">
+<meta name="twitter:title" content="泰語聽力練習室 — 泰華眼裡的泰語教學">
+<meta name="twitter:description" content="聽發音選出或輸入正確泰文，練耳朵也練拼寫。">
 <meta name="twitter:image" content="https://www.mrtaihualin.com/assets/share-card.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@400;500;700&family=Sarabun:wght@400;600;700&family=Noto+Sans+Thai:wght@400;500;700&display=swap" rel="stylesheet">
@@ -134,7 +134,7 @@ gtag("config","G-DKVQE30982");window.GA_CATEGORY="game";</script>
 <script src="js/games/protected-word-audio.js?v=4"></script><!-- Core 5: isolated Guest audio client + temporary global game-audio switch -->
 <script src="js/games/word-menu.js?v=10"></script><!-- เครื่องมือช่วยเรียนแบบแถวตรง -->
 <script src="js/core/network-guard.js?v=1"></script>
-<script src="js/games/game-content-client.js?v=21"></script>
+<script src="js/games/game-content-client.js?v=23"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 .v3-page{font-family:'Sarabun',sans-serif;display:flex;flex-direction:column;align-items:center;padding-top:8px;padding-bottom:112px;}
@@ -240,14 +240,6 @@ body.rg-modern-font .lg-opt,
 body.rg-modern-font .lg-type-input,
 body.rg-modern-font .lg-rev-th { font-family:'Noto Sans Thai','Sarabun',sans-serif !important; }
 
-#listening-live-game,#game-switcher,
-body[data-listening-availability="coming-soon"] .mrt-login-howto,
-body[data-listening-availability="coming-soon"] #lg-howto-btn,
-body[data-listening-availability="coming-soon"] #lg-howto-modal{display:none!important;}
-.lg-coming-soon-card{min-height:220px;justify-content:center;text-align:center;gap:14px;}
-.lg-coming-soon-icon{font-size:52px;line-height:1;}
-.lg-coming-soon-title{font-family:'Noto Serif TC',serif;font-size:24px;font-weight:900;color:var(--gold);}
-.lg-coming-soon-back{margin-top:4px;}
 </style>
 <script type="application/ld+json">
 {
@@ -279,7 +271,7 @@ body[data-listening-availability="coming-soon"] #lg-howto-modal{display:none!imp
 <script defer src="js/games/word-vault.js?v=8"></script>
 <script defer src="js/games/sentence-vault.js?v=4"></script>
 </head>
-<body data-gsh-game="listening" data-listening-availability="coming-soon">
+<body data-gsh-game="listening">
 
 <nav class="site-nav"><div class="nav-logo" onclick="goHome()"><span class="logo-accent">泰華</span><span class="logo-dim">眼裡的</span><span class="logo-main">泰語教學</span></div><ul class="nav-links"><li><a href="/games.html" class="nav-cta-secondary">🎮 遊戲</a></li><li><a href="javascript:void(0)" class="has-drop">課程與老師</a><div class="nav-drop"><a href="/index.html#teacher">關於老師</a><a href="/pricing.html#testimonials">學生回饋</a><a href="/pricing.html#pricing">費用方案</a><a href="/pricing.html#how">上課方式</a></div></li><li><a href="javascript:void(0)" class="has-drop">常見資訊</a><div class="nav-drop"><a href="/faq.html#faq">FAQ</a><a href="/faq.html#rules">上課須知</a><a href="/faq.html#feedback-section">分享經驗</a></div></li><li><a href="javascript:void(0)" class="has-drop">泰語學習資源</a><div class="nav-drop"><a href="/content.html">📚 泰語學習資源</a><a href="/blog.html#articles">📝 泰語學習文章</a><a href="/resources.html#video-learning">🎬 影音學習</a><a href="/blog.html#selfstudy">📖 自學資源</a><a href="javascript:void(0)" onclick="openModal('modal-quiz')">程度測驗</a><a href="/index.html#problems">學習困境</a><a href="/community.html">🇹🇭 泰語學習心聲與提問</a></div></li><li><a href="javascript:void(0)" class="has-drop">其他服務</a><div class="nav-drop"><a href="/page-services.html#tour-guide">🗺️ 導遊</a><a href="/page-services.html#drama">🎬 字幕翻譯</a><a href="/page-services.html#interpret">🎙️ 口譯</a><a href="/page-services.html#quote-form">📋 報價</a></div></li><li><a href="javascript:void(0)" onclick="openModal('modal-contact')">聯絡我們</a></li><li><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="nav-cta">免費試聽</a></li></ul><div class="nav-mobile-actions"><a class="nav-mobile-game" href="/games.html">🎮 遊戲</a><button class="nav-mobile-cta" onclick="openModal('modal-line-qr')">免費試聽</button></div><div class="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></div></nav><!--NAV-FIT:START--><script>(function(){try{function f(){var n=document.querySelector("nav.site-nav");if(!n)return;var l=n.querySelector(".nav-logo"),k=n.querySelector(".nav-links");if(!l||!k)return;n.classList.remove("nav-compact");k.style.cssText="";var cs=window.getComputedStyle(n);var pl=parseFloat(cs.paddingLeft)||0,pr=parseFloat(cs.paddingRight)||0;var avail=n.clientWidth-pl-pr;var need=l.scrollWidth+k.scrollWidth+12;if(need>avail){n.classList.add("nav-compact");}}window.__navFit=f;f();}catch(e){}})();</script><!--NAV-FIT:END-->
 
@@ -293,18 +285,7 @@ body[data-listening-availability="coming-soon"] #lg-howto-modal{display:none!imp
   <a href="games.html">泰語・遊戲</a>
 </div>
 
-<main class="v3-page gsh-shell" id="listening-coming-soon">
-  <div class="page-header gsh-page-header">
-    <h1 class="page-title" style="margin:0;">🎧 聽力練習室</h1>
-  </div>
-  <div class="card lg-coming-soon-card" role="status" aria-label="聽力練習室即將開幕">
-    <div class="lg-coming-soon-icon" aria-hidden="true">🎧</div>
-    <div class="lg-coming-soon-title">即將開幕</div>
-    <a class="btn btn-secondary lg-coming-soon-back" href="games-practice.html">返回遊戲練習室</a>
-  </div>
-</main>
-
-<div class="v3-page gsh-shell" id="listening-live-game" aria-hidden="true">
+<div class="v3-page gsh-shell" id="listening-live-game">
 
 <div class="page-header gsh-page-header">
   <h1 class="page-title" style="margin:0;">🎧 聽力練習室</h1>
@@ -476,7 +457,9 @@ document.addEventListener('DOMContentLoaded', function () {
 <div id="game-switcher" data-current="listening_game"></div>
 <script src="js/games/game-switcher.js?v=9"></script>
 
-<!-- Preserved paused runtime: js/games/listening-game-app.js?v=19. Do not boot while Listening is marked 即將開幕. -->
+<script>
+GameContentLoader.boot(['js/games/listening-game-app.js?v=20'], {game:'listening'}).catch(function(){ /* boot() แสดง error banner ให้แล้ว */ });
+</script>
 
 <!-- Cookie consent banner (Google Consent Mode v2) — แทรกอัตโนมัติโดย scripts/apply-cookie-consent.js ห้ามแก้มือ ให้แก้ที่ต้นฉบับแล้วรันสคริปต์ใหม่ -->
 <style>

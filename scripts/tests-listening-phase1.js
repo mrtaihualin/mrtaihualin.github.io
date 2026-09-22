@@ -118,9 +118,9 @@ check('reading-auth รองรับ route/game listening', /listening-game/.t
 check('Listening keeps account reporting but loads neither SRS nor Review',
   /reading-auth\.js\?v=35/.test(html) && /game-account\.js\?v=6/.test(html) && /practice-events\.js\?v=4/.test(html) &&
   !/(?:tone-server|learning-review)\.js/.test(html) && /typing-score\.js\?v=1/.test(html) && /listening-score\.js\?v=1/.test(html));
-check('Listening เก็บคำอธิบาย runtime เดิมไว้ แต่ OFF shell ซ่อน 玩法 ทุก surface',
+check('Listening เปิด runtime จริงและยังมีคำอธิบาย玩法ครบ',
   /id="lg-howto-modal"/.test(html) && /打字加分降到 0/.test(html) && /聽力分數降到 0/.test(html) &&
-  /body\[data-listening-availability="coming-soon"\] \.mrt-login-howto,[\s\S]{0,220}#lg-howto-modal\{display:none!important;\}/.test(html));
+  !/data-listening-availability="coming-soon"/.test(html));
 check('Edge ปฏิเสธ SRS game=listening',
   /\["tone", "reading", "typing", "wordorder"\]\.includes\(game\)/.test(edge) && !/"listening"/.test(edge));
 check('tone-round ปิดเส้นทาง Login Free เดิมและส่งไป Learning Engine ใหม่', /learning_engine_required/.test(edge));
@@ -129,7 +129,7 @@ check('Listening อ่าน SRS ของ game=listening กลับจาก
 check('Listening SRS query ผูก captured owner เป็น defense-in-depth', /\.eq\('game', 'listening'\)\s*\.eq\('user_id', owner\.uid\)/.test(app) && /options\.load\(owner\)/.test(app));
 check('Listening แยก Due/mastered และจัดรอบ Free 20%', /isSrsDue/.test(app) && /!\(rec && rec\.mastered\)/.test(app) && /tier:\s*'free'/.test(app) && /GameFlow\.allocateSrs/.test(app) && /LearningReview\.allocateRuntime/.test(app));
 check('Listening SRS read ใช้ NetworkGuard แบบ bounded และไม่ retry blind', /NetworkGuard\.request\([\s\S]*'listening-srs', \{\}, 10000, null\)/.test(app));
-check('Listening เก็บ runtime v19 ไว้แต่ไม่ boot ระหว่างขึ้น 即將開幕', /options\.delay\(1500\)/.test(app) && /Preserved paused runtime: js\/games\/listening-game-app\.js\?v=19/.test(html) && !/GameContentLoader\.boot\(\['js\/games\/listening-game-app\.js/.test(html));
+check('Listening boot runtime v20 ผ่านคลังกลาง', /options\.delay\(1500\)/.test(app) && /GameContentLoader\.boot\(\['js\/games\/listening-game-app\.js\?v=20'\], \{game:'listening'\}\)/.test(html));
 check('Listening มี leaderboard ของตัวเองและ auth ชี้ถูกหน้า', /READING_BOARD_GAME = 'listening'/.test(board) && /listening-board\.html/.test(auth));
 check('Leaderboard client รองรับ game=listening', /READING_BOARD_GAME === 'listening'/.test(boardClient) && /listening-game\.html/.test(boardClient));
 check('Core 5 SQL contract รองรับ Listening และ weekly เริ่มวันจันทร์ Taipei', /'reading', 'listening', 'typing', 'word_order'/.test(boardSql) && /date_trunc\('week', timezone\('Asia\/Taipei'/.test(boardSql));

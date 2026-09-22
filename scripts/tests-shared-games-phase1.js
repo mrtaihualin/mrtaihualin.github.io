@@ -47,16 +47,13 @@ test('Listening keeps its ordinary Desktop Account Bar compact without changing 
   assert.match(listening, /@media \(min-width:769px\) and \(min-height:601px\)[\s\S]{0,180}\.lg-account-context-chip\{display:none;\}/, 'Listening must hide only the duplicate context on ordinary Desktop');
 });
 
-test('Listening is temporarily closed without deleting its paused game implementation', () => {
+test('Listening is active through the protected central-content runtime', () => {
   const practice = fs.readFileSync(path.join(root, 'games-practice.html'), 'utf8');
   const listening = games.find((g) => g.id === 'listening').htmlText;
-  assert.match(practice, /class="gh-card gh-soon"[^>]+data-game-availability="coming-soon"/);
-  assert.doesNotMatch(practice, /<a[^>]+href="listening-game\.html"/);
-  assert.match(listening, /data-listening-availability="coming-soon"/);
-  assert.match(listening, /id="listening-coming-soon"[\s\S]{0,500}即將開幕/);
-  assert.match(listening, /id="listening-live-game"[^>]+aria-hidden="true"/);
-  assert.match(listening, /Preserved paused runtime: js\/games\/listening-game-app\.js\?v=19/);
-  assert.doesNotMatch(listening, /GameContentLoader\.boot\(\['js\/games\/listening-game-app\.js/);
+  assert.match(practice, /<a class="gh-card" href="listening-game\.html"/);
+  assert.doesNotMatch(practice, /data-game-availability="coming-soon"/);
+  assert.doesNotMatch(listening, /data-listening-availability="coming-soon"|id="listening-coming-soon"|id="listening-live-game"[^>]+aria-hidden="true"/);
+  assert.match(listening, /GameContentLoader\.boot\(\['js\/games\/listening-game-app\.js\?v=20'\], \{game:'listening'\}\)/);
 });
 
 test('Tone ordinary Desktop main and secondary headers exactly match the Core game header contract', () => {
@@ -543,7 +540,7 @@ test('Lego consumes the shared two-mode font path without a particle control', (
   const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
   const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
   assert.match(legoHtml, /shared\.min\.js\?v=52/, 'Lego keeps the unchanged shared game runtime');
-  assert.match(legoHtml, /lego-game-app\.js\?v=14/, 'Lego must load its Guest-only quota runtime');
+  assert.match(legoHtml, /lego-game-app\.js\?v=15/, 'Lego must load its central-vocabulary quota runtime');
   assert.match(legoApp, /window\.rgToggleFont\s*=\s*function/, 'Lego must expose the shared font adapter API');
   assert.match(legoApp, /classList\.toggle\('rg-modern-font'\)/, 'Lego must preserve the existing standard/modern modes');
   assert.match(legoApp, /localStorage\.setItem\('rg_modern_font'/, 'Lego must reuse the shared font preference');
@@ -574,7 +571,7 @@ test('Lego exposes only the locked minimum-release presentation', () => {
   assert.match(legoApp, /showFirstCorrect:false/, 'non-applicable first-attempt proof must be omitted from Lego Result');
 });
 
-test('Lego exposes only the locked word sets and branch grammar', () => {
+test('Lego projects every runtime word role from the authenticated central catalog', () => {
   const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
   const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
   const block = (start, end) => {
@@ -584,24 +581,28 @@ test('Lego exposes only the locked word sets and branch grammar', () => {
     return legoApp.slice(from, to);
   };
   const words = block('const WORDS={', '// ════════ SESSION POOL');
-  const locations = block('const LOCATION_WORDS=[', 'const SLEEP_LOCATION');
-  for (const th of ['ตอนนี้','วันนี้','พรุ่งนี้','เรา','ผม','พี่','อยาก','จะ','กำลัง','กิน','ไป','ไปกิน','นอน','ไปนอน','ซื้อ','ไปซื้อ','ข้าว','ขนม','ผลไม้','ไก่ย่าง','ก๋วยเตี๋ยว','ของกิน','เสื้อ','รองเท้า','กระเป๋า','กางเกง','ตั๋ว','อยู่','พ่อ','แม่','เพื่อน','แฟน','นะ','นะครับ','นะคะ','อะ','ครับ','ค่ะ']) {
-    assert.match(words, new RegExp(`th:'${th}'`), `locked word ${th} is missing`);
-  }
-  for (const th of ['ห้าง','บ้านเพื่อน','เซเว่น','ร้านอาหาร']) {
-    assert.match(locations, new RegExp(`th:'${th}'`), `locked location ${th} is missing`);
-  }
+  assert.match(legoApp, /const CENTRAL_CATALOG=Array\.isArray\(window\.WORDS_MASTER\)[\s\S]{0,120}row&&row\.catalog/);
+  assert.match(legoApp, /const CENTRAL_NOUNS=legoUniqueRole/);
+  assert.match(legoApp, /const CENTRAL_SUBJECTS=legoUniqueRole/);
+  assert.match(legoApp, /const CENTRAL_VERBS=legoUniqueRole/);
+  assert.match(legoApp, /const LOCATION_WORDS=legoUniqueRole/);
+  assert.match(legoApp, /const PERSON_WORDS=legoUniqueRole/);
+  assert.match(legoApp, /const TIME_WORDS=legoUniqueRole/);
+  assert.match(words, /time:TIME_WORDS[\s\S]*subj:CENTRAL_SUBJECTS[\s\S]*verb:CENTRAL_VERBS[\s\S]*obj:CENTRAL_NOUNS[\s\S]*adv:PERSON_WORDS/);
+  assert.doesNotMatch(legoApp, /const SLEEP_LOCATION|const SUBJ_EXTRA|objTags|tags:\['/);
   const active = block('function activeSlots(){', '// ════════ CSS VARS');
-  assert.match(active, /verb==='ไป'\|\|verb==='นอน'/, 'only ไป/นอน may expose a location branch');
-  assert.match(active, /verb==='ไป'&&!!state\.advObj/, 'Who must follow a selected ไป location');
+  assert.match(active, /s\.id==='obj'\) return !!verb/, 'every selected central verb must expose the optional object role');
+  assert.match(active, /!LOCATION_OBJECT_VERBS\.has\(verb\)/, 'location-object verbs must not duplicate the ที่ branch');
+  assert.match(active, /s\.id==='adv'/, 'every selected central verb must expose the optional กับ-person role');
   const renderBaseplate = block('function renderBaseplate(){', 'function applyOpen(){');
-  assert.match(renderBaseplate, /sessionPool\.obj\|\|\[\]\)\.filter\(isObjCompatible\)/, 'Eat and buy branches must show only compatible objects');
-  const actions = block('function pickWord(id,th){', 'function addCustomSubj(){');
+  assert.match(renderBaseplate, /const pool=getPoolForSlot\(s\.id\)/, 'every dropdown must use a role-filtered central pool');
+  const actions = block('function pickWord(id,encodedRef){', 'function addCustomSubj(){');
   assert.match(actions, /word\.th==='กำลัง'\?WORDS\.prog\[0\]:null/, 'กำลัง must default to rear อยู่');
   assert.match(actions, /id==='prog'&&!state\.modal/, 'rear อยู่ must not be removable without front grammar');
   const output = block('function renderOut(){', 'function render(){');
-  assert.match(output, /thParts\.push\('กับ'\+w\.th\)/, 'Who must use กับ after ไป and a location');
-  assert.doesNotMatch(output, /thParts\.push\('ที่'/, 'ไป location must not insert ที่');
+  assert.match(output, /thParts\.push\('กับ'\+w\.th\)/, 'Who must use กับ');
+  assert.match(output, /thParts\.push\('ที่'\+w\.th\)/, 'ordinary verb locations must use ที่');
+  assert.match(legoApp, /const LOCATION_OBJECT_VERBS=new Set\(\['ไป','มา','เที่ยว','อยู่'\]\)/, 'location verbs must use direct place objects');
   assert.doesNotMatch(legoApp, /title="加入我的造句單字庫/, 'word saving must not interrupt the build surface');
   assert.match(legoHtml, /沒有前置文法時，句尾的 อยู่ 會保留/);
   assert.match(legoHtml, /只有按過「完成句子」的內容會進入本輪結果；未完成的草稿不會儲存/);
@@ -618,11 +619,11 @@ test('Lego custom fields stay inside the locked slots and translation boundary',
   const customEnd = legoApp.indexOf('function clearAll(){', customStart);
   const custom = legoApp.slice(customStart, customEnd);
   assert.match(render, /\['time','subj','adv'\]\.includes\(s\.id\)/, 'custom input must be limited to Time, Subject and Who by default');
-  assert.match(render, /s\.id==='advObj'&&state\.verb&&state\.verb\.th==='ไป'/, 'custom Location must exist only in the ไป branch');
+  assert.match(render, /s\.id==='advObj'&&state\.verb&&!LOCATION_OBJECT_VERBS\.has\(state\.verb\.th\)/, 'custom Location must follow the central location-role branch');
   assert.match(render, /<span>ชื่อ<\/span>/, 'Subject must preserve the player-name field');
   assert.match(render, /<span>ใส่เอง<\/span>/, 'locked custom-input label must be visible');
   assert.match(custom, /\['time','subj','adv','advObj'\]\.includes\(id\)/);
-  assert.match(custom, /id==='advObj'&&\(!state\.verb\|\|state\.verb\.th!=='ไป'\)/, 'custom Location must fail closed outside ไป');
+  assert.match(custom, /id==='advObj'&&\(!state\.verb\|\|LOCATION_OBJECT_VERBS\.has\(state\.verb\.th\)\)/, 'custom Location must fail closed for direct-location object verbs');
   assert.match(custom, /const w=\{th:name,zh:name,custom:true,customType:'name'\}/, 'a proper name may stay Thai in the translated sentence');
   assert.match(custom, /state\[id\]=\{th:th,zh:zh,custom:true,customType:'custom'\}/, 'player translation must remain player-owned data');
   assert.doesNotMatch(custom, /WORDS\.(?:time|subj|adv)\.push|sessionPool\.(?:time|subj|adv)\.push/, 'custom input must not expand the locked candidate pools');
@@ -802,7 +803,7 @@ test('Guest/Login Free reports contain facts only and no personalized analysis o
 });
 
 test('first-time help is persistent for four mature games and explicit on Listening start', () => {
-  for (const g of games.filter((x) => x.id !== 'listening')) {
+  for (const g of games.filter((game) => game.id !== 'listening')) {
     assert.match(g.htmlText, new RegExp(`howto_tour_seen_${g.id}`), `${g.id}: ไม่มี first-time persistence`);
     assert.match(g.htmlText, /GT_TOUR_STEPS/, `${g.id}: ไม่มี guided steps`);
   }
@@ -830,8 +831,6 @@ test('all active replayable help modals close on Escape and restore focus to the
     assert.match(g.htmlText + g.appText, new RegExp(`window\\.${handles[g.id]}\\s*=\\s*window\\.registerGameModal`), `${g.id}: help modal is not registered`);
     assert.match(g.htmlText, new RegExp(`${handles[g.id]}\\)window\\.${handles[g.id]}\\.notifyOpen\\(this\\)`), `${g.id}: opener does not register focus return`);
   }
-  const listening = games.find((g) => g.id === 'listening').htmlText;
-  assert.match(listening, /body\[data-listening-availability="coming-soon"\] \.mrt-login-howto,[\s\S]{0,220}#lg-howto-modal\{display:none!important;\}/, 'Listening OFF must not expose stale playable help');
 });
 
 test('all five game pages declare mobile viewport and responsive CSS', () => {

@@ -17,7 +17,10 @@ const payloadSha256 = '02715eed20083f19124820c9306fc525db0d8c775f3fd68615902022b
 assert.strictEqual(manifest.schemaVersion, 2);
 assert.strictEqual(manifest.state, 'queued-owner-only');
 assert.strictEqual(manifest.accessTier, 'paid');
-assert.strictEqual(manifest.runtimeConsumption, 'tone-owner_all_access-only');
+assert.strictEqual(manifest.runtimeConsumption, 'all-six-owner_all_access-paid193-only');
+assert.strictEqual(manifest.runtimeCatalogVersion, 'paid-queue-193-v1');
+assert.strictEqual(manifest.runtimeRecordCount, 193);
+assert.strictEqual(manifest.supersedesRuntimeCatalogVersion, 'paid-queue-189-v1');
 assert.strictEqual(manifest.migrationState, 'source-ready-production-pending');
 assert.strictEqual(manifest.recordCount, 382);
 assert.deepStrictEqual(manifest.levelCounts, { '初': 369, '中': 13 });
@@ -68,9 +71,10 @@ assert.doesNotMatch(migration, /insert into public\.learning_items/i);
 assert.doesNotMatch(migration, /delete\s+from\s+public\.game_words/i);
 assert.doesNotMatch(migration, /^\+/m);
 assert.match(migration, /revoke all on table public\.game_words from public,anon,authenticated/);
-assert.match(edge, /wordStatuses = paidTone \? \['queued'\] : \['active'\]/);
-assert.match(edge, /wordTiers = paidTone \? \['paid'\]/);
-assert.match(edge, /requestBody\?\.paid_beta === true[\s\S]+owner_all_access/);
-assert.match(edge, /paid:\s*{\s*'初':\s*369,\s*'中':\s*13,\s*sentences:\s*40\s*}/);
+assert.match(edge, /wordStatuses = paidAccess \? \['queued'\] : \['active'\]/);
+assert.match(edge, /wordTiers = paidAccess \? \['paid'\]/);
+assert.match(edge, /requestedGame && GAME_SURFACES\.has\(requestedGame\)[\s\S]+owner_all_access/);
+assert.match(edge, /paid:\s*{\s*'初':\s*186,\s*'中':\s*7,\s*sentences:\s*40\s*}/);
+assert.match(edge, /query = query\.eq\('catalog_version', PAID_RUNTIME_CATALOG_VERSION\)/);
 
 console.log('✅ Original Paid 189 remains byte-exact inside the protected owner-only Paid queue');

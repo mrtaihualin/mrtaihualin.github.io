@@ -364,9 +364,10 @@ const validConfig = { url: 'https://project.supabase.co', anonKey: 'public-anon-
   });
   await test('Core 5 load the guard before the protected content client', async () => {
     ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html'].forEach((page) => {
-      const version = page === 'listening-game.html' ? 21 : 22;
+      const version = page === 'listening-game.html' ? 23 : 22;
       assert.match(read(page), new RegExp('network-guard\\.js\\?v=1[\\s\\S]*game-content-client\\.js\\?v=' + version));
     });
+    assert.match(read('lego.html'), /network-guard\.js\?v=1[\s\S]*game-content-client\.js\?v=23/);
   });
   await test('optional same-origin errors do not show a false fatal game banner', async () => {
     const harness = createBootHarness({ config: validConfig });
