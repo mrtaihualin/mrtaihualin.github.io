@@ -29,8 +29,6 @@ const guideLockStart = source.indexOf('function tfLockCurrentWordForGuide()');
 const guideLockEnd = source.indexOf('// คำปัจจุบันเป็นหลายพยางค์ไหม', guideLockStart);
 const useHintStart = source.indexOf('function tfUseHint(keys)');
 const useHintEnd = source.indexOf('function tfHandleDeduceMistake(choiceLabel, errMsg)', useHintStart);
-const resetGuideStart = source.indexOf('function tfResetGuideForNextUnit()');
-const resetGuideEnd = source.indexOf('// Highlight the one reviewed teaching choice', resetGuideStart);
 const guideStateStart = source.indexOf('var tfGuideMode =');
 const guideStateEnd = source.indexOf('function tfSyncGuideBtn()', guideStateStart);
 const scoreEngineStart = source.indexOf('var TF_SCORE_CFG = {');
@@ -52,7 +50,6 @@ assert.ok(initialToneMistakeStart >= 0 && initialToneMistakeEnd > initialToneMis
 assert.ok(deduceMistakeStart >= 0 && deduceMistakeEnd > deduceMistakeStart);
 assert.ok(guideLockStart >= 0 && guideLockEnd > guideLockStart);
 assert.ok(useHintStart >= 0 && useHintEnd > useHintStart);
-assert.ok(resetGuideStart >= 0 && resetGuideEnd > resetGuideStart);
 assert.ok(guideStateStart >= 0 && guideStateEnd > guideStateStart);
 assert.ok(scoreEngineStart >= 0 && scoreEngineEnd > scoreEngineStart);
 assert.ok(sessionBonusStart >= 0 && sessionBonusEnd > sessionBonusStart);
@@ -169,18 +166,7 @@ assert.strictEqual(guideSandbox.session.combo, 4);
 assert.strictEqual(guideSandbox.__renderCount, 1);
 assert.strictEqual(guideSandbox.__tips, 1);
 
-const guideResetSandbox = {
-  tfGuideMode: true,
-  __stored: { rg_guide_mode: '1', tf_guide_mode: '1' },
-  localStorage: { setItem(key, value) { guideResetSandbox.__stored[key] = value; } },
-  tfSyncGuideBtn() {}
-};
-vm.createContext(guideResetSandbox);
-vm.runInContext(source.slice(resetGuideStart, resetGuideEnd), guideResetSandbox);
-guideResetSandbox.tfResetGuideForNextUnit();
-assert.strictEqual(guideResetSandbox.tfGuideMode, false);
-assert.strictEqual(guideResetSandbox.__stored.tf_guide_mode, '0');
-assert.strictEqual(guideResetSandbox.__stored.rg_guide_mode, '1');
+assert.doesNotMatch(source, /tfResetGuideForNextUnit/, 'Tone must not reset the saved Hint choice when a word or page starts');
 assert.doesNotMatch(source, /rg_guide_mode/, 'Tone must not read or write Reading guide preference');
 assert.match(source, /localStorage\.getItem\('tf_guide_mode'\)/);
 assert.match(source, /localStorage\.setItem\('tf_guide_mode', tfGuideMode \? '1' : '0'\)/);
@@ -513,7 +499,6 @@ const firstWordSandbox = {
   S: null,
   __reveal: null,
   tfRollGolden() { return false; },
-  tfResetGuideForNextUnit() { firstWordSandbox.tfGuideMode = false; },
   tfSetupSrsFlagsForCurrentWord() {},
   tfCurWordNoTools() { return false; },
   tfSaveResumeState() {},
@@ -551,6 +536,10 @@ assert.doesNotThrow(() => firstWordSandbox.tfForceRevealZero());
 assert.strictEqual(firstWordSandbox.session.learningComponentWrongCounts[0], 4);
 assert.strictEqual(firstWordSandbox.__reveal.tone, firstMultiRecord.syllables[0].toneNumber);
 assert.strictEqual(firstWordSandbox.__reveal.options.sylIdx, 0);
+firstWordSandbox.tfGuideMode = true;
+firstWordSandbox.startSetSession([firstMultiEntry], { keepOrder: true });
+assert.strictEqual(firstWordSandbox.tfGuideMode, true, 'a new round must retain the saved Hint choice');
+assert.strictEqual(firstWordSandbox.session.currentWordGuideUsed, true, 'the new question must inherit Hint as Free Practice');
 
 let syllableCount = 0;
 for (const record of catalog.records) {
@@ -598,8 +587,7 @@ assert.match(source, /function tfScoreDeduce\(\)[\s\S]{0,1500}TF_WORDSCORE\.scor
 assert.match(source, /function tfScoreDeduce\(\)[\s\S]{0,700}currentWordDeduct[\s\S]{0,180}tfScoreFirstTry\(\)/);
 assert.match(source, /if \(TF_WORDSCORE\.isDead\(session\)\) \{\s*tfForceRevealZero\(\);/);
 assert.match(source, /session\.initialGuess = 0;[\s\S]{0,650}navigateToInflection\(\);/);
-assert.match(source, /function tfAdvanceCommittedWord\(\)[\s\S]{0,120}tfResetGuideForNextUnit\(\)[\s\S]{0,120}tfResetWordScoring\(\)/);
-assert.match(source, /function startSetSession\(words, opts\)[\s\S]{0,180}tfResetGuideForNextUnit\(\)/);
+assert.match(source, /function tfAdvanceCommittedWord\(\)[\s\S]{0,120}tfResetWordScoring\(\)/);
 assert.match(source, /function tfResultIsNeutral\(result\)[\s\S]{0,180}result\.is_practice[\s\S]{0,180}result\.hint_used[\s\S]{0,180}result\.skipped/);
 assert.match(source, /var perfectCount\s*=\s*scoredResults\.filter[\s\S]{0,180}!tfResultIsNeutral\(r\)[\s\S]{0,220}hadNeutralResult[\s\S]{0,220}sessionBonus\(total, perfectCount\)/);
 assert.match(source, /needReview:\s*!session\.currentWordGuideUsed\s*&&/);

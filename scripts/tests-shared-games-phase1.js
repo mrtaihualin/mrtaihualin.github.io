@@ -880,12 +880,13 @@ test('Typing has native mobile input while Listening typed mode is keyboard-focu
   assert.match(games.find((g) => g.id === 'listening').appText, /typeInput\.focus/);
 });
 
-test('Tone Hint creates one-word Free Practice while preserving the approved teaching derivation', () => {
+test('Tone Hint carries its saved choice while preserving per-question Free Practice scoring', () => {
   const toneGame = games.find((g) => g.id === 'tone');
   const tone = toneGame.appText;
   const toneMin = fs.readFileSync(path.join(root, 'js/games/tone-finder-game.min.js'), 'utf8');
-  assert.match(tone, /function tfAdvanceCommittedWord\(\)[\s\S]{0,120}tfResetGuideForNextUnit\(\)[\s\S]{0,120}tfResetWordScoring\(\)/, 'Tone: every next word must return to Challenge with Hint off');
-  assert.match(tone, /function startSetSession\(words, opts\)[\s\S]{0,180}tfResetGuideForNextUnit\(\)/, 'Tone: every new round must start in Challenge with Hint off');
+  assert.doesNotMatch(tone, /tfResetGuideForNextUnit/, 'Tone: a new word or reload must not overwrite the saved Hint choice');
+  assert.match(tone, /function tfAdvanceCommittedWord\(\)[\s\S]{0,120}tfResetWordScoring\(\)/, 'Tone: the next word must snapshot the carried Hint choice');
+  assert.match(tone, /currentWordGuideUsed:\s*!!tfGuideMode/, 'Tone: a new round must inherit the saved Hint choice');
   assert.match(tone, /tfGuideMode\s*\|\|\s*\(session\s*&&\s*session\.currentWordGuideUsed\)/, 'Tone: toggling guidance off must not restore scoring');
   assert.match(tone, /function tfLockCurrentWordForGuide\(\)[\s\S]{0,600}session\.score\s*=\s*Math\.max\(0,[\s\S]{0,120}- awarded\)/, 'Tone: points already awarded in the active question must be revoked');
   assert.doesNotMatch(tone.slice(tone.indexOf('function tfLockCurrentWordForGuide()'), tone.indexOf('// คำปัจจุบันเป็นหลายพยางค์ไหม')), /session\.combo\s*=/, 'Tone: Free Practice must preserve Combo');
@@ -926,7 +927,7 @@ test('Tone Hint creates one-word Free Practice while preserving the approved tea
   assert.match(toneMin, /pageshow/, 'Tone: deployed minified bundle must include the page-return guard');
   assert.match(toneMin, /tfHandleInitialToneMistake/, 'Tone: deployed minified bundle must preserve the initial no-deduction handler');
   assert.doesNotMatch(toneMin, /聲調選擇錯誤/, 'Tone: deployed minified bundle must not retain the superseded initial scored-mistake branch');
-  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=100/, 'Tone: page must request the rebuilt gameplay runtime version');
+  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=101/, 'Tone: page must request the rebuilt gameplay runtime version');
 });
 
 test('Tone mobile touch surfaces keep Desktop gameplay free of keyboard-only copy', () => {

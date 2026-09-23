@@ -1010,7 +1010,7 @@ function tfRepaintReading() {
 // ════════════════════════════════════════════════════════════
 // ── โหมด 提示: เปิดดูค่าที่ตรวจแล้วโดยตรง
 //   คำที่เปิด提示เป็น Free Practice: ไม่คิดคะแนน/โบนัส ไม่เปลี่ยน Combo และไม่อัปเดต SRS/Retry/Review
-//   ทุกคำใหม่กลับเป็น Challenge และปิด提示เสมอ
+//   ค่าที่ผู้เล่นเลือกคงอยู่ข้ามคำ รอบ และการโหลดหน้าใหม่; คะแนนยังล็อกแยกต่อคำ
 // ════════════════════════════════════════════════════════════
 var tfGuideMode = (function () { try { return localStorage.getItem('tf_guide_mode') === '1'; } catch (e) { return false; } })();
 
@@ -1020,12 +1020,6 @@ function tfSyncGuideBtn() {
   b.textContent = tfGuideMode ? '💡' : '🔥';
   b.title = tfGuideMode ? '有提示（純練習・完全不計分）' : '無提示（挑戰・正常計分）';
   b.setAttribute('aria-label', b.title);
-}
-
-function tfResetGuideForNextUnit() {
-  tfGuideMode = false;
-  try { localStorage.setItem('tf_guide_mode', '0'); } catch (e) {}
-  tfSyncGuideBtn();
 }
 
 // Highlight the one reviewed teaching choice for the current 推導 step.
@@ -1649,7 +1643,6 @@ function tfCommitWordAndAdvance(opts) {
 
 function tfAdvanceCommittedWord() {
   session.index++;
-  tfResetGuideForNextUnit();
   tfResetWordScoring();
   session.initialGuess = undefined;
   session.finalAnswer = undefined;
@@ -2886,7 +2879,6 @@ function tfRestoreSavedProgress(data) {
 }
 
 function startSetSession(words, opts) {
-  tfResetGuideForNextUnit();
   // Lin 2026-07-30: เดิมล้าง advSentenceCtx แบบไม่มีเงื่อนไขทุกครั้ง → ตอน TF.startAdvSentence เรียกฟังก์ชันนี้ (ซึ่งเรียก render() ข้างในตั้งแต่บรรทัดท้ายฟังก์ชัน)
   // แล้วค่อยตั้ง advSentenceCtx ใหม่ "หลัง" ฟังก์ชันนี้ return กลับไป ทำให้ render() รอบแรก (คำแรกของประโยค高級) เห็น advSentenceCtx เป็น null ก่อนเสมอ
   // → ประโยคเต็มไม่โชว์ตั้งแต่คำแรก (โชว์แค่คำเดียว) ตามที่ Lin แจ้ง — แก้โดยให้ TF.startAdvSentence ตั้ง advSentenceCtx "ก่อน" เรียกฟังก์ชันนี้ พร้อมส่ง opts.isAdvSentence=true มากันไม่ให้บรรทัดนี้ล้างทับ
