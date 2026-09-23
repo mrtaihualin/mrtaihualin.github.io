@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import { stripTypeScriptTypes } from 'node:module';
 import { TYPING_ROUND_ACTIONS_ENABLED, handleTypingRoundAction } from '../supabase/functions/score-submit/typing-round-service.mjs';
+import { typingRoundRateArgs } from '../supabase/functions/score-submit/typing-round-rate-policy.mjs';
 
 const owner = '10000000-0000-4000-8000-000000000001';
 const stranger = '10000000-0000-4000-8000-000000000002';
@@ -263,9 +264,9 @@ await check('lost commit response and post-commit read failure preserve same ope
 const source = fs.readFileSync(new URL('../supabase/functions/score-submit/index.ts', import.meta.url), 'utf8');
 const runnable = stripTypeScriptTypes(source.replace(/^import .+ from .+;$/gm, ''), { mode: 'strip' });
 function edge({ enabled = false, validAuth = true, rate = true } = {}) {
-  const f = fixture(); let handler; let legacyCalls = 0; let rateCalls = 0;
+  const f = fixture(); let handler; let legacyCalls = 0; let rateCalls = 0; const seenRateArgs = [];
   const admin = { ...f.admin, rpc(name, args) {
-    if (name === 'game_content_rl_check') { rateCalls++; return Promise.resolve({ data: rate }); }
+    if (name === 'game_content_rl_check') { rateCalls++; seenRateArgs.push(args); return Promise.resolve({ data: rate }); }
     return f.admin.rpc(name, args);
   } };
   vm.runInNewContext(runnable, { Request, Response, TextEncoder, crypto, URL, console,
@@ -274,10 +275,11 @@ function edge({ enabled = false, validAuth = true, rate = true } = {}) {
     createClient(_url, key) { return key === 'EXAMPLE_SERVICE_ROLE' ? admin
       : { auth: { getUser: async () => ({ data: { user: validAuth ? { id: owner } : null }, error: validAuth ? null : {} }) } }; },
     TYPING_ROUND_ACTIONS_ENABLED: enabled,
+    typingRoundRateArgs,
     handleTypingRoundAction: (options) => handleTypingRoundAction({ ...options, enabled }),
     validateScoreSubmission() { legacyCalls++; throw Object.assign(new Error(), { code: 'fixture_legacy' }); },
   });
-  return { f, calls: () => ({ legacyCalls, rateCalls }),
+  return { f, calls: () => ({ legacyCalls, rateCalls, seenRateArgs }),
     invoke: (body, headers = {}) => handler(new Request('https://fixture.invalid/score-submit', {
       method: 'POST', headers: { Origin: 'https://mrtaihualin.com', Authorization: 'Bearer fixture-user', ...headers },
       body: JSON.stringify(body),
@@ -295,6 +297,9 @@ await check('actual Edge entrypoint enforces auth, OFF gate, rate limit and leav
   const active = edge({ enabled: true });
   const response = await active.invoke(event());
   assert.equal(response.status, 200); assert.equal((await response.json()).checkpoint.currentWrongCount, 1);
+  assert.deepEqual(active.calls().seenRateArgs[0], {
+    p_key: `typing-round-event:${owner}`, p_limit: 600, p_window: 60,
+  });
   assert.equal(active.calls().legacyCalls, 0);
   assert.equal((await active.invoke({ game: 'typing' })).status, 400);
   assert.equal(active.calls().legacyCalls, 1);

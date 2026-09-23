@@ -11,6 +11,7 @@ import { readCurrentLearningSnapshot } from './learning-snapshot.mjs';
 import { HIDDEN_REVIEW_SCORE_DEFAULT_ENABLED, verifyLearningScore, verifyRoundLearningScores } from './learning-score-verifier.mjs';
 import { classifyLearningState, LOGIN_FREE_LEARNING_ENGINE_VERSION } from '../_shared/login-free-learning-engine.mjs';
 import { TYPING_ROUND_ACTIONS_ENABLED, handleTypingRoundAction } from './typing-round-service.mjs';
+import { typingRoundRateArgs } from './typing-round-rate-policy.mjs';
 
 const LOGIN_FREE_REVIEW_ACTIONS_ENABLED = true;
 const REVIEW_STAGING_PROJECT_REF = 'xufxvwcelbovzsxywawg';
@@ -386,9 +387,11 @@ serve(async (req) => {
     const isLearningAction = action.startsWith('learning_');
     const isLearningRequest = isLegacyReviewAction || isLearningAction;
     if (isLearningRequest && !reviewCallerAllowed(user, url)) return reply(origin, { error: 'feature_disabled' }, 404);
-    const rateArgs = isLearningRequest
-      ? { p_key: isLegacyReviewAction ? `learning-review:${user.id}` : `login-free-learning:${user.id}`, p_limit: 120, p_window: 600 }
-      : { p_key: `score-submit:${user.id}`, p_limit: 30, p_window: 600 };
+    const rateArgs = isTypingRoundAction
+      ? typingRoundRateArgs(action, user.id)
+      : isLearningRequest
+        ? { p_key: isLegacyReviewAction ? `learning-review:${user.id}` : `login-free-learning:${user.id}`, p_limit: 120, p_window: 600 }
+        : { p_key: `score-submit:${user.id}`, p_limit: 30, p_window: 600 };
     const { data: rateOk, error: rateError } = await admin.rpc('game_content_rl_check', rateArgs);
     if (rateError) return reply(origin, { error: 'rate_limit_unavailable' }, 503);
     if (rateOk !== true) return reply(origin, { error: 'rate_limited' }, 429);
