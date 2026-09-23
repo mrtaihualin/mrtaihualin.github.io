@@ -9,6 +9,7 @@ import { validateCanonicalScoreEvidence, validateScoreSubmission } from './score
 import { readLearningCatalog } from './learning-catalog.mjs';
 import { HIDDEN_REVIEW_SCORE_DEFAULT_ENABLED, verifyLearningScore, verifyRoundLearningScores } from './learning-score-verifier.mjs';
 import { classifyLearningState, LOGIN_FREE_LEARNING_ENGINE_VERSION } from '../_shared/login-free-learning-engine.mjs';
+import { TYPING_ROUND_ACTIONS_ENABLED, handleTypingRoundAction } from './typing-round-service.mjs';
 
 const LOGIN_FREE_REVIEW_ACTIONS_ENABLED = true;
 const REVIEW_STAGING_PROJECT_REF = 'xufxvwcelbovzsxywawg';
@@ -426,6 +427,8 @@ serve(async (req) => {
 
     const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
     const action = String(body.action || '');
+    const isTypingRoundAction = action.startsWith('typing_round_');
+    if (isTypingRoundAction && !TYPING_ROUND_ACTIONS_ENABLED) return reply(origin, { error: 'feature_disabled' }, 404);
     const isLegacyReviewAction = action.startsWith('review_');
     const isLearningAction = action.startsWith('learning_');
     const isLearningRequest = isLegacyReviewAction || isLearningAction;
@@ -436,6 +439,11 @@ serve(async (req) => {
     const { data: rateOk, error: rateError } = await admin.rpc('game_content_rl_check', rateArgs);
     if (rateError) return reply(origin, { error: 'rate_limit_unavailable' }, 503);
     if (rateOk !== true) return reply(origin, { error: 'rate_limited' }, 429);
+
+    if (isTypingRoundAction) {
+      const result = await handleTypingRoundAction({ admin, user, body });
+      return reply(origin, result.body, result.status);
+    }
 
     if (isLegacyReviewAction) {
       try { return await handleLegacyReviewAction(origin, body, user, admin); }

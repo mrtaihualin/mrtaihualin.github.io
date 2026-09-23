@@ -387,6 +387,11 @@ function dispOpt(comp,x){
 // ════════════════════════════════════════════
 var tgLevelSwitchRequest=0;
 function setLevel(lv){
+  // รัฐธรรมนูญเกม: รอบปกติที่เริ่มแล้วต้องเล่นให้จบ ห้ามทิ้งรอบด้วยการเปลี่ยนระดับ
+  if(tgRoundActive){
+    try{rgToast('請先完成目前這一輪，再更換等級');}catch(e){}
+    return false;
+  }
   var request=++tgLevelSwitchRequest;
   tgCloseMobileKeyboard();
   try{ if(typeof gtag==='function') gtag('event','typing_game_level_change',{category:'game', level: lv}); }catch(e){}
@@ -423,7 +428,7 @@ function setLevel(lv){
     Promise.resolve(ready).then(go,function(error){
       if(request===tgLevelSwitchRequest)console.error('[typing-game] level queue unavailable:',error);
     });
-    return;
+    return true;
   }
   // Lin 2026-07-13: เครื่องใหม่ที่เพิ่งล็อกอิน → รอ sync สั้นๆ (≤1.5วิ) ให้รอบแรกถูกต้อง เน็ตล่ม/ช้าไปต่อทันที ไม่ค้าง
   if(rgLoggedIn() && !window.__tgSrsSyncedOnce){
@@ -432,6 +437,7 @@ function setLevel(lv){
   } else {
     try{Promise.race([tgPrimeReview(),new Promise(function(r){setTimeout(r,1500);})]).then(go);}catch(e){go();}
   }
+  return true;
 }
 
 // ════════════════════════════════════════════
@@ -1036,7 +1042,7 @@ function tgShowAllMastered(){
   div.addEventListener('click',function(e){if(e.target===div)div.remove();});
   document.body.appendChild(div);
   document.getElementById('tg-am-review').onclick=function(){try{ if(typeof gtag==='function') gtag('event','typing_game_allmastered_continue',{category:'game'}); }catch(e){}div.remove();};
-  document.getElementById('tg-am-level').onclick=function(){try{ if(typeof gtag==='function') gtag('event','typing_game_allmastered_switch_level',{category:'game'}); }catch(e){}div.remove();var el=document.getElementById('end');if(el)el.style.display='none';var g=document.getElementById('game');if(g)g.style.display='none';window.scrollTo(0,0);};
+  document.getElementById('tg-am-level').onclick=function(){try{ if(typeof gtag==='function') gtag('event','typing_game_allmastered_switch_level',{category:'game'}); }catch(e){}div.remove();try{rgToast('請先完成目前這一輪，再更換等級');}catch(e){}window.scrollTo(0,0);};
 }
 
 // Neutral skip: advance without answer, score, Combo, life, or SRS mutation.
@@ -1264,6 +1270,7 @@ function tgTryResume(){
     var detailEl=document.getElementById('tg-resume-detail');
     if(!banner||!detailEl)return false;
     window.__tgResumeData=saved;
+    tgRoundActive=true;
     if(window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()){
       tgResumeContinue();
       return true;
@@ -1282,6 +1289,7 @@ function tgResumeContinue(){
     // กู้ได้ต่อเมื่อทุกตัวตนยังตรงกับข้อมูลปัจจุบันทั้งรอบ ห้ามข้ามคำหายหรือซ่อมคิวบางส่วน
     var q=tgResolveResumeWordIds(saved.wordIds,saved.level);
     if(!q){ tgResumeRestart(); return; }
+    tgRoundActive=true;
     try{ if(typeof gtag==='function') gtag('event','typing_game_resume_continue',{category:'game', level: saved.level}); }catch(e){}
     curLevel=saved.level||curLevel;
     try{localStorage.setItem('tg_level',curLevel);}catch(e){}
@@ -1308,6 +1316,7 @@ function tgResumeContinue(){
   }catch(e){}
 }
 function tgResumeRestartSame(){
+  if(tgRoundActive){try{rgToast('請繼續完成上次尚未結束的一輪');}catch(e){}return false;}
   var saved=window.__tgResumeData;
   if(!saved){tgResumeNewRound();return;}
   var q=tgResolveResumeWordIds(saved.wordIds,saved.level);
@@ -1316,15 +1325,17 @@ function tgResumeRestartSame(){
   curLevel=saved.level||curLevel;roundQueue=q;roundTotal=q.length;cur=0;okC=0;badC=0;streak=0;maxStreak=0;roundScore=0;cleanC=0;roundHadGuide=false;roundLog=[];roundReport=window.RoundReport?RoundReport.create({game_type:'typing',difficulty:curLevel,mode:'thai-keyboard'}):null;window.__tgResumeData=null;
   tgPrepareRestoredReview(function(){document.getElementById('end').style.display='none';document.getElementById('game').style.display='flex';document.getElementById('bars-wrap').style.display='flex';var _statRow=document.getElementById('rg-stat-row');if(_statRow)_statRow.style.display='flex';refreshUI();tgSaveResume();loadWord();});
 }
-function tgResumeNewRound(){
+function tgResumeNewRound(forceRecovery){
+  if(tgRoundActive&&forceRecovery!==true){try{rgToast('請繼續完成上次尚未結束的一輪');}catch(e){}return false;}
   try{ if(typeof gtag==='function') gtag('event','typing_game_resume_restart',{category:'game'}); }catch(e){}
   var banner=document.getElementById('tg-resume-banner');
   if(banner)banner.style.display='none';
   try{ if(window.GameResume) GameResume.clear('typing-game'); }catch(e){}
   window.__tgResumeData=null;
   initGame();
+  return true;
 }
-function tgResumeRestart(){tgResumeNewRound();}
+function tgResumeRestart(){return tgResumeNewRound(true);}
 
 // ════════════════════════════════════════════
 // PDF 報告（本輪作答事實 + 登入後 SRS 下次複習日期）— Lin 2026-07-07

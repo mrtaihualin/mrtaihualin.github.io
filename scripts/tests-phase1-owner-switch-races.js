@@ -337,7 +337,7 @@ test('Four games expose Login Free learning runtimes while Listening, Paid and L
   assert.match(read('lego.html'), /auth-widget\.js\?v=24/);
   assert.match(read('tone-finder.html'), /tone-finder-game\.min\.js\?v=92/);
   assert.match(read('reading-game.html'), /reading-game-app\.min\.js\?v=63/);
-  assert.match(read('typing-game.html'), /typing-game-app\.min\.js\?v=61/);
+  assert.match(read('typing-game.html'), /typing-game-app\.min\.js\?v=62/);
   assert.match(read('word-order.html'), /word-order-app\.min\.js\?v=46/);
   assert.match(read('listening-game.html'), /GameContentLoader\.boot\(\['js\/games\/listening-game-app\.js\?v=20'/);
 });

@@ -1,0 +1,86 @@
+// Internal, source-only preparation for Login Free 初/中. Not an HTTP handler.
+// Inputs MUST come from the authenticated catalog/currentLearningSnapshot owners,
+// never from request JSON. This function does not establish ownership or persist
+// issuance. Call exactly once inside the future idempotent creation workflow;
+// retries/Resume must read its saved output, not generate another plan.
+import { classifyLearningState } from '../_shared/login-free-learning-engine.mjs';
+
+const UINT32_RANGE = 0x100000000;
+function fail(code) { throw Object.assign(new Error(code), { code }); }
+function text(value) { return typeof value === 'string' && value.length > 0 && value.trim() === value; }
+function secureUint32() { return crypto.getRandomValues(new Uint32Array(1))[0]; }
+
+// Rejection sampling avoids modulo bias, including at the exact 18/100 boundary.
+function drawBelow(limit, randomUint32) {
+  const ceiling = UINT32_RANGE - UINT32_RANGE % limit;
+  for (let attempt = 0; attempt < 128; attempt++) {
+    const value = randomUint32();
+    if (!Number.isInteger(value) || value < 0 || value >= UINT32_RANGE) fail('invalid_typing_random');
+    if (value < ceiling) return value % limit;
+  }
+  fail('typing_random_unavailable');
+}
+
+function shuffled(rows, randomUint32) {
+  const copy = rows.slice();
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = drawBelow(i + 1, randomUint32);
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+export function buildTypingInitialPromptPlan({ level, today, snapshots, canonicalRows }, randomUint32 = secureUint32) {
+  if (![1, 2].includes(level)) fail('invalid_typing_level');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(today || '') || !Number.isFinite(Date.parse(today + 'T00:00:00Z'))
+      || new Date(today + 'T00:00:00Z').toISOString().slice(0, 10) !== today) fail('invalid_typing_day');
+  if (!Array.isArray(snapshots) || !Array.isArray(canonicalRows) || typeof randomUint32 !== 'function') fail('invalid_typing_catalog');
+  const code = level === 1 ? '初' : '中';
+  const canonical = new Map();
+  for (const row of canonicalRows) {
+    const record = row?.canonical_record;
+    if (!text(row?.content_key) || canonical.has(row.content_key) || row.level !== code
+        || row.status !== 'active' || !['guest', 'login'].includes(row.access_tier)
+        || record?.contentKey !== row.content_key || record.level !== code || !text(record.word)
+        || [...record.word].length > 512 || !Array.isArray(record.syllables) || !record.syllables.length) fail('invalid_typing_catalog');
+    canonical.set(row.content_key, record);
+  }
+  const ids = new Set();
+  const keys = new Set();
+  const buckets = { review_due: [], srs_due: [], regular_or_new: [] };
+  for (const row of snapshots) {
+    const ref = row?.content_ref;
+    if (!text(row?.item_id) || !text(row.state_token) || ids.has(row.item_id)
+        || ref?.source !== 'game_words' || !text(ref.key) || keys.has(ref.key)
+        || !canonical.has(ref.key)) fail('invalid_typing_snapshot');
+    ids.add(row.item_id); keys.add(ref.key);
+    // Preserve the existing owner's unresolved-legacy exclusion, without reading
+    // or deriving any legacy vocabulary. Do not trust the caller's bucket label.
+    if (row.state === 'legacy_identity_unresolved') continue;
+    if (['srs', 'mastered'].includes(row.state) && ![0, 1, 2, 3].includes(row.stage)) fail('invalid_typing_snapshot');
+    const bucket = classifyLearningState({ state: row.state, stage: row.stage, dueOn: row.due_on,
+      roundId: row.round_id, reviewAttemptsUsed: row.review_attempts_used,
+      mastered: row.mastered, everFailed: row.ever_failed }, today);
+    // Free stage 3 is terminal; an inconsistent non-mastered stage must fail shut.
+    if (row.state === 'srs' && row.stage === 3 && row.mastered !== true) fail('invalid_typing_snapshot');
+    if (buckets[bucket]) buckets[bucket].push(row);
+  }
+  const nextDay = buckets.review_due.find((row) => row.state === 'next_day_check');
+  const review = nextDay || buckets.review_due[0];
+  const srs = buckets.srs_due[0];
+  const required = 5 - Number(Boolean(review)) - Number(Boolean(srs));
+  if (buckets.regular_or_new.length < required) fail('insufficient_eligible_items');
+  // Separate one-in-five quotas. Overflow stays with the learning owner; never
+  // fill a shortage using additional Due, non-due, Retry or mastered content.
+  const rest = [...(review && !nextDay ? [review] : []), ...(srs ? [srs] : []),
+    ...shuffled(buckets.regular_or_new, randomUint32).slice(0, required)];
+  const selected = [...(nextDay ? [nextDay] : []), ...shuffled(rest, randomUint32)];
+  return selected.map((row) => ({
+    content_ref: { source: 'game_words', key: row.content_ref.key },
+    answer: canonical.get(row.content_ref.key).word,
+    golden: drawBelow(100, randomUint32) < 18,
+    // Eligibility only. The final atomic learning/score commit must enforce
+    // once-per-stage awards; this plan does not claim that commit is integrated.
+    srs_bonus: row.state === 'srs' && [1, 2].includes(row.stage),
+  }));
+}
