@@ -1,5 +1,11 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-09-23 — Tone Free Practice correct-count delta
+
+- Weekly correct challenge and shared Result fallback now use Tone's existing neutral-result predicate and require complete first-try, non-forced evidence, so Hint Free Practice, Skip and incomplete zero-mistake paths cannot increase correct counts. The Result still defers to RoundReport when available.
+- Behavioral regressions exercise both paths with mixed clean, neutral, forced, incomplete and wrong results. Tone derivation, Round Report, neutral Skip and shared-game tests pass; the full `node scripts/check-site.js` gate passes all 1,129 local files after running its temporary PostgreSQL fixtures with the required host shared-memory access.
+- The GitLab required job now runs the existing Phase 1 Free gamification PostgreSQL fixture after the site gate using its already installed PostgreSQL 15 runtime. The fixture creates its isolated cluster under `os.tmpdir()` for Linux/macOS portability; its local execution passes initdb, all three migrations, neutral Played outcomes, sequential and concurrent cases.
+
 ## 2026-09-22 — Tone release integration on Owner-582 (`SOURCE_CANDIDATE_PASS / PRODUCTION_BLOCKED`)
 
 - Rebased the verified Tone Initial/Middle playability delta onto canonical GitLab `main=b248d77` instead of releasing stale checkpoint `be2c13c` directly. Conflict resolution preserves the current Owner `Free 200 + Paid 382` all-six-game runtime, Lego protected catalog surface and current cache bindings while retaining the bounded game-content session/script timeouts and Tone `v99` runtime.

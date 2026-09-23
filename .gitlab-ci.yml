@@ -25,3 +25,4 @@ required-tests-and-write-set:
     - node scripts/tests-task-write-set.js
     - node scripts/check-task-write-set.js --gitlab
     - runuser -u postgres -- env PATH="/usr/lib/postgresql/15/bin:$PATH" node scripts/check-site.js
+    - runuser -u postgres -- env PATH="/usr/lib/postgresql/15/bin:$PATH" node scripts/tests-phase1-free-gamification-db.mjs

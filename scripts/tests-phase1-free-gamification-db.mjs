@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -15,7 +16,7 @@ const neutralMigrationName = fs.readdirSync(path.join(root, 'supabase/migrations
   .find((name) => name.endsWith('_phase1_practice_event_neutral_results.sql'));
 assert(neutralMigrationName, 'neutral Played migration missing');
 
-const tmp = fs.mkdtempSync('/private/tmp/phase1-d08-pg-');
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'phase1-d08-pg-'));
 const data = path.join(tmp, 'data');
 const socket = path.join(tmp, 'socket');
 fs.mkdirSync(socket);

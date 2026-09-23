@@ -427,6 +427,58 @@ const resultFallback = renderToneSummary([], scoreResultsWithNeutralFlags);
 assert.match(resultFallback.html, /class="tf-sum-score gsh-end-score">0 \/ 5<\/div>/, 'Tone Result fallback must exclude canonical, DTO, and snake_case neutral flags from Clean');
 assert.strictEqual(resultFallback.events[0][2].perfect, 0, 'Tone fallback analytics must use the neutral-safe count');
 
+const challengeStart = source.indexOf('function tfChallengeBump(session) {');
+const challengeEnd = source.indexOf('// Lin 2026-07-04:', challengeStart);
+assert.ok(challengeStart >= 0 && challengeEnd > challengeStart);
+const challengeState = { progress: 0, done: false };
+const challengeSandbox = {
+  tfChallengeState() { return { ch: { type: 'correct', target: 30 }, st: challengeState }; },
+  tfSaveChallenge() {}
+};
+vm.createContext(challengeSandbox);
+vm.runInContext(source.slice(sessionBonusStart, neutralHelperEnd), challengeSandbox);
+vm.runInContext(source.slice(challengeStart, challengeEnd), challengeSandbox);
+challengeSandbox.tfChallengeBump({ results: [
+  { mistakes: 0, firstTry: true },
+  { mistakes: 0, firstTry: true, hintUsed: true },
+  { mistakes: 0, firstTry: true, is_practice: true },
+  { mistakes: 0, firstTry: true, is_skipped: true },
+  { mistakes: 0, firstTry: true, forced: true },
+  { mistakes: 0, firstTry: false },
+  { mistakes: 1, firstTry: false }
+] });
+assert.strictEqual(challengeState.progress, 1, 'weekly correct challenge must credit only the complete clean answer');
+
+const enhanceStart = source.indexOf("var actions=body.querySelector('.gsh-end-actions');");
+const enhanceEndMarker = 'tfFinalizeAlignedResultPresentation(body);';
+const enhanceEnd = source.indexOf(enhanceEndMarker, enhanceStart);
+assert.ok(enhanceStart >= 0 && enhanceEnd > enhanceStart);
+let enhancedResult;
+const enhanceSandbox = {
+  body: { querySelector() { return null; } },
+  session: { results: [
+    { mistakes: 0, firstTry: true },
+    { mistakes: 0, firstTry: true, hintUsed: true },
+    { mistakes: 0, firstTry: true, skipped: true },
+    { mistakes: 0, firstTry: true, forced: true },
+    { mistakes: 0, firstTry: false },
+    { mistakes: 1, firstTry: false }
+  ], newBadges: [] },
+  roundReport: null,
+  tfSrsLoggedIn() { return false; },
+  GameFlow: { enhanceResult(options) { enhancedResult = options; } },
+  tfFinalizeAlignedResultPresentation() {}
+};
+enhanceSandbox.window = enhanceSandbox;
+vm.createContext(enhanceSandbox);
+vm.runInContext(source.slice(sessionBonusStart, neutralHelperEnd), enhanceSandbox);
+vm.runInContext('(function(){' + source.slice(enhanceStart, enhanceEnd + enhanceEndMarker.length) + '})()', enhanceSandbox);
+assert.strictEqual(enhancedResult.correct, 1, 'shared Result fallback must exclude Free Practice, Skip, forced, and wrong answers');
+assert.strictEqual(enhancedResult.total, 6, 'shared Result fallback must preserve the round denominator');
+enhanceSandbox.roundReport = { correct_count: 0, total_items: 6 };
+vm.runInContext('(function(){' + source.slice(enhanceStart, enhanceEnd + enhanceEndMarker.length) + '})()', enhanceSandbox);
+assert.strictEqual(enhancedResult.correct, 0, 'shared Result must prefer the authoritative report count when present');
+
 const firstMultiRecord = catalog.records.find((record) => record.level === '中' && record.syllables.length > 1);
 assert.ok(firstMultiRecord, 'canonical intermediate multi-syllable fixture is required');
 const firstWordSandbox = {

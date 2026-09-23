@@ -1109,7 +1109,7 @@ function tfChallengeBump(session) {
   var pack = tfChallengeState(), ch = pack.ch, st = pack.st;
   if (st.done) { tfSaveChallenge(st); return; }
   var add = 0;
-  if (ch.type === 'correct') add = session.results.filter(function (r) { return !r.skipped && (r.mistakes || 0) === 0 && !r.forced; }).length;
+  if (ch.type === 'correct') add = session.results.filter(function (r) { return !tfResultIsNeutral(r) && r.firstTry && (r.mistakes || 0) === 0 && !r.forced; }).length;
   else if (ch.type === 'sets') add = 1;
   else if (ch.type === 'perfect') add = session.isPerfect ? 1 : 0;
   else if (ch.type === 'combo') add = (session.maxCombo || 0) >= ch.target ? ch.target : 0;
@@ -2213,7 +2213,7 @@ function render() {
       GameFlow.markResult(body);
       setTimeout(function(){
         var actions=body.querySelector('.gsh-end-actions');
-        var correct=session&&session.results?session.results.filter(function(r){return !r.skipped&&(r.mistakes||0)===0;}).length:0;
+        var correct=session&&session.results?session.results.filter(function(r){return !tfResultIsNeutral(r)&&r.firstTry&&!r.forced;}).length:0;
         var total=session&&session.results?session.results.length:0;
         var hl=[];
         if(tfSrsLoggedIn()&&window.GAME_ACCOUNT){var gs=GAME_ACCOUNT.getStreak();if(gs)hl.push('🔥 連續 '+gs+' 天');if(session&&session.newBadges&&session.newBadges.length)hl.push('🎖️ '+session.newBadges[session.newBadges.length-1].zh);}
