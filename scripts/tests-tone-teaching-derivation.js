@@ -8,6 +8,7 @@ const vm = require('vm');
 
 const root = path.resolve(__dirname, '..');
 const source = fs.readFileSync(path.join(root, 'js/games/tone-finder-game.js'), 'utf8');
+const readingSource = fs.readFileSync(path.join(root, 'js/games/reading-game-app.js'), 'utf8');
 const catalog = JSON.parse(fs.readFileSync(path.join(root, 'data/approved-vocabulary-catalog.json'), 'utf8'));
 
 const defsStart = source.indexOf('var DEFS = {');
@@ -30,6 +31,8 @@ const useHintStart = source.indexOf('function tfUseHint(keys)');
 const useHintEnd = source.indexOf('function tfHandleDeduceMistake(choiceLabel, errMsg)', useHintStart);
 const resetGuideStart = source.indexOf('function tfResetGuideForNextUnit()');
 const resetGuideEnd = source.indexOf('// Highlight the one reviewed teaching choice', resetGuideStart);
+const guideStateStart = source.indexOf('var tfGuideMode =');
+const guideStateEnd = source.indexOf('function tfSyncGuideBtn()', guideStateStart);
 const scoreEngineStart = source.indexOf('var TF_SCORE_CFG = {');
 const scoreEngineEnd = source.indexOf('// ===== TF_WORDSCORE', scoreEngineStart);
 const sessionBonusStart = source.indexOf('function tfResultIsNeutral(result)');
@@ -50,6 +53,7 @@ assert.ok(deduceMistakeStart >= 0 && deduceMistakeEnd > deduceMistakeStart);
 assert.ok(guideLockStart >= 0 && guideLockEnd > guideLockStart);
 assert.ok(useHintStart >= 0 && useHintEnd > useHintStart);
 assert.ok(resetGuideStart >= 0 && resetGuideEnd > resetGuideStart);
+assert.ok(guideStateStart >= 0 && guideStateEnd > guideStateStart);
 assert.ok(scoreEngineStart >= 0 && scoreEngineEnd > scoreEngineStart);
 assert.ok(sessionBonusStart >= 0 && sessionBonusEnd > sessionBonusStart);
 assert.ok(neutralHelperEnd > sessionBonusStart);
@@ -167,15 +171,30 @@ assert.strictEqual(guideSandbox.__tips, 1);
 
 const guideResetSandbox = {
   tfGuideMode: true,
-  __stored: null,
-  localStorage: { setItem(key, value) { guideResetSandbox.__stored = [key, value]; } },
+  __stored: { rg_guide_mode: '1', tf_guide_mode: '1' },
+  localStorage: { setItem(key, value) { guideResetSandbox.__stored[key] = value; } },
   tfSyncGuideBtn() {}
 };
 vm.createContext(guideResetSandbox);
 vm.runInContext(source.slice(resetGuideStart, resetGuideEnd), guideResetSandbox);
 guideResetSandbox.tfResetGuideForNextUnit();
 assert.strictEqual(guideResetSandbox.tfGuideMode, false);
-assert.deepStrictEqual(Array.from(guideResetSandbox.__stored), ['rg_guide_mode', '0']);
+assert.strictEqual(guideResetSandbox.__stored.tf_guide_mode, '0');
+assert.strictEqual(guideResetSandbox.__stored.rg_guide_mode, '1');
+assert.doesNotMatch(source, /rg_guide_mode/, 'Tone must not read or write Reading guide preference');
+assert.match(source, /localStorage\.getItem\('tf_guide_mode'\)/);
+assert.match(source, /localStorage\.setItem\('tf_guide_mode', tfGuideMode \? '1' : '0'\)/);
+assert.match(readingSource, /localStorage\.getItem\('rg_guide_mode'\)/);
+assert.match(readingSource, /localStorage\.setItem\('rg_guide_mode',rgGuideMode\?'1':'0'\)/);
+
+for (const [readingMode, toneMode] of [['1', '0'], ['0', '1']]) {
+  const isolatedGuideSandbox = {
+    localStorage: { getItem(key) { return { rg_guide_mode: readingMode, tf_guide_mode: toneMode }[key]; } }
+  };
+  vm.createContext(isolatedGuideSandbox);
+  vm.runInContext(source.slice(guideStateStart, guideStateEnd), isolatedGuideSandbox);
+  assert.strictEqual(isolatedGuideSandbox.tfGuideMode, toneMode === '1');
+}
 
 const bonusSandbox = {
   session: null,

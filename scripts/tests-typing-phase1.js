@@ -447,7 +447,7 @@ test('Typing counter follows active syllables including High continuous segments
 });
 
 test('Typing loads the rebuilt crash-safe bundle with a fresh cache key', () => {
-  assert.match(html, /typing-game-app\.min\.js\?v=61/);
+  assert.match(html, /typing-game-app\.min\.js\?v=62/);
 });
 
 test('Typing treats the shared-profile legacy stat row as optional', () => {

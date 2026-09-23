@@ -252,7 +252,7 @@ test('direct sentence practice remains a separate single-item mode without Resum
 
 test('HTML fetches the exact-five minified runtime and source/minified carry the fail-closed contract', () => {
   assert.match(app, /var WO_ROUND_SIZE = 5/);
-  assert.match(html, /word-order-app\.min\.js\?v=46/);
+  assert.match(html, /word-order-app\.min\.js\?v=47/);
   assert.match(minApp, /WORD_ORDER_ROUND_EXACT_FIVE_REQUIRED/);
   assert.match(minApp, /round unavailable/);
 });

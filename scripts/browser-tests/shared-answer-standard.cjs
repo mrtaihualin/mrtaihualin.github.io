@@ -42,7 +42,7 @@ const origin = 'https://answer-review.test';
       });
       await context.addInitScript(() => {
         localStorage.setItem('cookieConsent', 'denied');
-        localStorage.setItem('games_particle_mode', 'off');
+        ['tf', 'rg', 'tg', 'wo'].forEach((game) => localStorage.setItem(game + '_particle_mode', 'off'));
         ['tone', 'reading', 'typing', 'wordorder'].forEach((game) => {
           localStorage.setItem('howto_tour_seen_' + game, '1');
           localStorage.setItem('howto_hint_seen_' + game, '1');

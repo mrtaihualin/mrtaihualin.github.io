@@ -902,8 +902,8 @@ var advSentIdx = -1;            // index ของประโยคปัจจ
 //   ครับ (ชาย) ใช้ได้เหมือนกันทุกประโยค (คำเดียวไม่เปลี่ยนตามชนิดประโยค) — ต่อได้เลยไม่ต้องมีข้อมูลเพิ่ม
 //   ค่ะ/คะ (หญิง) อ่านจาก s.politeF ที่ Lin ตรวจ+ยืนยันแล้วทีละประโยค (adv-sentences.js) — บอกเล่า→ค่ะ / คำถาม→คะ
 //   politeF: null = ประโยคที่ขึ้นด้วย "ผม" (สรรพนามผู้ชายเท่านั้น) → Lin สั่ง 2026-08-01 บังคับโชว์ครับเสมอ แม้เลือกโหมดหญิง (ไม่ใช่ "ยังไม่ได้กรอกข้อมูล" — ชุด 30 ประโยคนี้ Lin ตรวจครบ 100% แล้ว)
-function tfParticleMode() { try { return localStorage.getItem('games_particle_mode') || 'off'; } catch (e) { return 'off'; } }
-function tfSetParticleMode(m) { try { localStorage.setItem('games_particle_mode', m); } catch (e) {} }
+function tfParticleMode() { try { return localStorage.getItem('tf_particle_mode') || 'off'; } catch (e) { return 'off'; } }
+function tfSetParticleMode(m) { try { localStorage.setItem('tf_particle_mode', m); } catch (e) {} }
 // คืนคำลงท้ายสุภาพที่จะโชว์ (หรือ null) ตามโหมดปุ่มปัจจุบัน + ข้อมูล politeF ของประโยค s — ใช้ตอนเริ่มเล่นและตอนกดปุ่มระหว่างเล่น (ไม่รีเซ็ตรอบ)
 function tfShowParticleFor(s) {
   var mode = tfParticleMode();
@@ -926,10 +926,10 @@ function tfSyncParticleBtn() {
 // ── คำอ่านใต้คำศัพท์: 讀音 (ไทย 🐣/🥚) + 英文讀音 (โรมัน 🔡/🔠) — Lin 2026-07-25
 // เดิมเกมเสียงไม่มี 2 ปุ่มนี้เลย เพราะ "คำอ่านเฉลยวรรณยุกต์ก่อนตอบ" (โน้ต 2026-07-16)
 // รอบนี้ Lin สั่งให้เพิ่ม แต่ล็อกไว้ว่า **โชว์เฉพาะหลังตอบแล้วเท่านั้น** → ขั้น 'session-guess' (หน้าเดาวรรณยุกต์) จะไม่โชว์เด็ดขาด
-// ค่าจำใช้คีย์เดียวกับเกมอ่าน/เกมพิมพ์ (rg_pron_mode / rg_en_mode) → ตั้งครั้งเดียวเหมือนกันทุกเกม
+// ค่าจำของ Tone แยกจากเกมอื่น แม้ใช้ปุ่มและรูปแบบการแสดงร่วมกัน
 // ════════════════════════════════════════════════════════════
-var tfPronMode = (function () { try { var v = localStorage.getItem('rg_pron_mode'); return v === null ? false : v === '1'; } catch (e) { return false; } })();
-var tfEnMode   = (function () { try { var v = localStorage.getItem('rg_en_mode');   return v === null ? false : v === '1'; } catch (e) { return false; } })();
+var tfPronMode = (function () { try { var v = localStorage.getItem('tf_pron_mode'); return v === null ? false : v === '1'; } catch (e) { return false; } })();
+var tfEnMode   = (function () { try { var v = localStorage.getItem('tf_en_mode');   return v === null ? false : v === '1'; } catch (e) { return false; } })();
 
 function tfSyncReadBtns() {
   var b1 = document.getElementById('rg-pron-toggle');
@@ -1012,7 +1012,7 @@ function tfRepaintReading() {
 //   คำที่เปิด提示เป็น Free Practice: ไม่คิดคะแนน/โบนัส ไม่เปลี่ยน Combo และไม่อัปเดต SRS/Retry/Review
 //   ทุกคำใหม่กลับเป็น Challenge และปิด提示เสมอ
 // ════════════════════════════════════════════════════════════
-var tfGuideMode = (function () { try { return localStorage.getItem('rg_guide_mode') === '1'; } catch (e) { return false; } })();
+var tfGuideMode = (function () { try { return localStorage.getItem('tf_guide_mode') === '1'; } catch (e) { return false; } })();
 
 function tfSyncGuideBtn() {
   var b = document.getElementById('tf-guide-toggle');
@@ -1024,7 +1024,7 @@ function tfSyncGuideBtn() {
 
 function tfResetGuideForNextUnit() {
   tfGuideMode = false;
-  try { localStorage.setItem('rg_guide_mode', '0'); } catch (e) {}
+  try { localStorage.setItem('tf_guide_mode', '0'); } catch (e) {}
   tfSyncGuideBtn();
 }
 
@@ -4292,14 +4292,14 @@ var TF = {
   //   แก้: ถ้าไม่มีกล่อง #tf-read-line (= อยู่หน้าเฉลย) ให้ render() ใหม่แทน — วิธีเดียวกับปุ่ม 提示 ที่ทำอยู่แล้ว
   togglePron: function() {
     tfPronMode = !tfPronMode;
-    try { localStorage.setItem('rg_pron_mode', tfPronMode ? '1' : '0'); } catch(e){}
+    try { localStorage.setItem('tf_pron_mode', tfPronMode ? '1' : '0'); } catch(e){}
     tfSyncReadBtns();
     tfRepaintReading();
     if (window.WordMenu && window.WordMenu.refresh) window.WordMenu.refresh();
   },
   toggleEn: function() {
     tfEnMode = !tfEnMode;
-    try { localStorage.setItem('rg_en_mode', tfEnMode ? '1' : '0'); } catch(e){}
+    try { localStorage.setItem('tf_en_mode', tfEnMode ? '1' : '0'); } catch(e){}
     tfSyncReadBtns();
     tfRepaintReading();
     if (window.WordMenu && window.WordMenu.refresh) window.WordMenu.refresh();
@@ -4309,7 +4309,7 @@ var TF = {
   toggleGuide: function() {
     var wasGuideIntroPending = !!(session && session.currentWordGuideIntroPending);
     tfGuideMode = !tfGuideMode;
-    try { localStorage.setItem('rg_guide_mode', tfGuideMode ? '1' : '0'); } catch(e){}
+    try { localStorage.setItem('tf_guide_mode', tfGuideMode ? '1' : '0'); } catch(e){}
     if (tfGuideMode && session && session.words && session.index < session.words.length && S && S.word && S.step !== 'result') {
       tfLockCurrentWordForGuide();
       if (S.step === 'session-guess' && !tfCurWordNoTools()) {

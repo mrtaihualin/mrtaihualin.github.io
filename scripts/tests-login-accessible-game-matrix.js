@@ -40,22 +40,22 @@ assert.match(contentClient, /用LINE問老師/);
 const tiered = [
   {
     page: 'tone-finder.html', game: 'tone', app: 'js/games/tone-finder-game.js',
-    boot: /GameContentLoader\.boot\(\['js\/games\/tone-finder-game\.min\.js\?v=99'\], \{game:'tone'\}\)/,
+    boot: /GameContentLoader\.boot\(\['js\/games\/tone-finder-game\.min\.js\?v=100'\], \{game:'tone'\}\)/,
     resume: /GameResume\.save\('tone-finder'/,
   },
   {
     page: 'reading-game.html', game: 'reading', app: 'js/games/reading-game-app.js',
-    boot: /GameContentLoader\.boot\(\['js\/games\/reading-game-app\.min\.js\?v=63'\], \{game:'reading'\}\)/,
+    boot: /GameContentLoader\.boot\(\['js\/games\/reading-game-app\.min\.js\?v=64'\], \{game:'reading'\}\)/,
     resume: /GameResume\.save\(RG_RESUME_ID/,
   },
   {
     page: 'typing-game.html', game: 'typing', app: 'js/games/typing-game-app.js',
-    boot: /GameContentLoader\.boot\(\['js\/games\/typing-game-app\.min\.js\?v=61'\], \{game:'typing'\}\)/,
+    boot: /GameContentLoader\.boot\(\['js\/games\/typing-game-app\.min\.js\?v=62'\], \{game:'typing'\}\)/,
     resume: /GameResume\.save\('typing-game'/,
   },
   {
     page: 'word-order.html', game: 'word_order', app: 'js/games/word-order-app.js',
-    boot: /GameContentLoader\.boot\(\['js\/games\/word-order-app\.min\.js\?v=46'\], \{game:'word_order'\}\)/,
+    boot: /GameContentLoader\.boot\(\['js\/games\/word-order-app\.min\.js\?v=47'\], \{game:'word_order'\}\)/,
     resume: /GameResume\.save\('word-order'/,
   },
 ];
@@ -79,7 +79,7 @@ for (const item of tiered) {
 }
 
 const listening = read('listening-game.html');
-assert.match(listening, /GameContentLoader\.boot\(\['js\/games\/listening-game-app\.js\?v=20'\], \{game:'listening'\}\)/);
+assert.match(listening, /GameContentLoader\.boot\(\['js\/games\/listening-game-app\.js\?v=21'\], \{game:'listening'\}\)/);
 assert.doesNotMatch(listening, /coming-soon|即將開幕/);
 assert.doesNotMatch(listening, /js\/games\/(?:learning-review|tone-server)\.js/);
 assert.match(listening, /js\/core\/auth-widget\.js\?v=24/);
@@ -89,7 +89,7 @@ const lego = read('lego.html');
 const legoApp = read('js/games/lego-game-app.js');
 assert.match(lego, /data-gsh-game="lego"/);
 assert.match(lego, /id="buildPanel"/);
-assert.match(lego, /GameContentLoader\.boot\(\['js\/games\/lego-game-app\.js\?v=15'\], \{game:'lego'\}\)/);
+assert.match(lego, /GameContentLoader\.boot\(\['js\/games\/lego-game-app\.js\?v=16'\], \{game:'lego'\}\)/);
 assert.match(lego, /js\/games\/game-content-client\.js\?v=23/);
 assert.match(lego, /js\/core\/auth-widget\.js\?v=24/);
 assert.match(lego, /id="lego-resume-banner"/);

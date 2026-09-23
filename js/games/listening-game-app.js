@@ -10,13 +10,13 @@
   var ROUND_SIZE = 10;
   var MC_CHOICES = 4;
 
-  // ── 讀音／英文讀音／字體 — ใช้ localStorage คีย์เดียวกับเกมอ่าน/เกมพิมพ์ (ตั้งครั้งเดียวใช้ได้ทุกเกม) ──
-  var rgPronMode = (function () { try { return localStorage.getItem('rg_pron_mode') === '1'; } catch (e) { return false; } })();
-  var rgEnMode = (function () { try { return localStorage.getItem('rg_en_mode') === '1'; } catch (e) { return false; } })();
+  // ── 讀音／英文讀音／字體 — ใช้คีย์เฉพาะ Listening ──
+  var rgPronMode = (function () { try { return localStorage.getItem('lg_pron_mode') === '1'; } catch (e) { return false; } })();
+  var rgEnMode = (function () { try { return localStorage.getItem('lg_en_mode') === '1'; } catch (e) { return false; } })();
 
   function setRgPronMode(on) {
     rgPronMode = !!on;
-    try { localStorage.setItem('rg_pron_mode', rgPronMode ? '1' : '0'); } catch (e) {}
+    try { localStorage.setItem('lg_pron_mode', rgPronMode ? '1' : '0'); } catch (e) {}
     var btn = document.getElementById('lg-pron-toggle');
     if (btn) {
       btn.textContent = rgPronMode ? '🐣' : '🥚';
@@ -26,7 +26,7 @@
   }
   function setRgEnMode(on) {
     rgEnMode = !!on;
-    try { localStorage.setItem('rg_en_mode', rgEnMode ? '1' : '0'); } catch (e) {}
+    try { localStorage.setItem('lg_en_mode', rgEnMode ? '1' : '0'); } catch (e) {}
     var btn = document.getElementById('lg-en-toggle');
     if (btn) {
       btn.textContent = rgEnMode ? '🔡' : '🔠';
@@ -37,10 +37,10 @@
   // ── ฟ้อนต์โมเดิร์น (เหมือนเกมอ่าน/เกมพิมพ์) — shared.js เรียกฟังก์ชันนี้เองผ่านปุ่มใน #font-toggle-slot ──
   window.rgToggleFont = function () {
     var on = document.body.classList.toggle('rg-modern-font');
-    try { localStorage.setItem('rg_modern_font', on ? '1' : '0'); } catch (e) {}
+    try { localStorage.setItem('lg_modern_font', on ? '1' : '0'); } catch (e) {}
     try { if (window.gtag) gtag('event', 'listening_game_font_toggle', { category: 'game', on: on }); } catch (e) {}
   };
-  (function () { try { if (localStorage.getItem('rg_modern_font') === '1') document.body.classList.add('rg-modern-font'); } catch (e) {} })();
+  (function () { try { if (localStorage.getItem('lg_modern_font') === '1') document.body.classList.add('rg-modern-font'); } catch (e) {} })();
 
   var state = {
     mode: 'mc',     // 'mc' = 選擇答案 · 'type' = 輸入答案

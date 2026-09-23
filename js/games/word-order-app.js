@@ -212,12 +212,12 @@
     return out;
   }
 
-  // สวิตช์คำอ่าน — ใช้คีย์เดียวกับเกมอื่น (rg_pron_mode / rg_en_mode) ตั้งครั้งเดียวเหมือนกันทุกเกม
-  var woPronMode = (function(){ try { return localStorage.getItem('rg_pron_mode') === '1'; } catch(e){ return false; } })();
-  var woEnMode   = (function(){ try { return localStorage.getItem('rg_en_mode')   === '1'; } catch(e){ return false; } })();
-  // Lin 2026-07-30: สวิตช์คำแปลจีนรายคำ (ใต้กล่องทุกคำ เหมือน 英文讀音) — ใช้คีย์เดียวกับปุ่ม 🍙 ของเกมอื่น (games_hide_zh)
-  //   ตั้งครั้งเดียวเหมือนกันทุกเกม · ค่าเริ่มต้น = โชว์ (เหมือนเกมอื่น: ไม่มีคีย์ = ไม่ซ่อน)
-  var woZhWordOn = (function(){ try { return localStorage.getItem('games_hide_zh') !== '1'; } catch(e){ return true; } })();
+  // สวิตช์คำอ่าน — ค่าจำของ Word Order แยกจากเกมอื่น
+  var woPronMode = (function(){ try { return localStorage.getItem('wo_pron_mode') === '1'; } catch(e){ return false; } })();
+  var woEnMode   = (function(){ try { return localStorage.getItem('wo_en_mode')   === '1'; } catch(e){ return false; } })();
+  // Lin 2026-07-30: สวิตช์คำแปลจีนรายคำ (ใต้กล่องทุกคำ เหมือน 英文讀音) — ค่าจำของ Word Order แยกจากปุ่ม 🍙 ของเกมอื่น
+  //   ค่าจำเฉพาะ Word Order · ค่าเริ่มต้น = โชว์ (ไม่มีคีย์ = ไม่ซ่อน)
+  var woZhWordOn = (function(){ try { return localStorage.getItem('wo_hide_zh') !== '1'; } catch(e){ return true; } })();
   function woSyncReadBtns(){
     var b1 = document.getElementById('rg-pron-toggle');
     if (b1) {
@@ -262,28 +262,28 @@
   }
   window.woTogglePron = function(){
     woPronMode = !woPronMode;
-    try { localStorage.setItem('rg_pron_mode', woPronMode ? '1' : '0'); } catch(e){}
+    try { localStorage.setItem('wo_pron_mode', woPronMode ? '1' : '0'); } catch(e){}
     woSyncReadBtns(); woRepaintWords();
     if (window.WordMenu && window.WordMenu.refresh) window.WordMenu.refresh();
   };
   window.woToggleEn = function(){
     woEnMode = !woEnMode;
-    try { localStorage.setItem('rg_en_mode', woEnMode ? '1' : '0'); } catch(e){}
+    try { localStorage.setItem('wo_en_mode', woEnMode ? '1' : '0'); } catch(e){}
     woSyncReadBtns(); woRepaintWords();
     if (window.WordMenu && window.WordMenu.refresh) window.WordMenu.refresh();
   };
   // Lin 2026-07-30: สลับคำแปลจีนรายคำ (แถว 翻譯 ในเมนู 🍚)
   window.woToggleZhWord = function(){
     woZhWordOn = !woZhWordOn;
-    try { localStorage.setItem('games_hide_zh', woZhWordOn ? '0' : '1'); } catch(e){}
+    try { localStorage.setItem('wo_hide_zh', woZhWordOn ? '0' : '1'); } catch(e){}
     woSyncReadBtns(); woRepaintWords();
     if (window.WordMenu && window.WordMenu.refresh) window.WordMenu.refresh();
   };
 
   // ── ปุ่มครับ/ค่ะ/คะ ท้ายประโยค (Lin 2026-08-01) ──
   //   เกมนี้ไม่ใช่คำที่ต้องลากเรียงเลย — ต่อท้ายอัตโนมัติ "หลังเรียงประโยคหลักถูกแล้วเท่านั้น" (หรือกดยอมแพ้/ตายแล้วเฉลย ก็นับว่า "เห็นคำตอบสมบูรณ์" เหมือนกัน)
-  //   ใช้ localStorage key เดียวกับเกมเสียง/เกมอ่าน/เกมพิมพ์ (games_particle_mode) ให้ค่าติดกันข้ามเกม
-  var woParticleMode = (function(){ try { return localStorage.getItem('games_particle_mode') || 'off'; } catch(e){ return 'off'; } })();
+  //   ค่าจำของ Word Order แยกจากเกมอื่น
+  var woParticleMode = (function(){ try { return localStorage.getItem('wo_particle_mode') || 'off'; } catch(e){ return 'off'; } })();
   var woSentenceRevealed = false; // true เมื่อเรียงถูก/ตายแล้วเฉลย — ใช้คุมว่าจะเติมช่องครับ/ค่ะ/คะ ไหม
   function woShowParticleFor(s){
     if (!s) return null;
@@ -330,7 +330,7 @@
   }
   window.woToggleParticleMode = function(){
     woParticleMode = (woParticleMode === 'off') ? 'm' : (woParticleMode === 'm' ? 'f' : 'off');
-    try { localStorage.setItem('games_particle_mode', woParticleMode); } catch(e){}
+    try { localStorage.setItem('wo_particle_mode', woParticleMode); } catch(e){}
     if (SET.length && idx < SET.length) loadSentence();
     else { woSyncParticleBtn(); woRenderParticleLine(); }
     if (window.WordMenu && window.WordMenu.refresh) window.WordMenu.refresh();
@@ -1652,9 +1652,9 @@
 function rgToggleFont() {
   // Lin 2026-07-25: ลบโค้ดอัปเดตปุ่มเก่า #rg-font-btn ออก — ปุ่มนั้นไม่มีในหน้าแล้วตั้งแต่ย้ายเข้าเมนู 🍚 (shared.js สร้างปุ่มจริงเอง อ่านสถานะจาก class บน <body>)
   var on = document.body.classList.toggle('rg-modern-font');
-  try { localStorage.setItem('rg_modern_font', on ? '1' : '0'); } catch(e){}
+  try { localStorage.setItem('wo_modern_font', on ? '1' : '0'); } catch(e){}
 }
-(function(){ try { if (localStorage.getItem('rg_modern_font') === '1') { document.body.classList.add('rg-modern-font'); } } catch(e){} })(); // Lin 2026-07-25: ตัดโค้ดตั้งปุ่มเก่า #rg-font-btn ออก (ปุ่มไม่มีในหน้าแล้ว)
+(function(){ try { if (localStorage.getItem('wo_modern_font') === '1') { document.body.classList.add('rg-modern-font'); } } catch(e){} })(); // Lin 2026-07-25: ตัดโค้ดตั้งปุ่มเก่า #rg-font-btn ออก (ปุ่มไม่มีในหน้าแล้ว)
 
 // ── 我有問題 ──
 function rgOpenAsk() {

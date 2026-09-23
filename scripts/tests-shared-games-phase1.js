@@ -53,7 +53,7 @@ test('Listening is active through the protected central-content runtime', () => 
   assert.match(practice, /<a class="gh-card" href="listening-game\.html"/);
   assert.doesNotMatch(practice, /data-game-availability="coming-soon"/);
   assert.doesNotMatch(listening, /data-listening-availability="coming-soon"|id="listening-coming-soon"|id="listening-live-game"[^>]+aria-hidden="true"/);
-  assert.match(listening, /GameContentLoader\.boot\(\['js\/games\/listening-game-app\.js\?v=20'\], \{game:'listening'\}\)/);
+  assert.match(listening, /GameContentLoader\.boot\(\['js\/games\/listening-game-app\.js\?v=21'\], \{game:'listening'\}\)/);
 });
 
 test('Tone ordinary Desktop main and secondary headers exactly match the Core game header contract', () => {
@@ -219,7 +219,7 @@ test('floating controls use the locked switcher, focus and More Menu copy', () =
   assert.match(sharedJs, /fitMenuToViewport\(\)/);
   assert.match(sharedJs, /fitMoreMenuToViewport\(\)/);
   assert.match(sharedJs, /path\.indexOf\('listening-game'\) > -1\) GAME_ID = 'listening'/, 'Listening must use the shared More mapping');
-  assert.match(games.find((g) => g.id === 'listening').htmlText, /shared\.min\.js\?v=52/, 'Listening keeps its unchanged announcement-free shared runtime');
+  assert.match(games.find((g) => g.id === 'listening').htmlText, /shared\.min\.js\?v=53/, 'Listening loads the current announcement-free shared runtime');
 });
 
 test('all game pages permanently omit the automatic Login cap popup', () => {
@@ -256,13 +256,13 @@ test('all scoped pages use one fail-closed Login surface and game pages permanen
     const html = fs.readFileSync(path.join(root, file), 'utf8');
     assert.doesNotMatch(html, /ANN-BAND|ann-band|avail-band|annDismissed|annGoTo|annPrev|annNext/, `${file}: announcement DOM/marker/script/style hook must be removed`);
     assert.match(html, /minimum-guest-launch\.js\?v=25/, `${file}: must load the current Reading-authority Login gate`);
-    assert.match(html, /shared\.min\.js\?v=52/, `${file}: must load the announcement-free game runtime`);
+    assert.match(html, /shared\.min\.js\?v=53/, `${file}: must load the announcement-free game runtime`);
   }
   for (const file of nonGameScopedPages) {
     const html = fs.readFileSync(path.join(root, file), 'utf8');
     assert.match(html, /<!--ANN-BAND:START--><!-- Login UI scope: no announcement strip\. --><!--ANN-BAND:END-->/, `${file}: existing non-game announcement capability boundary must remain`);
     assert.match(html, /minimum-guest-launch\.js\?v=25/, `${file}: must load the current Reading-authority Login gate`);
-    assert.match(html, file === 'vault.html' ? /shared\.min\.js\?v=52/ : /shared\.min\.js\?v=52/, `${file}: non-game cache binding must stay on its current runtime`);
+    assert.match(html, /shared\.min\.js\?v=52/, `${file}: non-game cache binding must stay on its current runtime`);
   }
   assert.equal(scopedInventory.length, 17, 'FB-01 inventory must stay on the six games and eleven existing account surfaces');
   for (const file of scopedInventory) {
@@ -382,7 +382,7 @@ test('Lego keeps PR98 lower gameplay and participates only through Login', () =>
   const lego = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
   assert.match(lego, /id="rg-login-slot"/, 'Lego must retain the PR98 Login host');
   assert.match(lego, /css\/shared\.css\?v=36/);
-  assert.match(lego, /js\/core\/shared\.min\.js\?v=52/);
+  assert.match(lego, /js\/core\/shared\.min\.js\?v=53/);
   assert.doesNotMatch(lego, /gsh-session-placeholder|gsh-question-surface|gsh-wordorder-content-slot/);
   assert.match(lego, /<div class="card out">[\s\S]{0,220}<div class="out-banner">[\s\S]{0,220}id="sentTh"[\s\S]{0,160}id="sentZh"[\s\S]{0,160}id="sentZhFull"/);
   assert.match(lego, /id="lego-reveal" class="card lego-flow-card hidden"[\s\S]{0,160}id="lego-reveal-th"[\s\S]{0,160}id="lego-reveal-zh"/);
@@ -492,8 +492,8 @@ test('all games omit the removed leave-game control and dialog', () => {
   const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
   assert.doesNotMatch(sharedJs, /要離開遊戲嗎？|繼續遊戲|離開遊戲/);
   assert.doesNotMatch(sharedJs, /data-act="exit"|openGameExit|gsh-game-exit-dialog/);
-  for (const g of games) assert.match(g.htmlText, g.id === 'listening' ? /shared\.min\.js\?v=52/ : /shared\.min\.js\?v=52/, `${g.id}: must load the exit-free shared runtime`);
-  assert.match(legoHtml, /shared\.min\.js\?v=52/, 'Lego must load the exit-free shared runtime');
+  for (const g of games) assert.match(g.htmlText, /shared\.min\.js\?v=53/, `${g.id}: must load the exit-free shared runtime`);
+  assert.match(legoHtml, /shared\.min\.js\?v=53/, 'Lego must load the exit-free shared runtime');
 });
 
 test('the sitewide exit-intent survey and its submission path stay removed', () => {
@@ -523,9 +523,41 @@ test('shared font control binds after asynchronous Core 5 game startup', () => {
   assert.match(sharedJs, /var fontOn = isFontOn\(\);[\s\S]{0,500}aria-pressed/, 'font control must derive its visible and accessible state from the live body class');
   assert.match(sharedJs, /data-font-mode/, 'font control must expose its exact standard or modern state');
   assert.match(sharedJs, /MutationObserver\(renderFontBtn\)/, 'font control must resync when the game-owned font class changes');
-  assert.match(sharedJs, /e\.key !== 'rg_modern_font'/, 'font control must resync the shared preference across tabs');
+  assert.match(sharedJs, /e\.key !== fontStorageKey/, 'font control must resync only this game\'s preference across tabs');
   for (const g of games) {
     assert.match(g.htmlText, /id="font-toggle-slot"/, `${g.id}: missing shared font slot`);
+  }
+});
+
+test('game-owned preferences use distinct browser keys in all six games', () => {
+  const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
+  const expected = {
+    tone: ['tf_en_mode', 'tf_guide_mode', 'tf_modern_font', 'tf_particle_mode', 'tf_pron_mode'],
+    reading: ['rg_en_mode', 'rg_guide_mode', 'rg_modern_font', 'rg_particle_mode', 'rg_pron_mode'],
+    listening: ['lg_en_mode', 'lg_modern_font', 'lg_pron_mode'],
+    typing: ['tg_en_mode', 'tg_guide_mode', 'tg_modern_font', 'tg_particle_mode', 'tg_pron_mode'],
+    wordorder: ['wo_en_mode', 'wo_hide_zh', 'wo_modern_font', 'wo_particle_mode', 'wo_pron_mode'],
+    lego: ['lego_modern_font']
+  };
+  const allKeys = new Set();
+  for (const [id, keys] of Object.entries(expected)) {
+    const app = id === 'lego' ? legoApp : games.find((g) => g.id === id).appText;
+    const actual = [...new Set([...app.matchAll(/localStorage\.(?:getItem|setItem|removeItem)\(['"]([^'"]+)['"]/g)]
+      .map((match) => match[1])
+      .filter((key) => /_(?:en_mode|guide_mode|modern_font|particle_mode|pron_mode|hide_zh)$/.test(key)))].sort();
+    assert.deepStrictEqual(actual, keys.slice().sort(), `${id}: game-owned preference keys drifted`);
+    for (const key of actual) {
+      assert.ok(!allKeys.has(key), `${id}: ${key} is reused by another game`);
+      allKeys.add(key);
+    }
+  }
+  assert.match(sharedJs, /var fontStorageKey = gameStoragePrefix \+ '_modern_font'/);
+  assert.match(sharedJs, /var KEY = gameStoragePrefix \+ '_hide_zh'/);
+  for (const [page, prefix] of [
+    ['tone-finder', 'tf'], ['reading-game', 'rg'], ['listening-game', 'lg'],
+    ['typing-game', 'tg'], ['word-order', 'wo'], ['lego', 'lego']
+  ]) {
+    assert.ok(sharedJs.includes(`'${page}': '${prefix}'`), `${page}: shared UI must use its game-owned key`);
   }
 });
 
@@ -539,11 +571,11 @@ test('Tone question words and advanced sentences both follow the shared font mod
 test('Lego consumes the shared two-mode font path without a particle control', () => {
   const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
   const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
-  assert.match(legoHtml, /shared\.min\.js\?v=52/, 'Lego keeps the unchanged shared game runtime');
-  assert.match(legoHtml, /lego-game-app\.js\?v=15/, 'Lego must load its central-vocabulary quota runtime');
+  assert.match(legoHtml, /shared\.min\.js\?v=53/, 'Lego loads the current shared game runtime');
+  assert.match(legoHtml, /lego-game-app\.js\?v=16/, 'Lego must load its central-vocabulary quota runtime');
   assert.match(legoApp, /window\.rgToggleFont\s*=\s*function/, 'Lego must expose the shared font adapter API');
   assert.match(legoApp, /classList\.toggle\('rg-modern-font'\)/, 'Lego must preserve the existing standard/modern modes');
-  assert.match(legoApp, /localStorage\.setItem\('rg_modern_font'/, 'Lego must reuse the shared font preference');
+  assert.match(legoApp, /localStorage\.setItem\('lego_modern_font'/, 'Lego must keep its own font preference');
   assert.match(legoHtml, /body\.rg-modern-font \.out-th[\s\S]{0,500}Noto Sans Thai/, 'Lego Thai gameplay text must respond to the shared mode');
   assert.doesNotMatch(legoHtml + legoApp, /games_particle_mode|rg-particle-toggle|ToggleParticle/, 'Lego must not receive the particle control');
 });
@@ -666,16 +698,16 @@ test('all six games keep learning helpers without any rice-button contract', () 
   assert.doesNotMatch(sharedMin, /wm-trigger|textContent\s*=\s*['"]🍚['"]/);
   for (const g of games) {
     assert.match(g.htmlText, /js\/games\/word-menu\.js\?v=10/, `${g.id}: must load the inline learning-tool binder`);
-    assert.match(g.htmlText, g.id === 'listening' ? /js\/core\/shared\.min\.js\?v=52/ : /js\/core\/shared\.min\.js\?v=52/, `${g.id}: must load the rice-button-free shared runtime`);
+    assert.match(g.htmlText, /js\/core\/shared\.min\.js\?v=53/, `${g.id}: must load the rice-button-free shared runtime`);
     assert.doesNotMatch(g.htmlText, /wm-trigger|點 🍚|<button[^>]*>[^<]*🍚/, `${g.id}: retired rice-button source contract remains`);
   }
-  assert.match(legoHtml, /js\/core\/shared\.min\.js\?v=52/);
+  assert.match(legoHtml, /js\/core\/shared\.min\.js\?v=53/);
   assert.doesNotMatch(legoHtml, /wm-trigger|點 🍚|<button[^>]*>[^<]*🍚/);
   for (const app of [readingApp, typingApp, listeningApp]) assert.doesNotMatch(app, /#wm-trigger/);
   assert.match(games.find((g) => g.id === 'listening').htmlText, /id="zh-toggle-slot"/, 'Listening: translation control ต้องอยู่ใน inline learning tools');
   assert.match(sharedJs, /fab\.id = 'zh-fab-standalone'/, 'Lego must retain its existing non-rice translation control');
   assert.match(sharedJs, /GAME_ID === 'lego'[\s\S]{0,260}document\.getElementById\('zh-fab-standalone'\)[\s\S]{0,800}menu\.insertBefore\(legoTranslationRow, menu\.firstChild\)/, 'Lego translation must move inside its existing More menu instead of adding a fourth floating button');
-  assert.match(sharedJs, /var controlPage = String\(location\.pathname \|\| ''\)\.split\('\/'\)\.pop\(\)\.toLowerCase\(\);[\s\S]{0,120}if \(controlPage === 'vault\.html'\) return;/, 'Vault must stop before shared game translation controls are created');
+  assert.match(sharedJs, /if \(gamePage === 'vault'\) return;/, 'Vault must stop before shared game translation controls are created');
   assert.doesNotMatch(vaultHtml, /wm-trigger|zh-fab-standalone|<button[^>]*>[^<]*(?:🍚|🍙)/, 'Vault source must not define a floating rice control');
   assert.match(vaultHtml, /@media\(max-width:768px\) and \(orientation:portrait\)\{[\s\S]{0,500}html body \.rg-ctl-wrap\{[\s\S]{0,320}right:12px!important;[\s\S]{0,320}flex-direction:row!important;/, 'Vault Portrait controls must stay in one row at the right corner');
   assert.match(vaultHtml, /html body \.rg-ctl-wrap > #game-switcher\{[\s\S]{0,260}position:absolute!important;[\s\S]{0,180}right:0!important;[\s\S]{0,180}bottom:calc\(100% \+ 8px\)!important;/, 'Vault Portrait game menu must open above the right-corner controls');
@@ -698,7 +730,7 @@ test('mobile resume uses one compact shared-copy line and three horizontal actio
   for (const g of games) {
     const sharedCssVersion = g.id === 'listening' ? 37 : 38;
     assert.match(g.htmlText, new RegExp(`css/shared\\.css\\?v=${sharedCssVersion}`), `${g.id}: must load current shared game CSS`);
-    assert.match(g.htmlText, g.id === 'listening' ? /js\/core\/shared\.min\.js\?v=52/ : /js\/core\/shared\.min\.js\?v=52/, `${g.id}: must load shared resume copy`);
+    assert.match(g.htmlText, /js\/core\/shared\.min\.js\?v=53/, `${g.id}: must load shared resume copy`);
     assert.match(g.appText, /GameUiCopy\.resumeLine/, `${g.id}: resume detail must use shared semantic copy`);
   }
 });
@@ -894,7 +926,7 @@ test('Tone Hint creates one-word Free Practice while preserving the approved tea
   assert.match(toneMin, /pageshow/, 'Tone: deployed minified bundle must include the page-return guard');
   assert.match(toneMin, /tfHandleInitialToneMistake/, 'Tone: deployed minified bundle must preserve the initial no-deduction handler');
   assert.doesNotMatch(toneMin, /聲調選擇錯誤/, 'Tone: deployed minified bundle must not retain the superseded initial scored-mistake branch');
-  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=99/, 'Tone: page must request the rebuilt gameplay runtime version');
+  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=100/, 'Tone: page must request the rebuilt gameplay runtime version');
 });
 
 test('Tone mobile touch surfaces keep Desktop gameplay free of keyboard-only copy', () => {

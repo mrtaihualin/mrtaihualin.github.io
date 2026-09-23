@@ -1899,7 +1899,7 @@ window.deleteFBComment = function(postId, idx) {
 
 // ===================================================================
 // [05.2] 🍙 GAME TRANSLATION + FONT CONTROLS
-// ค่า default: จำไว้ด้วย localStorage (คีย์ games_hide_zh — แยกจาก textbook/controls-ui.js โดยตั้งใจ ตามที่ Lin เลือก)
+// ค่า default: จำไว้ด้วย localStorage คีย์เฉพาะเกม แยกจาก textbook/controls-ui.js
 // ระหว่างเล่น: คลิกที่กล่องคำแปลแต่ละกล่อง เปิด/ปิดเฉพาะจุดนั้นได้ (ไม่กระทบค่า default)
 // ทำงานเฉพาะหน้าเกม (มี #game-switcher) เหมือนปุ่มเต็มจอด้านบน — หน้าอื่นในเว็บไม่กระทบ
 // ⚠️ กล่องที่ "ซ้อนอยู่ในปุ่ม/เมนูที่มี onclick อื่นของเกม" (เช่น .ozh/.szh ในเกมเลโก้, .tf-level-sub ในเมนูเลือกประโยค高級)
@@ -1920,7 +1920,14 @@ window.deleteFBComment = function(postId, idx) {
       var gs = document.getElementById('game-switcher');
       if (!gs) return; // เอาแค่หน้าเกมจริงๆ
       var controlPage = String(location.pathname || '').split('/').pop().toLowerCase();
-      if (controlPage === 'vault.html') return; // Vault has no game translation tool; keep only 🎮 and focus controls.
+      var gamePage = controlPage.replace(/\.html$/, '');
+      if (gamePage === 'vault') return; // Vault has no game translation tool; keep only 🎮 and focus controls.
+      var gameStoragePrefix = {
+        'tone-finder': 'tf', 'reading-game': 'rg', 'listening-game': 'lg',
+        'typing-game': 'tg', 'word-order': 'wo', 'lego': 'lego'
+      }[gamePage] || gamePage.replace(/[^a-z0-9_-]/g, '');
+      if (!gameStoragePrefix) return;
+      var fontStorageKey = gameStoragePrefix + '_modern_font';
 
       function callFontToggle() {
         if (typeof window.rgToggleFont === 'function') { window.rgToggleFont(); return true; }
@@ -1960,14 +1967,13 @@ window.deleteFBComment = function(postId, idx) {
           }
         };
         fontSlot.appendChild(fontBtn);
-        // Keep the control truthful when the shared preference is restored or changed
-        // outside this exact button (for example another game/tab).
+        // Keep the control truthful when this game's preference changes in another tab.
         try {
           var fontClassObserver = new MutationObserver(renderFontBtn);
           fontClassObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
         } catch (e) {}
         window.addEventListener('storage', function (e) {
-          if (e.key !== 'rg_modern_font') return;
+          if (e.key !== fontStorageKey) return;
           var modern = e.newValue === '1';
           var usesToneFontClass = window.TF && typeof window.TF.toggleFont === 'function';
           document.body.classList.toggle('rg-modern-font', modern && !usesToneFontClass);
@@ -1990,7 +1996,7 @@ window.deleteFBComment = function(postId, idx) {
       // ปุ่มสลับฟอนต์ของหน้านี้อยู่ในแถวเครื่องมือใต้คำแล้ว → จบงานของบล็อกนี้แค่นี้พอ ไม่ต้องสร้างอะไรเพิ่ม
       if (isWordOrder) return;
 
-      var KEY = 'games_hide_zh';
+      var KEY = gameStoragePrefix + '_hide_zh';
       var hideOn = false;
       try { hideOn = localStorage.getItem(KEY) === '1'; } catch (e) {}
 

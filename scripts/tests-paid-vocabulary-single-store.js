@@ -122,7 +122,7 @@ assert.doesNotMatch(lego, /const SLEEP_LOCATION|const SUBJ_EXTRA|objTags|tags:\[
 
 assert.match(audio, /var GAME_AUDIO_ENABLED = true/);
 assert.doesNotMatch(listeningPage, /coming-soon|即將開幕|Preserved paused runtime/);
-assert.match(listeningPage, /GameContentLoader\.boot\(\['js\/games\/listening-game-app\.js\?v=20'\], \{game:'listening'\}\)/);
+assert.match(listeningPage, /GameContentLoader\.boot\(\['js\/games\/listening-game-app\.js\?v=21'\], \{game:'listening'\}\)/);
 
 async function verifyRuntimeCatalogIntegrity() {
   const integrityUrl = pathToFileURL(path.join(root, 'supabase/functions/game-content/catalog-integrity.mjs')).href;

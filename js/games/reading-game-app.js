@@ -417,7 +417,7 @@ setRgGuideMode(rgGuideMode); // ตั้งสถานะปุ่มตาม
 // Lin 2026-07-26: เดิมตอนเฉลย (checked=true) จะบังคับโชว์讀音เสมอ กดปุ่ม🐣/🥚ไม่มีผลตอนเฉลย → แก้ให้ปุ่มกดเปิด/ปิดได้จริงแม้ตอนเฉลยแล้ว
 // คำลงท้ายสุภาพเป็นข้อความประกอบประโยคเท่านั้น จนกว่าคลังกลางจะส่งระเบียนที่ Lin
 // ตรวจแล้วมาให้โดยตรง ห้ามสร้างพยางค์หรือคำตอบภาษาไว้ในเกม
-var rgParticleMode=(function(){try{return localStorage.getItem('games_particle_mode')||'off';}catch(e){return 'off';}})();
+var rgParticleMode=(function(){try{return localStorage.getItem('rg_particle_mode')||'off';}catch(e){return 'off';}})();
 function rgShowParticleFor(w){
   if(!w) return null;
   if(rgParticleMode==='f' && w.politeF) return w.politeF;
@@ -441,7 +441,7 @@ function rgSyncParticleBtn(){
 }
 function rgToggleParticleMode(){
   rgParticleMode=(rgParticleMode==='off')?'m':(rgParticleMode==='m'?'f':'off');
-  try{localStorage.setItem('games_particle_mode',rgParticleMode);}catch(e){}
+  try{localStorage.setItem('rg_particle_mode',rgParticleMode);}catch(e){}
   if(typeof WORD!=='undefined'&&WORD&&WORD.level==='高')loadWord();
   else{rgApplyParticleToTitle();rgSyncParticleBtn();}
 }

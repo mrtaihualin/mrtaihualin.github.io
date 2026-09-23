@@ -41,14 +41,14 @@ test('the exact four accepted games fetch the released shared Landscape runtime'
     const html = read(file);
     assert.match(html, new RegExp('<body[^>]+data-gsh-game="' + game + '"'));
     assert.match(html, /css\/mobile-landscape\.css\?v=77/);
-    assert.match(html, /js\/core\/shared\.min\.js\?v=52/);
+    assert.match(html, /js\/core\/shared\.min\.js\?v=53/);
     assert.match(html, /js\/core\/mobile-landscape\.js\?v=42/);
   });
 });
 
 test('Listening and Lego remain outside the four-game activation cache key', () => {
-  assert.match(read('listening-game.html'), /js\/core\/shared\.min\.js\?v=52/);
-  assert.match(read('lego.html'), /js\/core\/shared\.min\.js\?v=52/);
+  assert.match(read('listening-game.html'), /js\/core\/shared\.min\.js\?v=53/);
+  assert.match(read('lego.html'), /js\/core\/shared\.min\.js\?v=53/);
 });
 
 console.log('\n✅ Mobile Landscape release-gate tests passed (' + passed + ' checks)');
