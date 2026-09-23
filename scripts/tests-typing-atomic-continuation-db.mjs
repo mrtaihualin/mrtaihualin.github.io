@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -16,6 +17,8 @@ const migration = path.join(root, 'supabase/migrations/20260923060514_phase1_typ
 const rollback = path.join(root, 'supabase/recovery/phase1-typing-atomic-continuation/rollback.sql');
 const issuanceMigration = path.join(root, 'supabase/migrations/20260923143000_phase1_typing_initial_reserve_issuance.sql');
 const issuanceRollback = path.join(root, 'supabase/recovery/phase1-typing-initial-reserve-issuance/rollback.sql');
+const canonicalMigration = path.join(root, 'supabase/migrations/20260923170000_phase1_typing_canonical_version_pinning.sql');
+const canonicalRollback = path.join(root, 'supabase/recovery/phase1-typing-canonical-version-pinning/rollback.sql');
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'typing-continuation-db-'));
 const data = path.join(temp, 'data');
 const socket = path.join(temp, 'socket');
@@ -68,6 +71,34 @@ function psqlAsync(sql) {
   });
 }
 
+function psqlAsyncWithMarker(sql, marker) {
+  let readyResolve; let readyReject; let sawMarker = false;
+  const ready = new Promise((resolve, reject) => { readyResolve = resolve; readyReject = reject; });
+  const done = new Promise((resolve, reject) => {
+    const child = spawn('psql', [
+      '-X', '-q', '-v', 'ON_ERROR_STOP=1', '-h', socket, '-p', port,
+      '-d', 'postgres', '-At', '-c', sql,
+    ], { encoding: 'utf8' });
+    let stdout = ''; let stderr = '';
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk;
+      if (!sawMarker && stdout.includes(marker)) { sawMarker = true; readyResolve(); }
+    });
+    child.stderr.on('data', (chunk) => { stderr += chunk; });
+    child.on('error', (error) => { readyReject(error); reject(error); });
+    child.on('close', (status) => {
+      if (status === 0) {
+        if (!sawMarker) readyReject(new Error(`psql marker not seen: ${marker}`));
+        resolve(stdout.trim());
+      } else {
+        const error = new Error(`psql failed\n${stdout}\n${stderr}`);
+        readyReject(error); reject(error);
+      }
+    });
+  });
+  return { ready, done };
+}
+
 function asService(sql) {
   return psql(`set role service_role; ${sql}`);
 }
@@ -95,6 +126,8 @@ function hash(char) {
 const basePrompts = [1, 2, 3, 4, 5].map((index) => ({
   content_ref: { source: 'game_words', key: `typing-word-${index}` },
   answer: `คำ${index}`,
+  catalog_version: 'free-canonical-v1',
+  record_hash: createHash('sha256').update(`typing-word-${index}`).digest('hex'),
   golden: index === 3,
   srs_bonus: index === 2,
 }));
@@ -147,7 +180,8 @@ function snapshot(round, includeReserve = true) {
 let serial = 100;
 const nextOp = () => operationId(serial++);
 const prompt = (key, golden = false, srs_bonus = false) => ({
-  content_ref: { source: 'game_words', key }, answer: 'synthetic-answer-' + key, golden, srs_bonus,
+  content_ref: { source: 'game_words', key }, answer: 'synthetic-answer-' + key,
+  catalog_version: 'free-canonical-v1', record_hash: createHash('sha256').update(key).digest('hex'), golden, srs_bonus,
 });
 const event = (round, sequence, ordinal, type, answer = null, owner = userId, op = nextOp()) =>
   eventCall(op, hash('b'), round, sequence, ordinal, type, answer, owner);
@@ -158,7 +192,8 @@ function create(owner = userId, level = 1, prompts = basePrompts) {
 }
 let started = false;
 try {
-  run('initdb', ['-D', data, '--no-locale', '--encoding=UTF8', '--auth=trust']);
+  run('initdb', ['-D', data, '--no-locale', '--encoding=UTF8', '--auth=trust',
+    '--set=shared_memory_type=mmap', '--set=dynamic_shared_memory_type=mmap']);
   run('pg_ctl', ['-D', data, '-l', path.join(temp, 'postgres.log'),
     '-o', `-F -c listen_addresses='' -p ${port} -k ${socket}`, '-w', 'start']);
   started = true;
@@ -349,16 +384,41 @@ try {
   const stackPrompts = Array.from({ length: 6 }, (_, n) => prompt(`stack-${n}`));
   stackPrompts[5].golden = true;
   stackPrompts[5].srs_bonus = true;
-  const stackRound = create(stackOwner, 1, stackPrompts.slice(0, 5));
-  assert.equal(json(reserveCall(nextOp(), stackRound, 0, stackPrompts.slice(5), stackOwner)).ok, true);
   psql(`create table public.game_words(content_key text primary key, level text,
-    canonical_record jsonb, status text, access_tier text);
+    canonical_record jsonb, status text, access_tier text, catalog_version text, record_hash text);
     grant select on public.game_words to service_role;`);
   for (const p of stackPrompts) {
     const record = { contentKey: p.content_ref.key, word: p.answer, level: '初', syllables: [{}] };
     psql(`insert into public.game_words values (${quote(record.contentKey)}, '初',
-      ${quote(JSON.stringify(record))}::jsonb, 'active', 'login');`);
+      ${quote(JSON.stringify(record))}::jsonb, 'active', 'login',
+      ${quote(p.catalog_version)}, ${quote(p.record_hash)});`);
   }
+  apply(canonicalMigration);
+  const canonicalWrappers = [
+    'public.phase1_typing_round_issue(uuid,uuid,text,smallint,bigint,jsonb,jsonb)',
+    'public.phase1_typing_round_append_reserve(uuid,uuid,text,uuid,bigint,jsonb)',
+    'public.phase1_typing_round_append_event(uuid,uuid,text,uuid,bigint,bigint,text,text)',
+    'public.phase1_typing_round_load(uuid,uuid,bigint,bigint,smallint)',
+  ];
+  const hiddenPredecessors = canonicalWrappers.map(signature => signature.replace('(', '_unversioned('));
+  for (const signature of canonicalWrappers) {
+    assert.equal(psql(`select prosecdef and proconfig=ARRAY['search_path=""']
+      from pg_proc where oid=${quote(signature)}::regprocedure;`), 't');
+    assert.equal(psql(`select has_function_privilege('service_role', ${quote(signature)}, 'execute');`), 't');
+  }
+  for (const signature of hiddenPredecessors) {
+    // anon/authenticated also inherit any PUBLIC EXECUTE, so false covers the
+    // pseudo-role without relying on PUBLIC as a resolvable login role name.
+    for (const role of ['anon', 'authenticated', 'service_role']) {
+      assert.equal(psql(`select has_function_privilege(${quote(role)}, ${quote(signature)}, 'execute');`), 'f');
+    }
+  }
+  const stackRound = create(stackOwner, 1, stackPrompts.slice(0, 5));
+  psql(`update public.phase1_typing_round_prompts target
+    set catalog_version=word.catalog_version, record_hash=word.record_hash
+    from public.game_words word
+    where target.round_id=${quote(stackRound)}::uuid and word.content_key=target.content_key;`);
+  assert.equal(json(reserveCall(nextOp(), stackRound, 0, stackPrompts.slice(5), stackOwner)).ok, true);
   function query(read) {
     return { retry(value) { assert.equal(value, false); return this; },
       abortSignal(signal) { signal.throwIfAborted(); return this; },
@@ -442,12 +502,14 @@ try {
   const issuanceOwners = ['10000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000007'];
   psql(`insert into auth.users(id) values ${issuanceOwners.map(id => `(${quote(id)})`).join(',')};`);
   const trustedCatalog = Array.from({ length: 8 }, (_, i) => prompt(`issuance-${i + 1}`)).map(p => ({ content_key: p.content_ref.key,
-    level: '初', status: 'active', access_tier: 'login', canonical_record: {
+    level: '初', status: 'active', access_tier: 'login', catalog_version: p.catalog_version,
+    record_hash: p.record_hash, canonical_record: {
       contentKey: p.content_ref.key, word: p.answer, level: '初', syllables: [{}],
     } }));
   for (const row of trustedCatalog) {
     psql(`insert into public.game_words values (${quote(row.content_key)}, '初',
-      ${quote(JSON.stringify(row.canonical_record))}::jsonb, 'active', 'login');`);
+      ${quote(JSON.stringify(row.canonical_record))}::jsonb, 'active', 'login',
+      ${quote(row.catalog_version)}, ${quote(row.record_hash)});`);
   }
   const trustedContext = { startingCombo: 7, today: '2026-09-23', canonicalRows: trustedCatalog,
     snapshots: trustedCatalog.map((row, i) => ({ item_id: `fixture-item-${i}`, state_token: `fixture-token-${i}`,
@@ -509,9 +571,63 @@ try {
   assert.equal(contextCalls, 1); assert.equal(createCalls, 1);
   assert.equal(reserveState(issuanceRound).reserve_count, 3);
   assert.equal(reserveState(issuanceRound).reserve_cursor, 0);
+  assert.equal(psql(`select count(*) from public.phase1_typing_round_prompts
+    where round_id=${quote(issuanceRound)}::uuid and catalog_version='free-canonical-v1'
+      and record_hash ~ '^[0-9a-f]{64}$';`), '5');
+  assert.equal(psql(`select count(*) from public.phase1_typing_round_reserve_prompts
+    where round_id=${quote(issuanceRound)}::uuid and catalog_version='free-canonical-v1'
+      and record_hash ~ '^[0-9a-f]{64}$';`), '3');
+  assert.ok(issuedStart.prompt_page.every(p => p.catalog_version === 'free-canonical-v1'
+    && /^[0-9a-f]{64}$/.test(p.record_hash)));
   assert.equal(json(issueSql(rawCreateArgs[0])).idempotent, true);
   assert.equal(json(issueSql({ ...rawCreateArgs[0], p_reserve_prompts: [] })).reason, 'replay_conflict');
   assert.equal(snapshot(issuanceRound), issuanceBefore);
+
+  const driftKey = issuedStart.prompt_page[0].content_ref.key;
+  const originalHash = trustedCatalog.find(row => row.content_key === driftKey).record_hash;
+  psql(`update public.game_words set record_hash=${quote('f'.repeat(64))} where content_key=${quote(driftKey)};`);
+  const drifted = await handleTypingRoundAction({ admin: issuanceAdmin, user: { id: issuanceOwners[0] },
+    body: { action: 'typing_round_resume', round_id: issuanceRound }, enabled: true });
+  assert.equal(drifted.status, 409); assert.equal(drifted.body.error, 'typing_canonical_changed');
+  assert.equal(drifted.body.checkpoint, undefined);
+  psql(`update public.game_words set record_hash=${quote(originalHash)} where content_key=${quote(driftKey)};`);
+
+  const reserveDriftKey = psql(`select content_key from public.phase1_typing_round_reserve_prompts
+    where round_id=${quote(issuanceRound)}::uuid and reserve_ordinal=1;`);
+  const reserveOriginalHash = trustedCatalog.find(row => row.content_key === reserveDriftKey).record_hash;
+  psql(`update public.game_words set record_hash=${quote('d'.repeat(64))}
+    where content_key=${quote(reserveDriftKey)};`);
+  const reserveDrifted = await handleTypingRoundAction({ admin: issuanceAdmin,
+    user: { id: issuanceOwners[0] }, body: { action: 'typing_round_resume', round_id: issuanceRound }, enabled: true });
+  assert.equal(reserveDrifted.status, 409); assert.equal(reserveDrifted.body.error, 'typing_canonical_changed');
+  assert.equal(reserveDrifted.body.checkpoint, undefined);
+  psql(`update public.game_words set record_hash=${quote(reserveOriginalHash)}
+    where content_key=${quote(reserveDriftKey)};`);
+
+  const staleRefill = { ...stackPrompts[0], record_hash: 'e'.repeat(64) };
+  assert.equal(json(reserveCall(nextOp(), issuanceRound, 3, [staleRefill], issuanceOwners[0])).reason,
+    'typing_canonical_changed');
+  assert.equal(reserveState(issuanceRound).reserve_count, 3);
+
+  // A catalog writer that wins first must make the waiting refill recheck the
+  // updated row after its FOR SHARE wait, never commit a just-stale pin.
+  const refillRacePrompt = trustedCatalog[0];
+  const catalogWriter = psqlAsyncWithMarker(`begin;
+    update public.game_words set record_hash=${quote('c'.repeat(64))}
+      where content_key=${quote(refillRacePrompt.content_key)};
+    select 'CATALOG_WRITER_READY'; select pg_sleep(0.5); commit;`, 'CATALOG_WRITER_READY');
+  await catalogWriter.ready;
+  const racedRefill = await jsonAsync(reserveCall(nextOp(), issuanceRound, 3, [{
+    content_ref: { source: 'game_words', key: refillRacePrompt.content_key },
+    answer: refillRacePrompt.canonical_record.word,
+    catalog_version: refillRacePrompt.catalog_version, record_hash: refillRacePrompt.record_hash,
+    golden: false, srs_bonus: false,
+  }], issuanceOwners[0]));
+  await catalogWriter.done;
+  assert.equal(racedRefill.reason, 'typing_canonical_changed');
+  assert.equal(reserveState(issuanceRound).reserve_count, 3);
+  psql(`update public.game_words set record_hash=${quote(refillRacePrompt.record_hash)}
+    where content_key=${quote(refillRacePrompt.content_key)};`);
   assert.deepEqual(Object.keys(resumedStart.body).sort(), ['ok', 'checkpoint', 'current_prompt', 'operation_id', 'idempotent'].sort());
   assert.equal(JSON.stringify(resumedStart.body).includes('synthetic-answer'), false);
   for (const conflict of [await start({ ...startBody, level: 2 }), await start(startBody, issuanceOwners[1])]) {
@@ -553,6 +669,13 @@ try {
   console.log('Typing planner/receipt/create/Resume SQL stack: uncertain replay, no redraw, owner binding, simultaneous first issuance: PASS');
 
   const rounds = [round, emptyRound, raceRound, sameRound, stackRound, issuanceRound, issuanceRaceRound];
+  const beforeCanonicalRollback = rounds.map(r => snapshot(r, true));
+  apply(canonicalRollback);
+  assert.deepEqual(rounds.map(r => snapshot(r, true)), beforeCanonicalRollback);
+  apply(canonicalMigration);
+  assert.deepEqual(rounds.map(r => snapshot(r, true)), beforeCanonicalRollback);
+  apply(canonicalRollback);
+  assert.deepEqual(rounds.map(r => snapshot(r, true)), beforeCanonicalRollback);
   const beforeRollback = rounds.map(r => snapshot(r, false));
   apply(issuanceRollback);
   assert.equal(psql(`select to_regprocedure(${quote(issueSignature)}) is null;`), 't');

@@ -24,12 +24,14 @@ function storage() {
 function fixture({ count = 5, level = 1, combo = 0, units = 1, golden = [], srs = [] } = {}) {
   const code = level === 1 ? '初' : '中';
   const rows = Array.from({ length: count }, (_, i) => ({ content_key: `composition-${i + 1}`,
-    level: code, status: 'active', access_tier: 'login', canonical_record: {
+    level: code, status: 'active', access_tier: 'login', catalog_version: 'free-canonical-v1',
+    record_hash: (i + 1).toString(16).padStart(64, '0'), canonical_record: {
       contentKey: `composition-${i + 1}`, level: code, word: `synthetic-answer-${i + 1}`,
       syllables: Array.from({ length: Array.isArray(units) ? units[i] : units }, () => ({})),
     } }));
   const prompts = rows.map((row, i) => ({ prompt_ordinal: i + 1,
     content_ref: { source: 'game_words', key: row.content_key }, answer: row.canonical_record.word,
+    catalog_version: row.catalog_version, record_hash: row.record_hash,
     golden: golden.includes(i + 1), srs_bonus: srs.includes(i + 1) }));
   const round = { round_id: ROUND, game: 'typing', level, starting_combo: combo,
     prompt_count: count, next_event_sequence: 1, current_prompt_ordinal: 1,

@@ -6,6 +6,7 @@ import { loadTypingInitialRoundContext } from './typing-round-context.mjs';
 import { handleTypingRoundAction } from './typing-round-service.mjs';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const RECORD_HASH = /^[0-9a-f]{64}$/;
 const RECEIPT_FIELDS = 'operation_id,user_id,round_id,operation_type,request_hash,request_payload,response';
 
 function fail(code, status = 503) {
@@ -66,6 +67,18 @@ function confirmedRound(response, operationId, level) {
   return uuid(response.round_id, 'invalid_typing_evidence', 503);
 }
 
+function pinnedPrompt(prompt) {
+  return prompt?.content_ref?.source === 'game_words'
+    && typeof prompt.content_ref.key === 'string' && prompt.content_ref.key.trim() === prompt.content_ref.key
+    && prompt.content_ref.key.length > 0 && prompt.content_ref.key.length <= 512
+    && typeof prompt.answer === 'string' && prompt.answer.trim() === prompt.answer
+    && prompt.answer.length > 0 && [...prompt.answer].length <= 512
+    && typeof prompt.catalog_version === 'string' && prompt.catalog_version.trim() === prompt.catalog_version
+    && prompt.catalog_version.length > 0 && prompt.catalog_version.length <= 128
+    && RECORD_HASH.test(prompt.record_hash || '')
+    && typeof prompt.golden === 'boolean' && typeof prompt.srs_bonus === 'boolean';
+}
+
 function replayRound(saved, userId, operationId, level, hash) {
   if (saved.operation_id !== operationId || saved.user_id !== userId
       || saved.operation_type !== 'create_round' || saved.request_hash !== hash
@@ -77,8 +90,10 @@ function replayRound(saved, userId, operationId, level, hash) {
       || saved.response.starting_combo !== saved.request_payload.starting_combo
       || !Array.isArray(saved.request_payload.prompts)
       || saved.request_payload.prompts.length !== 5
+      || saved.request_payload.prompts.some((prompt) => !pinnedPrompt(prompt))
       || !Array.isArray(saved.request_payload.reserve_prompts)
       || saved.request_payload.reserve_prompts.length > 64
+      || saved.request_payload.reserve_prompts.some((prompt) => !pinnedPrompt(prompt))
       || saved.response.prompt_count !== 5
       || saved.response.reserve_count !== saved.request_payload.reserve_prompts.length) fail('invalid_typing_evidence');
   return roundId;
@@ -147,6 +162,8 @@ export async function handleTypingRoundStart({ admin, user, body, loadTrustedCon
         writeConfirmed = true;
       } else if (created?.reason === 'active_round_exists') {
         fail('active_round_exists', 409);
+      } else if (created?.reason === 'typing_canonical_changed') {
+        fail('typing_canonical_changed', 409);
       } else {
         fail('typing_storage_unavailable');
       }

@@ -11,6 +11,7 @@ function fixture(count = 8, level = 1) {
   const code = level === 1 ? '初' : '中';
   const canonicalRows = Array.from({ length: count }, (_, i) => ({ content_key: `fixture-${i}`,
     level: code, status: 'active', access_tier: 'login',
+    catalog_version: 'free-canonical-v1', record_hash: (i + 1).toString(16).padStart(64, '0'),
     canonical_record: { contentKey: `fixture-${i}`, word: `answer-${i}`, level: code, syllables: [{}] } }));
   const snapshots = canonicalRows.map((row, i) => ({ item_id: `fixture-item-${i}`, state_token: `normal:${i}`,
     content_ref: { source: 'game_words', key: row.content_key }, state: 'normal', stage: null, due_on: null }));
@@ -27,8 +28,9 @@ check('exactly five unique canonical prompts at both Free levels; no input mutat
     const result = plan(f, fixed);
     assert.equal(result.length, 5); assert.equal(new Set(result.map(key)).size, 5);
     for (const row of result) {
-      assert.deepEqual(Object.keys(row), ['content_ref', 'answer', 'golden', 'srs_bonus']);
+      assert.deepEqual(Object.keys(row), ['content_ref', 'answer', 'catalog_version', 'record_hash', 'golden', 'srs_bonus']);
       assert.equal(row.answer, f.canonicalRows.find((item) => item.content_key === key(row)).canonical_record.word);
+      assert.equal(row.catalog_version, 'free-canonical-v1'); assert.match(row.record_hash, /^[0-9a-f]{64}$/);
       assert.equal(row.golden, false); assert.equal(row.srs_bonus, false);
     }
     assert.equal(JSON.stringify(f), before);
@@ -75,6 +77,7 @@ check('duplicate item IDs, aliases and missing canonical matches fail shut', () 
 });
 check('inactive, Paid, mismatched and malformed canonical records are never issued', () => {
   const mutate = [r => r.status = 'inactive', r => r.access_tier = 'paid', r => r.level = '中',
+    r => r.catalog_version = '', r => r.record_hash = 'bad',
     r => r.canonical_record.contentKey = 'other', r => r.canonical_record.level = '中',
     r => r.canonical_record.word = ' ', r => r.canonical_record.syllables = [],
     r => r.canonical_record.word = 'a'.repeat(513)];

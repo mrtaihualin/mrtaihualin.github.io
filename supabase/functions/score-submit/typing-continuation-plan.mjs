@@ -5,6 +5,7 @@
 // atomically/idempotently before returning success. That integration is pending.
 import { buildTypingResumeCheckpoint } from './typing-resume-checkpoint.mjs';
 
+const RECORD_HASH = /^[0-9a-f]{64}$/;
 function fail(code) { throw Object.assign(new Error(code), { code }); }
 function identity(ref) {
   if (ref?.source !== 'game_words' || typeof ref.key !== 'string' || !ref.key || ref.key.trim() !== ref.key) {
@@ -44,13 +45,18 @@ export function planTypingContinuation({ serverRound, canonicalRows, serverEvent
     const key = identity(prompt?.content_ref);
     if (typeof prompt.golden !== 'boolean' || typeof prompt.srs_bonus !== 'boolean'
         || typeof prompt.answer !== 'string' || !prompt.answer || prompt.answer.trim() !== prompt.answer
+        || typeof prompt.catalog_version !== 'string' || !prompt.catalog_version
+        || prompt.catalog_version.trim() !== prompt.catalog_version || prompt.catalog_version.length > 128
+        || !RECORD_HASH.test(prompt.record_hash || '')
         || [...prompt.answer].length > 512) fail('invalid_typing_reserve');
     const matches = canonicalRows.filter((row) => row.content_key === key);
-    if (matches.length !== 1 || matches[0].level !== checkpoint.difficulty || matches[0].word !== prompt.answer) {
+    if (matches.length !== 1 || matches[0].level !== checkpoint.difficulty || matches[0].word !== prompt.answer
+        || matches[0].catalog_version !== prompt.catalog_version || matches[0].record_hash !== prompt.record_hash) {
       fail('typing_reserve_canonical_mismatch');
     }
     if (completed.has(key)) continue;
     const selected = { content_ref: { source: 'game_words', key }, answer: prompt.answer,
+      catalog_version: prompt.catalog_version, record_hash: prompt.record_hash,
       golden: prompt.golden, srs_bonus: prompt.srs_bonus };
     // Reuse the canonical/entitlement validator on the extended protected queue.
     // This still reduces ONLY the original persisted events.

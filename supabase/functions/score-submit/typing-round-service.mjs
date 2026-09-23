@@ -7,6 +7,7 @@ export const TYPING_ROUND_ACTIONS_ENABLED = false;
 const PAGE_SIZE = 64;
 const TIMEOUT_MS = 10000;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const RECORD_HASH = /^[0-9a-f]{64}$/;
 const own = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
 
 function fail(code, status = 503) {
@@ -61,7 +62,7 @@ function rpcResult(data) {
   const reason = data?.reason;
   if (reason === 'round_not_found') fail(reason, 404);
   if (['replay_conflict', 'resync_required', 'round_not_active', 'replacement_prompt_required',
-    'typing_reserve_exhausted'].includes(reason)) fail(reason, 409);
+    'typing_reserve_exhausted', 'typing_canonical_changed'].includes(reason)) fail(reason, 409);
   if (['answer_mismatch', 'duplicate_completed_content', 'invalid_arguments'].includes(reason)) fail(reason, 400);
   fail('typing_storage_unavailable');
 }
@@ -129,28 +130,37 @@ async function canonicalRows(admin, evidence, signal) {
   const keys = [...new Set(evidence.prompts.map((prompt) => {
     const ref = prompt?.content_ref;
     if (ref?.source !== 'game_words' || typeof ref.key !== 'string' || !ref.key
-        || ref.key.trim() !== ref.key) fail('invalid_typing_evidence');
+        || ref.key.trim() !== ref.key
+        || typeof prompt.catalog_version !== 'string' || !prompt.catalog_version
+        || prompt.catalog_version.trim() !== prompt.catalog_version || prompt.catalog_version.length > 128
+        || !RECORD_HASH.test(prompt.record_hash || '')) fail('invalid_typing_evidence');
     return ref.key;
   }))];
   const rows = [];
   for (const batch of catalogBatches(keys)) {
     const data = await resultOf(admin.from('game_words')
-      .select('content_key,level,canonical_record,status,access_tier')
+      .select('content_key,level,canonical_record,status,access_tier,catalog_version,record_hash')
       .in('content_key', batch).eq('level', level), signal);
     if (!Array.isArray(data)) fail('typing_canonical_unavailable');
     for (const row of data) {
       const record = row?.canonical_record;
       if (row.status !== 'active' || !['guest', 'login'].includes(row.access_tier)
           || !batch.includes(row.content_key) || row.level !== level
+          || typeof row.catalog_version !== 'string' || !row.catalog_version
+          || row.catalog_version.trim() !== row.catalog_version || row.catalog_version.length > 128
+          || !RECORD_HASH.test(row.record_hash || '')
           || record?.contentKey !== row.content_key || record.level !== level
           || !Array.isArray(record.syllables) || !record.syllables.length) fail('typing_canonical_unavailable');
-      rows.push({ content_key: record.contentKey, word: record.word, level, syllables: record.syllables });
+      rows.push({ content_key: record.contentKey, word: record.word, level, syllables: record.syllables,
+        catalog_version: row.catalog_version, record_hash: row.record_hash });
     }
   }
   const byKey = new Map(rows.map((row) => [row.content_key, row]));
   if (byKey.size !== rows.length || byKey.size !== keys.length) fail('typing_canonical_unavailable');
   for (const prompt of evidence.prompts) {
-    if (byKey.get(prompt.content_ref.key)?.word !== prompt.answer) fail('typing_canonical_changed', 409);
+    const row = byKey.get(prompt.content_ref.key);
+    if (row?.word !== prompt.answer || row?.catalog_version !== prompt.catalog_version
+        || row?.record_hash !== prompt.record_hash) fail('typing_canonical_changed', 409);
   }
   return rows;
 }

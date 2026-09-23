@@ -7,12 +7,14 @@ let passed = 0;
 function check(name, fn) { fn(); passed++; console.log('PASS ' + name); }
 const op = (n) => `30000000-0000-4000-8000-${n.toString(16).padStart(12, '0')}`;
 const ref = (n) => ({ source: 'game_words', key: `fixture-${n}` });
-const prompt = (n) => ({ content_ref: ref(n), answer: `answer-${n}`, golden: n % 2 === 0, srs_bonus: n % 3 === 0 });
+const pin = (n) => ({ catalog_version: 'free-canonical-v1', record_hash: (n + 1).toString(16).padStart(64, '0') });
+const prompt = (n) => ({ content_ref: ref(n), answer: `answer-${n}`, ...pin(n), golden: n % 2 === 0, srs_bonus: n % 3 === 0 });
 const protectedPrompt = (p) => ({ contentRef: p.content_ref, golden: p.golden, srsBonus: p.srs_bonus });
 function fixture(level = '初') {
   return { serverRound: { roundId: '20000000-0000-4000-8000-000000000001', game: 'typing',
     difficulty: level, startingCombo: 4, prompts: Array.from({ length: 5 }, (_, n) => protectedPrompt(prompt(n))) },
-    canonicalRows: Array.from({ length: 100 }, (_, n) => ({ content_key: ref(n).key, word: `answer-${n}`, level, syllables: [{}] })),
+    canonicalRows: Array.from({ length: 100 }, (_, n) => ({ content_key: ref(n).key, word: `answer-${n}`,
+      level, syllables: [{}], ...pin(n) })),
     serverEvents: [], serverReserve: { cursor: 0, prompts: Array.from({ length: 400 }, (_, n) => prompt((n + 5) % 100)) },
     nextEventType: 'skipped' };
 }
@@ -81,10 +83,12 @@ check('reserve exhaustion fails shut and leaves all evidence unchanged', () => {
 });
 check('malformed cursor, entitlement, answer and canonical reserve fail shut', () => {
   for (const cursor of [-1, 0.5, 401, '0']) { const f = atTail(); f.serverReserve.cursor = cursor; assert.throws(() => plan(f), /invalid_typing_reserve/); }
-  for (const mutate of [p => p.golden = 1, p => p.srs_bonus = null, p => p.answer = ' ', p => p.content_ref.source = 'game_sentences']) {
+  for (const mutate of [p => p.golden = 1, p => p.srs_bonus = null, p => p.answer = ' ',
+    p => p.catalog_version = '', p => p.record_hash = 'bad', p => p.content_ref.source = 'game_sentences']) {
     const f = atTail(); mutate(f.serverReserve.prompts[0]); assert.throws(() => plan(f), /invalid_typing_reserve/);
   }
   for (const mutate of [f => f.serverReserve.prompts[0].answer = 'wrong', f => f.canonicalRows[5].level = '中',
+    f => f.canonicalRows[5].catalog_version = 'free-canonical-v2', f => f.canonicalRows[5].record_hash = 'f'.repeat(64),
     f => f.canonicalRows.splice(5, 1), f => f.canonicalRows.push(f.canonicalRows[5])]) {
     const f = atTail(); mutate(f); assert.throws(() => plan(f), /typing_reserve_canonical_mismatch/);
   }

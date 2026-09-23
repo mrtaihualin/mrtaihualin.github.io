@@ -6,8 +6,10 @@
 import { classifyLearningState } from '../_shared/login-free-learning-engine.mjs';
 
 const UINT32_RANGE = 0x100000000;
+const RECORD_HASH = /^[0-9a-f]{64}$/;
 function fail(code) { throw Object.assign(new Error(code), { code }); }
 function text(value) { return typeof value === 'string' && value.length > 0 && value.trim() === value; }
+function version(value) { return text(value) && value.length <= 128; }
 function secureUint32() { return crypto.getRandomValues(new Uint32Array(1))[0]; }
 
 // Rejection sampling avoids modulo bias, including at the exact 18/100 boundary.
@@ -41,9 +43,10 @@ function selectTypingPromptRows({ level, today, snapshots, canonicalRows }, rand
     const record = row?.canonical_record;
     if (!text(row?.content_key) || canonical.has(row.content_key) || row.level !== code
         || row.status !== 'active' || !['guest', 'login'].includes(row.access_tier)
+        || !version(row.catalog_version) || !RECORD_HASH.test(row.record_hash || '')
         || record?.contentKey !== row.content_key || record.level !== code || !text(record.word)
         || [...record.word].length > 512 || !Array.isArray(record.syllables) || !record.syllables.length) fail('invalid_typing_catalog');
-    canonical.set(row.content_key, record);
+    canonical.set(row.content_key, row);
   }
   const ids = new Set();
   const keys = new Set();
@@ -80,9 +83,12 @@ function selectTypingPromptRows({ level, today, snapshots, canonicalRows }, rand
 }
 
 function prompt(row, canonical, randomUint32) {
+  const source = canonical.get(row.content_ref.key);
   return {
     content_ref: { source: 'game_words', key: row.content_ref.key },
-    answer: canonical.get(row.content_ref.key).word,
+    answer: source.canonical_record.word,
+    catalog_version: source.catalog_version,
+    record_hash: source.record_hash,
     golden: drawBelow(100, randomUint32) < 18,
     // Eligibility only. The final atomic learning/score commit must enforce
     // once-per-stage awards; this plan does not claim that commit is integrated.

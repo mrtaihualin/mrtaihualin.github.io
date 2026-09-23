@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -90,6 +91,8 @@ function hash(char) {
 const basePrompts = [1, 2, 3, 4, 5].map((index) => ({
   content_ref: { source: 'game_words', key: `typing-word-${index}` },
   answer: `คำ${index}`,
+  catalog_version: 'free-canonical-v1',
+  record_hash: createHash('sha256').update(`typing-word-${index}`).digest('hex'),
   golden: index === 3,
   srs_bonus: index === 2,
 }));
@@ -285,12 +288,13 @@ try {
   // Exercise the actual SQL -> Edge bridge -> reducer shapes, using the same
   // disposable PostgreSQL server and a synthetic canonical catalog only.
   psql(`create table public.game_words(content_key text primary key, level text,
-    canonical_record jsonb, status text, access_tier text);
+    canonical_record jsonb, status text, access_tier text, catalog_version text, record_hash text);
     grant select on public.game_words to service_role;`);
   for (const prompt of basePrompts) {
     const record = { contentKey: prompt.content_ref.key, word: prompt.answer, level: '初', syllables: [{}] };
     psql(`insert into public.game_words values (${quote(record.contentKey)}, '初',
-      ${quote(JSON.stringify(record))}::jsonb, 'active', 'login');`);
+      ${quote(JSON.stringify(record))}::jsonb, 'active', 'login',
+      ${quote(prompt.catalog_version)}, ${quote(prompt.record_hash)});`);
   }
   function bridgeQuery(read) {
     return { retry(value) { assert.equal(value, false); return this; },
@@ -303,7 +307,19 @@ try {
       const parameters = Object.entries(args).map(([key, value]) =>
         `${key} => ${value === null ? 'null' : typeof value === 'number'
           ? `${value}::${key === 'p_page_size' ? 'smallint' : 'bigint'}` : quote(value)}`);
-      return bridgeQuery(() => json(`select public.${name}(${parameters.join(',')})::text;`));
+      return bridgeQuery(() => {
+        const result = json(`select public.${name}(${parameters.join(',')})::text;`);
+        // This older foundation migration predates pin columns. Decorate only
+        // the synthetic bridge shape; the canonical migration DB suite proves
+        // that the real replacement load RPC reads persisted pins.
+        if (name === 'phase1_typing_round_load' && result.ok === true) {
+          result.prompt_page = result.prompt_page.map((prompt) => {
+            const source = basePrompts.find((row) => row.content_ref.key === prompt.content_ref.key);
+            return { ...prompt, catalog_version: source.catalog_version, record_hash: source.record_hash };
+          });
+        }
+        return result;
+      });
     },
     from(name) {
       assert.equal(name, 'game_words');

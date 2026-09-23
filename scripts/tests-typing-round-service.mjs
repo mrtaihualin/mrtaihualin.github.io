@@ -19,19 +19,21 @@ function fixture(count = 5, level = 1) {
   const code = level === 1 ? '初' : '中';
   const rows = Array.from({ length: Math.min(count, 100) }, (_, i) => ({
     content_key: `fixture-word-${i + 1}`, level: code, status: 'active', access_tier: 'login',
+    catalog_version: 'free-canonical-v1', record_hash: (i + 1).toString(16).padStart(64, '0'),
     canonical_record: { contentKey: `fixture-word-${i + 1}`, word: `fixture-answer-${i + 1}`,
       level: code, syllables: [{}] },
   }));
   const prompts = Array.from({ length: count }, (_, i) => {
     const row = rows[i % rows.length];
     return { prompt_ordinal: i + 1, content_ref: { source: 'game_words', key: row.content_key },
-      answer: row.canonical_record.word, golden: i === 2, srs_bonus: i === 1 };
+      answer: row.canonical_record.word, catalog_version: row.catalog_version,
+      record_hash: row.record_hash, golden: i === 2, srs_bonus: i === 1 };
   });
   const round = { round_id: roundId, game: 'typing', level, starting_combo: 4,
     prompt_count: count, next_event_sequence: 1, current_prompt_ordinal: 1,
     completed_count: 0, skip_count: 0, status: 'active' };
   const state = { owner, round, prompts, rows, events: [], operations: new Map(), calls: [],
-    queryHook: null, pageHook: null, failWrite: false, failLoad: false, lostWriteResponse: false };
+    queryHook: null, pageHook: null, loadReason: null, failWrite: false, failLoad: false, lostWriteResponse: false };
   const query = (fn) => {
     let signal;
     return { retry(value) { assert.equal(value, false); return this; },
@@ -47,6 +49,7 @@ function fixture(count = 5, level = 1) {
         }
         if (name === 'phase1_typing_round_load') {
           if (state.failLoad) return { error: { message: 'PRIVATE SQL ERROR' } };
+          if (state.loadReason) return { data: { ok: false, reason: state.loadReason } };
           const p = args.p_prompt_after; const e = args.p_event_after; const size = args.p_page_size;
           assert.equal(size, 64);
           const data = { ok: true, round: structuredClone(round),
@@ -213,6 +216,29 @@ await check('missing, duplicate, private and changed canonical content fail clos
     assert.ok([409, 503].includes(result.status));
     assert.equal(result.body.checkpoint, undefined);
   }
+});
+
+await check('missing prompt pin and catalog version/hash drift fail closed without leaking pins', async () => {
+  for (const mutate of [
+    (f) => { delete f.prompts[0].catalog_version; },
+    (f) => { f.prompts[0].record_hash = 'bad'; },
+    (f) => { f.rows[0].catalog_version = 'free-canonical-v2'; },
+    (f) => { f.rows[0].record_hash = 'f'.repeat(64); },
+  ]) {
+    const f = fixture(); mutate(f);
+    const result = await f.call();
+    assert.ok([409, 503].includes(result.status));
+    assert.equal(result.body.checkpoint, undefined);
+  }
+  const f = fixture(); const result = await f.call(); const visible = JSON.stringify(result.body);
+  assert.ok(!visible.includes('free-canonical-v1')); assert.ok(!visible.includes(f.rows[0].record_hash));
+});
+
+await check('protected load rejects unconsumed reserve drift before Resume projection', async () => {
+  const f = fixture(); f.loadReason = 'typing_canonical_changed';
+  const result = await f.call();
+  assert.equal(result.status, 409); assert.equal(result.body.error, 'typing_canonical_changed');
+  assert.equal(result.body.checkpoint, undefined); assert.equal(result.body.current_prompt, undefined);
 });
 
 await check('lost commit response and post-commit read failure preserve same operation for retry', async () => {

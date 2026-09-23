@@ -13,6 +13,7 @@ function fixture({ previous = true, level = 1 } = {}) {
   const code = level === 1 ? '初' : '中';
   const canonical = Array.from({ length: 8 }, (_, i) => ({
     content_key: `context-${i + 1}`, level: code, status: 'active', access_tier: 'login',
+    catalog_version: 'free-canonical-v1', record_hash: (i + 1).toString(16).padStart(64, '0'),
     canonical_record: { contentKey: `context-${i + 1}`, level: code,
       word: `answer-${i + 1}`, syllables: [{}] },
   }));
@@ -20,6 +21,7 @@ function fixture({ previous = true, level = 1 } = {}) {
     content_source: 'game_words', content_key: row.content_key }));
   const prompts = canonical.slice(0, 5).map((row, i) => ({ prompt_ordinal: i + 1,
     content_ref: { source: 'game_words', key: row.content_key }, answer: row.canonical_record.word,
+    catalog_version: row.catalog_version, record_hash: row.record_hash,
     golden: false, srs_bonus: false }));
   const events = prompts.map((prompt, i) => ({ operation_id: `30000000-0000-4000-8000-00000000000${i + 1}`,
     sequence: i + 1, prompt_ordinal: i + 1, content_ref: prompt.content_ref,

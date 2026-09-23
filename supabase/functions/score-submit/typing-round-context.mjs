@@ -32,7 +32,7 @@ async function canonicalRows(admin, catalog, level, signal) {
   const rows = [];
   for (const batch of catalogBatches(keys)) {
     const data = await resultOf(admin.from('game_words')
-      .select('content_key,level,status,access_tier,canonical_record')
+      .select('content_key,level,status,access_tier,catalog_version,record_hash,canonical_record')
       .in('content_key', batch).eq('level', code).limit(2000), signal);
     if (!Array.isArray(data)) fail('invalid_typing_catalog');
     rows.push(...data);

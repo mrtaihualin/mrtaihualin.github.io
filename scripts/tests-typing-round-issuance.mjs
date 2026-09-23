@@ -22,7 +22,8 @@ async function check(name, fn) { await fn(); passed++; console.log('PASS ' + nam
 function fixture(level = 1) {
   const code = level === 1 ? '初' : '中';
   const canonicalRows = Array.from({ length: 8 }, (_, i) => ({ content_key: `issuance-synthetic-${i + 1}`,
-    level: code, status: 'active', access_tier: 'login', canonical_record: {
+    level: code, status: 'active', access_tier: 'login', catalog_version: 'free-canonical-v1',
+    record_hash: (i + 1).toString(16).padStart(64, '0'), canonical_record: {
       contentKey: `issuance-synthetic-${i + 1}`, level: code,
       word: `synthetic-answer-${i + 1}`, syllables: [{}],
     } }));
@@ -186,6 +187,8 @@ await check('first issuance uses trusted Combo five, unique canonical prompts, s
     assert.equal(new Set(args.p_prompts.map((p) => p.content_ref.key)).size, 5);
     assert.equal(new Set([...args.p_prompts, ...args.p_reserve_prompts].map((p) => p.content_ref.key)).size, 8);
     assert.ok(args.p_prompts.every((p) => typeof p.golden === 'boolean' && p.srs_bonus === false));
+    assert.ok([...args.p_prompts, ...args.p_reserve_prompts].every((p) =>
+      p.catalog_version === 'free-canonical-v1' && /^[0-9a-f]{64}$/.test(p.record_hash)));
     const visible = JSON.stringify(result.body);
     assert.ok(!visible.includes('synthetic-answer-')); assert.ok(!visible.includes('request_payload'));
     assert.ok(!visible.includes('srs_bonus')); assert.ok(!visible.includes('prompts'));
@@ -200,6 +203,19 @@ await check('known receipt replays without trusted callback or Golden redraw and
   assert.equal(replay.status, 200); assert.equal(replay.body.idempotent, true);
   assert.deepEqual(replay.body.checkpoint, initial.body.checkpoint); assert.deepEqual(replay.body.current_prompt, initial.body.current_prompt);
   assert.deepEqual(f.receipts.get(OP), persisted); assert.equal(f.creates().length, 1); assert.equal(f.contextCalls.length, 1);
+});
+
+await check('receipt replay rejects missing or malformed canonical pins', async () => {
+  for (const mutate of [
+    (payload) => { delete payload.prompts[0].catalog_version; },
+    (payload) => { payload.prompts[0].record_hash = 'bad'; },
+    (payload) => { payload.reserve_prompts[0].catalog_version = ''; },
+  ]) {
+    const f = fixture(); assert.equal((await f.call()).status, 200);
+    mutate(f.receipts.get(OP).request_payload);
+    const result = await f.call({ loadTrustedContext: () => { throw new Error('must not redraw'); } });
+    assert.equal(result.status, 503); assert.equal(result.body.checkpoint, undefined);
+  }
 });
 
 await check('lost committed create response retains same operation and retry reads persisted winner', async () => {
