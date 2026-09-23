@@ -57,6 +57,36 @@ test('High sentence syllables expose exact reviewed fields to the shared answer 
   assert.ok(reviewedDisplay.buildAnswerRows(syllable).some((row) => row.tag === '母音' && row.text === 'อา'));
 });
 
+test('Reading Advanced male politeness displays ครับ without changing other game preferences', () => {
+  const particle = block('var rgParticleMode=', 'var rgPronMode=');
+  const values = new Map([
+    ['rg_particle_mode', 'm'], ['tf_particle_mode', 'f'],
+    ['tg_particle_mode', 'off'], ['wo_particle_mode', 'm']
+  ]);
+  const title = { textContent: '' };
+  const button = { style: {}, setAttribute() {}, title: '' };
+  const context = {
+    localStorage: { getItem: (key) => values.get(key) ?? null, setItem: (key, value) => values.set(key, value) },
+    document: { getElementById: (id) => ({ wth: title, 'rg-particle-toggle': button })[id] || null },
+    WORD: { th: 'ทดสอบ', level: '高', politeF: 'ค่ะ' }
+  };
+  vm.createContext(context);
+  vm.runInContext(particle, context);
+  vm.runInContext('rgApplyParticleToTitle();rgSyncParticleBtn()', context);
+  assert.strictEqual(title.textContent, 'ทดสอบครับ');
+  assert.strictEqual(button.title.includes('ครับ'), true);
+  vm.runInContext("rgParticleMode='f';rgApplyParticleToTitle()", context);
+  assert.strictEqual(title.textContent, 'ทดสอบค่ะ');
+  vm.runInContext("rgParticleMode='off';rgApplyParticleToTitle()", context);
+  assert.strictEqual(title.textContent, 'ทดสอบ');
+  vm.runInContext("rgParticleMode='m';WORD.level='初';rgApplyParticleToTitle()", context);
+  assert.strictEqual(title.textContent, 'ทดสอบ');
+  assert.strictEqual(values.get('rg_particle_mode'), 'm');
+  assert.deepStrictEqual([...values].filter(([key]) => key !== 'rg_particle_mode'), [
+    ['tf_particle_mode', 'f'], ['tg_particle_mode', 'off'], ['wo_particle_mode', 'm']
+  ]);
+});
+
 test('attempt score and correction evidence reset for every new word', () => {
   const loadWord = block('function loadWord()', 'function loadSyl()');
   assert.match(loadWord, /readingAttemptScore=null;readingFirstCheckWrongCounts=null;readingCorrectionAttempts=0;readingFirstCheckDone=false/);
@@ -118,7 +148,7 @@ test('Reading keeps reviewed syllable authority through the live answer object',
 });
 
 test('Reading loads the rebuilt crash-safe bundle with a fresh cache key', () => {
-  assert.match(html, /reading-game-app\.min\.js\?v=64/);
+  assert.match(html, /reading-game-app\.min\.js\?v=65/);
   assert.match(minified, /READING_FINAL_EXCEPTIONS=\{"อีเมล@中#noun-b-11":"ล"\}/);
   assert.match(minified, /function reviewedReadingVowel\(/);
   assert.match(minified, /function reviewedReadingFinal\(/);

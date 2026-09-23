@@ -420,6 +420,7 @@ setRgGuideMode(rgGuideMode); // ตั้งสถานะปุ่มตาม
 var rgParticleMode=(function(){try{return localStorage.getItem('rg_particle_mode')||'off';}catch(e){return 'off';}})();
 function rgShowParticleFor(w){
   if(!w) return null;
+  if(rgParticleMode==='m') return 'ครับ';
   if(rgParticleMode==='f' && w.politeF) return w.politeF;
   return null;
 }
