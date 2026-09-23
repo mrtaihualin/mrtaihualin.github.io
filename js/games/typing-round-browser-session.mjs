@@ -72,6 +72,7 @@ export function createTypingRoundBrowserSession({ roundClient, storage, locks = 
   let writer = null;
   let generation = 0;
   let operation = null;
+  let lifecycle = Promise.resolve();
 
   function draftKey(scopeId = owner?.scopeId) { return DRAFT_PREFIX + scopeId; }
   function requireWriter(epoch = generation) {
@@ -113,9 +114,15 @@ export function createTypingRoundBrowserSession({ roundClient, storage, locks = 
   function compatibleDraft(state, maximumPosition) {
     const draft = readDraft();
     if (!draft) return null;
-    let current;
-    try { current = currentIdentity(state); }
-    catch (_) { removeDraft(); return null; }
+    // Transient/retry states are not authority to destroy a valid local draft.
+    // Only a confirmed completed checkpoint or a confirmed ready prompt can
+    // prove that the record is stale.
+    if (state?.status === 'complete' && state.checkpoint?.complete === true) {
+      removeDraft();
+      return null;
+    }
+    if (state?.status !== 'ready') fail('round_not_ready');
+    const current = currentIdentity(state);
     if (draft.roundId !== current.roundId || draft.promptOrdinal !== current.promptOrdinal
         || !sameRef(draft.contentRef, current.contentRef) || draft.stateVersion > current.stateVersion
         || (maximumPosition !== undefined && (!integer(maximumPosition) || draft.position > maximumPosition))) {
@@ -133,7 +140,7 @@ export function createTypingRoundBrowserSession({ roundClient, storage, locks = 
     try { storage.setItem(draftKey(), JSON.stringify(next)); }
     catch (_) { fail('persistence_unavailable'); }
   }
-  async function stop() {
+  async function stopInternal() {
     generation += 1;
     operation = null;
     const previous = writer;
@@ -145,9 +152,18 @@ export function createTypingRoundBrowserSession({ roundClient, storage, locks = 
       try { await previous.request; } catch (_) {}
     }
   }
-  async function start(context) {
+  function lifecycleTransition(work) {
+    const result = lifecycle.then(work);
+    lifecycle = result.catch(() => {});
+    return result;
+  }
+  function stop() {
+    return lifecycleTransition(stopInternal);
+  }
+  function start(context) {
+    return lifecycleTransition(async () => {
     const selected = ownerContext(context);
-    await stop();
+    await stopInternal();
     if (!locks || typeof locks.request !== 'function') fail('writer_coordination_unavailable');
     const epoch = generation;
     let release;
@@ -178,8 +194,9 @@ export function createTypingRoundBrowserSession({ roundClient, storage, locks = 
     writer.request = request;
     // A corrupt local draft cannot silently downgrade exact Resume.
     try { readDraft(); }
-    catch (error) { await stop(); throw error; }
+    catch (error) { await stopInternal(); throw error; }
     return getState();
+    });
   }
   function getState() {
     const state = clientState(roundClient);

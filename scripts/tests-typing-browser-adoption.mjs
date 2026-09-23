@@ -44,6 +44,7 @@ function roundClient() {
     pendingOperationId: null, error: null };
   let ownerContext = null;
   let failNext = null;
+  let pendingEvent = null;
   const calls = [];
   const ready = () => {
     state = { ...state, status: 'ready', checkpoint: { roundId: ROUND, stateVersion: 0 },
@@ -66,7 +67,11 @@ function roundClient() {
     },
     async sendEvent(event) {
       calls.push(['event', clone(event)]);
-      if (failNext) { const code = failNext; failNext = null; throw Object.assign(new Error(code), { code }); }
+      if (failNext) {
+        const code = failNext; failNext = null; pendingEvent = clone(event);
+        state.status = 'retry_pending'; state.pendingOperationId = 'synthetic-pending';
+        throw Object.assign(new Error(code), { code });
+      }
       state.checkpoint.stateVersion += 1;
       if (['completed', 'skipped'].includes(event.type)) {
         state.currentPrompt = { ordinal: state.currentPrompt.ordinal + 1,
@@ -74,7 +79,18 @@ function roundClient() {
       }
       return clone(state);
     },
-    async retryPending() { calls.push(['retry']); return clone(state); },
+    async retryPending() {
+      calls.push(['retry']);
+      if (!pendingEvent) throw Object.assign(new Error('no_pending_operation'), { code: 'no_pending_operation' });
+      const event = pendingEvent; pendingEvent = null;
+      state.status = 'ready'; state.pendingOperationId = null;
+      state.checkpoint.stateVersion += 1;
+      if (['completed', 'skipped'].includes(event.type)) {
+        state.currentPrompt = { ordinal: state.currentPrompt.ordinal + 1,
+          content_ref: ref(state.currentPrompt.ordinal + 1), golden: false };
+      }
+      return clone(state);
+    },
     getState() { return clone(state); },
   };
 }
@@ -112,6 +128,17 @@ await test('second same-scope tab fails closed while a different scope may proce
   assert.equal(secondClient.calls.some(([kind, value]) => kind === 'owner' && value), false);
   await third.start(other); assert.equal(locks.held.size, 2);
   await Promise.all([first.stop(), third.stop()]);
+});
+
+await test('overlapping owner starts serialize without leaking either Web Lock', async () => {
+  const locks = lockManager(); const session = createTypingRoundBrowserSession({
+    roundClient: roundClient(), storage: memoryStorage(), locks,
+  });
+  const [first, second] = await Promise.all([session.start(owner), session.start(other)]);
+  assert.equal(first.scopeId, owner.scopeId); assert.equal(second.scopeId, other.scopeId);
+  assert.equal(locks.held.size, 1);
+  assert.equal([...locks.held][0].endsWith(other.scopeId), true);
+  await session.stop(); assert.equal(locks.held.size, 0);
 });
 
 await test('missing or failed Web Locks support never activates the client', async () => {
@@ -161,8 +188,22 @@ await test('terminal confirmation clears stale partial only after server success
   client.fail('transport_unavailable');
   await rejection(session.sendEvent({ type: 'completed', answer: 'synthetic' }), 'transport_unavailable');
   assert.equal(storage.records.size, 1);
-  await session.sendEvent({ type: 'completed', answer: 'synthetic' });
+  await session.retryPending();
   assert.equal(storage.records.size, 0); assert.equal(session.restorePartial(10), 0);
+  await session.stop();
+});
+
+await test('lost-response retry state never destroys a valid partial draft', async () => {
+  const storage = memoryStorage(); const client = roundClient();
+  const session = createTypingRoundBrowserSession({ roundClient: client, storage, locks: lockManager() });
+  await session.start(owner); await session.resume(); session.savePartial(2);
+  client.fail('transport_unavailable');
+  await rejection(session.sendEvent({ type: 'wrong' }), 'transport_unavailable');
+  assert.throws(() => session.restorePartial(10), /round_not_ready/);
+  assert.equal(storage.records.size, 1);
+  await session.retryPending();
+  assert.equal(session.restorePartial(10), 2);
+  assert.equal(JSON.parse([...storage.records.values()][0]).stateVersion, 1);
   await session.stop();
 });
 
