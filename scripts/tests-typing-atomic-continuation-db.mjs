@@ -19,6 +19,8 @@ const issuanceMigration = path.join(root, 'supabase/migrations/20260923143000_ph
 const issuanceRollback = path.join(root, 'supabase/recovery/phase1-typing-initial-reserve-issuance/rollback.sql');
 const canonicalMigration = path.join(root, 'supabase/migrations/20260923170000_phase1_typing_canonical_version_pinning.sql');
 const canonicalRollback = path.join(root, 'supabase/recovery/phase1-typing-canonical-version-pinning/rollback.sql');
+const refillMigration = path.join(root, 'supabase/migrations/20260923200000_phase1_typing_bounded_reserve_refill.sql');
+const refillRollback = path.join(root, 'supabase/recovery/phase1-typing-bounded-reserve-refill/rollback.sql');
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'typing-continuation-db-'));
 const data = path.join(temp, 'data');
 const socket = path.join(temp, 'socket');
@@ -99,6 +101,35 @@ function psqlAsyncWithMarker(sql, marker) {
   return { ready, done };
 }
 
+function psqlInteractiveLock(sql, marker) {
+  let readyResolve; let readyReject; let sawMarker = false;
+  const ready = new Promise((resolve, reject) => { readyResolve = resolve; readyReject = reject; });
+  let child;
+  const done = new Promise((resolve, reject) => {
+    child = spawn('psql', [
+      '-X', '-q', '-A', '-t', '-v', 'ON_ERROR_STOP=1', '-h', socket, '-p', port, '-d', 'postgres',
+    ]);
+    let stdout = ''; let stderr = '';
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk;
+      if (!sawMarker && stdout.includes(marker)) { sawMarker = true; readyResolve(); }
+    });
+    child.stderr.on('data', (chunk) => { stderr += chunk; });
+    child.on('error', (error) => { readyReject(error); reject(error); });
+    child.on('close', (status) => {
+      if (status === 0) {
+        if (!sawMarker) readyReject(new Error(`psql marker not seen: ${marker}`));
+        resolve(stdout.trim());
+      } else {
+        const error = new Error(`psql failed\n${stdout}\n${stderr}`);
+        readyReject(error); reject(error);
+      }
+    });
+    child.stdin.write(sql + '\n');
+  });
+  return { ready, done, release() { child.stdin.end('commit;\n\\q\n'); } };
+}
+
 function asService(sql) {
   return psql(`set role service_role; ${sql}`);
 }
@@ -159,6 +190,18 @@ function reserveCall(batch, round, count, prompts, owner = userId, requestHash =
   return `select public.phase1_typing_round_append_reserve(
     ${quote(batch)}::uuid, ${quote(owner)}::uuid, ${quote(requestHash)},
     ${quote(round)}::uuid, ${count}::bigint, ${quote(JSON.stringify(prompts))}::jsonb)::text;`;
+}
+function refillCall(batch, round, sequence, ordinal, count, cursor, prompts,
+    owner = userId, requestHash = hash('f'), promptCount = 5, completedCount = 0, skipCount = 0) {
+  return `select public.phase1_typing_round_refill(
+    ${quote(batch)}::uuid, ${quote(owner)}::uuid, ${quote(requestHash)}, ${quote(round)}::uuid,
+    ${sequence}::bigint, ${ordinal}::bigint, ${promptCount}::bigint, ${completedCount}::smallint,
+    ${skipCount}::bigint, ${count}::bigint, ${cursor}::bigint,
+    ${quote(JSON.stringify(prompts))}::jsonb)::text;`;
+}
+function reserveLoad(round, after = 0, owner = userId, size = 64) {
+  return json(`select public.phase1_typing_round_reserve_load(
+    ${quote(owner)}::uuid, ${quote(round)}::uuid, ${after}::bigint, ${size}::smallint)::text;`);
 }
 function load(round, owner = userId) {
   return json(`select public.phase1_typing_round_load(${quote(owner)}::uuid, ${quote(round)}::uuid,
@@ -394,6 +437,7 @@ try {
       ${quote(p.catalog_version)}, ${quote(p.record_hash)});`);
   }
   apply(canonicalMigration);
+  apply(refillMigration);
   const canonicalWrappers = [
     'public.phase1_typing_round_issue(uuid,uuid,text,smallint,bigint,jsonb,jsonb)',
     'public.phase1_typing_round_append_reserve(uuid,uuid,text,uuid,bigint,jsonb)',
@@ -413,6 +457,121 @@ try {
       assert.equal(psql(`select has_function_privilege(${quote(role)}, ${quote(signature)}, 'execute');`), 'f');
     }
   }
+  const refillLoadSignature = 'public.phase1_typing_round_reserve_load(uuid,uuid,bigint,smallint)';
+  const refillCommitSignature = 'public.phase1_typing_round_refill(uuid,uuid,text,uuid,bigint,bigint,bigint,smallint,bigint,bigint,bigint,jsonb)';
+  for (const [signature, securityDefiner] of [[refillLoadSignature, false], [refillCommitSignature, true]]) {
+    assert.equal(psql(`select prosecdef=${securityDefiner} and proconfig=ARRAY['search_path=""']
+      from pg_proc where oid=${quote(signature)}::regprocedure;`), 't');
+    assert.equal(psql(`select has_function_privilege('service_role', ${quote(signature)}, 'execute');`), 't');
+    for (const role of ['anon', 'authenticated']) {
+      assert.equal(psql(`select has_function_privilege(${quote(role)}, ${quote(signature)}, 'execute');`), 'f');
+    }
+  }
+  const refillOwner = '10000000-0000-4000-8000-000000000008';
+  psql(`insert into auth.users values (${quote(refillOwner)});`);
+  const refillRound = create(refillOwner, 1, stackPrompts.slice(0, 5));
+  psql(`update public.phase1_typing_round_prompts target
+    set catalog_version=word.catalog_version, record_hash=word.record_hash
+    from public.game_words word
+    where target.round_id=${quote(refillRound)}::uuid and word.content_key=target.content_key;
+    insert into public.phase1_typing_round_reserve_state(round_id) values (${quote(refillRound)}::uuid);`);
+  let refillPage = reserveLoad(refillRound, 0, refillOwner);
+  assert.equal(refillPage.ok, true); assert.equal(refillPage.reserve.reserve_count, 0);
+  assert.deepEqual(refillPage.reserve_page, []); assert.equal(refillPage.has_more_reserves, false);
+  const refillBatch = nextOp();
+  const firstRefillSql = refillCall(refillBatch, refillRound, 1, 1, 0, 0,
+    [stackPrompts[5]], refillOwner);
+  assert.equal(json(firstRefillSql).reserve_count, 1);
+  assert.equal(json(firstRefillSql).idempotent, true);
+  assert.equal(json(refillCall(refillBatch, refillRound, 1, 1, 0, 0,
+    [stackPrompts[4]], refillOwner)).reason, 'replay_conflict');
+  assert.equal(json(refillCall(nextOp(), refillRound, 1, 1, 0, 0,
+    [stackPrompts[5]], refillOwner)).reason, 'resync_required');
+  assert.equal(json(refillCall(nextOp(), refillRound, 1, 1, 1, 0,
+    Array(64).fill(stackPrompts[5]), refillOwner)).reserve_count, 65);
+  assert.equal(json(refillCall(nextOp(), refillRound, 1, 1, 65, 0,
+    [stackPrompts[5], stackPrompts[5]], refillOwner)).reserve_count, 67);
+  refillPage = reserveLoad(refillRound, 0, refillOwner);
+  assert.equal(refillPage.reserve_page.length, 64); assert.equal(refillPage.next_reserve_after, 64);
+  assert.equal(refillPage.has_more_reserves, true);
+  const refillTail = reserveLoad(refillRound, 64, refillOwner);
+  assert.equal(refillTail.reserve_page.length, 3); assert.equal(refillTail.next_reserve_after, 67);
+  assert.equal(refillTail.has_more_reserves, false);
+  assert.equal(reserveLoad(refillRound, 0, userId).reason, 'round_not_found');
+  psql(`update public.game_words set record_hash=${quote('9'.repeat(64))}
+    where content_key=${quote(stackPrompts[5].content_ref.key)};`);
+  assert.equal(reserveLoad(refillRound, 0, refillOwner).reason, 'typing_canonical_changed');
+  psql(`update public.game_words set record_hash=${quote(stackPrompts[5].record_hash)}
+    where content_key=${quote(stackPrompts[5].content_ref.key)};`);
+  assert.equal(json(event(refillRound, 1, 1, 'wrong', null, refillOwner)).ok, true);
+  assert.equal(json(refillCall(nextOp(), refillRound, 1, 1, 67, 0,
+    [stackPrompts[5]], refillOwner)).reason, 'resync_required');
+  const beforeRefillRollback = snapshot(refillRound, true);
+  apply(refillRollback);
+  assert.equal(snapshot(refillRound, true), beforeRefillRollback);
+  assert.equal(psql(`select pg_catalog.to_regprocedure(${quote(refillLoadSignature)}) is null;`), 't');
+  apply(refillMigration);
+  assert.equal(snapshot(refillRound, true), beforeRefillRollback);
+  assert.equal(reserveLoad(refillRound, 0, refillOwner).reserve.reserve_count, 67);
+  const lockOwner = '10000000-0000-4000-8000-000000000010';
+  psql(`insert into auth.users values (${quote(lockOwner)});`);
+  const lockRound = create(lockOwner, 1, stackPrompts.slice(0, 5));
+  psql(`update public.phase1_typing_round_prompts target
+    set catalog_version=word.catalog_version, record_hash=word.record_hash
+    from public.game_words word
+    where target.round_id=${quote(lockRound)}::uuid and word.content_key=target.content_key;
+    insert into public.phase1_typing_round_reserve_state(round_id) values (${quote(lockRound)}::uuid);`);
+  const lockBatch = nextOp(); const lockHash = hash('7'); const lockPrompt = stackPrompts[5];
+  const roundBlocker = psqlInteractiveLock(`begin;
+    select round_id from public.phase1_typing_rounds where round_id=${quote(lockRound)}::uuid for update;
+    select 'REFILL_LOCK_ORDER_READY';`, 'REFILL_LOCK_ORDER_READY');
+  await roundBlocker.ready;
+  const directAppend = jsonAsync(reserveCall(lockBatch, lockRound, 0, [lockPrompt], lockOwner, lockHash));
+  let appendBlocked = false;
+  for (let attempt = 0; attempt < 80 && !appendBlocked; attempt++) {
+    appendBlocked = Number(psql(`select count(*) from pg_stat_activity
+      where pid <> pg_backend_pid() and backend_type='client backend'
+        and state='active' and wait_event_type='Lock';`)) > 0;
+    if (!appendBlocked) await new Promise(resolve => setTimeout(resolve, 25));
+  }
+  if (!appendBlocked) throw new Error('append lock wait not observed: ' + psql(`select coalesce(jsonb_agg(
+    jsonb_build_object('state',state,'wait_type',wait_event_type,'wait',wait_event,'query',left(query,120))), '[]'::jsonb)::text
+    from pg_stat_activity where pid <> pg_backend_pid() and backend_type='client backend';`));
+  const protectedRefill = jsonAsync(refillCall(lockBatch, lockRound, 1, 1, 0, 0,
+    [lockPrompt], lockOwner, lockHash));
+  roundBlocker.release();
+  const crossEntrypoint = await Promise.all([directAppend, protectedRefill]);
+  await roundBlocker.done;
+  assert.equal(crossEntrypoint.filter(result => result.ok && !result.idempotent).length, 1);
+  assert.equal(crossEntrypoint.filter(result => result.ok && result.idempotent).length, 1);
+  assert.equal(reserveState(lockRound).reserve_count, 1);
+  const canonicalRaceBatch = nextOp();
+  const activeRacePrompt = stackPrompts[0];
+  const canonicalBlocker = psqlInteractiveLock(`begin;
+    update public.game_words set record_hash=${quote('8'.repeat(64))}
+      where content_key=${quote(activeRacePrompt.content_ref.key)};
+    select 'REFILL_CANONICAL_RACE_READY';`, 'REFILL_CANONICAL_RACE_READY');
+  await canonicalBlocker.ready;
+  const canonicalRace = jsonAsync(refillCall(canonicalRaceBatch, lockRound, 1, 1, 1, 0,
+    [lockPrompt], lockOwner, hash('6')));
+  let canonicalWait = false;
+  for (let attempt = 0; attempt < 80 && !canonicalWait; attempt++) {
+    canonicalWait = Number(psql(`select count(*) from pg_stat_activity
+      where pid <> pg_backend_pid() and backend_type='client backend'
+        and state='active' and wait_event_type='Lock';`)) > 0;
+    if (!canonicalWait) await new Promise(resolve => setTimeout(resolve, 25));
+  }
+  assert.equal(canonicalWait, true);
+  canonicalBlocker.release();
+  const canonicalRaceResult = await canonicalRace;
+  await canonicalBlocker.done;
+  assert.equal(canonicalRaceResult.reason, 'typing_canonical_changed');
+  assert.equal(reserveState(lockRound).reserve_count, 1);
+  assert.equal(psql(`select count(*) from public.phase1_typing_round_reserve_batches
+    where batch_id=${quote(canonicalRaceBatch)}::uuid;`), '0');
+  psql(`update public.game_words set record_hash=${quote(activeRacePrompt.record_hash)}
+    where content_key=${quote(activeRacePrompt.content_ref.key)};`);
+  console.log('Typing protected bounded reserve refill SQL: ACL, paging, receipt, full snapshot CAS and rollback: PASS');
   const stackRound = create(stackOwner, 1, stackPrompts.slice(0, 5));
   psql(`update public.phase1_typing_round_prompts target
     set catalog_version=word.catalog_version, record_hash=word.record_hash
@@ -668,8 +827,11 @@ try {
   assert.equal(reserveState(issuanceRaceRound).reserve_count, 3);
   console.log('Typing planner/receipt/create/Resume SQL stack: uncertain replay, no redraw, owner binding, simultaneous first issuance: PASS');
 
-  const rounds = [round, emptyRound, raceRound, sameRound, stackRound, issuanceRound, issuanceRaceRound];
+  const rounds = [round, emptyRound, raceRound, sameRound, refillRound, lockRound,
+    stackRound, issuanceRound, issuanceRaceRound];
   const beforeCanonicalRollback = rounds.map(r => snapshot(r, true));
+  apply(refillRollback);
+  assert.deepEqual(rounds.map(r => snapshot(r, true)), beforeCanonicalRollback);
   apply(canonicalRollback);
   assert.deepEqual(rounds.map(r => snapshot(r, true)), beforeCanonicalRollback);
   apply(canonicalMigration);
@@ -689,7 +851,7 @@ try {
   console.log('Typing ordered protected reserve, tail atomicity, category preservation, five completions: PASS');
   console.log('Typing exact replay, cross-owner/CAS/concurrency, zero partial writes, no skip cap: PASS');
   console.log('Typing forced RLS, browser denial, unchanged load API, exact rollback preserving round evidence: PASS');
-  console.log('TYPING_ATOMIC_CONTINUATION_DB_PASS 5');
+  console.log('TYPING_ATOMIC_CONTINUATION_DB_PASS 6');
 } finally {
   if (started) spawnSync('pg_ctl', ['-D', data, '-m', 'fast', '-w', 'stop'], { encoding: 'utf8' });
   fs.rmSync(temp, { recursive: true, force: true });

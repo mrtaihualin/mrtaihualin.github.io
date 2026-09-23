@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import assert from 'node:assert/strict';
-import { loadTypingInitialRoundContext } from '../supabase/functions/score-submit/typing-round-context.mjs';
+import { loadTypingInitialRoundContext, loadTypingReserveRefillContext } from '../supabase/functions/score-submit/typing-round-context.mjs';
 
 const OWNER = '10000000-0000-4000-8000-000000000001';
 const OTHER = '10000000-0000-4000-8000-000000000002';
@@ -141,6 +141,15 @@ await check('null or malformed learning-state payload never becomes normal state
     };
     await assert.rejects(f.load(), /learning_queue_unavailable/);
   }
+});
+
+await check('refill context reuses protected catalog/state without reading cross-round Combo', async () => {
+  const f = fixture();
+  const result = await loadTypingReserveRefillContext({ admin: f.admin, userId: OWNER,
+    level: 1, today: TODAY, signal: AbortSignal.timeout(1000) });
+  assert.deepEqual(Object.keys(result).sort(), ['canonicalRows', 'snapshots', 'today']);
+  assert.equal(result.snapshots.length, 8); assert.equal(result.canonicalRows.length, 8);
+  assert.equal(f.reads.some((row) => row.table === 'phase1_typing_rounds'), false);
 });
 
 console.log(`TYPING_ROUND_CONTEXT_PASS ${passed}`);

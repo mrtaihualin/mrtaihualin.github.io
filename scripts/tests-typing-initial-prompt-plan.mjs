@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { buildTypingInitialPromptPlan as plan, buildTypingInitialRoundAllocation as allocate } from '../supabase/functions/score-submit/typing-initial-prompt-plan.mjs';
+import { buildTypingInitialPromptPlan as plan, buildTypingInitialRoundAllocation as allocate,
+  buildTypingReserveRefillPlan as refill } from '../supabase/functions/score-submit/typing-initial-prompt-plan.mjs';
 import { buildTypingResumeCheckpoint } from '../supabase/functions/score-submit/typing-resume-checkpoint.mjs';
 
 let passed = 0;
@@ -149,5 +150,45 @@ check('reserve never absorbs Due overflow, Retry, non-due or Mastered content', 
   assert.equal(all.includes('fixture-0'), true); assert.equal(all.includes('fixture-2') || all.includes('fixture-3'), true);
   for (const excluded of ['fixture-1', 'fixture-4', 'fixture-5', 'fixture-6']) assert.equal(all.includes(excluded), false);
   assert.deepEqual(result.reservePrompts.map(key).sort(), f.snapshots.slice(7).map(key).filter((v) => !result.prompts.map(key).includes(v)).sort());
+});
+check('bounded refill prefers never-issued regular identities before recycled Skips', () => {
+  const f = fixture(80);
+  const result = refill({ ...f,
+    issuedKeys: f.snapshots.slice(0, 8).map(key),
+    completedKeys: f.snapshots.slice(0, 2).map(key),
+    queuedKeys: f.snapshots.slice(2, 4).map(key),
+  }, fixed);
+  assert.equal(result.length, 64);
+  assert.ok(result.every((row) => Number(key(row).split('-')[1]) >= 8));
+  assert.ok(result.every((row) => row.srs_bonus === false));
+});
+check('refill recycles eligible skipped regular identities only after unseen pool', () => {
+  const f = fixture(8);
+  const result = refill({ ...f,
+    issuedKeys: f.snapshots.slice(0, 6).map(key), completedKeys: [key(f.snapshots[0])],
+    queuedKeys: [key(f.snapshots[1])],
+  }, fixed);
+  assert.deepEqual(new Set(result.slice(0, 2).map(key)), new Set(['fixture-6', 'fixture-7']));
+  assert.deepEqual(new Set(result.slice(2).map(key)), new Set(['fixture-2', 'fixture-3', 'fixture-4', 'fixture-5']));
+});
+check('refill never admits Due, Retry, non-due, Mastered or unresolved content', () => {
+  const f = fixture(9);
+  const patches = [
+    { state: 'next_day_check', due_on: today }, { state: 'srs', stage: 1, due_on: today },
+    { state: 'retry_end_round' }, { state: 'srs', stage: 1, due_on: '2026-09-24' },
+    { state: 'mastered', stage: 3, mastered: true }, { state: 'legacy_identity_unresolved' },
+  ];
+  patches.forEach((patch, i) => state(f, i, patch));
+  const result = refill({ ...f, issuedKeys: [], completedKeys: [], queuedKeys: [] }, fixed);
+  assert.deepEqual(new Set(result.map(key)), new Set(['fixture-6', 'fixture-7', 'fixture-8']));
+});
+check('refill evidence fails closed for impossible sets and an exhausted pool', () => {
+  let f = fixture(5);
+  assert.throws(() => refill({ ...f, issuedKeys: [], completedKeys: ['fixture-0'], queuedKeys: [] }, fixed),
+    /invalid_typing_refill_evidence/);
+  assert.throws(() => refill({ ...f, issuedKeys: ['fixture-0'], completedKeys: ['fixture-0'],
+    queuedKeys: ['fixture-0'] }, fixed), /invalid_typing_refill_evidence/);
+  assert.throws(() => refill({ ...f, issuedKeys: f.snapshots.map(key), completedKeys: [],
+    queuedKeys: f.snapshots.map(key) }, fixed), /typing_refill_unavailable/);
 });
 console.log(`Typing initial prompt plan: ${passed}/${passed} PASS`);

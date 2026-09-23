@@ -77,3 +77,21 @@ export async function loadTypingInitialRoundContext({ admin, userId, level, toda
   signal?.throwIfAborted();
   return { startingCombo: combo, today: exactDay, snapshots, canonicalRows: canonical };
 }
+
+// Existing-round refill deliberately has no cross-round Combo dependency. It
+// reuses the same authenticated catalog/snapshot/canonical owners as issuance.
+export async function loadTypingReserveRefillContext({ admin, userId, level, today, catalogMode = 'off', signal }) {
+  if (typeof userId !== 'string' || !UUID.test(userId)) fail('unauthorized');
+  if (![1, 2].includes(level)) fail('invalid_typing_level');
+  const exactDay = day(today);
+  signal?.throwIfAborted();
+  const catalog = await readLearningCatalog(admin, 'typing', level, catalogMode);
+  signal?.throwIfAborted();
+  const [snapshots, canonical] = await Promise.all([
+    readCurrentLearningSnapshot({ admin, userId: userId.toLowerCase(), game: 'typing', level,
+      catalog, today: exactDay, signal }),
+    canonicalRows(admin, catalog, level, signal),
+  ]);
+  signal?.throwIfAborted();
+  return { today: exactDay, snapshots, canonicalRows: canonical };
+}

@@ -32,11 +32,11 @@ function shuffled(rows, randomUint32) {
   return copy;
 }
 
-function selectTypingPromptRows({ level, today, snapshots, canonicalRows }, randomUint32) {
+function classifyTypingPromptRows({ level, today, snapshots, canonicalRows }) {
   if (![1, 2].includes(level)) fail('invalid_typing_level');
   if (!/^\d{4}-\d{2}-\d{2}$/.test(today || '') || !Number.isFinite(Date.parse(today + 'T00:00:00Z'))
       || new Date(today + 'T00:00:00Z').toISOString().slice(0, 10) !== today) fail('invalid_typing_day');
-  if (!Array.isArray(snapshots) || !Array.isArray(canonicalRows) || typeof randomUint32 !== 'function') fail('invalid_typing_catalog');
+  if (!Array.isArray(snapshots) || !Array.isArray(canonicalRows)) fail('invalid_typing_catalog');
   const code = level === 1 ? '初' : '中';
   const canonical = new Map();
   for (const row of canonicalRows) {
@@ -68,6 +68,12 @@ function selectTypingPromptRows({ level, today, snapshots, canonicalRows }, rand
     if (row.state === 'srs' && row.stage === 3 && row.mastered !== true) fail('invalid_typing_snapshot');
     if (buckets[bucket]) buckets[bucket].push(row);
   }
+  return { buckets, canonical };
+}
+
+function selectTypingPromptRows(input, randomUint32) {
+  if (typeof randomUint32 !== 'function') fail('invalid_typing_catalog');
+  const { buckets, canonical } = classifyTypingPromptRows(input);
   const nextDay = buckets.review_due.find((row) => row.state === 'next_day_check');
   const review = nextDay || buckets.review_due[0];
   const srs = buckets.srs_due[0];
@@ -110,4 +116,39 @@ export function buildTypingInitialRoundAllocation(input, randomUint32 = secureUi
     prompts: plan.selected.map((row) => prompt(row, plan.canonical, randomUint32)),
     reservePrompts: plan.reserve.slice(0, 64).map((row) => prompt(row, plan.canonical, randomUint32)),
   };
+}
+
+function keySet(value, code) {
+  if (!Array.isArray(value)) fail(code);
+  const result = new Set();
+  for (const key of value) {
+    if (!text(key) || key.length > 512 || result.has(key)) fail(code);
+    result.add(key);
+  }
+  return result;
+}
+
+// Refill only the regular/new pool. Previously skipped regular identities may
+// return after every never-issued eligible identity, but completed or currently
+// queued identities can never be selected. Due/Retry/Mastered overflow remains
+// with the learning owner and is intentionally unavailable here.
+export function buildTypingReserveRefillPlan(input, randomUint32 = secureUint32) {
+  const { buckets, canonical } = classifyTypingPromptRows(input);
+  if (typeof randomUint32 !== 'function') fail('invalid_typing_catalog');
+  const issued = keySet(input.issuedKeys, 'invalid_typing_refill_evidence');
+  const completed = keySet(input.completedKeys, 'invalid_typing_refill_evidence');
+  const queued = keySet(input.queuedKeys, 'invalid_typing_refill_evidence');
+  if ([...completed].some((key) => !issued.has(key))
+      || [...queued].some((key) => !issued.has(key) || completed.has(key))) {
+    fail('invalid_typing_refill_evidence');
+  }
+  const eligible = buckets.regular_or_new.filter((row) => {
+    const key = row.content_ref.key;
+    return !completed.has(key) && !queued.has(key);
+  });
+  const unseen = shuffled(eligible.filter((row) => !issued.has(row.content_ref.key)), randomUint32);
+  const recycled = shuffled(eligible.filter((row) => issued.has(row.content_ref.key)), randomUint32);
+  const selected = [...unseen, ...recycled].slice(0, 64);
+  if (!selected.length) fail('typing_refill_unavailable');
+  return selected.map((row) => ({ ...prompt(row, canonical, randomUint32), srs_bonus: false }));
 }

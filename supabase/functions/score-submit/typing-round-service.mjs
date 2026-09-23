@@ -94,7 +94,7 @@ function pageRows(page, kind, after, total) {
   return rows;
 }
 
-async function loadEvidence(admin, userId, requestedId, signal) {
+export async function loadTypingRoundEvidence({ admin, userId, roundId: requestedId, signal }) {
   let round = null;
   let promptAfter = 0;
   let eventAfter = 0;
@@ -166,7 +166,7 @@ async function canonicalRows(admin, evidence, signal) {
 }
 
 export async function loadTypingRoundCheckpoint({ admin, userId, roundId, signal }) {
-  const evidence = await loadEvidence(admin, userId, roundId, signal);
+  const evidence = await loadTypingRoundEvidence({ admin, userId, roundId, signal });
   const { round, prompts, events } = evidence;
   const rows = await canonicalRows(admin, evidence, signal);
   let state;
