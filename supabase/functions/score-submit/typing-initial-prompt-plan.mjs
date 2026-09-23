@@ -30,7 +30,7 @@ function shuffled(rows, randomUint32) {
   return copy;
 }
 
-export function buildTypingInitialPromptPlan({ level, today, snapshots, canonicalRows }, randomUint32 = secureUint32) {
+function selectTypingPromptRows({ level, today, snapshots, canonicalRows }, randomUint32) {
   if (![1, 2].includes(level)) fail('invalid_typing_level');
   if (!/^\d{4}-\d{2}-\d{2}$/.test(today || '') || !Number.isFinite(Date.parse(today + 'T00:00:00Z'))
       || new Date(today + 'T00:00:00Z').toISOString().slice(0, 10) !== today) fail('invalid_typing_day');
@@ -72,15 +72,36 @@ export function buildTypingInitialPromptPlan({ level, today, snapshots, canonica
   if (buckets.regular_or_new.length < required) fail('insufficient_eligible_items');
   // Separate one-in-five quotas. Overflow stays with the learning owner; never
   // fill a shortage using additional Due, non-due, Retry or mastered content.
+  const orderedRegular = shuffled(buckets.regular_or_new, randomUint32);
   const rest = [...(review && !nextDay ? [review] : []), ...(srs ? [srs] : []),
-    ...shuffled(buckets.regular_or_new, randomUint32).slice(0, required)];
+    ...orderedRegular.slice(0, required)];
   const selected = [...(nextDay ? [nextDay] : []), ...shuffled(rest, randomUint32)];
-  return selected.map((row) => ({
+  return { selected, reserve: orderedRegular.slice(required), canonical };
+}
+
+function prompt(row, canonical, randomUint32) {
+  return {
     content_ref: { source: 'game_words', key: row.content_ref.key },
     answer: canonical.get(row.content_ref.key).word,
     golden: drawBelow(100, randomUint32) < 18,
     // Eligibility only. The final atomic learning/score commit must enforce
     // once-per-stage awards; this plan does not claim that commit is integrated.
     srs_bonus: row.state === 'srs' && [1, 2].includes(row.stage),
-  }));
+  };
+}
+
+export function buildTypingInitialPromptPlan(input, randomUint32 = secureUint32) {
+  const plan = selectTypingPromptRows(input, randomUint32);
+  return plan.selected.map((row) => prompt(row, plan.canonical, randomUint32));
+}
+
+// Allocate the bounded first reserve batch in the same protected draw as the
+// initial five. The remaining eligible pool stays unissued for a later bounded
+// refill transaction; no browser may redraw or reorder this persisted batch.
+export function buildTypingInitialRoundAllocation(input, randomUint32 = secureUint32) {
+  const plan = selectTypingPromptRows(input, randomUint32);
+  return {
+    prompts: plan.selected.map((row) => prompt(row, plan.canonical, randomUint32)),
+    reservePrompts: plan.reserve.slice(0, 64).map((row) => prompt(row, plan.canonical, randomUint32)),
+  };
 }

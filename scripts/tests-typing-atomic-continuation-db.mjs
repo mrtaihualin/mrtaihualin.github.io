@@ -14,6 +14,8 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const foundation = path.join(root, 'supabase/migrations/20260922175100_phase1_typing_server_round_event_foundation.sql');
 const migration = path.join(root, 'supabase/migrations/20260923060514_phase1_typing_atomic_continuation.sql');
 const rollback = path.join(root, 'supabase/recovery/phase1-typing-atomic-continuation/rollback.sql');
+const issuanceMigration = path.join(root, 'supabase/migrations/20260923143000_phase1_typing_initial_reserve_issuance.sql');
+const issuanceRollback = path.join(root, 'supabase/recovery/phase1-typing-initial-reserve-issuance/rollback.sql');
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'typing-continuation-db-'));
 const data = path.join(temp, 'data');
 const socket = path.join(temp, 'socket');
@@ -168,6 +170,8 @@ try {
   const originalEvent = psql(`select pg_get_functiondef(${quote(eventSignature)}::regprocedure);`);
   apply(migration);
   apply(migration);
+  apply(issuanceMigration);
+  apply(issuanceMigration);
   assert.equal(psql(`select exists (
     select 1 from pg_index i join pg_attribute a on a.attrelid = i.indrelid
     where i.indrelid = 'public.phase1_typing_round_reserve_batches'::regclass
@@ -185,14 +189,16 @@ try {
     }
   }
   const reserveSignature = 'public.phase1_typing_round_append_reserve(uuid,uuid,text,uuid,bigint,jsonb)';
+  const issueSignature = 'public.phase1_typing_round_issue(uuid,uuid,text,smallint,bigint,jsonb,jsonb)';
   for (const role of ['anon', 'authenticated']) {
-    for (const signature of [eventSignature, reserveSignature]) {
+    for (const signature of [eventSignature, reserveSignature, issueSignature]) {
       assert.equal(psql(`select has_function_privilege('${role}', ${quote(signature)}, 'execute');`), 'f');
     }
     assert.throws(() => psql(`set role ${role}; select * from public.phase1_typing_round_reserve_prompts;`), /permission denied/);
   }
   assert.equal(psql(`select count(*) from pg_proc where oid in (${quote(eventSignature)}::regprocedure,
-    ${quote(reserveSignature)}::regprocedure) and (prosecdef or proconfig is distinct from ARRAY['search_path=""']);`), '0');
+    ${quote(reserveSignature)}::regprocedure, ${quote(issueSignature)}::regprocedure)
+    and (prosecdef or proconfig is distinct from ARRAY['search_path=""']);`), '0');
 
   const round = create();
   const repeatedSkipped = { ...basePrompts[1], golden: true, srs_bonus: true };
@@ -435,17 +441,27 @@ try {
   // this does not pretend to implement the still-missing live context owner.
   const issuanceOwners = ['10000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000007'];
   psql(`insert into auth.users(id) values ${issuanceOwners.map(id => `(${quote(id)})`).join(',')};`);
-  const trustedCatalog = stackPrompts.slice(0, 5).map(p => ({ content_key: p.content_ref.key,
+  const trustedCatalog = Array.from({ length: 8 }, (_, i) => prompt(`issuance-${i + 1}`)).map(p => ({ content_key: p.content_ref.key,
     level: '初', status: 'active', access_tier: 'login', canonical_record: {
       contentKey: p.content_ref.key, word: p.answer, level: '初', syllables: [{}],
     } }));
+  for (const row of trustedCatalog) {
+    psql(`insert into public.game_words values (${quote(row.content_key)}, '初',
+      ${quote(JSON.stringify(row.canonical_record))}::jsonb, 'active', 'login');`);
+  }
   const trustedContext = { startingCombo: 7, today: '2026-09-23', canonicalRows: trustedCatalog,
     snapshots: trustedCatalog.map((row, i) => ({ item_id: `fixture-item-${i}`, state_token: `fixture-token-${i}`,
       content_ref: { source: 'game_words', key: row.content_key }, state: 'normal' })) };
   let contextCalls = 0;
   let createCalls = 0;
   const rawCreateResults = [];
+  const rawCreateArgs = [];
   let loseCreateResponse = true;
+  const issueSql = (args) => `select public.phase1_typing_round_issue(
+    ${quote(args.p_operation_id)}::uuid, ${quote(args.p_user_id)}::uuid, ${quote(args.p_request_hash)},
+    ${args.p_level}::smallint, ${args.p_starting_combo}::bigint,
+    ${quote(JSON.stringify(args.p_prompts))}::jsonb,
+    ${quote(JSON.stringify(args.p_reserve_prompts))}::jsonb)::text;`;
   const issuanceAdmin = {
     from(name) {
       if (name !== 'phase1_typing_round_operations') return stackAdmin.from(name);
@@ -457,12 +473,11 @@ try {
       });
     },
     rpc(name, args) {
-      if (name !== 'phase1_typing_round_create') return stackAdmin.rpc(name, args);
+      if (name !== 'phase1_typing_round_issue') return stackAdmin.rpc(name, args);
       createCalls++;
       return query(async () => {
-        const result = await jsonAsync(`select public.phase1_typing_round_create(
-          ${quote(args.p_operation_id)}::uuid, ${quote(args.p_user_id)}::uuid, ${quote(args.p_request_hash)},
-          ${args.p_level}::smallint, ${args.p_starting_combo}::bigint, ${quote(JSON.stringify(args.p_prompts))}::jsonb)::text;`);
+        rawCreateArgs.push(structuredClone(args));
+        const result = await jsonAsync(issueSql(args));
         rawCreateResults.push(structuredClone(result));
         if (loseCreateResponse) { loseCreateResponse = false; throw new Error('synthetic lost create response'); }
         return result;
@@ -492,6 +507,11 @@ try {
   assert.equal(resumedStart.body.checkpoint.combo, 7);
   assert.equal(snapshot(issuanceRound), issuanceBefore);
   assert.equal(contextCalls, 1); assert.equal(createCalls, 1);
+  assert.equal(reserveState(issuanceRound).reserve_count, 3);
+  assert.equal(reserveState(issuanceRound).reserve_cursor, 0);
+  assert.equal(json(issueSql(rawCreateArgs[0])).idempotent, true);
+  assert.equal(json(issueSql({ ...rawCreateArgs[0], p_reserve_prompts: [] })).reason, 'replay_conflict');
+  assert.equal(snapshot(issuanceRound), issuanceBefore);
   assert.deepEqual(Object.keys(resumedStart.body).sort(), ['ok', 'checkpoint', 'current_prompt', 'operation_id', 'idempotent'].sort());
   assert.equal(JSON.stringify(resumedStart.body).includes('synthetic-answer'), false);
   for (const conflict of [await start({ ...startBody, level: 2 }), await start(startBody, issuanceOwners[1])]) {
@@ -529,10 +549,13 @@ try {
   const issuanceRaceRound = racedStarts[0].body.checkpoint.roundId;
   assert.equal(psql(`select count(*) from public.phase1_typing_rounds where user_id=${quote(issuanceOwners[1])}::uuid;`), '1');
   assert.equal(load(issuanceRaceRound, issuanceOwners[1]).prompt_page.length, 5);
+  assert.equal(reserveState(issuanceRaceRound).reserve_count, 3);
   console.log('Typing planner/receipt/create/Resume SQL stack: uncertain replay, no redraw, owner binding, simultaneous first issuance: PASS');
 
   const rounds = [round, emptyRound, raceRound, sameRound, stackRound, issuanceRound, issuanceRaceRound];
   const beforeRollback = rounds.map(r => snapshot(r, false));
+  apply(issuanceRollback);
+  assert.equal(psql(`select to_regprocedure(${quote(issueSignature)}) is null;`), 't');
   apply(rollback);
   assert.equal(psql(`select pg_get_functiondef(${quote(eventSignature)}::regprocedure);`), originalEvent);
   assert.deepEqual(rounds.map(r => snapshot(r, false)), beforeRollback);

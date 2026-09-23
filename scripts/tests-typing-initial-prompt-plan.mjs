@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { buildTypingInitialPromptPlan as plan } from '../supabase/functions/score-submit/typing-initial-prompt-plan.mjs';
+import { buildTypingInitialPromptPlan as plan, buildTypingInitialRoundAllocation as allocate } from '../supabase/functions/score-submit/typing-initial-prompt-plan.mjs';
 import { buildTypingResumeCheckpoint } from '../supabase/functions/score-submit/typing-resume-checkpoint.mjs';
 
 let passed = 0;
@@ -123,5 +123,28 @@ check('prepared output is reducer-compatible; persisted replay keeps Golden with
   const service = fs.readFileSync(new URL('../supabase/functions/score-submit/typing-round-service.mjs', import.meta.url), 'utf8');
   assert.match(service, /TYPING_ROUND_ACTIONS_ENABLED = false/);
   assert.doesNotMatch(service, /typing-initial-prompt-plan/);
+});
+check('initial allocation persists five prompts plus one bounded ordered reserve batch', () => {
+  const f = fixture(100); const before = JSON.stringify(f);
+  const result = allocate(f, fixed);
+  assert.equal(result.prompts.length, 5); assert.equal(result.reservePrompts.length, 64);
+  assert.deepEqual(result.prompts, plan(f, fixed));
+  assert.equal(new Set([...result.prompts, ...result.reservePrompts].map(key)).size, 69);
+  assert.ok(result.reservePrompts.every((row) => row.srs_bonus === false));
+  assert.equal(JSON.stringify(f), before);
+});
+check('reserve never absorbs Due overflow, Retry, non-due or Mastered content', () => {
+  const f = fixture(12);
+  state(f, 0, { state: 'next_day_check', due_on: today });
+  state(f, 1, { state: 'review_needed', due_on: today });
+  state(f, 2, { state: 'srs', stage: 1, due_on: today });
+  state(f, 3, { state: 'srs', stage: 2, due_on: today });
+  state(f, 4, { state: 'retry_end_round' });
+  state(f, 5, { state: 'srs', stage: 1, due_on: '2026-09-24' });
+  state(f, 6, { state: 'mastered', stage: 3, mastered: true });
+  const result = allocate(f, fixed); const all = [...result.prompts, ...result.reservePrompts].map(key);
+  assert.equal(all.includes('fixture-0'), true); assert.equal(all.includes('fixture-2') || all.includes('fixture-3'), true);
+  for (const excluded of ['fixture-1', 'fixture-4', 'fixture-5', 'fixture-6']) assert.equal(all.includes(excluded), false);
+  assert.deepEqual(result.reservePrompts.map(key).sort(), f.snapshots.slice(7).map(key).filter((v) => !result.prompts.map(key).includes(v)).sort());
 });
 console.log(`Typing initial prompt plan: ${passed}/${passed} PASS`);

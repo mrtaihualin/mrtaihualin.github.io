@@ -1,7 +1,8 @@
 // Internal source-only initial issuance. No HTTP route imports or enables this.
-// The entrypoint must supply its verified auth.getUser() and a protected context
-// owner. Cross-round Combo/context and reserve allocation remain separate work.
-import { buildTypingInitialPromptPlan } from './typing-initial-prompt-plan.mjs';
+// The protected wrapper derives authenticated context, cross-round Combo and
+// the first bounded ordered reserve batch without browser-owned values.
+import { buildTypingInitialRoundAllocation } from './typing-initial-prompt-plan.mjs';
+import { loadTypingInitialRoundContext } from './typing-round-context.mjs';
 import { handleTypingRoundAction } from './typing-round-service.mjs';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -76,7 +77,10 @@ function replayRound(saved, userId, operationId, level, hash) {
       || saved.response.starting_combo !== saved.request_payload.starting_combo
       || !Array.isArray(saved.request_payload.prompts)
       || saved.request_payload.prompts.length !== 5
-      || saved.response.prompt_count !== 5) fail('invalid_typing_evidence');
+      || !Array.isArray(saved.request_payload.reserve_prompts)
+      || saved.request_payload.reserve_prompts.length > 64
+      || saved.response.prompt_count !== 5
+      || saved.response.reserve_count !== saved.request_payload.reserve_prompts.length) fail('invalid_typing_evidence');
   return roundId;
 }
 
@@ -118,16 +122,17 @@ export async function handleTypingRoundStart({ admin, user, body, loadTrustedCon
       if (!context || !Number.isSafeInteger(context.startingCombo) || context.startingCombo < 0) {
         fail('invalid_typing_context');
       }
-      let prompts;
+      let allocation;
       try {
-        prompts = buildTypingInitialPromptPlan({ level: start.level, today: context.today,
+        allocation = buildTypingInitialRoundAllocation({ level: start.level, today: context.today,
           snapshots: context.snapshots, canonicalRows: context.canonicalRows });
       } catch (_) { fail('invalid_typing_context'); }
       signal.throwIfAborted();
       writeAttempted = true;
-      const created = await resultOf(admin.rpc('phase1_typing_round_create', {
+      const created = await resultOf(admin.rpc('phase1_typing_round_issue', {
         p_operation_id: start.operationId, p_user_id: userId, p_request_hash: hash,
-        p_level: start.level, p_starting_combo: context.startingCombo, p_prompts: prompts,
+        p_level: start.level, p_starting_combo: context.startingCombo,
+        p_prompts: allocation.prompts, p_reserve_prompts: allocation.reservePrompts,
       }), signal);
       if (created?.ok === true) {
         writeConfirmed = true;
@@ -164,4 +169,23 @@ export async function handleTypingRoundStart({ admin, user, body, loadTrustedCon
         ? { operation_id: start.operationId, retry_same_operation: true,
           ...(writeConfirmed ? { round_committed: true } : {}) } : {}) } };
   }
+}
+
+function taipeiDay(now) {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(now);
+}
+
+// Future authenticated entrypoints use this owner-bound wrapper. It deliberately
+// exposes no callback, day, catalog, learning state or Combo override to HTTP.
+// The feature remains default OFF and is not imported by the live entrypoint.
+export async function handleTypingRoundStartWithProtectedContext({
+  admin, user, body, enabled = false, catalogMode = 'off', now = new Date(),
+}) {
+  return handleTypingRoundStart({ admin, user, body, enabled,
+    loadTrustedContext: ({ userId, level, signal }) => loadTypingInitialRoundContext({
+      admin, userId, level, signal, catalogMode, today: taipeiDay(now),
+    }),
+  });
 }

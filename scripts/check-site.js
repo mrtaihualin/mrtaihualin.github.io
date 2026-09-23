@@ -119,6 +119,7 @@ runTest(['scripts/tests-typing-round-persistence-db.mjs'], 'Typing server-owned 
 runTest(['scripts/tests-typing-round-service.mjs'], 'Typing existing-round Edge bridge tests');
 runTest(['scripts/tests-typing-initial-prompt-plan.mjs'], 'Typing initial server prompt plan tests');
 runTest(['scripts/tests-typing-round-issuance.mjs'], 'Typing inactive initial issuance and durable replay tests');
+runTest(['scripts/tests-typing-round-context.mjs'], 'Typing protected initial context and cross-round Combo tests');
 runTest(['scripts/tests-typing-continuation-plan.mjs'], 'Typing ordered Skip continuation plan tests');
 runTest(['scripts/tests-typing-round-client.mjs'], 'Typing inactive client journal/owner-fence tests');
 runTest(['scripts/tests-typing-client-service-integration.mjs'], 'Typing client/service/reducer composition tests');

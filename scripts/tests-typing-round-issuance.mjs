@@ -4,7 +4,8 @@
 // are separate gates. No remote service, database or vocabulary is read.
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { handleTypingRoundStart } from '../supabase/functions/score-submit/typing-round-issuance.mjs';
+import { handleTypingRoundStart, handleTypingRoundStartWithProtectedContext } from '../supabase/functions/score-submit/typing-round-issuance.mjs';
+import { loadTypingInitialRoundContext } from '../supabase/functions/score-submit/typing-round-context.mjs';
 
 const OWNER = '10000000-0000-4000-8000-000000000001';
 const OTHER = '10000000-0000-4000-8000-000000000002';
@@ -28,14 +29,17 @@ function fixture(level = 1) {
   const snapshots = canonicalRows.map((row, i) => ({ item_id: `synthetic-item-${i + 1}`,
     state_token: `normal:${i + 1}`, state: 'normal', stage: null, due_on: null,
     content_ref: { source: 'game_words', key: row.content_key } }));
-  const f = { receipts: new Map(), rounds: new Map(), rpcCalls: [], reads: [], contextCalls: [],
+  const f = { receipts: new Map(), rounds: new Map(), reserves: new Map(), rpcCalls: [], reads: [], contextCalls: [],
     context: { startingCombo: 5, today: '2026-09-23', canonicalRows, snapshots },
     loseWrite: false, failLoad: false, failReceipt: false, contextHook: null, receiptBarrier: null };
-  const query = (fn) => {
+  const query = (fn, requireSignal = true) => {
     let signal;
     return { retry(value) { assert.equal(value, false); return this; },
       abortSignal(value) { signal = value; return this; },
-      then(resolve, reject) { return Promise.resolve().then(() => { assert.ok(signal); signal.throwIfAborted(); return fn(); }).then(resolve, reject); } };
+      then(resolve, reject) { return Promise.resolve().then(() => {
+        if (typeof requireSignal === 'function' ? requireSignal() : requireSignal) assert.ok(signal);
+        signal?.throwIfAborted(); return fn();
+      }).then(resolve, reject); } };
   };
   f.admin = {
     from(table) {
@@ -53,10 +57,27 @@ function fixture(level = 1) {
           return this;
         }, eq(field, value) { assert.equal(field, 'operation_id'); selectedOp = value; return this; }, maybeSingle() { return this; } });
       }
+      if (table === 'phase1_learning_review_states' || table === 'tone_srs_state'
+          || table === 'phase1_typing_rounds') {
+        const chain = Object.assign(query(() => ({ data: [] })), {
+          select() { return this; }, eq() { return this; }, limit() { return this; }, order() { return this; },
+        });
+        return chain;
+      }
+      if (table === 'learning_items') {
+        let keys;
+        return Object.assign(query(() => ({ data: canonicalRows.filter((r) => !keys || keys.includes(r.content_key))
+          .map((r, i) => ({ item_id: `synthetic-item-${i + 1}`, content_source: 'game_words', content_key: r.content_key })) }), false), {
+          select() { return this; }, is() { return this; }, eq() { return this; }, limit() { return this; },
+          in(field, value) { assert.equal(field, 'content_key'); keys = value; return this; },
+        });
+      }
       assert.equal(table, 'game_words'); let keys; let requestedLevel;
-      return Object.assign(query(() => ({ data: clone(canonicalRows.filter((r) => keys.includes(r.content_key) && r.level === requestedLevel)) })), {
-        select() { return this; }, in(field, value) { assert.equal(field, 'content_key'); keys = value; return this; },
-        eq(field, value) { assert.equal(field, 'level'); requestedLevel = value; return this; },
+      return Object.assign(query(() => ({ data: clone(canonicalRows.filter((r) => (!keys || keys.includes(r.content_key))
+        && (!requestedLevel || r.level === requestedLevel))) }), () => Boolean(keys)), {
+        select() { return this; }, limit() { return this; },
+        in(field, value) { if (field === 'content_key') keys = value; return this; },
+        eq(field, value) { if (field === 'level') requestedLevel = value; return this; },
       });
     },
     rpc(name, args) {
@@ -71,9 +92,10 @@ function fixture(level = 1) {
             event_page: [], next_prompt_after: Math.min(stored.prompts.length, p + size), next_event_after: 0,
             has_more_prompts: stored.prompts.length > p + size, has_more_events: false } };
         }
-        assert.equal(name, 'phase1_typing_round_create');
+        assert.equal(name, 'phase1_typing_round_issue');
         assert.equal(args.p_request_hash, hash(args.p_user_id, args.p_level));
-        const requestPayload = { level: args.p_level, starting_combo: args.p_starting_combo, prompts: clone(args.p_prompts) };
+        const requestPayload = { level: args.p_level, starting_combo: args.p_starting_combo,
+          prompts: clone(args.p_prompts), reserve_prompts: clone(args.p_reserve_prompts) };
         const old = f.receipts.get(args.p_operation_id);
         if (old) return { data: old.user_id === args.p_user_id && old.operation_type === 'create_round'
           && old.request_hash === args.p_request_hash && JSON.stringify(old.request_payload) === JSON.stringify(requestPayload)
@@ -84,9 +106,11 @@ function fixture(level = 1) {
         const round = { round_id: ROUND, game: 'typing', level: args.p_level, starting_combo: args.p_starting_combo,
           prompt_count: args.p_prompts.length, next_event_sequence: 1, current_prompt_ordinal: 1,
           completed_count: 0, skip_count: 0, status: 'active' };
-        const response = { ok: true, idempotent: false, operation_id: args.p_operation_id, ...round };
+        const response = { ok: true, idempotent: false, operation_id: args.p_operation_id,
+          reserve_count: args.p_reserve_prompts.length, ...round };
         const prompts = args.p_prompts.map((p, i) => ({ ...clone(p), prompt_ordinal: i + 1 }));
         f.rounds.set(ROUND, { owner: args.p_user_id, round, prompts });
+        f.reserves.set(ROUND, clone(args.p_reserve_prompts));
         f.receipts.set(args.p_operation_id, { operation_id: args.p_operation_id, user_id: args.p_user_id,
           round_id: ROUND, operation_type: 'create_round', request_hash: args.p_request_hash,
           request_payload: requestPayload, response });
@@ -103,7 +127,7 @@ function fixture(level = 1) {
   };
   f.call = (overrides = {}) => handleTypingRoundStart({ admin: f.admin, user: { id: OWNER },
     body: { ...body, level }, loadTrustedContext: f.loadTrustedContext, enabled: true, ...overrides });
-  f.creates = () => f.rpcCalls.filter((call) => call.name === 'phase1_typing_round_create');
+  f.creates = () => f.rpcCalls.filter((call) => call.name === 'phase1_typing_round_issue');
   return f;
 }
 
@@ -112,6 +136,28 @@ await check('default OFF rejects before storage or trusted context', async () =>
   const result = await handleTypingRoundStart({ admin: f.admin, user: { id: OWNER }, body, loadTrustedContext: f.loadTrustedContext });
   assert.equal(result.status, 404); assert.equal(result.body.error, 'feature_disabled');
   assert.equal(f.reads.length, 0); assert.equal(f.rpcCalls.length, 0); assert.equal(f.contextCalls.length, 0);
+});
+
+await check('protected owner wrapper stays OFF and accepts no context or Combo override', async () => {
+  const f = fixture();
+  const result = await handleTypingRoundStartWithProtectedContext({ admin: f.admin, user: { id: OWNER },
+    body: { ...body, startingCombo: 99, today: '1999-01-01' },
+    loadTrustedContext: () => { throw new Error('must not be accepted'); } });
+  assert.equal(result.status, 404); assert.equal(result.body.error, 'feature_disabled');
+  assert.equal(f.reads.length, 0); assert.equal(f.rpcCalls.length, 0); assert.equal(f.contextCalls.length, 0);
+
+  const rejected = await handleTypingRoundStartWithProtectedContext({ admin: f.admin, user: { id: OWNER },
+    body: { ...body, startingCombo: 99, today: '1999-01-01' }, enabled: true,
+    now: new Date('2026-09-23T00:00:00Z') });
+  assert.equal(rejected.status, 400); assert.equal(f.creates().length, 0);
+
+  const protectedContext = await loadTypingInitialRoundContext({ admin: f.admin, userId: OWNER, level: 1,
+    today: '2026-09-23', signal: AbortSignal.timeout(1000) });
+  assert.equal(protectedContext.startingCombo, 0);
+  const created = await handleTypingRoundStartWithProtectedContext({ admin: f.admin, user: { id: OWNER },
+    body, enabled: true, now: new Date('2026-09-23T00:00:00Z') });
+  assert.equal(created.status, 200, JSON.stringify(created)); assert.equal(created.body.checkpoint.combo, 0);
+  assert.equal(f.creates().length, 1); assert.equal(f.creates()[0].args.p_starting_combo, 0);
 });
 
 await check('invalid owner, High, operation and forged state fail before storage', async () => {
@@ -136,12 +182,15 @@ await check('first issuance uses trusted Combo five, unique canonical prompts, s
     assert.equal(f.contextCalls.length, 1); assert.equal(f.creates().length, 1); assert.equal(f.rounds.size, 1);
     const args = f.creates()[0].args;
     assert.equal(args.p_starting_combo, 5); assert.equal(args.p_prompts.length, 5);
+    assert.equal(args.p_reserve_prompts.length, 3);
     assert.equal(new Set(args.p_prompts.map((p) => p.content_ref.key)).size, 5);
+    assert.equal(new Set([...args.p_prompts, ...args.p_reserve_prompts].map((p) => p.content_ref.key)).size, 8);
     assert.ok(args.p_prompts.every((p) => typeof p.golden === 'boolean' && p.srs_bonus === false));
     const visible = JSON.stringify(result.body);
     assert.ok(!visible.includes('synthetic-answer-')); assert.ok(!visible.includes('request_payload'));
     assert.ok(!visible.includes('srs_bonus')); assert.ok(!visible.includes('prompts'));
     for (const prompt of args.p_prompts.slice(1)) assert.ok(!visible.includes(prompt.content_ref.key));
+    for (const prompt of args.p_reserve_prompts) assert.ok(!visible.includes(prompt.content_ref.key));
   }
 });
 

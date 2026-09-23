@@ -155,7 +155,7 @@ async function canonicalRows(admin, evidence, signal) {
   return rows;
 }
 
-async function checkpoint(admin, userId, roundId, signal) {
+export async function loadTypingRoundCheckpoint({ admin, userId, roundId, signal }) {
   const evidence = await loadEvidence(admin, userId, roundId, signal);
   const { round, prompts, events } = evidence;
   const rows = await canonicalRows(admin, evidence, signal);
@@ -208,7 +208,7 @@ export async function handleTypingRoundAction({ admin, user, body, enabled = TYP
       if (committed.operation_id !== event.operationId || committed.round_id !== event.roundId
           || typeof committed.idempotent !== 'boolean') fail('invalid_typing_evidence');
     }
-    const verified = await checkpoint(admin, userId, event.roundId, signal);
+    const verified = await loadTypingRoundCheckpoint({ admin, userId, roundId: event.roundId, signal });
     if (committed && verified.checkpoint.stateVersion < event.sequence) fail('invalid_typing_evidence');
     return { status: 200, body: { ok: true, ...verified,
       ...(committed ? { operation_id: event.operationId, idempotent: committed.idempotent } : {}) } };
