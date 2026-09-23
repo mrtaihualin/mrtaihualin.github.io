@@ -29,9 +29,12 @@ check('exactly five unique canonical prompts at both Free levels; no input mutat
     const result = plan(f, fixed);
     assert.equal(result.length, 5); assert.equal(new Set(result.map(key)).size, 5);
     for (const row of result) {
-      assert.deepEqual(Object.keys(row), ['content_ref', 'answer', 'catalog_version', 'record_hash', 'golden', 'srs_bonus']);
+      assert.deepEqual(Object.keys(row), ['content_ref', 'answer', 'catalog_version', 'record_hash',
+        'attempt_kind', 'learning_state', 'learning_state_token', 'golden', 'srs_bonus']);
       assert.equal(row.answer, f.canonicalRows.find((item) => item.content_key === key(row)).canonical_record.word);
       assert.equal(row.catalog_version, 'free-canonical-v1'); assert.match(row.record_hash, /^[0-9a-f]{64}$/);
+      assert.equal(row.attempt_kind, 'primary'); assert.equal(row.learning_state_token,
+        f.snapshots.find((item) => key(item) === key(row)).state_token);
       assert.equal(row.golden, false); assert.equal(row.srs_bonus, false);
     }
     assert.equal(JSON.stringify(f), before);
@@ -118,7 +121,8 @@ check('unbiased random rejection and bounded entropy failure', () => {
 check('prepared output is reducer-compatible; persisted replay keeps Golden without redrawing', () => {
   const f = fixture(5); const prompts = JSON.parse(JSON.stringify(plan(f, () => 0)));
   const input = { serverRound: { roundId: '20000000-0000-4000-8000-000000000001', game: 'typing',
-    difficulty: '初', startingCombo: 4, prompts: prompts.map((p) => ({ contentRef: p.content_ref, golden: p.golden, srsBonus: p.srs_bonus })) },
+    difficulty: '初', startingCombo: 4, prompts: prompts.map((p) => ({ contentRef: p.content_ref,
+      golden: p.golden, srsBonus: p.srs_bonus, attemptKind: p.attempt_kind })) },
     serverEvents: [], canonicalRows: f.canonicalRows.map((r) => ({ content_key: r.content_key,
       word: r.canonical_record.word, level: r.level, syllables: r.canonical_record.syllables })) };
   const result = buildTypingResumeCheckpoint(input);

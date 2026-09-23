@@ -2,8 +2,10 @@
 // separate units. Keep the HTTP route OFF until those owners are integrated.
 import { buildTypingResumeCheckpoint } from './typing-resume-checkpoint.mjs';
 import { catalogBatches } from './learning-catalog.mjs';
+import { prepareTypingAtomicEvent } from './typing-round-final-commit.mjs';
 
 export const TYPING_ROUND_ACTIONS_ENABLED = false;
+export const TYPING_ATOMIC_FINAL_COMMIT_ENABLED = false;
 const PAGE_SIZE = 64;
 const TIMEOUT_MS = 10000;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -69,17 +71,21 @@ function rpcResult(data) {
 
 function roundShape(raw, requestedId) {
   const id = uuid(raw?.round_id, 'invalid_typing_evidence', 503);
+  const primaryCompleted = raw.primary_completed_count ?? raw.completed_count;
+  const pendingRetries = raw.pending_retry_count ?? 0;
   if ((requestedId && requestedId !== id) || raw.game !== 'typing' || ![1, 2].includes(raw.level)
       || !integer(raw.starting_combo) || !integer(raw.prompt_count, 5)
       || !integer(raw.next_event_sequence, 1) || !integer(raw.current_prompt_ordinal, 1)
-      || !integer(raw.completed_count) || raw.completed_count > 5 || !integer(raw.skip_count)
+      || !integer(raw.completed_count) || raw.completed_count > 10 || !integer(primaryCompleted)
+      || primaryCompleted > 5 || !integer(pendingRetries) || pendingRetries > 5 || !integer(raw.skip_count)
       || raw.current_prompt_ordinal !== raw.completed_count + raw.skip_count + 1
       || !['active', 'completed'].includes(raw.status)
-      || (raw.status === 'completed') !== (raw.completed_count === 5)) fail('invalid_typing_evidence');
+      || (raw.status === 'completed') !== (primaryCompleted === 5 && pendingRetries === 0)) fail('invalid_typing_evidence');
   // Fixed order is also the snapshot fingerprint across separate RPC pages.
   return { round_id: id, game: raw.game, level: raw.level, starting_combo: raw.starting_combo,
     prompt_count: raw.prompt_count, next_event_sequence: raw.next_event_sequence,
     current_prompt_ordinal: raw.current_prompt_ordinal, completed_count: raw.completed_count,
+    primary_completed_count: primaryCompleted, pending_retry_count: pendingRetries,
     skip_count: raw.skip_count, status: raw.status };
 }
 
@@ -174,11 +180,13 @@ export async function loadTypingRoundCheckpoint({ admin, userId, roundId, signal
     state = buildTypingResumeCheckpoint({
       serverRound: { roundId: round.round_id, game: 'typing', difficulty: round.level === 1 ? '初' : '中',
         startingCombo: round.starting_combo,
-        prompts: prompts.map((p) => ({ contentRef: p.content_ref, golden: p.golden, srsBonus: p.srs_bonus })) },
+        prompts: prompts.map((p) => ({ contentRef: p.content_ref, golden: p.golden,
+          srsBonus: p.srs_bonus, attemptKind: p.attempt_kind || 'primary' })) },
       canonicalRows: rows, serverEvents: events,
     });
   } catch (_) { fail('invalid_typing_evidence'); }
-  if (state.completedCount !== round.completed_count || state.skipCount !== round.skip_count
+  if (state.completedCount !== round.completed_count
+      || state.primaryCompletedCount !== round.primary_completed_count || state.skipCount !== round.skip_count
       || state.consumedPromptCount + 1 !== round.current_prompt_ordinal
       || state.complete !== (round.status === 'completed')) fail('invalid_typing_evidence');
   const prompt = state.complete ? null : prompts[state.currentPromptIndex];
@@ -186,6 +194,7 @@ export async function loadTypingRoundCheckpoint({ admin, userId, roundId, signal
   // cross the HTTP boundary. Only the current prompt identity/Golden is public.
   return { checkpoint: state, current_prompt: prompt ? {
     ordinal: prompt.prompt_ordinal, content_ref: prompt.content_ref, golden: prompt.golden,
+    attempt_kind: prompt.attempt_kind || 'primary',
   } : null };
 }
 
@@ -196,7 +205,8 @@ async function eventHash(userId, event) {
 }
 
 // user must come from the entrypoint's verified auth.getUser(), never the body.
-export async function handleTypingRoundAction({ admin, user, body, enabled = TYPING_ROUND_ACTIONS_ENABLED }) {
+export async function handleTypingRoundAction({ admin, user, body, enabled = TYPING_ROUND_ACTIONS_ENABLED,
+  atomicEnabled = TYPING_ATOMIC_FINAL_COMMIT_ENABLED }) {
   if (!enabled) return { status: 404, body: { error: 'feature_disabled' } };
   let event;
   let writeAttempted = false;
@@ -207,12 +217,28 @@ export async function handleTypingRoundAction({ admin, user, body, enabled = TYP
     const signal = AbortSignal.timeout(TIMEOUT_MS);
     let committed = null;
     if (event.action === 'typing_round_event') {
+      let atomic = null;
+      if (atomicEnabled === true) {
+        const evidence = await loadTypingRoundEvidence({ admin, userId, roundId: event.roundId, signal });
+        const current = evidence.prompts[event.promptOrdinal - 1];
+        if (!current?.learning_state || !current?.learning_state_token) fail('typing_atomic_schema_unavailable');
+        const rows = event.type === 'completed' ? await canonicalRows(admin, evidence, signal) : [];
+        atomic = await prepareTypingAtomicEvent({ evidence, canonicalRows: rows, event });
+      }
       writeAttempted = true;
-      committed = rpcResult(await resultOf(admin.rpc('phase1_typing_round_append_event', {
+      committed = rpcResult(await resultOf(admin.rpc(
+        atomic ? 'phase1_typing_round_commit_event' : 'phase1_typing_round_append_event', {
         p_operation_id: event.operationId, p_user_id: userId,
         p_request_hash: await eventHash(userId, event), p_round_id: event.roundId,
         p_expected_sequence: event.sequence, p_prompt_ordinal: event.promptOrdinal,
         p_event_type: event.type, p_answer: event.answer,
+        ...(atomic ? {
+          p_server_learning_score: atomic.serverLearningScore,
+          p_score_verified_by: atomic.scoreVerifiedBy,
+          p_server_final_score: atomic.serverFinalScore,
+          p_evidence_hash: atomic.evidenceHash,
+          p_mirror_items: atomic.mirrorItems,
+        } : {}),
       }), signal));
       writeConfirmed = true;
       if (committed.operation_id !== event.operationId || committed.round_id !== event.roundId

@@ -76,6 +76,11 @@ function pinnedPrompt(prompt) {
     && typeof prompt.catalog_version === 'string' && prompt.catalog_version.trim() === prompt.catalog_version
     && prompt.catalog_version.length > 0 && prompt.catalog_version.length <= 128
     && RECORD_HASH.test(prompt.record_hash || '')
+    && prompt.attempt_kind === 'primary'
+    && ['normal', 'next_day_check', 'review_needed', 'weak_4d', 'srs'].includes(prompt.learning_state)
+    && typeof prompt.learning_state_token === 'string'
+    && prompt.learning_state_token.length > 0 && prompt.learning_state_token.trim() === prompt.learning_state_token
+    && prompt.learning_state_token.length <= 512
     && typeof prompt.golden === 'boolean' && typeof prompt.srs_bonus === 'boolean';
 }
 

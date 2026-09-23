@@ -95,6 +95,9 @@ function prompt(row, canonical, randomUint32) {
     answer: source.canonical_record.word,
     catalog_version: source.catalog_version,
     record_hash: source.record_hash,
+    attempt_kind: 'primary',
+    learning_state: row.state,
+    learning_state_token: row.state_token,
     golden: drawBelow(100, randomUint32) < 18,
     // Eligibility only. The final atomic learning/score commit must enforce
     // once-per-stage awards; this plan does not claim that commit is integrated.

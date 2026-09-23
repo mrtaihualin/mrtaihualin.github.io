@@ -10,10 +10,10 @@ const fraction = (n = 0) => ({ numerator: n, denominator: 1, decimal: n });
 const contentRef = (n) => ({ source: 'game_words', key: 'synthetic-' + n });
 const clone = (x) => JSON.parse(JSON.stringify(x));
 function initial() {
-  return { version: 'typing-resume-checkpoint-v1', serverVerified: true, game: 'typing', difficulty: '初',
+  return { version: 'typing-resume-checkpoint-v2', serverVerified: true, game: 'typing', difficulty: '初',
     roundId, stateVersion: 0, confirmedThroughOperationId: null, targetCompleted: 5, confirmedEventCount: 0,
     consumedPromptCount: 0, currentPromptIndex: 0, currentWrongCount: 0, currentGuide: false,
-    completedCount: 0, skipCount: 0, hadGuide: false, cleanCount: 0, combo: 0, maxCombo: 0,
+    completedCount: 0, primaryCompletedCount: 0, skipCount: 0, hadGuide: false, cleanCount: 0, combo: 0, maxCombo: 0,
     complete: false, perfectEligible: true, scoreBeforeRoundBonus: fraction(),
     roundBonus: { completion: 0, perfect: 0, total: 0 }, confirmedScore: fraction(), finalScore: null,
     confirmedItems: [] };
@@ -41,16 +41,18 @@ function fixture() {
       if (request.type === 'hint_opened') { cp.currentGuide = true; cp.hadGuide = true; }
       if (['skipped', 'completed'].includes(request.type)) {
         const skipped = request.type === 'skipped';
-        if (skipped) cp.skipCount++; else cp.completedCount++;
+        if (skipped) cp.skipCount++; else { cp.completedCount++; cp.primaryCompletedCount++; }
         cp.confirmedItems.push({ operationId: request.operation_id, contentRef: contentRef(request.prompt_ordinal),
-          outcome: request.type, completedOrdinal: skipped ? null : cp.completedCount, combo: 0, awardedScore: fraction() });
+          outcome: request.type, attemptKind: 'primary', completedOrdinal: skipped ? null : cp.completedCount,
+          combo: 0, awardedScore: fraction() });
         cp.consumedPromptCount++; cp.currentPromptIndex++; cp.currentWrongCount = 0; cp.currentGuide = false;
         cp.complete = cp.completedCount === 5;
         if (cp.complete) { cp.currentPromptIndex = null; cp.finalScore = 0; }
       }
     }
     return { status: 200, body: { ok: true, checkpoint: clone(cp), current_prompt: cp.complete ? null : {
-      ordinal: cp.currentPromptIndex + 1, content_ref: contentRef(cp.currentPromptIndex + 1), golden: false },
+      ordinal: cp.currentPromptIndex + 1, content_ref: contentRef(cp.currentPromptIndex + 1), golden: false,
+      attempt_kind: 'primary' },
     ...(isEvent ? { operation_id: request.operation_id, idempotent: replay } : {}) } };
   };
   const create = (override = transport) => createTypingRoundClient({ ...options, transport: override });

@@ -74,7 +74,7 @@ function fixture({ level = '初', rows, prompts, serverEvents, startingCombo = 0
 }
 
 check('contract is versioned and supports only Initial/Middle', () => {
-  assert.equal(TYPING_RESUME_CHECKPOINT_VERSION, 'typing-resume-checkpoint-v1');
+  assert.equal(TYPING_RESUME_CHECKPOINT_VERSION, 'typing-resume-checkpoint-v2');
   const rows = [1, 2, 3, 4, 5].map((index) => word(index, '高'));
   rejects('unsupported_typing_checkpoint_level', () => buildTypingResumeCheckpoint(fixture({ level: '高', rows })));
 });
@@ -290,6 +290,38 @@ check('server Golden and SRS flags cannot award a non-clean unit', () => {
   assert.equal(result.confirmedItems[0].awardedScore.decimal, 15);
 });
 
+check('one protected end-of-round Retry may repeat a primary identity without becoming a sixth primary', () => {
+  const rows = [1, 2, 3, 4, 5].map((index) => word(index, '初'));
+  const prompts = rows.map((row) => prompt(row));
+  prompts.push({ ...prompt(rows[0]), attemptKind: 'retry', golden: false, srsBonus: false });
+  const raw = [
+    wrong(rows[0], 1), wrong(rows[0], 2), wrong(rows[0], 3),
+    completed(rows[0], 4),
+    ...rows.slice(1).map((row, index) => completed(row, index + 5)),
+    completed(rows[0], 9),
+  ];
+  const result = buildTypingResumeCheckpoint(fixture({ rows, prompts, serverEvents: raw }));
+  assert.equal(result.complete, true);
+  assert.equal(result.primaryCompletedCount, 5);
+  assert.equal(result.completedCount, 6);
+  assert.equal(result.confirmedItems.at(-1).attemptKind, 'retry');
+  assert.equal(result.confirmedItems.at(-1).completedOrdinal, 6);
+});
+
+check('Retry prompts fail closed unless the same primary completed first and can complete only once', () => {
+  const rows = [1, 2, 3, 4, 5].map((index) => word(index, '初'));
+  const retry = { ...prompt(rows[0]), attemptKind: 'retry', golden: false, srsBonus: false };
+  assert.throws(() => buildTypingResumeCheckpoint(fixture({ rows,
+    prompts: [retry, ...rows.slice(1).map((row) => prompt(row))],
+    serverEvents: [completed(rows[0], 1)] })), /invalid_retry_completion/);
+  const prompts = [...rows.map((row) => prompt(row)), retry, retry];
+  const events = rows.map((row, index) => completed(row, index + 1));
+  events.push(completed(rows[0], 6));
+  events.push(completed(rows[0], 7));
+  assert.throws(() => buildTypingResumeCheckpoint(fixture({ rows, prompts, serverEvents: events })),
+    /invalid_retry_completion/);
+});
+
 check('completion and Perfect bonuses are derived after five clean units', () => {
   const rows = [1, 2, 3, 4, 5].map((index) => word(index));
   const result = buildTypingResumeCheckpoint(fixture({
@@ -325,7 +357,7 @@ check('queue identity, sequence, canonical level, and idempotency fail closed', 
   }));
 
   const extraRows = [...rows, word(6)];
-  rejects('event_after_round_complete', () => buildTypingResumeCheckpoint(fixture({
+  rejects('too_many_primary_completions', () => buildTypingResumeCheckpoint(fixture({
     rows: extraRows,
     prompts: extraRows.map((row) => prompt(row)),
     serverEvents: extraRows.map((row, index) => completed(row, index + 1)),

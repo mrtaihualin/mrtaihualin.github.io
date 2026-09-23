@@ -124,6 +124,9 @@ runTest(['scripts/tests-typing-reserve-refill.mjs'], 'Typing protected bounded r
 runTest(['scripts/tests-typing-continuation-plan.mjs'], 'Typing ordered Skip continuation plan tests');
 runTest(['scripts/tests-typing-round-client.mjs'], 'Typing inactive client journal/owner-fence tests');
 runTest(['scripts/tests-typing-browser-adoption.mjs'], 'Typing inactive partial Resume/writer/rate boundary tests');
+runTest(['scripts/tests-typing-round-final-commit.mjs'], 'Typing atomic final-commit preparation tests');
+runTest(['scripts/tests-typing-atomic-learning-score-source.mjs'], 'Typing atomic learning/score source boundary tests');
+runTest(['scripts/tests-typing-atomic-learning-score-db.mjs'], 'Typing atomic learning/Retry/score PostgreSQL tests');
 runTest(['scripts/tests-typing-client-service-integration.mjs'], 'Typing client/service/reducer composition tests');
 runTest(['scripts/tests-typing-atomic-continuation-db.mjs'], 'Typing atomic reserve and client/service/PostgreSQL composition tests');
 runTest(['scripts/tests-learning-review-runtime.js'], 'Login Free Review cumulative-allocation/runtime tests');

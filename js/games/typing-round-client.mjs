@@ -24,10 +24,10 @@ const PREFIX = 'typing-round-pending:v1:';
 const CHECKPOINT_KEYS = ['version', 'serverVerified', 'game', 'difficulty', 'roundId',
   'stateVersion', 'confirmedThroughOperationId', 'targetCompleted', 'confirmedEventCount',
   'consumedPromptCount', 'currentPromptIndex', 'currentWrongCount', 'currentGuide',
-  'completedCount', 'skipCount', 'hadGuide', 'cleanCount', 'combo', 'maxCombo', 'complete',
+  'completedCount', 'primaryCompletedCount', 'skipCount', 'hadGuide', 'cleanCount', 'combo', 'maxCombo', 'complete',
   'perfectEligible', 'scoreBeforeRoundBonus', 'roundBonus', 'confirmedScore', 'finalScore', 'confirmedItems'];
 const ITEM_KEYS = ['operationId', 'contentRef', 'outcome', 'completedOrdinal', 'wrong', 'guide',
-  'quota', 'clean', 'combo', 'goldenAwarded', 'srsBonusAwarded', 'baseScore', 'awardedScore'];
+  'attemptKind', 'quota', 'clean', 'combo', 'goldenAwarded', 'srsBonusAwarded', 'baseScore', 'awardedScore'];
 const copy = (value) => value == null ? value : JSON.parse(JSON.stringify(value));
 const integer = (value, min = 0) => Number.isSafeInteger(value) && value >= min;
 const fail = (code) => { throw Object.assign(new Error(code), { code }); };
@@ -59,13 +59,15 @@ function verifiedResponse(body, roundId, previous, pending) {
   const cp = body?.checkpoint;
   const prompt = body?.current_prompt;
   if (!keys(body, ['ok', 'checkpoint', 'current_prompt', 'operation_id', 'idempotent']) || body.ok !== true
-      || !keys(cp, CHECKPOINT_KEYS) || cp.version !== 'typing-resume-checkpoint-v1'
+      || !keys(cp, CHECKPOINT_KEYS) || cp.version !== 'typing-resume-checkpoint-v2'
       || cp.serverVerified !== true || cp.game !== 'typing' || !['初', '中'].includes(cp.difficulty)
       || !id(cp.roundId) || (roundId && cp.roundId !== roundId)
       || !integer(cp.stateVersion) || cp.confirmedEventCount !== cp.stateVersion
-      || cp.targetCompleted !== 5 || !integer(cp.completedCount) || cp.completedCount > 5
+      || cp.targetCompleted !== 5 || !integer(cp.completedCount) || cp.completedCount > 10
+      || !integer(cp.primaryCompletedCount) || cp.primaryCompletedCount > 5
+      || cp.primaryCompletedCount > cp.completedCount
       || !integer(cp.skipCount) || cp.consumedPromptCount !== cp.completedCount + cp.skipCount
-      || cp.complete !== (cp.completedCount === 5)
+      || (cp.complete && cp.primaryCompletedCount !== 5)
       || cp.currentPromptIndex !== (cp.complete ? null : cp.consumedPromptCount)
       || !['currentWrongCount', 'cleanCount', 'combo', 'maxCombo'].every((k) => integer(cp[k]))
       || !['currentGuide', 'hadGuide', 'perfectEligible'].every((k) => typeof cp[k] === 'boolean')
@@ -79,18 +81,20 @@ function verifiedResponse(body, roundId, previous, pending) {
       || !Array.isArray(cp.confirmedItems) || cp.confirmedItems.length !== cp.consumedPromptCount) fail('invalid_checkpoint');
   for (const item of cp.confirmedItems) {
     if (!keys(item, ITEM_KEYS) || !id(item.operationId) || !ref(item.contentRef)
-        || !['completed', 'skipped'].includes(item.outcome) || !integer(item.combo)
+        || !['completed', 'skipped'].includes(item.outcome)
+        || !['primary', 'retry'].includes(item.attemptKind) || !integer(item.combo)
         || !fraction(item.awardedScore)
         || (item.outcome === 'skipped' ? item.completedOrdinal !== null : !integer(item.completedOrdinal, 1))
         || ['wrong', 'quota'].some((key) => Object.hasOwn(item, key) && !integer(item[key]))
         || ['guide', 'clean', 'goldenAwarded', 'srsBonusAwarded'].some((key) => Object.hasOwn(item, key) && typeof item[key] !== 'boolean')
         || (Object.hasOwn(item, 'baseScore') && !fraction(item.baseScore))) fail('invalid_checkpoint');
   }
-  if (cp.complete ? prompt !== null : (!keys(prompt, ['ordinal', 'content_ref', 'golden'])
+  if (cp.complete ? prompt !== null : (!keys(prompt, ['ordinal', 'content_ref', 'golden', 'attempt_kind'])
       || prompt.ordinal !== cp.currentPromptIndex + 1 || !ref(prompt.content_ref)
-      || typeof prompt.golden !== 'boolean')) fail('invalid_checkpoint');
+      || typeof prompt.golden !== 'boolean' || !['primary', 'retry'].includes(prompt.attempt_kind))) fail('invalid_checkpoint');
   if (previous && (cp.roundId !== previous.roundId || cp.difficulty !== previous.difficulty
       || cp.stateVersion < previous.stateVersion || cp.completedCount < previous.completedCount
+      || cp.primaryCompletedCount < previous.primaryCompletedCount
       || cp.skipCount < previous.skipCount
       || (cp.stateVersion === previous.stateVersion && JSON.stringify(cp) !== JSON.stringify(previous)))) fail('checkpoint_conflict');
   if (pending && (body.operation_id !== pending.operation_id || typeof body.idempotent !== 'boolean'

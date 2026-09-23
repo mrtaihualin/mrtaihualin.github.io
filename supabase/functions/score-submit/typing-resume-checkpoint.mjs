@@ -6,7 +6,7 @@
 // a client score, wrong-count summary, Hint summary, Combo, Golden flag, SRS
 // entitlement, queue, or round summary.
 
-export const TYPING_RESUME_CHECKPOINT_VERSION = 'typing-resume-checkpoint-v1';
+export const TYPING_RESUME_CHECKPOINT_VERSION = 'typing-resume-checkpoint-v2';
 
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const LEVEL_MULTIPLIER = Object.freeze({ '初': 1, '中': 2 });
@@ -145,7 +145,12 @@ function normalizeServerRound(serverRound) {
     if (typeof prompt.golden !== 'boolean' || typeof prompt.srsBonus !== 'boolean') {
       fail('incomplete_server_prompt_entitlement');
     }
-    return { contentRef: ref, golden: prompt.golden, srsBonus: prompt.srsBonus };
+    const attemptKind = prompt.attemptKind || prompt.attempt_kind || 'primary';
+    if (!['primary', 'retry'].includes(attemptKind)
+        || (attemptKind === 'retry' && (prompt.golden || prompt.srsBonus))) {
+      fail('invalid_server_prompt_attempt');
+    }
+    return { contentRef: ref, golden: prompt.golden, srsBonus: prompt.srsBonus, attemptKind };
   });
   return { roundId, difficulty, startingCombo, prompts };
 }
@@ -216,6 +221,7 @@ export function buildTypingResumeCheckpoint(input) {
   let combo = round.startingCombo;
   let maxCombo = combo;
   let completedCount = 0;
+  let primaryCompletedCount = 0;
   let cleanCount = 0;
   let skipCount = 0;
   let hadGuide = false;
@@ -224,11 +230,11 @@ export function buildTypingResumeCheckpoint(input) {
   let promptIndex = 0;
   let currentWrongCount = 0;
   let currentGuide = false;
-  const completedContent = new Set();
+  const completedPrimaryContent = new Set();
+  const completedRetryContent = new Set();
   const confirmedItems = [];
 
   events.forEach((event) => {
-    if (completedCount >= TARGET_COMPLETED) fail('event_after_round_complete');
     const prompt = round.prompts[promptIndex];
     if (!prompt) fail('replacement_queue_exhausted');
     if (!sameRef(event.contentRef, prompt.contentRef)) fail('event_prompt_order_mismatch');
@@ -254,6 +260,7 @@ export function buildTypingResumeCheckpoint(input) {
         operationId: event.operationId,
         contentRef: event.contentRef,
         outcome: 'skipped',
+        attemptKind: prompt.attemptKind,
         completedOrdinal: null,
         combo,
         awardedScore: publicFraction(fraction(0)),
@@ -266,8 +273,16 @@ export function buildTypingResumeCheckpoint(input) {
 
     if (event.answer !== row.word) fail('typing_completion_answer_mismatch');
     const completedIdentity = event.contentRef.source + ':' + event.contentRef.key;
-    if (completedContent.has(completedIdentity)) fail('duplicate_completed_content');
-    completedContent.add(completedIdentity);
+    if (prompt.attemptKind === 'primary') {
+      if (completedPrimaryContent.has(completedIdentity)) fail('duplicate_completed_content');
+      completedPrimaryContent.add(completedIdentity);
+      primaryCompletedCount += 1;
+      if (primaryCompletedCount > TARGET_COMPLETED) fail('too_many_primary_completions');
+    } else {
+      if (!completedPrimaryContent.has(completedIdentity)
+          || completedRetryContent.has(completedIdentity)) fail('invalid_retry_completion');
+      completedRetryContent.add(completedIdentity);
+    }
     completedCount += 1;
     const clean = currentWrongCount === 0 && !currentGuide;
     if (clean) {
@@ -291,6 +306,7 @@ export function buildTypingResumeCheckpoint(input) {
       operationId: event.operationId,
       contentRef: event.contentRef,
       outcome: 'completed',
+      attemptKind: prompt.attemptKind,
       completedOrdinal: completedCount,
       wrong: currentWrongCount,
       guide: currentGuide,
@@ -307,12 +323,12 @@ export function buildTypingResumeCheckpoint(input) {
     currentGuide = false;
   });
 
-  if (promptIndex === round.prompts.length && completedCount < TARGET_COMPLETED) {
+  if (promptIndex === round.prompts.length && primaryCompletedCount < TARGET_COMPLETED) {
     fail('replacement_queue_exhausted');
   }
-  const complete = completedCount === TARGET_COMPLETED;
+  const complete = primaryCompletedCount === TARGET_COMPLETED && promptIndex === round.prompts.length;
   const completionBonus = complete && skipCount <= 2 && !hadGuide ? 20 : 0;
-  const perfectBonus = complete && perfectSoFar && cleanCount === TARGET_COMPLETED && skipCount === 0 ? 50 : 0;
+  const perfectBonus = complete && perfectSoFar && cleanCount === completedCount && skipCount === 0 ? 50 : 0;
   const roundBonus = completionBonus + perfectBonus;
   const confirmedScore = add(scoreBeforeRoundBonus, fraction(roundBonus));
 
@@ -331,6 +347,7 @@ export function buildTypingResumeCheckpoint(input) {
     currentWrongCount,
     currentGuide,
     completedCount,
+    primaryCompletedCount,
     skipCount,
     hadGuide,
     cleanCount,
