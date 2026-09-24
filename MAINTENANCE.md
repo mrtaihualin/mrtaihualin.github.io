@@ -3164,6 +3164,13 @@ node scripts/check-site.js
 - This is a local replacement source candidate only. The failed Production transaction rolled back completely; Roman migration, Edge deployment and Cloudflare traffic were not attempted. A new commit/MR, migration hash and exact Production authorization are required before rollout can resume.
 - A second authorized attempt stopped before commit because the migration insert still named retired physical columns `syls` and `read_syls`, while the Current Production table stores the complete reviewed structure only in `canonical_record`. The insert and disposable schema fixture now match the full live 22-column schema; the embedded reviewed payload remains byte-for-byte unchanged.
 
+# 2026-09-22 — LG001–LG012 Advanced sentence activation
+
+- Added the 12 Lin-authored LG001–LG012 sentences as Advanced ranks 31–42 in the existing central sentence catalog. Guest remains capped at 20; Login and owner access now receive all 42. The rows, stable keys, aliases and Learning Items were added atomically without deleting or changing prior sentence or learner history.
+- Production postcheck confirms `game_sentences=42`, target canonical rows `12`, target aliases `12`, target Learning Items `12`, and direct `anon`/`authenticated` table access remains denied. Migration ledger `20260922103701` is recorded as applied.
+- Deployed only `game-content` v45 and `game-audio` v10 with JWT verification retained. Both now use the exact pinned `npm:@supabase/supabase-js@2.112.3` dependency after the former CDN import timed out in the provider bundler. A live Guest probe returns HTTP 200 and preserves the 20-sentence cap.
+- Focused catalog, security and game behavior checks pass; the complete `node scripts/check-site.js` gate passes across all 1,130 repository files. Lin completed the required 100% language-field review and confirmed `ผ่านทั้งหมด` on 2026-09-22.
+
 # 2026-09-23 — Six-game browser preference isolation
 
 - Tone, Reading, Listening, Typing, Word Order and Lego now persist game-owned Hint, reading/romanization, font, particle and translation choices under distinct game keys. The one shared UI adapter still renders the same controls, but selects storage by game page; starting or changing one game no longer rewrites another game's saved choice. Site-wide Auth and consent storage are unchanged.
