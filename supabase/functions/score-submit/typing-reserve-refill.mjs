@@ -1,5 +1,4 @@
-// Internal source-only Typing reserve refill owner. It is not imported by the
-// live HTTP entrypoint and remains default OFF until the later activation unit.
+// Protected Typing reserve refill owner for the authenticated HTTP route.
 import { buildTypingReserveRefillPlan } from './typing-initial-prompt-plan.mjs';
 import { loadTypingReserveRefillContext } from './typing-round-context.mjs';
 import { loadTypingRoundEvidence } from './typing-round-service.mjs';

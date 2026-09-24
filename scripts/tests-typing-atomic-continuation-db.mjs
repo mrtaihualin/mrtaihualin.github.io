@@ -418,10 +418,10 @@ try {
   assert.equal(load(sameRound, sameIdOwner).round.completed_count, 0);
   assert.equal(load(sameRound, sameIdOwner).round.prompt_count, 71);
 
-  // Integration added only after the backend and inactive client each passed
+  // Integration added only after the backend and client each passed
   // unrelated unit review. Real client -> real Edge service/reducer -> real SQL.
   // This is synthetic, with no HTTP Auth/DOM/IME or final learning-commit claim.
-  assert.equal(TYPING_ROUND_ACTIONS_ENABLED, false);
+  assert.equal(TYPING_ROUND_ACTIONS_ENABLED, true);
   const stackOwner = '10000000-0000-4000-8000-000000000009';
   psql(`insert into auth.users values (${quote(stackOwner)});`);
   const stackPrompts = Array.from({ length: 6 }, (_, n) => prompt(`stack-${n}`));

@@ -1,4 +1,4 @@
-// Internal source-only initial issuance. No HTTP route imports or enables this.
+// Protected initial issuance for the authenticated Typing round HTTP route.
 // The protected wrapper derives authenticated context, cross-round Combo and
 // the first bounded ordered reserve batch without browser-owned values.
 import { buildTypingInitialRoundAllocation } from './typing-initial-prompt-plan.mjs';
@@ -199,9 +199,8 @@ function taipeiDay(now) {
   }).format(now);
 }
 
-// Future authenticated entrypoints use this owner-bound wrapper. It deliberately
+// The authenticated entrypoint uses this owner-bound wrapper. It deliberately
 // exposes no callback, day, catalog, learning state or Combo override to HTTP.
-// The feature remains default OFF and is not imported by the live entrypoint.
 export async function handleTypingRoundStartWithProtectedContext({
   admin, user, body, enabled = false, catalogMode = 'off', now = new Date(),
 }) {

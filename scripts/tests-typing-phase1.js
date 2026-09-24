@@ -160,7 +160,7 @@ test('continuous typing zero score keeps accepting input without reveal/finish',
 
 test('fully typed word reveals, shows Next, and Enter advances', () => {
   const wAssignments = Array.from(source.matchAll(/W=\{th:SY\.th,[^\n]+?\};/g), (match) => match[0]);
-  assert.strictEqual(wAssignments.length, 2, 'Typing must have exactly two reviewed-syllable W assignments');
+  assert.strictEqual(wAssignments.length, 3, 'Typing must have exactly three reviewed-syllable W assignments, including protected completion');
   wAssignments.forEach((assignment) => assert.match(assignment, /catalog:SY\.catalog/));
 
   function element() {
@@ -546,7 +546,7 @@ test('Typing counter follows active syllables including High continuous segments
 });
 
 test('Typing loads the rebuilt crash-safe bundle with a fresh cache key', () => {
-  assert.match(html, /typing-game-app\.min\.js\?v=62/);
+  assert.match(html, /typing-game-app\.min\.js\?v=63/);
 });
 
 test('Typing treats the shared-profile legacy stat row as optional', () => {

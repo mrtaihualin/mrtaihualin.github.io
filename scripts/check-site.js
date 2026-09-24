@@ -122,7 +122,7 @@ runTest(['scripts/tests-typing-round-issuance.mjs'], 'Typing inactive initial is
 runTest(['scripts/tests-typing-round-context.mjs'], 'Typing protected initial context and cross-round Combo tests');
 runTest(['scripts/tests-typing-reserve-refill.mjs'], 'Typing protected bounded reserve-refill tests');
 runTest(['scripts/tests-typing-continuation-plan.mjs'], 'Typing ordered Skip continuation plan tests');
-runTest(['scripts/tests-typing-round-client.mjs'], 'Typing inactive client journal/owner-fence tests');
+runTest(['scripts/tests-typing-round-client.mjs'], 'Typing client journal/owner-fence tests');
 runTest(['scripts/tests-typing-browser-adoption.mjs'], 'Typing inactive partial Resume/writer/rate boundary tests');
 runTest(['scripts/tests-typing-round-final-commit.mjs'], 'Typing atomic final-commit preparation tests');
 runTest(['scripts/tests-typing-atomic-learning-score-source.mjs'], 'Typing atomic learning/score source boundary tests');

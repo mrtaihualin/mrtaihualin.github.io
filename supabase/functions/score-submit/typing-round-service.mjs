@@ -1,11 +1,11 @@
-// Existing-round bridge only. Round/prompt issuance and browser activation are
-// separate units. Keep the HTTP route OFF until those owners are integrated.
+// Protected Typing round owner. HTTP routing is enabled only after issuance,
+// reserve refill and the browser writer boundary are integrated as one path.
 import { buildTypingResumeCheckpoint } from './typing-resume-checkpoint.mjs';
 import { catalogBatches } from './learning-catalog.mjs';
 import { prepareTypingAtomicEvent } from './typing-round-final-commit.mjs';
 
-export const TYPING_ROUND_ACTIONS_ENABLED = false;
-export const TYPING_ATOMIC_FINAL_COMMIT_ENABLED = false;
+export const TYPING_ROUND_ACTIONS_ENABLED = true;
+export const TYPING_ATOMIC_FINAL_COMMIT_ENABLED = true;
 const PAGE_SIZE = 64;
 const TIMEOUT_MS = 10000;
 const RECEIPT_FIELDS = 'operation_id,user_id,round_id,operation_type,request_hash,request_payload,response';

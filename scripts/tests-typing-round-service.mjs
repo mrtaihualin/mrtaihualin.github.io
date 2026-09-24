@@ -128,10 +128,10 @@ function fixture(count = 5, level = 1) {
   return state;
 }
 
-await check('default OFF rejects before storage; verified owner is required', async () => {
-  assert.equal(TYPING_ROUND_ACTIONS_ENABLED, false);
+await check('default ON still honors an explicit kill switch and requires a verified owner', async () => {
+  assert.equal(TYPING_ROUND_ACTIONS_ENABLED, true);
   const f = fixture();
-  assert.equal((await handleTypingRoundAction({ admin: f.admin, user: { id: owner }, body: resume })).status, 404);
+  assert.equal((await handleTypingRoundAction({ admin: f.admin, user: { id: owner }, body: resume, enabled: false })).status, 404);
   assert.equal((await f.call(resume, null)).status, 401);
   assert.equal(f.calls.length, 0);
 });
@@ -308,7 +308,8 @@ await check('exact receipt is checked before canonical projection and retires a 
 const source = fs.readFileSync(new URL('../supabase/functions/score-submit/index.ts', import.meta.url), 'utf8');
 const runnable = stripTypeScriptTypes(source.replace(/^import .+ from .+;$/gm, ''), { mode: 'strip' });
 function edge({ enabled = false, validAuth = true, rate = true } = {}) {
-  const f = fixture(); let handler; let legacyCalls = 0; let rateCalls = 0; const seenRateArgs = [];
+  const f = fixture(); let handler; let legacyCalls = 0; let rateCalls = 0;
+  let startCalls = 0; let refillCalls = 0; const seenRateArgs = [];
   const admin = { ...f.admin, rpc(name, args) {
     if (name === 'game_content_rl_check') { rateCalls++; seenRateArgs.push(args); return Promise.resolve({ data: rate }); }
     return f.admin.rpc(name, args);
@@ -321,16 +322,18 @@ function edge({ enabled = false, validAuth = true, rate = true } = {}) {
     TYPING_ROUND_ACTIONS_ENABLED: enabled,
     typingRoundRateArgs,
     handleTypingRoundAction: (options) => handleTypingRoundAction({ ...options, enabled }),
+    handleTypingRoundStartWithProtectedContext: async () => { startCalls++; return { status: 200, body: { ok: true } }; },
+    handleTypingReserveRefillWithProtectedContext: async () => { refillCalls++; return { status: 200, body: { ok: true } }; },
     validateScoreSubmission() { legacyCalls++; throw Object.assign(new Error(), { code: 'fixture_legacy' }); },
   });
-  return { f, calls: () => ({ legacyCalls, rateCalls, seenRateArgs }),
+  return { f, calls: () => ({ legacyCalls, rateCalls, startCalls, refillCalls, seenRateArgs }),
     invoke: (body, headers = {}) => handler(new Request('https://fixture.invalid/score-submit', {
       method: 'POST', headers: { Origin: 'https://mrtaihualin.com', Authorization: 'Bearer fixture-user', ...headers },
       body: JSON.stringify(body),
     })) };
 }
 
-await check('actual Edge entrypoint enforces auth, OFF gate, rate limit and leaves legacy score route intact', async () => {
+await check('actual Edge entrypoint enforces auth, kill switch, rate limit and leaves legacy score route intact', async () => {
   const off = edge(); assert.equal((await off.invoke(resume)).status, 404);
   assert.equal(off.calls().rateCalls, 0); assert.equal(off.f.calls.length, 0);
   const unauthorized = edge({ enabled: true, validAuth: false });
@@ -340,12 +343,18 @@ await check('actual Edge entrypoint enforces auth, OFF gate, rate limit and leav
   assert.equal((await rate.invoke(resume)).status, 429); assert.equal(rate.f.calls.length, 0);
   const active = edge({ enabled: true });
   const response = await active.invoke(event());
-  assert.equal(response.status, 404); assert.equal((await response.json()).error, 'typing_atomic_disabled');
-  assert.equal(active.f.events.length, 0);
+  assert.equal(response.status, 200); assert.equal((await response.json()).ok, true);
+  assert.equal(active.f.events.length, 1);
   assert.deepEqual(active.calls().seenRateArgs[0], {
     p_key: `typing-round-event:${owner}`, p_limit: 600, p_window: 60,
   });
   assert.equal(active.calls().legacyCalls, 0);
+  assert.equal((await active.invoke({ action: 'typing_round_start', operation_id: op(90), level: 1 })).status, 200);
+  assert.equal(active.calls().startCalls, 1);
+  assert.equal((await active.invoke({ action: 'typing_round_refill', round_id: roundId })).status, 400);
+  assert.equal(active.calls().refillCalls, 0);
+  assert.equal((await active.invoke({ action: 'typing_round_refill', round_id: roundId, batch_id: op(91) })).status, 200);
+  assert.equal(active.calls().refillCalls, 1);
   assert.equal((await active.invoke({ game: 'typing' })).status, 400);
   assert.equal(active.calls().legacyCalls, 1);
   assert.equal((await active.invoke(resume, { Origin: 'https://untrusted.invalid' })).status, 403);

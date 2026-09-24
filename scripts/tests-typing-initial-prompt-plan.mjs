@@ -129,7 +129,7 @@ check('prepared output is reducer-compatible; persisted replay keeps Golden with
   assert.deepEqual(buildTypingResumeCheckpoint(input), result);
   assert.equal(result.combo, 4);
   const service = fs.readFileSync(new URL('../supabase/functions/score-submit/typing-round-service.mjs', import.meta.url), 'utf8');
-  assert.match(service, /TYPING_ROUND_ACTIONS_ENABLED = false/);
+  assert.match(service, /TYPING_ROUND_ACTIONS_ENABLED = true/);
   assert.doesNotMatch(service, /typing-initial-prompt-plan/);
 });
 check('initial allocation persists five prompts plus one bounded ordered reserve batch', () => {

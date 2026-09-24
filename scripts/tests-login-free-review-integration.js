@@ -44,7 +44,7 @@ pages.forEach(page => {
 });
 assert.match(read('js/score/phase1-canonical-state.js'), /whenReady:\s*whenReady/);
 assert.match(read('js/games/game-content-client.js'), /whenLoginFreeCanonicalReady\(data, game\)/);
-assert.match(games.typing, /_tgResumeHandled=tgTryResume\(\)[\s\S]*if\(!_tgResumeHandled\)[\s\S]*_tgInitialStarted[\s\S]*Promise\.all\(/);
+assert.match(games.typing, /function tgBootstrapInitialRound\(\)[\s\S]*!tgProtectedEligible\(\)[\s\S]*_tgResumeHandled=tgTryResume\(\)[\s\S]*if\(_tgResumeHandled\)return;[\s\S]*_tgInitialStarted[\s\S]*Promise\.all\(/);
 assert.match(games.reading, /_rgLoginFreeResume[\s\S]*!rgTryLoadResumeBanner\(\)/);
 assert.match(games.word_order, /LearningReview\.runtimeEnabled\(\)[\s\S]*woResumeContinue\(state,restoredSet\)/);
 assert.match(games.tone, /__tfLoginFreeResume[\s\S]*TF\.resumeSavedSession\(\)/);

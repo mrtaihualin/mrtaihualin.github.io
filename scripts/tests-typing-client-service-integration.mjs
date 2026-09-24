@@ -154,8 +154,8 @@ function fixture({ count = 5, level = 1, combo = 0, units = 1, golden = [], srs 
   return f;
 }
 
-await check('composition remains explicitly inactive and Resume exposes only confirmed state', async () => {
-  assert.equal(TYPING_ROUND_ACTIONS_ENABLED, false);
+await check('activated composition Resume exposes only confirmed state', async () => {
+  assert.equal(TYPING_ROUND_ACTIONS_ENABLED, true);
   const f = fixture({ combo: 4, golden: [1] }); const c = await f.connect(); const state = c.getState();
   assert.equal(state.checkpoint.combo, 4); assert.equal(state.checkpoint.confirmedScore.decimal, 0);
   assert.equal(state.currentPrompt.ordinal, 1); assert.equal(state.currentPrompt.golden, true);

@@ -224,13 +224,14 @@ await check('malformed write success is uncertain, never falsely confirmed', asy
   assert.equal(f.receipts.has(BATCH), true);
 });
 
-await check('protected wrapper remains OFF and live entrypoint does not import refill owner', async () => {
+await check('protected wrapper remains explicit while the live entrypoint owns activation', async () => {
   const f = fixture(); const result = await handleTypingReserveRefillWithProtectedContext({
     admin: f.admin, user: { id: OWNER }, batchId: BATCH, roundId: ROUND,
   });
   assert.equal(result.status, 404); assert.equal(f.rpcCalls.length, 0);
   const entrypoint = fs.readFileSync(new URL('../supabase/functions/score-submit/index.ts', import.meta.url), 'utf8');
-  assert.doesNotMatch(entrypoint, /typing-reserve-refill/);
+  assert.match(entrypoint, /typing-reserve-refill/);
+  assert.match(entrypoint, /handleTypingReserveRefillWithProtectedContext/);
 });
 
 console.log(`TYPING_RESERVE_REFILL_PASS ${passed}`);

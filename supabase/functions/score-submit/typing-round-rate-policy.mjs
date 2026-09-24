@@ -1,4 +1,4 @@
-// Source-only rate policy for the still-disabled protected Typing round routes.
+// Rate policy for the protected Typing round routes.
 // Correct characters and Backspace are local-only. A network event is emitted
 // only for wrong, hint, completion or Skip evidence. The event bucket therefore
 // must support real typing bursts; control traffic keeps a separate low-rate key.

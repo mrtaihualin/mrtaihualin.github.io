@@ -1,6 +1,6 @@
-// Protected source-only owner for initial Typing round context. It derives
+// Protected owner for initial Typing round context. It derives
 // catalog/state/Combo from authenticated server storage; no browser value may
-// supply or override these fields. HTTP round actions remain OFF.
+// supply or override these fields. Only the authenticated Edge route calls it.
 import { catalogBatches, readLearningCatalog } from './learning-catalog.mjs';
 import { readCurrentLearningSnapshot } from './learning-snapshot.mjs';
 import { loadTypingRoundCheckpoint } from './typing-round-service.mjs';

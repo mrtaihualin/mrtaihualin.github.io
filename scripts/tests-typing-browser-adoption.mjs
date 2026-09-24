@@ -100,11 +100,24 @@ async function test(name, work) {
   await work(); passed += 1; process.stdout.write(`PASS ${name}\n`);
 }
 
-await test('browser boundary is default OFF and has no live game import', () => {
-  assert.equal(TYPING_ROUND_BROWSER_ENABLED, false);
-  for (const file of ['typing-game.html', 'js/games/typing-game-app.js', 'js/games/typing-game-app.min.js']) {
-    assert(!fs.readFileSync(new URL(`../${file}`, import.meta.url), 'utf8').includes('typing-round-browser-session'));
-  }
+await test('browser boundary is enabled through the owner-fenced live adapter', () => {
+  assert.equal(TYPING_ROUND_BROWSER_ENABLED, true);
+  const html = fs.readFileSync(new URL('../typing-game.html', import.meta.url), 'utf8');
+  const live = fs.readFileSync(new URL('../js/games/typing-round-live.mjs', import.meta.url), 'utf8');
+  const app = fs.readFileSync(new URL('../js/games/typing-game-app.js', import.meta.url), 'utf8');
+  assert.match(html, /typing-round-live\.mjs/);
+  assert.match(live, /typing-round-browser-session\.mjs/);
+  assert.match(live, /createTypingRoundClient/);
+  assert.match(app, /TYPING_ROUND_LIVE\.activate/);
+  assert(html.indexOf('typing-round-live.mjs') < html.indexOf('typing-game-app.min.js?v=63'));
+  assert.match(live, /scope_.*crypto\.randomUUID/);
+  assert.match(live, /typing-round-start:v1:/);
+  assert.match(live, /typing-round-refill:v1:/);
+  assert.match(live, /typing_reserve_exhausted/);
+  assert.match(app, /\{type:'wrong'\}/);
+  assert.match(app, /\{type:'hint_opened'\}/);
+  assert.match(app, /\{type:'completed',answer:WORD\.th\}/);
+  assert.match(app, /\{type:'skipped'\}/);
 });
 
 await test('writer lock is acquired before owner activation and held for the session', async () => {
@@ -266,12 +279,14 @@ await test('Typing event traffic has a separate verified burst budget from contr
   assert.throws(() => typingRoundRateArgs('typing_round_event', ''), /invalid_rate_owner/);
 });
 
-await test('entrypoint keeps the OFF gate before the prepared Typing rate policy', () => {
+await test('entrypoint keeps the feature gate before rate policy and routes every protected owner', () => {
   const source = fs.readFileSync(new URL('../supabase/functions/score-submit/index.ts', import.meta.url), 'utf8');
   const off = source.indexOf('isTypingRoundAction && !TYPING_ROUND_ACTIONS_ENABLED');
   const rate = source.indexOf('typingRoundRateArgs(action, user.id)');
   assert(off >= 0 && rate > off);
   assert.match(source, /isTypingRoundAction\s*\?\s*typingRoundRateArgs/);
+  assert.match(source, /handleTypingRoundStartWithProtectedContext/);
+  assert.match(source, /handleTypingReserveRefillWithProtectedContext/);
   assert.match(source, /p_key:\s*`score-submit:\$\{user\.id\}`[^\n]+p_limit:\s*30/);
 });
 

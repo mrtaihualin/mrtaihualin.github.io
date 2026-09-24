@@ -338,21 +338,21 @@ try {
   assert.equal(actualResume.body.checkpoint.stateVersion, 8);
   assert.equal(actualResume.body.checkpoint.completedCount, 5);
   assert.equal(actualResume.body.current_prompt, null);
-  const actualReplay = await handleTypingRoundAction({ admin: bridgeAdmin, user: { id: userId }, enabled: true,
+  const actualReplay = await handleTypingRoundAction({ admin: bridgeAdmin, user: { id: userId }, enabled: true, atomicEnabled: false,
     body: { action: 'typing_round_event', round_id: raceRoundId, operation_id: operationId(60),
       expected_sequence: 2, prompt_ordinal: 1, type: 'wrong' } });
   // This account does not own raceRoundId: service credentials cannot bypass the
   // verified caller's p_user_id filter inside the RPC.
   assert.equal(actualReplay.status, 404);
 
-  const currentEvent = await handleTypingRoundAction({ admin: bridgeAdmin, user: { id: raceUserId }, enabled: true,
+  const currentEvent = await handleTypingRoundAction({ admin: bridgeAdmin, user: { id: raceUserId }, enabled: true, atomicEnabled: false,
     body: { action: 'typing_round_event', round_id: raceRoundId, operation_id: operationId(61),
       expected_sequence: 2, prompt_ordinal: 1, type: 'wrong' } });
   // The current service must never fall back to this predecessor writer. Its
   // own historical SQL contract remains covered directly above.
   assert.equal(currentEvent.status, 404);
   assert.equal(currentEvent.body.error, 'typing_atomic_disabled');
-  const retried = await handleTypingRoundAction({ admin: bridgeAdmin, user: { id: raceUserId }, enabled: true,
+  const retried = await handleTypingRoundAction({ admin: bridgeAdmin, user: { id: raceUserId }, enabled: true, atomicEnabled: false,
     body: { action: 'typing_round_event', round_id: raceRoundId, operation_id: operationId(61),
       expected_sequence: 2, prompt_ordinal: 1, type: 'wrong' } });
   assert.equal(retried.status, 404);

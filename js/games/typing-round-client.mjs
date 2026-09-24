@@ -1,5 +1,5 @@
-// Inactive, existing-round adapter. No UI, content loading, Auth, round issuance,
-// cross-round Combo or partial-character resume is activated by this module.
+// Existing-round adapter. UI, content loading, Auth, round issuance and
+// cross-round Combo remain owned by the browser/server integration layers.
 // The caller supplies a verified session's opaque owner context and a transport
 // bound to that context. scopeId/contextToken are fencing labels, NOT role claims
 // or authorization. Use a stable, random non-PII scopeId per owner; never a user

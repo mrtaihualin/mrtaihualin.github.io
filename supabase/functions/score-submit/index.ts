@@ -11,6 +11,8 @@ import { readCurrentLearningSnapshot } from './learning-snapshot.mjs';
 import { HIDDEN_REVIEW_SCORE_DEFAULT_ENABLED, verifyLearningScore, verifyRoundLearningScores } from './learning-score-verifier.mjs';
 import { classifyLearningState, LOGIN_FREE_LEARNING_ENGINE_VERSION } from '../_shared/login-free-learning-engine.mjs';
 import { TYPING_ROUND_ACTIONS_ENABLED, handleTypingRoundAction } from './typing-round-service.mjs';
+import { handleTypingRoundStartWithProtectedContext } from './typing-round-issuance.mjs';
+import { handleTypingReserveRefillWithProtectedContext } from './typing-reserve-refill.mjs';
 import { typingRoundRateArgs } from './typing-round-rate-policy.mjs';
 
 const LOGIN_FREE_REVIEW_ACTIONS_ENABLED = true;
@@ -381,7 +383,10 @@ serve(async (req) => {
 
     const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
     const action = String(body.action || '');
-    const isTypingRoundAction = action.startsWith('typing_round_');
+    const isTypingRoundNamespace = action.startsWith('typing_round_');
+    const isTypingRoundAction = ['typing_round_start', 'typing_round_resume',
+      'typing_round_event', 'typing_round_refill'].includes(action);
+    if (isTypingRoundNamespace && !isTypingRoundAction) return reply(origin, { error: 'invalid_typing_action' }, 400);
     if (isTypingRoundAction && !TYPING_ROUND_ACTIONS_ENABLED) return reply(origin, { error: 'feature_disabled' }, 404);
     const isLegacyReviewAction = action.startsWith('review_');
     const isLearningAction = action.startsWith('learning_');
@@ -397,7 +402,23 @@ serve(async (req) => {
     if (rateOk !== true) return reply(origin, { error: 'rate_limited' }, 429);
 
     if (isTypingRoundAction) {
-      const result = await handleTypingRoundAction({ admin, user, body });
+      let result;
+      if (action === 'typing_round_start') {
+        result = await handleTypingRoundStartWithProtectedContext({
+          admin, user, body, enabled: TYPING_ROUND_ACTIONS_ENABLED, catalogMode: 'off',
+        });
+      } else if (action === 'typing_round_refill') {
+        if (!body || Object.keys(body).length !== 3
+            || !Object.hasOwn(body, 'round_id') || !Object.hasOwn(body, 'batch_id')) {
+          return reply(origin, { error: 'invalid_typing_request' }, 400);
+        }
+        result = await handleTypingReserveRefillWithProtectedContext({
+          admin, user, roundId: body.round_id, batchId: body.batch_id,
+          enabled: TYPING_ROUND_ACTIONS_ENABLED, catalogMode: 'off',
+        });
+      } else {
+        result = await handleTypingRoundAction({ admin, user, body });
+      }
       return reply(origin, result.body, result.status);
     }
 

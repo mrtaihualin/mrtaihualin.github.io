@@ -1,5 +1,4 @@
-// Inactive browser-adoption boundary for protected Typing Initial/Middle rounds.
-// This module is deliberately not imported by typing-game.html or the live app.
+// Browser-adoption boundary for protected Typing Initial/Middle rounds.
 // The caller must supply the already owner-bound round client. Server checkpoints
 // remain authoritative; the only local Resume datum is the number of confirmed
 // correct UTF-16 code units already accepted for the current prompt. No answer,
@@ -10,7 +9,7 @@
 // if Web Locks are unavailable or another same-scope tab owns the lock, protected
 // play must stay inactive. Server CAS still fences other devices and sessions.
 
-export const TYPING_ROUND_BROWSER_ENABLED = false;
+export const TYPING_ROUND_BROWSER_ENABLED = true;
 
 const SCOPE = /^[A-Za-z0-9_-]{8,128}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
