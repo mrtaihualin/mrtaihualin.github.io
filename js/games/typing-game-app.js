@@ -234,7 +234,7 @@ var wordUsedGuide=false; // งาน 9: เปิดคำใบ้ระหว
 var wordWrongTotal=0; // นับผิดสะสม "ทั้งคำ/ประโยค" (ไม่แยกพยางค์) ใช้กับ rgWrongScore()
 // คำลงท้ายสุภาพเป็น input ต่อท้ายที่ Lin อนุมัติโดยตรง ไม่ใช่ระเบียนคำศัพท์/คำอ่าน
 // จึงเก็บเฉพาะข้อความที่ต้องพิมพ์และธงกันคะแนน ห้ามสร้างข้อมูลวิเคราะห์ภาษาในเกม
-var tgParticleMode=(function(){try{return localStorage.getItem('games_particle_mode')||'off';}catch(e){return 'off';}})();
+var tgParticleMode=(function(){try{return localStorage.getItem('tg_particle_mode')||'off';}catch(e){return 'off';}})();
 function tgShowParticleFor(w){
   if(!w) return null;
   if(tgParticleMode==='m') return 'ครับ';
@@ -261,7 +261,7 @@ function tgSyncParticleBtn(){
 }
 function tgToggleParticleMode(){
   tgParticleMode=(tgParticleMode==='off')?'m':(tgParticleMode==='m'?'f':'off');
-  try{localStorage.setItem('games_particle_mode',tgParticleMode);}catch(e){}
+  try{localStorage.setItem('tg_particle_mode',tgParticleMode);}catch(e){}
   loadWord(); // เปลี่ยนโหมดกลางคำ = โหลดคำนี้ใหม่ (ต่อ/ตัด syllable ครับ ออกจาก sylList จริง ต้องเริ่มพิมพ์คำนี้ใหม่)
 }
 var totalStars=0,totalBadges=0;
@@ -731,13 +731,13 @@ function renderSylStrip(){
     strip.appendChild(c);
   });
 }
-// ── ปุ่มเปิด/ปิดคำอ่าน 🐣/🥚 — port มาจากเกมอ่าน (Lin 2026-07-16) · ใช้ localStorage key เดียวกัน = ตั้งค่าครั้งเดียว sync กันทั้งเกมอ่าน/เกมพิมพ์
+// ── ปุ่มเปิด/ปิดคำอ่าน 🐣/🥚 — port มาจากเกมอ่าน (Lin 2026-07-16) · ค่าจำของเกมพิมพ์แยกจากเกมอ่าน
 // 🐣 มีนาเจี๊ยบออกเสียง = คำอ่านโชว์อยู่ · 🥚 ไข่เงียบ = คำอ่านซ่อนอยู่
 // Lin 2026-07-26: เดิมตอนเฉลย (checked=true) จะบังคับโชว์讀音เสมอ กดปุ่ม🐣/🥚ไม่มีผลตอนเฉลย → แก้ให้ปุ่มกดเปิด/ปิดได้จริงแม้ตอนเฉลยแล้ว (ไม่บังคับโชว์อีกต่อไป)
-var rgPronMode=(function(){try{var v=localStorage.getItem('rg_pron_mode');return v===null?false:v==='1';}catch(e){return false;}})();
+var rgPronMode=(function(){try{var v=localStorage.getItem('tg_pron_mode');return v===null?false:v==='1';}catch(e){return false;}})();
 function setRgPronMode(on){
   rgPronMode=!!on;
-  try{localStorage.setItem('rg_pron_mode',rgPronMode?'1':'0');}catch(e){}
+  try{localStorage.setItem('tg_pron_mode',rgPronMode?'1':'0');}catch(e){}
   var btn=document.getElementById('rg-pron-toggle');
   if(btn){
     btn.textContent=rgPronMode?'🐣':'🥚';
@@ -752,8 +752,8 @@ function setRgPronMode(on){
 setRgPronMode(rgPronMode); // ตั้งไอคอนปุ่มตามค่าที่จำไว้ ตั้งแต่โหลดหน้า
 
 // ── ปุ่มเปิด/ปิด "คำอ่านโรมัน" (英文讀音) — Lin 2026-07-25 ──
-// 🔡 = โชว์อยู่ · 🔠 = ซ่อนอยู่ (ไอคอนตามที่ Lin เลือก) · ค่าจำแยกจากคำอ่านไทย (rg_en_mode)
-var rgEnMode=(function(){try{var v=localStorage.getItem('rg_en_mode');return v===null?false:v==='1';}catch(e){return false;}})();
+// 🔡 = โชว์อยู่ · 🔠 = ซ่อนอยู่ (ไอคอนตามที่ Lin เลือก) · ค่าจำแยกจากคำอ่านไทย (tg_en_mode)
+var rgEnMode=(function(){try{var v=localStorage.getItem('tg_en_mode');return v===null?false:v==='1';}catch(e){return false;}})();
 function buildEnPron(){ return (typeof WORD!=='undefined'&&WORD&&WORD.en)?WORD.en:''; }
 function rgRenderEnLine(){
   var el=document.getElementById('rev-en');
@@ -762,7 +762,7 @@ function rgRenderEnLine(){
 }
 function setRgEnMode(on){
   rgEnMode=!!on;
-  try{localStorage.setItem('rg_en_mode',rgEnMode?'1':'0');}catch(e){}
+  try{localStorage.setItem('tg_en_mode',rgEnMode?'1':'0');}catch(e){}
   var btn=document.getElementById('rg-en-toggle');
   if(btn){
     btn.textContent=rgEnMode?'🔡':'🔠';
@@ -2779,10 +2779,10 @@ try { rgRenderGameBar(); } catch(e){}
 function rgToggleFont() {
   // Lin 2026-07-25: ลบโค้ดอัปเดตปุ่มเก่า #rg-font-btn ออก — shared.js สร้างปุ่มในแถวเครื่องมือและอ่านสถานะจาก class บน <body>
   var on = document.body.classList.toggle('rg-modern-font');
-  try { localStorage.setItem('rg_modern_font', on ? '1' : '0'); } catch(e){}
+  try { localStorage.setItem('tg_modern_font', on ? '1' : '0'); } catch(e){}
   try{ if(typeof gtag==='function') gtag('event','typing_game_font_toggle',{category:'game', on: on}); }catch(e){}
 }
-(function(){ try { if (localStorage.getItem('rg_modern_font') === '1') { document.body.classList.add('rg-modern-font'); } } catch(e){} })(); // Lin 2026-07-25: ตัดโค้ดตั้งปุ่มเก่า #rg-font-btn ออก (ปุ่มไม่มีในหน้าแล้ว)
+(function(){ try { if (localStorage.getItem('tg_modern_font') === '1') { document.body.classList.add('rg-modern-font'); } } catch(e){} })(); // Lin 2026-07-25: ตัดโค้ดตั้งปุ่มเก่า #rg-font-btn ออก (ปุ่มไม่มีในหน้าแล้ว)
 
 // ── 我有問題 ──
 function rgOpenAsk() {

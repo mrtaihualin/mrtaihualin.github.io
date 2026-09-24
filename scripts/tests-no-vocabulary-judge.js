@@ -163,7 +163,9 @@ assert.match(readingGame, /content_ref:\{source:[^\n]+key:rgContentKey\(w\)\}/);
 assert.match(typingGame, /content_ref:\{source:[^\n]+key:tgContentKey\(w\)\}/);
 assert.match(wordOrderGame, /correctAnswer:wordsArr\.join\(' '\)/);
 assert.doesNotMatch(wordOrderGame, /correctAnswer:s\.th|correctAnswer:s&&s\.words/);
-assert.doesNotMatch([toneGame, readingGame].join('\n'), /return ['"]ครับ|\|\|['"]ครับ/);
+assert.doesNotMatch(toneGame, /return ['"]ครับ|\|\|['"]ครับ/);
+assert.match(readingGame, /function rgShowParticleFor\(w\)\{[\s\S]{0,120}if\(rgParticleMode==='m'\) return 'ครับ';/);
+assert.doesNotMatch(readingGame.replace("if(rgParticleMode==='m') return 'ครับ';", ''), /return ['"]ครับ|\|\|['"]ครับ/);
 assert.match(typingGame, /function tgShowParticleFor\(w\)[\s\S]{0,180}tgParticleMode==='m'\) return 'ครับ';[\s\S]{0,100}w\.politeF\|\|'ครับ'/);
 assert.match(wordOrderGame, /function woShowParticleFor\(s\)[\s\S]{0,180}woParticleMode === 'm'\) return 'ครับ';[\s\S]{0,100}s\.politeF \|\| 'ครับ'/);
 assert.match(removalMigration, /drop column if exists syls/);
@@ -251,7 +253,7 @@ assert.strictEqual(sandbox.window.buildSentencesForPhonicsGames([validSentence])
 });
 assert.match(read('listening-game.html'), /js\/games\/game-content-client\.js/);
 assert.doesNotMatch(read('listening-game.html'), /data\/tone-engine\.js/);
-assert.match(read('listening-game.html'), /GameContentLoader\.boot\(\['js\/games\/listening-game-app\.js\?v=20'/);
+assert.match(read('listening-game.html'), /GameContentLoader\.boot\(\['js\/games\/listening-game-app\.js\?v=21'/);
 
 const forbiddenRuntimeJudgeMarkers = /deriveText|readSyls|VOWEL_SYMBOL|VOWEL_READ|noneToEmpty|TF_PARTICLE_WORDS|SCORE_DEDUCE|DEDUCE_WRONG|deduceScore/;
 [
@@ -286,7 +288,7 @@ assert.match(read('js/games/word-order-app.min.js'), /word-order report answer/)
 });
 
 // Listening now consumes the same authenticated central vocabulary contract.
-assert.match(read('listening-game.html'), /GameContentLoader\.boot\(\['js\/games\/listening-game-app\.js\?v=20'\], \{game:'listening'\}\)/);
+assert.match(read('listening-game.html'), /GameContentLoader\.boot\(\['js\/games\/listening-game-app\.js\?v=21'\], \{game:'listening'\}\)/);
 assert.doesNotMatch(read('listening-game.html'), /src=["']data\/(?:words-data|adv-sentences)\.js/);
 
 console.log('NO_VOCABULARY_JUDGE_PASS');

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -8,8 +9,14 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const migrationName = fs.readdirSync(path.join(root, 'supabase/migrations'))
   .find((name) => name.endsWith('_phase1_free_gamification_streak.sql'));
 assert(migrationName, 'D08 migration missing');
+const playedMigrationName = fs.readdirSync(path.join(root, 'supabase/migrations'))
+  .find((name) => name.endsWith('_phase1_practice_event_idempotency.sql'));
+assert(playedMigrationName, 'Played migration missing');
+const neutralMigrationName = fs.readdirSync(path.join(root, 'supabase/migrations'))
+  .find((name) => name.endsWith('_phase1_practice_event_neutral_results.sql'));
+assert(neutralMigrationName, 'neutral Played migration missing');
 
-const tmp = fs.mkdtempSync('/private/tmp/phase1-d08-pg-');
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'phase1-d08-pg-'));
 const data = path.join(tmp, 'data');
 const socket = path.join(tmp, 'socket');
 fs.mkdirSync(socket);
@@ -36,19 +43,20 @@ create table auth.users(id uuid primary key);
 create table public.practice_surfaces(code text primary key);
 insert into public.practice_surfaces(code) values
   ('tone_finder'),('reading'),('listening'),('typing'),('word_order');
+create table public.learning_items(item_id uuid primary key);
 create table public.practice_events(
   event_id bigint generated always as identity primary key,
   user_id uuid references auth.users(id) on delete cascade,
+  item_id uuid references public.learning_items(item_id),
   session_id uuid,
   surface_code text not null references public.practice_surfaces(code),
+  is_correct boolean,
+  result text,
   evidence_source text not null default 'game',
   meta jsonb,
   created_at timestamptz not null default now()
 );
-create or replace function public.phase1_practice_events_record(
-  uuid, uuid, text, timestamptz, text, jsonb
-) returns jsonb language sql security invoker set search_path = ''
-as $$ select jsonb_build_object('ok', true, 'idempotent', false, 'recorded', 1) $$;
+grant select, insert on public.practice_events to service_role;
 create table public.tone_round_operations(
   operation_id uuid primary key, user_id uuid not null, game text not null,
   level smallint not null, word text not null, request_hash text not null,
@@ -163,10 +171,77 @@ try {
   console.log('PostgreSQL fixture: start PASS');
   psql(prelude);
   console.log('PostgreSQL fixture: prelude PASS');
+  run('psql', ['-X', '-v', 'ON_ERROR_STOP=1', '-h', socket, '-p', port, '-d', 'postgres', '-f', path.join(root, 'supabase/migrations', playedMigrationName)]);
+  console.log('PostgreSQL fixture: Played migration PASS');
   run('psql', ['-X', '-v', 'ON_ERROR_STOP=1', '-h', socket, '-p', port, '-d', 'postgres', '-f', path.join(root, 'supabase/migrations', migrationName)]);
   console.log('PostgreSQL fixture: migration PASS');
+  run('psql', ['-X', '-v', 'ON_ERROR_STOP=1', '-h', socket, '-p', port, '-d', 'postgres', '-f', path.join(root, 'supabase/migrations', neutralMigrationName)]);
+  console.log('PostgreSQL fixture: neutral Played migration PASS');
   psql(tests);
   console.log('PostgreSQL fixture: sequential cases PASS');
+
+  psql(`
+    insert into auth.users(id) values ('00000000-0000-4000-8000-000000000011');
+    insert into learning_items(item_id) values
+      ('11000000-0000-4000-8000-000000000001'),
+      ('11000000-0000-4000-8000-000000000002'),
+      ('11000000-0000-4000-8000-000000000003'),
+      ('11000000-0000-4000-8000-000000000004');
+    set role service_role;
+    select phase1_practice_events_record(
+      '00000000-0000-4000-8000-000000000011',
+      '11000000-0000-4000-8000-000000000011',
+      'tone_finder', pg_catalog.now(), repeat('a', 64),
+      '[{"item_id":"11000000-0000-4000-8000-000000000001","ordinal":1,"is_correct":true,"is_practice":true,"is_skipped":false,"wrong_count":0,"hint_used":true,"listen_count":null}]'::jsonb
+    );
+    select phase1_practice_events_record(
+      '00000000-0000-4000-8000-000000000011',
+      '11000000-0000-4000-8000-000000000012',
+      'tone_finder', pg_catalog.now(), repeat('b', 64),
+      '[{"item_id":"11000000-0000-4000-8000-000000000002","ordinal":1,"is_correct":true,"is_practice":true,"is_skipped":true,"wrong_count":0,"hint_used":true,"listen_count":null}]'::jsonb
+    );
+    select phase1_practice_events_record(
+      '00000000-0000-4000-8000-000000000011',
+      '11000000-0000-4000-8000-000000000013',
+      'tone_finder', pg_catalog.now(), repeat('c', 64),
+      '[{"item_id":"11000000-0000-4000-8000-000000000003","ordinal":1,"is_correct":true,"skip_reason":"user_skip","wrong_count":0,"hint_used":false,"listen_count":null}]'::jsonb
+    );
+    do $$ declare r jsonb; begin
+      r := phase1_practice_events_record(
+        '00000000-0000-4000-8000-000000000011',
+        '11000000-0000-4000-8000-000000000014',
+        'tone_finder', pg_catalog.now(), repeat('d', 64),
+        '[{"item_id":"11000000-0000-4000-8000-000000000004","ordinal":1,"is_correct":true,"skip_reason":"unknown","wrong_count":0,"hint_used":false,"listen_count":null}]'::jsonb
+      );
+      if r ->> 'reason' <> 'invalid_items' then raise exception 'invalid skip_reason accepted %', r; end if;
+    end $$;
+    reset role;
+    do $$ begin
+      if not exists (
+        select 1 from practice_events
+        where user_id = '00000000-0000-4000-8000-000000000011'
+          and result = 'practice' and is_correct is null
+          and meta ->> 'is_practice' = 'true' and meta ->> 'is_skipped' = 'false'
+      ) then raise exception 'neutral practice evidence missing'; end if;
+      if not exists (
+        select 1 from practice_events
+        where user_id = '00000000-0000-4000-8000-000000000011'
+          and result = 'skipped' and is_correct is null
+          and meta ->> 'is_practice' = 'true' and meta ->> 'is_skipped' = 'true'
+      ) then raise exception 'neutral skipped evidence missing'; end if;
+      if not exists (
+        select 1 from practice_events
+        where user_id = '00000000-0000-4000-8000-000000000011'
+          and result = 'skipped' and is_correct is null
+          and meta ->> 'skip_reason' = 'user_skip' and meta ->> 'is_skipped' = 'true'
+      ) then raise exception 'legacy skip_reason evidence missing'; end if;
+      if exists (
+        select 1 from practice_events
+        where session_id = '11000000-0000-4000-8000-000000000014'
+      ) then raise exception 'invalid skip_reason row inserted'; end if;
+    end $$;
+  `);
+  console.log('PostgreSQL fixture: neutral Played outcomes PASS');
 
   const concurrent = [
     `select phase1_free_gamification_apply('00000000-0000-4000-8000-000000000010','a0000000-0000-4000-8000-000000000001','reading');`,

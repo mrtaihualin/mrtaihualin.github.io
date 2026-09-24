@@ -3,15 +3,15 @@
 // แยกออกมาจาก lego.html (เดิมฝัง inline <script> 1,182 บรรทัด) — Lin สั่ง 2026-08-02 ให้แยก logic ออกจาก UI ตามแพทเทิร์นเกมอื่น
 // ย้ายมาแบบคัดลอกตรงๆ ไม่มีการแก้ logic ใดๆ — พฤติกรรมต้องเหมือนเดิม 100%
 
-// Shared Phase 1.2 font adapter: keep the same two existing modes and storage key
-// used by Reading, Listening, Typing and Word Order. shared.js owns the control UI.
+// Shared Phase 1.2 font adapter keeps the same two modes and control UI;
+// Lego's saved choice is isolated from the other games.
 window.rgToggleFont = function () {
   var on = document.body.classList.toggle('rg-modern-font');
-  try { localStorage.setItem('rg_modern_font', on ? '1' : '0'); } catch (e) {}
+  try { localStorage.setItem('lego_modern_font', on ? '1' : '0'); } catch (e) {}
 };
 (function () {
   try {
-    if (localStorage.getItem('rg_modern_font') === '1') document.body.classList.add('rg-modern-font');
+    if (localStorage.getItem('lego_modern_font') === '1') document.body.classList.add('rg-modern-font');
   } catch (e) {}
 })();
 

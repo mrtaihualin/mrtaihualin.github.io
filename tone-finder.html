@@ -82,7 +82,7 @@
 <script defer src="js/score/phase1-canonical-state.js?v=3"></script>
 <script defer src="js/games/reading-auth.js?v=35"></script>
 <script defer src="js/score/learning-summary.js?v=1"></script>
-<script defer src="js/games/round-report.js?v=8"></script>
+<script defer src="js/games/round-report.js?v=10"></script>
 <script defer src="js/games/study-plan-core.js?v=2"></script>
 <script defer src="js/games/study-plan.js?v=5"></script>
 <script defer src="js/games/tone-server.js?v=6"></script><!-- Server SRS owner; Lin-only Paid Tone beta is separately gated -->
@@ -90,7 +90,7 @@
 <script src="js/games/word-menu.js?v=10"></script><!-- เครื่องมือช่วยเรียนแบบแถวตรง -->
 <script src="js/core/network-guard.js?v=1"></script>
 <script src="js/games/learning-review.js?v=9"></script><!-- Login Free learning owner; Paid Review remains parked -->
-<script src="js/games/game-content-client.js?v=22"></script>
+<script src="js/games/game-content-client.js?v=23"></script>
 <script src="js/games/reviewed-vocabulary-display.js?v=1"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -2070,10 +2070,11 @@ document.addEventListener('contextmenu', function(e){
       </ul>
       <div style="font-size:13px;color:#555;background:#f9f5ee;border-radius:8px;padding:10px 14px;margin:0 0 12px;">
         <ul style="margin:0;padding-left:18px;line-height:1.9;">
-          <li>每題從 <strong>10 分</strong>開始：答錯或使用「?」提示 1／2／3 次 → <strong>7／4／1 分</strong>，滿 4 次 → 0 分並直接看解答</li>
+          <li>每題從 <strong>10 分</strong>開始：推導中選錯 1／2／3 次 → <strong>7／4／1 分</strong>，滿 4 次 → 0 分並直接看解答</li>
+          <li>打開「?」或提示模式後，這一題改為純練習：0 分、不影響連擊、不寫入複習；下一題會自動回到無提示挑戰</li>
           <li>連續第一次答對 3／5／8 次 → <strong>×1.5／×2／×3</strong></li>
           <li>✨黃金字（約 18% 機率）答對再 <strong>×2</strong></li>
-          <li>玩完一輪 <strong>+20</strong>，整輪都第一次就答對（perfect）再 <strong>+50</strong></li>
+          <li>全輪都沒有使用提示時：玩完一輪 <strong>+20</strong>，整輪都乾淨答對（perfect）再 <strong>+50</strong></li>
           <li>玩完一輪可下載 📄 PDF 報告</li>
         </ul>
       </div>
@@ -2089,7 +2090,7 @@ document.addEventListener('contextmenu', function(e){
         <p style="margin:0 0 10px;">初級與中級答錯後，遊戲會依老師已審核的子音、母音、尾音與活音／死音資料逐步提問；最後正確聲調仍只取自老師已審核的聲調答案，不會另外計算或建立第二套判定。</p>
 
         <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">💡🔥 兩種模式</div>
-        <p style="margin:0 0 10px;"><strong>💡 有提示（練習模式）</strong>：推導每一步會反白正確選項；整輪不計分、不算星星、不算複習進度。<strong>🔥 無提示（挑戰模式）</strong>：先自行選擇，答錯後靠自己完成推導。</p>
+        <p style="margin:0 0 10px;"><strong>💡 有提示（練習模式）</strong>：推導每一步會反白正確選項；目前這個字不計分、不影響連擊，也不寫入複習。下一個字會自動回到無提示。<strong>🔥 無提示（挑戰模式）</strong>：先自行選擇，答錯後靠自己完成推導。</p>
 
         <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">「跳過」按鈕是什麼意思</div>
         <p style="margin:0 0 10px;">不想做這題時可按「跳過」直接進入下一題；不算答對或答錯、不加減分，也不影響 Combo 或複習進度。是否已記住由複習系統依實際作答決定。</p>
@@ -2108,7 +2109,7 @@ document.addEventListener('contextmenu', function(e){
         <p style="margin:0 0 10px;">玩完一輪可以列印或儲存這輪的學習紀錄，裡面有這輪總分和每個字的作答、正解、意思、結果與得分；登入後會自動加上既有的複習進度。</p>
 
         <div style="font-weight:700;color:#8B6310;margin:14px 0 4px;">🔁 複習系統（登入才有）</div>
-        <p style="margin:0;">答錯、推導中選錯或使用提示的字會排時間回來複習；只有乾淨答對才會推進複習狀態。</p>
+        <p style="margin:0;">推導中選錯的字會依規則排回來複習；使用提示的字是純練習，不會更新複習狀態。只有乾淨答對才會推進複習狀態。</p>
       </div>
 
       <p style="font-size:13px;color:#8B6310;background:rgba(139,99,16,0.07);border-radius:8px;padding:10px 14px;margin:16px 0 0;">聲調其實是有規律的呢～想真正搞懂，<a href="pricing.html" style="color:#8B6310;font-weight:700;">可以來上課喔 😄</a></p>
@@ -2233,7 +2234,7 @@ document.addEventListener('contextmenu', function(e){
     });
   }
   gcGate();
-  GameContentLoader.boot(['js/games/tone-finder-game.min.js?v=92'], {game:'tone'}).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
+  GameContentLoader.boot(['js/games/tone-finder-game.min.js?v=102'], {game:'tone'}).then(gcRelease).catch(function(){ /* boot() แสดง error banner ให้แล้ว ปุ่มคงสถานะปิดต่อไป */ });
 })();
 </script>
 
@@ -2257,8 +2258,8 @@ document.addEventListener('contextmenu', function(e){
           → หน้านี้เป็นหน้าเดียวที่ผิดแถว = ของค้างจากตอนอัปโหลดชุดแรก (git: 6a10c58)
      ถ้าวันหลังหน้านี้จะมีหน้าต่างบทความ/โพสต์จริงๆ ค่อยใส่ 2 บรรทัดนี้กลับมา -->
 <script src="data/nav-template.js?v=4"></script>
-<script src="js/core/shared.min.js?v=52"></script>
-<script src="js/games/practice-events.js?v=4"></script>
+<script src="js/core/shared.min.js?v=53"></script>
+<script src="js/games/practice-events.js?v=5"></script>
 <script src="js/games/game-flow.js?v=14"></script>
 <script src="js/core/mobile-landscape.js?v=42"></script>
 <script src="js/games/game-tutorial-lifecycle.js?v=2"></script>

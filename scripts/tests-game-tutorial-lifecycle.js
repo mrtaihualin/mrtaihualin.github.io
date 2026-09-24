@@ -155,14 +155,14 @@ for (const [file, game, resume, howto, resumeId] of pages) {
 const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
 const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
 assert.match(legoHtml, /js\/games\/game-tutorial-lifecycle\.js\?v=2/);
-assert.match(legoHtml, /js\/games\/lego-game-app\.js\?v=15/);
+assert.match(legoHtml, /js\/games\/lego-game-app\.js\?v=16/);
 assert.ok(legoHtml.includes("window.__legoHadGuestResumeAtLoad=!!localStorage.getItem('gsh_resume_lego')"));
 assert.match(legoApp, /seenKey:'howto_tour_seen_lego'/);
 assert.ok(legoApp.includes('window.__legoHadGuestResumeAtLoad===true'));
 assert.ok(legoApp.includes("blockers:['#lego-resume-banner','#lego-howto-modal']"));
 
 const listening = fs.readFileSync(path.join(root, 'listening-game.html'), 'utf8');
-assert.match(listening, /GameContentLoader\.boot\(\['js\/games\/listening-game-app\.js\?v=20'\], \{game:'listening'\}\)/);
+assert.match(listening, /GameContentLoader\.boot\(\['js\/games\/listening-game-app\.js\?v=21'\], \{game:'listening'\}\)/);
 assert.doesNotMatch(listening, /data-listening-availability="coming-soon"/);
 
 const browserHarness = fs.readFileSync(path.join(root, 'scripts/browser-tests/game-tutorial-lifecycle.html'), 'utf8');

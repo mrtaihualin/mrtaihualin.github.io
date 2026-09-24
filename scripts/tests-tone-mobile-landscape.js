@@ -102,7 +102,7 @@ test('all six Resume screens reuse Tone 640px geometry and exact three-action co
     const html = read(file);
     const fourGame = game === 'tone' || game === 'reading' || game === 'typing' || game === 'word-order';
     assert.match(html, /css\/mobile-landscape\.css\?v=77/, `${file}: must load its current shared Resume CSS`);
-    assert.match(html, /js\/core\/shared\.min\.js\?v=52/, `${file}: must load exact Resume copy`);
+    assert.match(html, /js\/core\/shared\.min\.js\?v=53/, `${file}: must load exact Resume copy`);
   }
   const shared = read('js/core/shared.js');
   assert.match(shared, /continueAction: '繼續上次練習'/);
@@ -132,7 +132,7 @@ test('Tone preserves three left, three right and reveal actions in the right slo
   assert.match(stage, /children\.length === 6 \? 3/);
   assert.match(stage, /mountExistingNode\(uncertain, container\)/);
   assert.match(stage, /function syncToneRevealActions\([\s\S]{0,900}result-audio[\s\S]{0,260}result-english[\s\S]{0,260}result-next/);
-  assert.match(toneApp, /skipCurrentWord:\s*function\(\)[\s\S]{0,1500}is_skipped:\s*true/);
+  assert.match(toneApp, /skipCurrentWord:\s*function\(\)[\s\S]{0,2500}is_skipped:\s*true/);
   assert.match(css, /--gsh-ml-position-two-size:\s*clamp\(64px, 22\.5dvh, 88px\)/);
   assert.match(css, /data-gsh-game="tone"[^}]+--gsh-ml-tone-choice:\s*var\(--gsh-ml-position-two-size\)/);
   assert.match(css, /data-gsh-ml-split="tone"[^}]+align-content:\s*center/);
@@ -349,7 +349,7 @@ test('four-game refinements expose original controls and one shared modal shell'
   assert.match(stage, /data-gsh-ml-unavailable[\s\S]{0,500}!control \|\| !!control\.disabled/);
   assert.match(css, /data-gsh-ml-unavailable="true"[\s\S]{0,180}cursor: not-allowed/);
   assert.match(css, /#tf-howto-modal,[\s\S]{0,180}#rg-howto-modal,[\s\S]{0,180}#wo-howto-modal[\s\S]{0,180}z-index: 100002 !important/);
-  assert.match(wordOrder, /word-order-app\.min\.js\?v=46/);
+  assert.match(wordOrder, /word-order-app\.min\.js\?v=47/);
 });
 
 test('local Landscape review pages load current game assets from the site root', () => {

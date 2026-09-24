@@ -266,7 +266,7 @@ for (const game of ['tone','reading','typing','word_order']) test(game+': real N
   else if(game==='word_order')block=text.slice(text.indexOf('  window.woNext = function()'),text.indexOf("  document.addEventListener('keydown'",text.indexOf('  window.woNext = function()')));
   else block=text.slice(text.indexOf('function nextWord(){'),text.indexOf('function endRound(){',text.indexOf('function nextWord(){')));
   Object.assign(h.context,{roundReport:h.report,cur:0,idx:0,roundQueue:[0,1],SET:[0,1],session:{index:0,words:[0,1]},isWordPractice:false,practiceMode:false,loads:0,ends:0,
-    loadWord(){h.context.loads++;},loadSentence(){h.context.loads++;},tfSetupNextWord(){h.context.loads++;},endRound(){h.context.ends++;},finish(){h.context.ends++;},tfGoToSummary(){h.context.ends++;},tfResetWordScoring(){},tfSaveResumeState(){},tgSaveResume(){},woSaveResume(){}});
+    loadWord(){h.context.loads++;},loadSentence(){h.context.loads++;},tfSetupNextWord(){h.context.loads++;},endRound(){h.context.ends++;},finish(){h.context.ends++;},tfGoToSummary(){h.context.ends++;},tfResetGuideForNextUnit(){},tfResetWordScoring(){},tfSaveResumeState(){},tgSaveResume(){},woSaveResume(){}});
   vm.runInNewContext(block,h.context);
   const next=game==='tone'?()=>h.api.advance(h.report,h.context.tfAdvanceCommittedWord):game==='word_order'?h.context.woNext:h.context.nextWord;
   await assert.rejects(h.api.processItem(h.report,item(1)),/synthetic-save-unavailable/);

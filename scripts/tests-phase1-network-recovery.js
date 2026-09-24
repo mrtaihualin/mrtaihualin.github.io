@@ -58,7 +58,7 @@ function createBootHarness(options = {}) {
       appended.push(element);
       element.parentNode = body;
       if (element.id) elementsById[element.id] = element;
-      if (element.tagName === 'SCRIPT' && typeof element.onload === 'function') {
+      if (options.autoLoadScripts !== false && element.tagName === 'SCRIPT' && typeof element.onload === 'function') {
         queueMicrotask(() => element.onload());
       }
     },
@@ -102,6 +102,9 @@ function createBootHarness(options = {}) {
     },
     NetworkGuard: {
       request(fetchImpl, url, requestOptions, timeoutMs) {
+        if (url === 'game-content-auth-session') {
+          return Promise.resolve().then(() => fetchImpl(url, requestOptions));
+        }
         requests.push({ fetchImpl, url, requestOptions, timeoutMs });
         return Promise.resolve({ ok: true, json: () => Promise.resolve(payload) });
       },
@@ -110,8 +113,8 @@ function createBootHarness(options = {}) {
     console: { log() {}, warn() {}, error() {} },
     URL,
     Promise,
-    setTimeout,
-    clearTimeout,
+    setTimeout: options.setTimeout || setTimeout,
+    clearTimeout: options.clearTimeout || clearTimeout,
     setInterval,
     clearInterval,
     addEventListener(type, callback) {
@@ -194,6 +197,27 @@ const validConfig = { url: 'https://project.supabase.co', anonKey: 'public-anon-
     assert.strictEqual(sessionReads, 1);
     assert.strictEqual(harness.requests[0].requestOptions.headers.Authorization, ['Bearer', 'session-fixture-value'].join(' '));
     assert.strictEqual(harness.sandbox.GAME_CONTENT_TIER, 'login');
+  });
+  await test('stalled Login Free session lookup times out into recoverable boot error', async () => {
+    const harness = createBootHarness({
+      readyState: 'complete',
+      config: { ...validConfig, runtimeMode: 'login-free' },
+    });
+    harness.sandbox.getSupabaseClient = () => ({ auth: { getSession: () => new Promise(() => {}) } });
+    const normalRequest = harness.sandbox.NetworkGuard.request;
+    harness.sandbox.NetworkGuard.request = (request, label, options, timeoutMs, AbortCtor) => {
+      if (label !== 'game-content-auth-session') return normalRequest(request, label, options, timeoutMs, AbortCtor);
+      assert.strictEqual(timeoutMs, 5000);
+      assert.strictEqual(AbortCtor, null);
+      return guard.request(request, label, options, 5, null);
+    };
+    await assert.rejects(
+      harness.sandbox.GameContentLoader.boot(['js/games/example.js'], { game: 'tone' }),
+      (error) => error && error.code === 'NETWORK_TIMEOUT'
+    );
+    assert.strictEqual(harness.requests.length, 0);
+    assert.strictEqual(harness.appended.filter(el => el.tagName === 'SCRIPT').length, 0);
+    assert.ok(harness.sandbox.document.getElementById('gc-error-banner'));
   });
   await test('all four Login Free games wait for canonical Resume before app execution', async () => {
     for (const game of ['tone', 'reading', 'typing', 'word_order']) {
@@ -362,10 +386,27 @@ const validConfig = { url: 'https://project.supabase.co', anonKey: 'public-anon-
   await test('synchronous fetch failure becomes a rejected promise', async () => {
     await assert.rejects(guard.request(() => { throw new Error('offline'); }, '/fail', {}, 50, null), /offline/);
   });
+  await test('stalled game script load times out, removes the pending script and exposes recovery', async () => {
+    const harness = createBootHarness({
+      readyState: 'complete',
+      config: validConfig,
+      autoLoadScripts: false,
+      setTimeout(callback, timeoutMs) {
+        return setTimeout(callback, timeoutMs === 15000 ? 5 : timeoutMs);
+      },
+    });
+    await assert.rejects(
+      harness.sandbox.GameContentLoader.boot(['js/games/stalled.js']),
+      (error) => error && error.code === 'NETWORK_TIMEOUT'
+    );
+    const script = harness.appended.find(el => el.tagName === 'SCRIPT');
+    assert.ok(script);
+    assert.strictEqual(script.parentNode, null);
+    assert.ok(harness.sandbox.document.getElementById('gc-error-banner'));
+  });
   await test('Core 5 load the guard before the protected content client', async () => {
     ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html'].forEach((page) => {
-      const version = page === 'listening-game.html' ? 23 : 22;
-      assert.match(read(page), new RegExp('network-guard\\.js\\?v=1[\\s\\S]*game-content-client\\.js\\?v=' + version));
+      assert.match(read(page), /network-guard\.js\?v=1[\s\S]*game-content-client\.js\?v=23/);
     });
     assert.match(read('lego.html'), /network-guard\.js\?v=1[\s\S]*game-content-client\.js\?v=23/);
   });

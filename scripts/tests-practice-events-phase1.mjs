@@ -14,6 +14,8 @@ const authWidget = read('js/core/auth-widget.js');
 const personalContent = read('js/score/personal-content.js');
 const migrationName = fs.readdirSync(path.join(root, 'supabase/migrations')).find((name) => name.endsWith('_phase1_practice_event_idempotency.sql'));
 const migration = migrationName ? read('supabase/migrations/' + migrationName) : '';
+const neutralMigrationName = fs.readdirSync(path.join(root, 'supabase/migrations')).find((name) => name.endsWith('_phase1_practice_event_neutral_results.sql'));
+const neutralMigration = neutralMigrationName ? read('supabase/migrations/' + neutralMigrationName) : '';
 let pass = 0;
 const failures = [];
 function check(label, condition) {
@@ -44,6 +46,23 @@ const normalized = normalizeRecordBody(valid);
 check('record maps the five-game name to the canonical surface', normalized.surface === 'reading');
 check('record keeps canonical item identity and outcome', normalized.items[0].content_ref.key === 'กา@1' && normalized.items[0].is_correct === true);
 check('record normalization drops raw learner answers', !Object.prototype.hasOwnProperty.call(normalized.items[0], 'answer'));
+const neutralNormalized = normalizeRecordBody({
+  ...valid,
+  items: [{ ...valid.items[0], is_correct: true, is_practice: true, is_skipped: false }]
+});
+check('Free Practice remains explicit and cannot normalize as correct', neutralNormalized.items[0].is_practice === true && neutralNormalized.items[0].is_skipped === false && neutralNormalized.items[0].is_correct === false);
+const skippedNormalized = normalizeRecordBody({
+  ...valid,
+  items: [{ ...valid.items[0], is_correct: true, is_practice: true, is_skipped: true }]
+});
+check('Skip remains explicit and cannot normalize as correct', skippedNormalized.items[0].is_skipped === true && skippedNormalized.items[0].is_practice === true && skippedNormalized.items[0].is_correct === false);
+const legacySkipNormalized = normalizeRecordBody({
+  ...valid,
+  items: [{ ...valid.items[0], is_correct: true, skip_reason: 'user_skip' }]
+});
+check('legacy skip_reason remains an explicit neutral Skip', legacySkipNormalized.items[0].skip_reason === 'user_skip' && legacySkipNormalized.items[0].is_skipped === true && legacySkipNormalized.items[0].is_correct === false);
+check('ordinary normalized evidence does not gain a skip_reason field', !Object.prototype.hasOwnProperty.call(normalized.items[0], 'skip_reason'));
+rejects('record rejects an unknown legacy skip_reason', () => normalizeRecordBody({ ...valid, items: [{ ...valid.items[0], skip_reason: 'unknown' }] }));
 rejects('record rejects non-v4 round identity', () => normalizeRecordBody({ ...valid, round_id: 'bad' }));
 rejects('record rejects a noncanonical content source', () => normalizeRecordBody({ ...valid, items: [{ ...valid.items[0], content_ref: { source: 'saved_provenance', key: 'กา' } }] }));
 rejects('record rejects whitespace-repaired content identity', () => normalizeRecordBody({ ...valid, items: [{ ...valid.items[0], content_ref: { source: 'game_words', key: ' กา@1 ' } }] }));
@@ -67,6 +86,11 @@ check('Edge source pins supabase-js', /supabase-js@2\.112\.3/.test(edge));
 check('migration provides retry uniqueness', /create unique index if not exists uq_practice_events_user_round_surface_ordinal/.test(migration));
 check('migration serializes and detects replay conflicts', /pg_advisory_xact_lock/.test(migration) && /replay_conflict/.test(migration));
 check('migration keeps RPCs invoker-scoped and revokes browser roles', /security invoker/.test(migration) && /revoke all on function public\.phase1_practice_events_record[\s\S]*from public, anon, authenticated/.test(migration));
+check('neutral-result migration preserves practice and skip instead of writing incorrect', /is_practice/.test(neutralMigration) && /is_skipped/.test(neutralMigration) && /then 'skipped'[\s\S]*then 'practice'[\s\S]*then 'correct'[\s\S]*else 'incorrect'/.test(neutralMigration));
+check('neutral-result migration preserves and validates the installed skip_reason contract', /skip_reason'[\s\S]*user_skip'[\s\S]*audio_unavailable'/.test(neutralMigration) && /'skip_reason', entry\.value -> 'skip_reason'/.test(neutralMigration));
+check('neutral-result migration stores neutral correctness as NULL', /when entry\.value ->> 'skip_reason' is not null then null[\s\S]*is_skipped'[\s\S]*then null[\s\S]*is_practice'[\s\S]*then null/.test(neutralMigration));
+check('neutral-result migration keeps the existing RPC signature and browser denial', /create or replace function public\.phase1_practice_events_record\([\s\S]*p_items jsonb[\s\S]*security invoker/.test(neutralMigration) && /revoke all on function public\.phase1_practice_events_record[\s\S]*from public, anon, authenticated/.test(neutralMigration));
+check('Edge forwards true neutral evidence while preserving old hashes for ordinary items', /item\.is_practice \? \{ is_practice: true \} : \{\}/.test(edge) && /item\.is_skipped \? \{ is_skipped: true \} : \{\}/.test(edge) && /item\.skip_reason \? \{ skip_reason: item\.skip_reason \} : \{\}/.test(edge) && !/is_practice: item\.is_practice/.test(edge) && !/is_skipped: item\.is_skipped/.test(edge));
 check('client queue is account-bound and minimized', /phase1_practice_event_pending_v1/.test(client) && /function minimizedReport/.test(client) && !/user_answer/.test((client.match(/function minimizedReport[\s\S]*?\n  \}/) || [''])[0]));
 check('Guest never queues Played evidence', /if \(!owner \|\| !payload\) return Promise\.resolve\(false\)/.test(client));
 check('network failure keeps a retryable queue and online flush exists', /window\.addEventListener\('online', flush\)/.test(client) && /function flush\(\)/.test(client));
@@ -77,9 +101,9 @@ check('personal content derives Played copy from server evidence, never provenan
 check('personal content exposes bounded status recovery', /PracticeEvents\.status\(requestItems\)/.test(personalContent) && /重新載入練習紀錄/.test(personalContent));
 check('Login Free activates the recorder on all Core 5 pages', ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html'].every((name) => {
   const html = read(name);
-  return /practice-events\.js\?v=4/.test(html) && /game-flow\.js\?v=14/.test(html);
+  return /practice-events\.js\?v=5/.test(html) && /game-flow\.js\?v=14/.test(html);
 }));
-check('personal content loads authenticated status evidence before its UI', /practice-events\.js\?v=2[\s\S]*personal-content\.js\?v=5/.test(read('vault.html')));
+check('personal content loads authenticated status evidence before its UI', /practice-events\.js\?v=3[\s\S]*personal-content\.js\?v=5/.test(read('vault.html')));
 
 function deferred() {
   let resolve;
@@ -109,6 +133,24 @@ function report(roundId) {
       listen_count: 1,
     }],
   };
+}
+function neutralReport(roundId) {
+  const value = report(roundId);
+  value.game_type = 'tone';
+  value.items[0] = {
+    ...value.items[0],
+    is_correct: true,
+    is_practice: true,
+    is_skipped: false,
+    hint_used: true,
+  };
+  return value;
+}
+function skippedReport(roundId) {
+  const value = neutralReport(roundId);
+  value.items[0].is_skipped = true;
+  value.items[0].skip_reason = 'user_skip';
+  return value;
 }
 function runtimeHarness({ withNetworkGuard = true } = {}) {
   const localStorage = memoryStorage();
@@ -162,6 +204,26 @@ async function waitFor(predicate) {
     await new Promise((resolve) => setImmediate(resolve));
   }
   return predicate();
+}
+
+{
+  const h = runtimeHarness();
+  const request = h.context.PracticeEvents.submitReport(neutralReport('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'));
+  await tick();
+  const item = h.invocations[0]?.payload?.items?.[0];
+  check('client sends Free Practice as neutral evidence instead of a correct result', item?.is_practice === true && item?.is_skipped === false && item?.is_correct === false);
+  h.invocations[0].resolve({ data: { ok: true }, error: null });
+  await request;
+}
+
+{
+  const h = runtimeHarness();
+  const request = h.context.PracticeEvents.submitReport(skippedReport('cccccccc-cccc-4ccc-8ccc-cccccccccccc'));
+  await tick();
+  const item = h.invocations[0]?.payload?.items?.[0];
+  check('client preserves the approved skip_reason with explicit neutral flags', item?.skip_reason === 'user_skip' && item?.is_skipped === true && item?.is_correct === false);
+  h.invocations[0].resolve({ data: { ok: true }, error: null });
+  await request;
 }
 
 {

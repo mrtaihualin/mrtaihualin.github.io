@@ -99,7 +99,8 @@ function normalizeItem(game, item) {
       !refKey || refKey.trim() !== refKey || refKey !== key) fail('invalid_content_ref');
   const points = finiteInt(item.points, 'invalid_item_points', 0, ITEM_CAP[game]);
   const wrong = finiteInt(item.wrong, 'invalid_wrong_count', 0, 100);
-  const guide = item.guide === true;
+  const guide = item.guide === true || (game === 'tone' && item.hint_used === true);
+  const skipped = game === 'tone' && item.skipped === true;
   const failed = item.failed === true;
   const mastered = item.mastered === true;
 
@@ -107,7 +108,7 @@ function normalizeItem(game, item) {
     const expected = listeningPoints(item);
     if (points !== expected) fail('score_evidence_mismatch');
   } else {
-    if (guide && points !== 0) fail('score_evidence_mismatch');
+    if ((guide || skipped) && points !== 0) fail('score_evidence_mismatch');
     if (game !== 'reading' && game !== 'tone' && failed && points !== 0) fail('score_evidence_mismatch');
   }
 
@@ -116,6 +117,7 @@ function normalizeItem(game, item) {
     points,
     wrong,
     guide,
+    ...(skipped ? { skipped: true } : {}),
     failed,
     mastered,
     contentRef: { source: refSource, key: refKey },
@@ -154,10 +156,11 @@ export function validateScoreSubmission(body) {
   const roundBonus = finiteInt(body.evidence.roundBonus, 'invalid_round_bonus', 0, 70);
   if (![0, 20, 70].includes(roundBonus)) fail('invalid_round_bonus');
   const srsBonus = finiteInt(body.evidence.srsBonus, 'invalid_srs_bonus', 0, items.length * 3);
-  const cleanItems = items.filter((item) => item.wrong === 0 && !item.guide && !item.failed).length;
+  const cleanItems = items.filter((item) => item.wrong === 0 && !item.guide && !item.skipped && !item.failed).length;
   const perfectEligible = cleanItems === items.length;
   if (roundBonus === 70 && !perfectEligible) fail('invalid_perfect_bonus');
-  if ((game === 'reading' || game === 'typing') && items.some((item) => item.guide) && roundBonus !== 0) {
+  if ((game === 'tone' || game === 'reading' || game === 'typing') &&
+      items.some((item) => item.guide || (game === 'tone' && item.skipped)) && roundBonus !== 0) {
     fail('invalid_round_bonus');
   }
   if ((game === 'reading' || game === 'typing' || game === 'listening') && srsBonus !== 0) fail('invalid_srs_bonus');
@@ -200,7 +203,7 @@ export function validateCanonicalScoreEvidence(accepted, canonicalRows) {
   accepted.evidence.items.forEach((item) => {
     const row = byKey.get(item.key);
     if (!row) fail('invalid_content_evidence');
-    const clean = item.wrong === 0 && !item.guide && !item.failed;
+    const clean = item.wrong === 0 && !item.guide && !item.skipped && !item.failed;
     cleanStreak = clean ? cleanStreak + 1 : 0;
     const combo = clean ? comboMultiplier(cleanStreak) : 1;
     const golden = clean ? 2 : 1;

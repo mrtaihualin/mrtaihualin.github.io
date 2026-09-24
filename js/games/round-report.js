@@ -12,7 +12,7 @@
   var PRINT_COPY = {
     summary: '本輪摘要', activity: '今日活動', detail: '本輪詳細紀錄', account: '帳號學習資料',
     score: '本輪得分', completed: '完成', firstCorrect: '首次答對', question: '題目', meaning: '意思',
-    answer: '作答', correctAnswer: '正解', result: '結果', correct: '答對', incorrect: '待加強', skipped: '跳過',
+    answer: '作答', correctAnswer: '正解', result: '結果', correct: '答對', incorrect: '待加強', practice: '純練習', skipped: '跳過',
     wrongCount: '錯誤次數', itemScore: '本題得分', hintEffect: '提示影響', hintScore: '使用提示後本題得分',
     listenCount: '聆聽次數', words: '逐字', choiceMode: '選擇答案', typedMode: '輸入答案',
     listeningScore: '聽力分數', typingScore: 'Typing 分數', noItems: '本輪沒有可列印的紀錄',
@@ -60,6 +60,11 @@
     return isFinite(value) ? value : (fallback || 0);
   }
 
+  function normalizeGameType(value) {
+    var gameType = String(value || '').toLowerCase().replace(/-/g, '_');
+    return gameType === 'wordorder' ? 'word_order' : gameType;
+  }
+
   function contentRef(input) {
     // Lego reports are outside the central-vocabulary path and intentionally have no content_ref.
     // For every supplied Core-5 identity, preserve the exact value or fail; never invent a default.
@@ -103,6 +108,7 @@
       user_answer: String(input.user_answer != null ? input.user_answer : (attempts.length ? attempts[attempts.length - 1].answer : '')),
       correct_answer: String(input.correct_answer || ''),
       is_correct: !!input.is_correct,
+      is_practice: !!input.is_practice,
       is_skipped: !!input.is_skipped,
       skip_reason: input.skip_reason ? String(input.skip_reason) : null,
       wrong_count: Math.max(0, number(input.wrong_count, 0)),
@@ -174,8 +180,9 @@
     if (input.score != null) report.score = number(input.score, 0);
     if (input.submission_id !== undefined) report.submission_id = input.submission_id || null;
     report.total_items = report.items.length;
-    report.correct_count = report.items.filter(function (row) { return row.is_correct; }).length;
-    report.wrong_count = report.items.filter(function (row) { return !row.is_correct && !row.is_skipped; }).length;
+    var toneReport = normalizeGameType(report.game_type) === 'tone';
+    report.correct_count = report.items.filter(function (row) { return row.is_correct && !row.is_practice && !row.is_skipped && !(toneReport && row.hint_used); }).length;
+    report.wrong_count = report.items.filter(function (row) { return !row.is_correct && !row.is_practice && !row.is_skipped; }).length;
     recordDailyActivity(report.game_type, report.total_items, report.round_id);
     dispatchRoundEvent('gsh:round-complete', report);
     return report;
@@ -269,7 +276,9 @@
   function toPracticeEventDraft(report) {
     var check = validate(report);
     if (!check.ok) throw new Error(check.errors.join('; '));
+    var toneReport = normalizeGameType(report.game_type) === 'tone';
     return report.items.map(function (row) {
+      var isPractice = !!row.is_practice || (toneReport && !!row.hint_used);
       return {
         session_id: report.round_id,
         item_id: row.item_id,
@@ -277,8 +286,8 @@
         surface: 'game',
         practice_mode: report.mode || report.difficulty || null,
         skill: report.game_type,
-        is_correct: row.is_correct,
-        result: row.is_skipped ? 'skipped' : (row.is_correct ? 'correct' : 'incorrect'),
+        is_correct: !!row.is_correct && !isPractice && !row.is_skipped,
+        result: row.is_skipped ? 'skipped' : (isPractice ? 'practice' : (row.is_correct ? 'correct' : 'incorrect')),
         score_earned: row.item_score,
         wrong_count: row.wrong_count,
         attempts: clone(row.attempts),
@@ -304,9 +313,10 @@
   }
 
   function firstCorrectCount(report) {
+    var toneCleanEvidence = String(report && report.game_type || '').toLowerCase().replace(/-/g, '_') === 'tone';
     return (report && report.items || []).filter(function (row) {
       var first = row && row.attempts && row.attempts[0];
-      return !!(row && row.is_correct && !row.hint_used && Number(row.wrong_count || 0) === 0 && (!first || first.is_correct));
+      return !!(row && row.is_correct && !row.is_practice && !row.is_skipped && !row.hint_used && Number(row.wrong_count || 0) === 0 && (toneCleanEvidence || !first || first.is_correct));
     }).length;
   }
 
@@ -324,6 +334,7 @@
     if (!items.length) return '<div class="rr-empty">' + PRINT_COPY.noItems + '</div>';
     return '<table class="rr-detail-table"><thead><tr><th>#</th><th>' + PRINT_COPY.question + '</th><th>' + PRINT_COPY.meaning + '</th><th>' + PRINT_COPY.result + '</th></tr></thead><tbody>'
       + items.map(function (row, index) {
+        var toneHintPractice = normalizeGameType(config.reportGameType || config.gameType) === 'tone' && !!row.hint_used;
         var extra = [];
         if (row.user_answer) extra.push(PRINT_COPY.answer + '：' + esc(row.user_answer));
         if (row.correct_answer) extra.push(PRINT_COPY.correctAnswer + '：' + esc(row.correct_answer));
@@ -334,8 +345,8 @@
         if (row.hint_used) extra.push(PRINT_COPY.hintEffect + '：' + PRINT_COPY.hintScore + ' ' + number(row.item_score, 0));
         if (row.words && row.words.length) extra.push(PRINT_COPY.words + '：' + row.words.map(function (word) { return esc(word.th) + '＝' + esc(word.zh); }).join('・'));
         if (row.linguistic && row.linguistic.custom) extra.push(PRINT_COPY.customDisclaimer);
-        var statusClass = row.is_skipped ? 'skip' : (row.is_correct ? 'ok' : 'bad');
-        var statusText = row.is_skipped ? PRINT_COPY.skipped : (row.is_correct ? PRINT_COPY.correct : PRINT_COPY.incorrect);
+        var statusClass = row.is_skipped ? 'skip' : ((row.is_practice || toneHintPractice) ? 'practice' : (row.is_correct ? 'ok' : 'bad'));
+        var statusText = row.is_skipped ? PRINT_COPY.skipped : ((row.is_practice || toneHintPractice) ? PRINT_COPY.practice : (row.is_correct ? PRINT_COPY.correct : PRINT_COPY.incorrect));
         return '<tr><td>' + (index + 1) + '</td><td><strong>' + esc(row.question) + '</strong><div class="rr-item-extra">' + extra.join('<br>') + '</div></td>'
           + '<td>' + esc(row.meaning || '') + '</td><td class="rr-status ' + statusClass + '">' + statusText + '</td></tr>';
       }).join('') + '</tbody></table>';
@@ -369,11 +380,11 @@
     var dailyCount = config.dailyCount == null ? dailyActivity(gameType) : config.dailyCount;
     var account = loginSectionsHtml(report);
     return '<!DOCTYPE html><html lang="zh-TW"><head><meta charset="utf-8"><title>' + esc(config.documentTitle || config.title || '本輪學習紀錄') + '</title>'
-      + '<style>@page{size:A4 portrait;margin:10mm}*{box-sizing:border-box}body{margin:0;background:#fff;color:#1c1c1c;font-family:"Noto Sans TC","PingFang TC",sans-serif}.rr-page{max-width:190mm;margin:0 auto;background:#fbf5e7;padding:8mm}.rr-card{background:#fff;border:1px solid #c8973a}.rr-head{display:flex;justify-content:space-between;gap:10mm;background:#1c1c1c;border-bottom:3px solid #c8973a;color:#fff;padding:7mm}.rr-head h1{margin:0;font:700 20px "Noto Serif TC","PingFang TC",serif}.rr-brand{color:#c8973a;font-size:9px;letter-spacing:.2em;margin-top:4px}.rr-head-meta{text-align:right;color:#c8973a;font-size:11px;white-space:nowrap}.rr-body{padding:6mm}.rr-section{margin:0 0 6mm;break-inside:avoid-page;page-break-inside:avoid}.rr-section.rr-detail{break-inside:auto;page-break-inside:auto}.rr-section h2{font-size:15px;color:#8b6310;border-bottom:1px solid rgba(139,99,16,.25);padding-bottom:3px;margin:0 0 3mm}.rr-summary-row{display:flex;justify-content:space-between;gap:12px;font-size:12px;padding:2px 0}.rr-summary-row strong.primary{font-size:19px;color:#5a3e0a}.rr-activity{font-weight:700;color:#5a3e0a}.rr-detail-table{width:100%;border-collapse:collapse;font-size:11px}.rr-detail-table th{color:#8b6310;text-align:left;border-bottom:1.5px solid #c8973a;padding:5px}.rr-detail-table td{padding:6px 5px;border-bottom:1px solid #eadfc9;vertical-align:top;overflow-wrap:anywhere}.rr-detail-table tr{break-inside:avoid;page-break-inside:avoid}.rr-item-extra{font-size:9.5px;color:#666;line-height:1.45;margin-top:3px}.rr-status.ok{color:#2e7d32}.rr-status.bad{color:#c62828}.rr-status.skip{color:#8b6310}.rr-mode{margin:0 0 5mm}.rr-mode h3{font-size:13px;color:#5a3e0a;margin:0 0 2px}.rr-mode-score{font-size:10px;color:#8b6310;margin-bottom:2mm}.rr-empty{font-size:12px;color:#777}.gsh-login-summary{font-size:11px;line-height:1.55}.rr-footer{text-align:center;color:#8b6310;font-size:9px;letter-spacing:.15em;padding:5mm 2mm 1mm}@media print{.rr-page{padding:0;background:#fff}}</style>'
+      + '<style>@page{size:A4 portrait;margin:10mm}*{box-sizing:border-box}body{margin:0;background:#fff;color:#1c1c1c;font-family:"Noto Sans TC","PingFang TC",sans-serif}.rr-page{max-width:190mm;margin:0 auto;background:#fbf5e7;padding:8mm}.rr-card{background:#fff;border:1px solid #c8973a}.rr-head{display:flex;justify-content:space-between;gap:10mm;background:#1c1c1c;border-bottom:3px solid #c8973a;color:#fff;padding:7mm}.rr-head h1{margin:0;font:700 20px "Noto Serif TC","PingFang TC",serif}.rr-brand{color:#c8973a;font-size:9px;letter-spacing:.2em;margin-top:4px}.rr-head-meta{text-align:right;color:#c8973a;font-size:11px;white-space:nowrap}.rr-body{padding:6mm}.rr-section{margin:0 0 6mm;break-inside:avoid-page;page-break-inside:avoid}.rr-section.rr-detail{break-inside:auto;page-break-inside:auto}.rr-section h2{font-size:15px;color:#8b6310;border-bottom:1px solid rgba(139,99,16,.25);padding-bottom:3px;margin:0 0 3mm}.rr-summary-row{display:flex;justify-content:space-between;gap:12px;font-size:12px;padding:2px 0}.rr-summary-row strong.primary{font-size:19px;color:#5a3e0a}.rr-activity{font-weight:700;color:#5a3e0a}.rr-detail-table{width:100%;border-collapse:collapse;font-size:11px}.rr-detail-table th{color:#8b6310;text-align:left;border-bottom:1.5px solid #c8973a;padding:5px}.rr-detail-table td{padding:6px 5px;border-bottom:1px solid #eadfc9;vertical-align:top;overflow-wrap:anywhere}.rr-detail-table tr{break-inside:avoid;page-break-inside:avoid}.rr-item-extra{font-size:9.5px;color:#666;line-height:1.45;margin-top:3px}.rr-status.ok{color:#2e7d32}.rr-status.bad{color:#c62828}.rr-status.skip,.rr-status.practice{color:#8b6310}.rr-mode{margin:0 0 5mm}.rr-mode h3{font-size:13px;color:#5a3e0a;margin:0 0 2px}.rr-mode-score{font-size:10px;color:#8b6310;margin-bottom:2mm}.rr-empty{font-size:12px;color:#777}.gsh-login-summary{font-size:11px;line-height:1.55}.rr-footer{text-align:center;color:#8b6310;font-size:9px;letter-spacing:.15em;padding:5mm 2mm 1mm}@media print{.rr-page{padding:0;background:#fff}}</style>'
       + '</head><body><main class="rr-page"><div class="rr-card"><header class="rr-head"><div><h1>' + esc(config.title || '本輪學習紀錄') + '</h1><div class="rr-brand">mrtaihualin.com</div></div><div class="rr-head-meta"><div>' + esc(today) + '</div>' + (difficulty ? '<div>' + esc(difficulty) + '</div>' : '') + '</div></header><div class="rr-body">'
       + '<section class="rr-section" data-print-section="summary"><h2>' + PRINT_COPY.summary + '</h2>' + summary + '</section>'
       + '<section class="rr-section" data-print-section="activity"><h2>' + PRINT_COPY.activity + '</h2><div class="rr-activity">' + esc(dailyActivityText(gameType, dailyCount)) + '</div></section>'
-      + '<section class="rr-section rr-detail" data-print-section="detail"><h2>' + PRINT_COPY.detail + '</h2>' + modeSections(report, { gameType: gameType, groupListeningModes: !!config.groupListeningModes }) + '</section>'
+      + '<section class="rr-section rr-detail" data-print-section="detail"><h2>' + PRINT_COPY.detail + '</h2>' + modeSections(report, { gameType: gameType, reportGameType: report.game_type, groupListeningModes: !!config.groupListeningModes }) + '</section>'
       + (account ? '<section class="rr-section" data-print-section="account">' + account + '</section>' : '')
       + '</div></div><footer class="rr-footer">泰華眼裡的泰語教學　·　mrtaihualin.com</footer></main></body></html>';
   }
