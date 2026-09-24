@@ -32,10 +32,12 @@ function fixture({ count = 5, level = 1, combo = 0, units = 1, golden = [], srs 
   const prompts = rows.map((row, i) => ({ prompt_ordinal: i + 1,
     content_ref: { source: 'game_words', key: row.content_key }, answer: row.canonical_record.word,
     catalog_version: row.catalog_version, record_hash: row.record_hash,
-    golden: golden.includes(i + 1), srs_bonus: srs.includes(i + 1) }));
+    golden: golden.includes(i + 1), srs_bonus: srs.includes(i + 1), attempt_kind: 'primary',
+    learning_state: 'normal', learning_state_token: `normal:item-${i + 1}` }));
   const round = { round_id: ROUND, game: 'typing', level, starting_combo: combo,
     prompt_count: count, next_event_sequence: 1, current_prompt_ordinal: 1,
-    completed_count: 0, skip_count: 0, status: 'active' };
+    completed_count: 0, primary_completed_count: 0, pending_retry_count: 0,
+    skip_count: 0, status: 'active' };
   const events = []; const operations = new Map(); const requests = []; const rpcCalls = [];
   const f = { rows, prompts, round, events, operations, requests, rpcCalls, storage: storage(),
     loseNextResponse: false, pauseNextResponse: null };
@@ -58,7 +60,7 @@ function fixture({ count = 5, level = 1, combo = 0, units = 1, golden = [], srs 
             next_prompt_after: Math.min(prompts.length, p + size), next_event_after: Math.min(events.length, e + size),
             has_more_prompts: prompts.length > p + size, has_more_events: events.length > e + size } };
         }
-        assert.equal(name, 'phase1_typing_round_append_event');
+        assert.equal(name, 'phase1_typing_round_commit_event');
         const previous = operations.get(args.p_operation_id);
         if (previous) return { data: previous.hash === args.p_request_hash
           ? { ...previous.response, idempotent: true } : { ok: false, reason: 'replay_conflict' } };
@@ -71,18 +73,38 @@ function fixture({ count = 5, level = 1, combo = 0, units = 1, golden = [], srs 
           return { data: { ok: false, reason: 'answer_mismatch' } };
         }
         const terminal = ['completed', 'skipped'].includes(args.p_event_type);
-        const finishesRound = args.p_event_type === 'completed' && round.completed_count === 4;
-        if (terminal && !finishesRound && !prompts[args.p_prompt_ordinal]) {
+        const hasAtomicSuccessorOrFinish = args.p_event_type === 'completed' && (
+          (prompt.attempt_kind === 'primary' && round.primary_completed_count === 4)
+          || (prompt.attempt_kind === 'retry' && round.primary_completed_count === 5
+            && round.pending_retry_count === 1)
+        );
+        if (terminal && !hasAtomicSuccessorOrFinish && !prompts[args.p_prompt_ordinal]) {
           return { data: { ok: false, reason: 'replacement_prompt_required' } };
         }
         events.push({ operation_id: args.p_operation_id, sequence: args.p_expected_sequence,
           prompt_ordinal: args.p_prompt_ordinal, content_ref: clone(prompt.content_ref), type: args.p_event_type,
           ...(args.p_event_type === 'completed' ? { answer: args.p_answer } : {}) });
         round.next_event_sequence++;
-        if (args.p_event_type === 'completed') round.completed_count++;
+        if (args.p_event_type === 'completed') {
+          round.completed_count++;
+          if (prompt.attempt_kind === 'primary') {
+            round.primary_completed_count++;
+            if (args.p_server_learning_score <= 3) round.pending_retry_count++;
+          } else {
+            round.pending_retry_count--;
+          }
+        }
         if (args.p_event_type === 'skipped') round.skip_count++;
         if (['completed', 'skipped'].includes(args.p_event_type)) round.current_prompt_ordinal++;
-        if (round.completed_count === 5) round.status = 'completed';
+        if (round.primary_completed_count === 5 && round.pending_retry_count > 0
+            && !prompts.some((row) => row.attempt_kind === 'retry')) {
+          const source = prompts.find((row) => row.attempt_kind === 'primary'
+            && events.some((e) => e.prompt_ordinal === row.prompt_ordinal && e.type === 'hint_opened'));
+          prompts.push({ ...clone(source), prompt_ordinal: prompts.length + 1, golden: false, srs_bonus: false,
+            attempt_kind: 'retry', learning_state: 'retry_end_round', learning_state_token: 'retry-token' });
+          round.prompt_count = prompts.length;
+        }
+        if (round.primary_completed_count === 5 && round.pending_retry_count === 0) round.status = 'completed';
         const response = { ok: true, idempotent: false, operation_id: args.p_operation_id, round_id: ROUND };
         operations.set(args.p_operation_id, { hash: args.p_request_hash, response });
         return { data: response };
@@ -100,7 +122,9 @@ function fixture({ count = 5, level = 1, combo = 0, units = 1, golden = [], srs 
   f.transport = async (body, { ownerContext }) => {
     requests.push({ body: clone(body), ownerContext: clone(ownerContext) });
     const userId = ownerContext.scopeId === SESSION.scopeId ? OWNER : OTHER;
-    const response = await handleTypingRoundAction({ admin, user: { id: userId }, body, enabled: true });
+    const response = await handleTypingRoundAction({
+      admin, user: { id: userId }, body, enabled: true, atomicEnabled: true,
+    });
     if (f.pauseNextResponse) {
       const pause = f.pauseNextResponse; f.pauseNextResponse = null;
       pause.reached(); await pause.wait;
@@ -219,7 +243,12 @@ await check('Hint then wrong is free practice, preserving Combo while awarding n
   assert.equal(c.getState().checkpoint.combo, 4);
   assert.equal(c.getState().checkpoint.currentGuide, false);
   for (let i = 0; i < 4; i++) await f.finish(c);
-  assert.equal(c.getState().checkpoint.finalScore, 90); // 20+20+20+30; no bonuses.
+  assert.equal(c.getState().checkpoint.complete, false);
+  assert.equal(c.getState().currentPrompt.attempt_kind, 'retry');
+  await f.finish(c);
+  assert.equal(c.getState().checkpoint.primaryCompletedCount, 5);
+  assert.equal(c.getState().checkpoint.completedCount, 6);
+  assert.equal(c.getState().checkpoint.finalScore, 120); // 20+20+20+30+Retry 30; no bonuses.
   assert.deepEqual(c.getState().checkpoint.roundBonus, { completion: 0, perfect: 0, total: 0 });
 });
 

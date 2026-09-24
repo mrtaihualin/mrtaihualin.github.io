@@ -348,22 +348,16 @@ try {
   const currentEvent = await handleTypingRoundAction({ admin: bridgeAdmin, user: { id: raceUserId }, enabled: true,
     body: { action: 'typing_round_event', round_id: raceRoundId, operation_id: operationId(61),
       expected_sequence: 2, prompt_ordinal: 1, type: 'wrong' } });
-  // Either racing create may have selected Middle. Populate its exact level
-  // before asking the bridge to return a checkpoint for a committed event.
-  const raceLevel = psql(`select level from public.phase1_typing_rounds where round_id=${quote(raceRoundId)}::uuid;`);
-  if (raceLevel === '2') {
-    assert.equal(currentEvent.status, 503);
-    assert.equal(currentEvent.body.event_committed, true);
-    psql(`update public.game_words set level='中', canonical_record=jsonb_set(canonical_record, '{level}', '"中"'::jsonb);`);
-  } else assert.equal(currentEvent.status, 200);
+  // The current service must never fall back to this predecessor writer. Its
+  // own historical SQL contract remains covered directly above.
+  assert.equal(currentEvent.status, 404);
+  assert.equal(currentEvent.body.error, 'typing_atomic_disabled');
   const retried = await handleTypingRoundAction({ admin: bridgeAdmin, user: { id: raceUserId }, enabled: true,
     body: { action: 'typing_round_event', round_id: raceRoundId, operation_id: operationId(61),
       expected_sequence: 2, prompt_ordinal: 1, type: 'wrong' } });
-  assert.equal(retried.status, 200);
-  assert.equal(retried.body.idempotent, true);
-  assert.equal(retried.body.checkpoint.stateVersion, 2);
-  assert.equal(psql(`select count(*) from public.phase1_typing_round_events where round_id=${quote(raceRoundId)}::uuid;`), '2');
-  console.log('Typing SQL/Edge/reducer bridge, cross-owner denial and durable replay: PASS');
+  assert.equal(retried.status, 404);
+  assert.equal(psql(`select count(*) from public.phase1_typing_round_events where round_id=${quote(raceRoundId)}::uuid;`), '1');
+  console.log('Typing SQL/Edge/reducer Resume, cross-owner denial and legacy-writer fail-closed gate: PASS');
   console.log('Typing server-owned round/event atomic persistence: PASS');
   console.log('Typing round replay, sequence, canonical answer and replacement guards: PASS');
   console.log('Typing round concurrency, bounded paging, RLS and browser-role denial: PASS');

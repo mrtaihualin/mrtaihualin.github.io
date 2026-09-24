@@ -28,13 +28,16 @@ function fixture(count = 5, level = 1) {
     const row = rows[i % rows.length];
     return { prompt_ordinal: i + 1, content_ref: { source: 'game_words', key: row.content_key },
       answer: row.canonical_record.word, catalog_version: row.catalog_version,
-      record_hash: row.record_hash, golden: i === 2, srs_bonus: i === 1 };
+      record_hash: row.record_hash, golden: i === 2, srs_bonus: i === 1,
+      attempt_kind: 'primary', learning_state: 'normal', learning_state_token: `normal:item-${i + 1}` };
   });
   const round = { round_id: roundId, game: 'typing', level, starting_combo: 4,
     prompt_count: count, next_event_sequence: 1, current_prompt_ordinal: 1,
-    completed_count: 0, skip_count: 0, status: 'active' };
+    completed_count: 0, primary_completed_count: 0, pending_retry_count: 0,
+    skip_count: 0, status: 'active' };
   const state = { owner, round, prompts, rows, events: [], operations: new Map(), calls: [],
-    queryHook: null, pageHook: null, loadReason: null, failWrite: false, failLoad: false, lostWriteResponse: false };
+    queryHook: null, pageHook: null, loadReason: null, failWrite: false, failLoad: false,
+    failPostWriteLoad: false, lostWriteResponse: false };
   const query = (fn) => {
     let signal;
     return { retry(value) { assert.equal(value, false); return this; },
@@ -63,7 +66,7 @@ function fixture(count = 5, level = 1) {
           if (state.pageHook) state.pageHook(data, args);
           return { data };
         }
-        assert.equal(name, 'phase1_typing_round_append_event');
+        assert.equal(name, 'phase1_typing_round_commit_event');
         assert.match(args.p_request_hash, /^[a-f0-9]{64}$/);
         if (state.failWrite) return { error: { message: 'PRIVATE SQL ERROR' } };
         const old = state.operations.get(args.p_operation_id);
@@ -80,13 +83,14 @@ function fixture(count = 5, level = 1) {
           ...(args.p_event_type === 'completed' ? { answer: args.p_answer } : {}) };
         state.events.push(record);
         round.next_event_sequence++;
-        if (record.type === 'completed') round.completed_count++;
+        if (record.type === 'completed') { round.completed_count++; round.primary_completed_count++; }
         if (record.type === 'skipped') round.skip_count++;
         if (['completed', 'skipped'].includes(record.type)) round.current_prompt_ordinal++;
-        if (round.completed_count === 5) round.status = 'completed';
+        if (round.primary_completed_count === 5) round.status = 'completed';
         const response = { ok: true, idempotent: false, operation_id: args.p_operation_id, round_id: roundId };
         state.operations.set(args.p_operation_id, { hash: args.p_request_hash, response });
         if (state.lostWriteResponse) { state.lostWriteResponse = false; return { error: { message: 'connection lost after commit' } }; }
+        if (state.failPostWriteLoad) { state.failPostWriteLoad = false; state.failLoad = true; }
         return { data: response };
       });
     },
@@ -102,7 +106,9 @@ function fixture(count = 5, level = 1) {
         eq(field, value) { assert.equal(field, 'level'); requestedLevel = value; return this; } });
     },
   };
-  state.call = (body = resume, user = { id: owner }) => handleTypingRoundAction({ admin: state.admin, user, body, enabled: true });
+  state.call = (body = resume, user = { id: owner }) => handleTypingRoundAction({
+    admin: state.admin, user, body, enabled: true, atomicEnabled: true,
+  });
   return state;
 }
 
@@ -111,6 +117,16 @@ await check('default OFF rejects before storage; verified owner is required', as
   const f = fixture();
   assert.equal((await handleTypingRoundAction({ admin: f.admin, user: { id: owner }, body: resume })).status, 404);
   assert.equal((await f.call(resume, null)).status, 401);
+  assert.equal(f.calls.length, 0);
+});
+
+await check('event writes fail closed while the atomic cutover gate is OFF', async () => {
+  const f = fixture();
+  const result = await handleTypingRoundAction({
+    admin: f.admin, user: { id: owner }, body: event(), enabled: true, atomicEnabled: false,
+  });
+  assert.equal(result.status, 404);
+  assert.equal(result.body.error, 'typing_atomic_disabled');
   assert.equal(f.calls.length, 0);
 });
 
@@ -249,7 +265,7 @@ await check('lost commit response and post-commit read failure preserve same ope
   assert.equal(lost.body.retry_same_operation, true);
   assert.equal(lost.body.operation_id, op(1));
   assert.equal((await f.call(event())).body.idempotent, true);
-  f.failLoad = true;
+  f.failPostWriteLoad = true;
   const failedLoad = await f.call(event({ operation_id: op(2), expected_sequence: 2, type: 'hint_opened' }));
   assert.equal(failedLoad.body.event_committed, true);
   assert.equal(failedLoad.body.retry_same_operation, true);
@@ -296,7 +312,8 @@ await check('actual Edge entrypoint enforces auth, OFF gate, rate limit and leav
   assert.equal((await rate.invoke(resume)).status, 429); assert.equal(rate.f.calls.length, 0);
   const active = edge({ enabled: true });
   const response = await active.invoke(event());
-  assert.equal(response.status, 200); assert.equal((await response.json()).checkpoint.currentWrongCount, 1);
+  assert.equal(response.status, 404); assert.equal((await response.json()).error, 'typing_atomic_disabled');
+  assert.equal(active.f.events.length, 0);
   assert.deepEqual(active.calls().seenRateArgs[0], {
     p_key: `typing-round-event:${owner}`, p_limit: 600, p_window: 60,
   });

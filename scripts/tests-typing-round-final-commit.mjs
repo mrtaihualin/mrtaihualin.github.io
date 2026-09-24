@@ -83,6 +83,8 @@ await check('skip/wrong/hint preparation never accepts a client-derived score', 
 await check('service routes prepared rounds to the atomic RPC while all public gates remain OFF', () => {
   const service = fs.readFileSync(new URL('../supabase/functions/score-submit/typing-round-service.mjs', import.meta.url), 'utf8');
   assert.match(service, /phase1_typing_round_commit_event/);
+  assert.doesNotMatch(service, /'phase1_typing_round_append_event'/);
+  assert.match(service, /atomicEnabled !== true\) fail\('typing_atomic_disabled'/);
   assert.match(service, /TYPING_ROUND_ACTIONS_ENABLED = false/);
   assert.match(service, /TYPING_ATOMIC_FINAL_COMMIT_ENABLED = false/);
   for (const file of ['../typing-game.html', '../js/games/typing-game-app.js', '../js/games/typing-game-app.min.js']) {

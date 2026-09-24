@@ -14,8 +14,12 @@ check('one service-only RPC owns event, learning transition, Retry and final sco
   assert.match(migration, /phase1_score_submit_commit\(/);
   assert.match(migration, /insert into public\.phase1_typing_round_events/);
   assert.match(migration, /insert into public\.phase1_typing_round_operations/);
+  assert.match(migration, /typing_atomic_learning_rejected/);
+  assert.match(migration, /typing_atomic_score_rejected/);
   assert.match(migration, /grant execute on function public\.phase1_typing_round_commit_event[\s\S]+to service_role/);
   assert.doesNotMatch(migration, /grant execute on function public\.phase1_typing_round_commit_event[\s\S]{0,260}to (public|anon|authenticated)/);
+  assert.match(migration, /revoke all on function public\.phase1_typing_round_append_event[\s\S]+service_role/);
+  assert.match(migration, /revoke all on function public\.phase1_typing_round_issue_prelearning[\s\S]+service_role/);
 });
 
 check('learning score is recomputed from protected primitives and canonical syllable count', () => {
@@ -24,6 +28,8 @@ check('learning score is recomputed from protected primitives and canonical syll
   assert.match(migration, /jsonb_array_length\(v_word\.canonical_record->'syllables'\)/);
   assert.match(migration, /learning_score_mismatch/);
   assert.match(migration, /p_score_verified_by is distinct from 'edge:typing:v2'/);
+  assert.match(migration, /time zone 'Asia\/Taipei'/);
+  assert.doesNotMatch(migration, /time zone 'Asia\/Bangkok'/);
 });
 
 check('Retry obligations stay private until five primaries and skipped Retry is requeued', () => {
@@ -51,10 +57,16 @@ check('account export is owner-bound and omits answers, future queue, hashes and
   }
 });
 
-check('rollback requires no active round, deactivates the writer and preserves additive evidence', () => {
+check('rollback requires no active round, deactivates every issue/write owner and preserves additive evidence', () => {
   assert.match(rollback, /where status='active'/);
   assert.match(rollback, /revoke all on function public\.phase1_typing_round_commit_event/);
+  assert.match(rollback, /revoke all on function public\.phase1_typing_round_append_event/);
+  assert.match(rollback, /revoke all on function public\.phase1_typing_round_issue/);
+  assert.match(rollback, /revoke all on function public\.phase1_typing_round_append_reserve/);
+  assert.match(rollback, /revoke all on function public\.phase1_typing_round_refill/);
+  assert.doesNotMatch(rollback, /grant execute/);
   assert.doesNotMatch(rollback, /drop table/);
+  assert.doesNotMatch(rollback, /drop function/);
   assert.doesNotMatch(rollback, /delete from/);
   assert.match(rollback, /preserves every round, prompt, Retry obligation, learning row and score/i);
 });

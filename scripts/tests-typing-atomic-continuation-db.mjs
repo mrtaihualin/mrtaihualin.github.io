@@ -585,10 +585,22 @@ try {
   }
   const stackAdmin = {
     rpc(name, args) {
-      assert.ok(['phase1_typing_round_load', 'phase1_typing_round_append_event'].includes(name));
-      const params = Object.entries(args).map(([key, value]) => `${key} => ${value === null ? 'null'
+      assert.ok(['phase1_typing_round_load', 'phase1_typing_round_commit_event'].includes(name));
+      const sqlName = name === 'phase1_typing_round_commit_event'
+        ? 'phase1_typing_round_append_event' : name;
+      const legacyKeys = new Set(['p_operation_id','p_user_id','p_request_hash','p_round_id',
+        'p_expected_sequence','p_prompt_ordinal','p_event_type','p_answer']);
+      const params = Object.entries(args).filter(([key]) => sqlName === name || legacyKeys.has(key))
+        .map(([key, value]) => `${key} => ${value === null ? 'null'
         : typeof value === 'number' ? `${value}::${key === 'p_page_size' ? 'smallint' : 'bigint'}` : quote(value)}`);
-      return query(() => json(`select public.${name}(${params.join(',')})::text;`));
+      return query(() => {
+        const result = json(`select public.${sqlName}(${params.join(',')})::text;`);
+        if (name === 'phase1_typing_round_load' && result.ok === true) {
+          result.prompt_page = result.prompt_page.map((row) => ({ ...row, attempt_kind: 'primary',
+            learning_state: 'normal', learning_state_token: `fixture:${row.prompt_ordinal}` }));
+        }
+        return result;
+      });
     },
     from(name) {
       assert.equal(name, 'game_words'); let keys; let level;
@@ -606,7 +618,9 @@ try {
   const sent = [];
   const transport = async (body) => {
     sent.push(structuredClone(body));
-    const response = await handleTypingRoundAction({ admin: stackAdmin, user: { id: stackOwner }, body, enabled: true });
+    const response = await handleTypingRoundAction({
+      admin: stackAdmin, user: { id: stackOwner }, body, enabled: true, atomicEnabled: true,
+    });
     if (loseResponse) { loseResponse = false; throw new Error('synthetic lost response after SQL commit'); }
     return response;
   };

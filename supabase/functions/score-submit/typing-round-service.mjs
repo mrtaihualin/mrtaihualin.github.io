@@ -217,32 +217,41 @@ export async function handleTypingRoundAction({ admin, user, body, enabled = TYP
     const signal = AbortSignal.timeout(TIMEOUT_MS);
     let committed = null;
     if (event.action === 'typing_round_event') {
-      let atomic = null;
-      if (atomicEnabled === true) {
-        const evidence = await loadTypingRoundEvidence({ admin, userId, roundId: event.roundId, signal });
+      if (atomicEnabled !== true) fail('typing_atomic_disabled', 404);
+      const evidence = await loadTypingRoundEvidence({ admin, userId, roundId: event.roundId, signal });
+      const replay = evidence.events.find((row) => row.operation_id === event.operationId);
+      if (replay) {
+        if (replay.sequence !== event.sequence || replay.prompt_ordinal !== event.promptOrdinal
+            || replay.type !== event.type || (replay.answer ?? null) !== event.answer) fail('replay_conflict', 409);
+        committed = { operation_id: event.operationId, round_id: event.roundId, idempotent: true };
+      } else {
+        if (evidence.round.status !== 'active') fail('round_not_active', 409);
         const current = evidence.prompts[event.promptOrdinal - 1];
         if (!current?.learning_state || !current?.learning_state_token) fail('typing_atomic_schema_unavailable');
         const rows = event.type === 'completed' ? await canonicalRows(admin, evidence, signal) : [];
-        atomic = await prepareTypingAtomicEvent({ evidence, canonicalRows: rows, event });
-      }
-      writeAttempted = true;
-      committed = rpcResult(await resultOf(admin.rpc(
-        atomic ? 'phase1_typing_round_commit_event' : 'phase1_typing_round_append_event', {
-        p_operation_id: event.operationId, p_user_id: userId,
-        p_request_hash: await eventHash(userId, event), p_round_id: event.roundId,
-        p_expected_sequence: event.sequence, p_prompt_ordinal: event.promptOrdinal,
-        p_event_type: event.type, p_answer: event.answer,
-        ...(atomic ? {
+        let atomic;
+        try { atomic = await prepareTypingAtomicEvent({ evidence, canonicalRows: rows, event }); }
+        catch (error) {
+          if (error?.code === 'typing_completion_answer_mismatch') fail('answer_mismatch', 400);
+          fail('invalid_typing_evidence');
+        }
+        writeAttempted = true;
+        committed = rpcResult(await resultOf(admin.rpc(
+          'phase1_typing_round_commit_event', {
+          p_operation_id: event.operationId, p_user_id: userId,
+          p_request_hash: await eventHash(userId, event), p_round_id: event.roundId,
+          p_expected_sequence: event.sequence, p_prompt_ordinal: event.promptOrdinal,
+          p_event_type: event.type, p_answer: event.answer,
           p_server_learning_score: atomic.serverLearningScore,
           p_score_verified_by: atomic.scoreVerifiedBy,
           p_server_final_score: atomic.serverFinalScore,
           p_evidence_hash: atomic.evidenceHash,
           p_mirror_items: atomic.mirrorItems,
-        } : {}),
-      }), signal));
-      writeConfirmed = true;
-      if (committed.operation_id !== event.operationId || committed.round_id !== event.roundId
-          || typeof committed.idempotent !== 'boolean') fail('invalid_typing_evidence');
+        }), signal));
+        writeConfirmed = true;
+        if (committed.operation_id !== event.operationId || committed.round_id !== event.roundId
+            || typeof committed.idempotent !== 'boolean') fail('invalid_typing_evidence');
+      }
     }
     const verified = await loadTypingRoundCheckpoint({ admin, userId, roundId: event.roundId, signal });
     if (committed && verified.checkpoint.stateVersion < event.sequence) fail('invalid_typing_evidence');

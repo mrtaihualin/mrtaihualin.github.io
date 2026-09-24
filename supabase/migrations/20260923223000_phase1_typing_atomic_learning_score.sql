@@ -360,18 +360,20 @@ begin
     v_wrong := (select pg_catalog.count(*) from public.phase1_typing_round_events
       where round_id=p_round_id and prompt_ordinal=p_prompt_ordinal and event_type='wrong');
     v_units := pg_catalog.jsonb_array_length(v_word.canonical_record->'syllables');
-    if v_units<1 then return pg_catalog.jsonb_build_object('ok',false,'reason','invalid_canonical_units'); end if;
+    if v_units<1 then raise exception 'typing_atomic_invalid_canonical_units'; end if;
     v_quota := least(4+greatest(0,v_units-4),9);
     v_expected_score := case when v_guide or v_wrong>=v_quota then 0
       else pg_catalog.round(10-(10::numeric/v_quota)*v_wrong)::smallint end;
     if p_server_learning_score is distinct from v_expected_score then
-      return pg_catalog.jsonb_build_object('ok',false,'reason','learning_score_mismatch');
+      raise exception 'typing_atomic_learning_score_mismatch';
     end if;
     v_learning := public.phase1_login_free_learning_commit(p_operation_id,p_user_id,p_request_hash,
       'typing',v_round.level,v_prompt.content_source,v_prompt.content_key,p_server_learning_score,
       p_score_verified_by,p_round_id,v_prompt.learning_state,v_prompt.learning_state_token,
-      (pg_catalog.clock_timestamp() at time zone 'Asia/Bangkok')::date,'free','answer');
-    if v_learning->>'ok' is distinct from 'true' then return v_learning; end if;
+      (pg_catalog.clock_timestamp() at time zone 'Asia/Taipei')::date,'free','answer');
+    if v_learning->>'ok' is distinct from 'true' then
+      raise exception 'typing_atomic_learning_rejected:%', coalesce(v_learning->>'reason','unknown');
+    end if;
     v_completed := v_completed+1;
     if v_prompt.attempt_kind='primary' then
       v_primary := v_primary+1;
@@ -429,13 +431,15 @@ begin
   end if;
   v_status := case when v_primary=5 and v_pending=0 then 'completed' else 'active' end;
   if v_status='completed' then
-    if p_server_final_score is null then return pg_catalog.jsonb_build_object('ok',false,'reason','final_score_required'); end if;
+    if p_server_final_score is null then raise exception 'typing_atomic_final_score_required'; end if;
     v_score := public.phase1_score_submit_commit(p_round_id,p_user_id,'typing',
       case v_round.level when 1 then '初' else '中' end,p_server_final_score,1,
       p_evidence_hash,p_mirror_items);
-    if v_score->>'ok' is distinct from 'true' then return v_score; end if;
+    if v_score->>'ok' is distinct from 'true' then
+      raise exception 'typing_atomic_score_rejected:%', coalesce(v_score->>'reason','unknown');
+    end if;
   elsif p_server_final_score is not null then
-    return pg_catalog.jsonb_build_object('ok',false,'reason','premature_final_score');
+    raise exception 'typing_atomic_premature_final_score';
   end if;
   update public.phase1_typing_rounds set prompt_count=prompt_count+v_added,
     next_event_sequence=next_event_sequence+1,
@@ -489,6 +493,18 @@ revoke all on function public.phase1_typing_round_refill(uuid,uuid,text,uuid,big
 revoke all on function public.phase1_typing_round_load(uuid,uuid,bigint,bigint,smallint) from public,anon,authenticated;
 revoke all on function public.phase1_typing_round_commit_event(uuid,uuid,text,uuid,bigint,bigint,text,text,smallint,text,integer,text,jsonb) from public,anon,authenticated;
 revoke all on function public.phase1_typing_account_export(uuid,integer) from public,anon,authenticated;
+-- Atomic cutover has one completion writer. The prior event RPC and renamed
+-- implementation helpers remain only as recovery evidence, never API owners.
+revoke all on function public.phase1_typing_round_append_event(uuid,uuid,text,uuid,bigint,bigint,text,text)
+  from public,anon,authenticated,service_role;
+revoke all on function public.phase1_typing_round_issue_prelearning(uuid,uuid,text,smallint,bigint,jsonb,jsonb)
+  from public,anon,authenticated,service_role;
+revoke all on function public.phase1_typing_round_append_reserve_prelearning(uuid,uuid,text,uuid,bigint,jsonb)
+  from public,anon,authenticated,service_role;
+revoke all on function public.phase1_typing_round_refill_prelearning(uuid,uuid,text,uuid,bigint,bigint,bigint,smallint,bigint,bigint,bigint,jsonb)
+  from public,anon,authenticated,service_role;
+revoke all on function public.phase1_typing_round_load_prelearning(uuid,uuid,bigint,bigint,smallint)
+  from public,anon,authenticated,service_role;
 grant execute on function public.phase1_typing_round_issue(uuid,uuid,text,smallint,bigint,jsonb,jsonb) to service_role;
 grant execute on function public.phase1_typing_round_append_reserve(uuid,uuid,text,uuid,bigint,jsonb) to service_role;
 grant execute on function public.phase1_typing_round_refill(uuid,uuid,text,uuid,bigint,bigint,bigint,smallint,bigint,bigint,bigint,jsonb) to service_role;
