@@ -29,6 +29,14 @@ const guideLockStart = source.indexOf('function tfLockCurrentWordForGuide()');
 const guideLockEnd = source.indexOf('// คำปัจจุบันเป็นหลายพยางค์ไหม', guideLockStart);
 const useHintStart = source.indexOf('function tfUseHint(keys)');
 const useHintEnd = source.indexOf('function tfHandleDeduceMistake(choiceLabel, errMsg)', useHintStart);
+const resetWordStart = source.indexOf('function tfResetWordScoring()');
+const resetWordEnd = source.indexOf('function tfLockCurrentWordForGuide()', resetWordStart);
+const nextWordStart = source.indexOf('function tfSetupNextWord()');
+const nextWordEnd = source.indexOf('function tfGoToSummary()', nextWordStart);
+const softPointsStart = source.indexOf('function tfSoftPointsAllowed(entry)');
+const softPointsEnd = source.indexOf('function tfExcludeMasteredWords(', softPointsStart);
+const processSrsStart = source.indexOf('function tfProcessSrsOnWordCommit(');
+const processSrsEnd = source.indexOf('// เช็กว่าคำที่กำลังจะเล่นเป็นรอบตัดสิน', processSrsStart);
 const guideStateStart = source.indexOf('var tfGuideMode =');
 const guideStateEnd = source.indexOf('function tfSyncGuideBtn()', guideStateStart);
 const scoreEngineStart = source.indexOf('var TF_SCORE_CFG = {');
@@ -50,6 +58,10 @@ assert.ok(initialToneMistakeStart >= 0 && initialToneMistakeEnd > initialToneMis
 assert.ok(deduceMistakeStart >= 0 && deduceMistakeEnd > deduceMistakeStart);
 assert.ok(guideLockStart >= 0 && guideLockEnd > guideLockStart);
 assert.ok(useHintStart >= 0 && useHintEnd > useHintStart);
+assert.ok(resetWordStart >= 0 && resetWordEnd > resetWordStart);
+assert.ok(nextWordStart >= 0 && nextWordEnd > nextWordStart);
+assert.ok(softPointsStart >= 0 && softPointsEnd > softPointsStart);
+assert.ok(processSrsStart >= 0 && processSrsEnd > processSrsStart);
 assert.ok(guideStateStart >= 0 && guideStateEnd > guideStateStart);
 assert.ok(scoreEngineStart >= 0 && scoreEngineEnd > scoreEngineStart);
 assert.ok(sessionBonusStart >= 0 && sessionBonusEnd > sessionBonusStart);
@@ -149,6 +161,7 @@ const guideSandbox = {
   __tips: 0,
   __renderCount: 0,
   tfCurWordIsParticle() { return false; },
+  tfCurWordNoTools() { return false; },
   tfUpdateScoreHud() {},
   render() { guideSandbox.__renderCount += 1; },
   showTip() { guideSandbox.__tips += 1; }
@@ -165,6 +178,11 @@ assert.strictEqual(guideSandbox.session.currentWordGolden, false);
 assert.strictEqual(guideSandbox.session.combo, 4);
 assert.strictEqual(guideSandbox.__renderCount, 1);
 assert.strictEqual(guideSandbox.__tips, 1);
+guideSandbox.tfCurWordNoTools = () => true;
+guideSandbox.tfUseHint(['high']);
+assert.strictEqual(guideSandbox.__tips, 1, 'a no-tools check must reject Hint even through a stale control');
+assert.doesNotMatch(source, /if \(tfGuideMode\) tfLockCurrentWordForGuide\(\)/,
+  'carried Hint must not lock a later syllable of a no-tools check');
 
 assert.doesNotMatch(source, /tfResetGuideForNextUnit/, 'Tone must not reset the saved Hint choice when a word or page starts');
 assert.doesNotMatch(source, /rg_guide_mode/, 'Tone must not read or write Reading guide preference');
@@ -492,6 +510,7 @@ const firstWordSandbox = {
   tfGuideMode: false,
   selectedLevel: 2,
   selectedCategory: 'ทั้งหมด',
+  __testSrsSequence: false,
   session: null,
   hist: [],
   histPos: -1,
@@ -499,8 +518,11 @@ const firstWordSandbox = {
   S: null,
   __reveal: null,
   tfRollGolden() { return false; },
-  tfSetupSrsFlagsForCurrentWord() {},
-  tfCurWordNoTools() { return false; },
+  tfSetupSrsFlagsForCurrentWord() {
+    firstWordSandbox.session.curWordIsFinalSrsCheck =
+      firstWordSandbox.__testSrsSequence && firstWordSandbox.session.index === 1;
+  },
+  tfCurWordNoTools() { return !!firstWordSandbox.session?.curWordIsFinalSrsCheck; },
   tfSaveResumeState() {},
   render() {},
   tfMinaToast() {},
@@ -516,6 +538,8 @@ const firstWordSandbox = {
 firstWordSandbox.window = firstWordSandbox;
 vm.createContext(firstWordSandbox);
 vm.runInContext(source.slice(wordScoreStart, wordScoreEnd), firstWordSandbox);
+vm.runInContext(source.slice(resetWordStart, resetWordEnd), firstWordSandbox);
+vm.runInContext(source.slice(nextWordStart, nextWordEnd), firstWordSandbox);
 vm.runInContext(source.slice(startSessionStart, startSessionEnd), firstWordSandbox);
 vm.runInContext(source.slice(forceRevealStart, forceRevealEnd), firstWordSandbox);
 const firstMultiEntry = {
@@ -540,6 +564,51 @@ firstWordSandbox.tfGuideMode = true;
 firstWordSandbox.startSetSession([firstMultiEntry], { keepOrder: true });
 assert.strictEqual(firstWordSandbox.tfGuideMode, true, 'a new round must retain the saved Hint choice');
 assert.strictEqual(firstWordSandbox.session.currentWordGuideUsed, true, 'the new question must inherit Hint as Free Practice');
+
+firstWordSandbox.__testSrsSequence = true;
+firstWordSandbox.startSetSession([firstMultiEntry, firstMultiEntry, firstMultiEntry], { keepOrder: true });
+assert.strictEqual(firstWordSandbox.session.currentWordGuideUsed, true, 'ordinary word inherits the saved Hint choice');
+firstWordSandbox.session.index = 1;
+firstWordSandbox.tfResetWordScoring();
+firstWordSandbox.tfSetupNextWord();
+assert.strictEqual(firstWordSandbox.tfGuideMode, true, 'Day 7 must not erase the saved Hint preference');
+assert.strictEqual(firstWordSandbox.session.currentWordGuideUsed, false, 'Day 7 must not become Free Practice');
+assert.strictEqual(firstWordSandbox.session.currentWordGuideIntroPending, false, 'Day 7 must not show the guided start gate');
+firstWordSandbox.session.index = 2;
+firstWordSandbox.tfResetWordScoring();
+firstWordSandbox.tfSetupNextWord();
+assert.strictEqual(firstWordSandbox.session.currentWordGuideUsed, true, 'Hint resumes for the following ordinary word');
+assert.strictEqual(firstWordSandbox.session.currentWordGuideIntroPending, true);
+
+const noToolsSrsSandbox = {
+  tfGuideMode: true,
+  PAID_SRS_PRIVATE_BETA: true,
+  selectedLevel: 1,
+  session: { currentWordGuideUsed: false, curWordIsFinalSrsCheck: true, curWordGuesses: {}, initialGuess: 3 },
+  __requests: 0,
+  tfSrsLoggedIn() { return true; },
+  tfReviewOwns() { return false; },
+  tfGetSrsRecord() { return null; },
+  TONE_SERVER: {
+    available() { return true; },
+    finishRound() {
+      noToolsSrsSandbox.__requests += 1;
+      return { then(callback) { callback({ ok: true }); } };
+    }
+  }
+};
+noToolsSrsSandbox.window = noToolsSrsSandbox;
+vm.createContext(noToolsSrsSandbox);
+vm.runInContext(source.slice(softPointsStart, softPointsEnd), noToolsSrsSandbox);
+vm.runInContext(source.slice(processSrsStart, processSrsEnd), noToolsSrsSandbox);
+assert.strictEqual(noToolsSrsSandbox.tfSoftPointsAllowed({ word: 'synthetic' }), true,
+  'the saved Hint choice must not suppress ordinary Day 7 scoring');
+noToolsSrsSandbox.tfProcessSrsOnWordCommit({ word: 'synthetic', contentKey: 'synthetic' }, 0, true, false);
+assert.strictEqual(noToolsSrsSandbox.__requests, 1, 'Day 7 answer must reach the server SRS owner');
+noToolsSrsSandbox.session.currentWordGuideUsed = true;
+assert.strictEqual(noToolsSrsSandbox.tfSoftPointsAllowed({ word: 'synthetic' }), false);
+noToolsSrsSandbox.tfProcessSrsOnWordCommit({ word: 'synthetic', contentKey: 'synthetic' }, 0, true, false);
+assert.strictEqual(noToolsSrsSandbox.__requests, 1, 'a genuinely guided word remains Free Practice');
 
 let syllableCount = 0;
 for (const record of catalog.records) {

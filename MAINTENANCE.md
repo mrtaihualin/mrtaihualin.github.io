@@ -3179,3 +3179,9 @@ node scripts/check-site.js
 - Production postcheck confirms `game_sentences=42`, target canonical rows `12`, target aliases `12`, target Learning Items `12`, and direct `anon`/`authenticated` table access remains denied. Migration ledger `20260922103701` is recorded as applied.
 - Deployed only `game-content` v45 and `game-audio` v10 with JWT verification retained. Both now use the exact pinned `npm:@supabase/supabase-js@2.112.3` dependency after the former CDN import timed out in the provider bundler. A live Guest probe returns HTTP 200 and preserves the 20-sentence cap.
 - Focused catalog, security and game behavior checks pass; the complete `node scripts/check-site.js` gate passes across all 1,130 repository files. Lin completed the required 100% language-field review and confirmed `ผ่านทั้งหมด` on 2026-09-22.
+
+# 2026-09-24 — Tone saved Hint during no-tools SRS checks
+
+- A saved Tone Hint choice now marks a word as Free Practice only after its no-tools SRS flags are known. Day 7/known checks keep the preference for later ordinary words but do not expose Hint, suppress first-try evidence or skip the server-authoritative Paid SRS commit. Already-guided ordinary words remain zero-score Free Practice even if Hint is switched off.
+- Guarded stale Hint actions and multi-syllable transitions during no-tools checks, rebuilt only the Tone minified runtime and advanced its page cache key to `v102`. Added a synthetic regression for ordinary → Day 7 → ordinary transitions, SRS dispatch and guided-word exclusion; updated exact cache-key assertions.
+- Focused Tone/shared/login/owner-switch checks and `node scripts/check-site.js` pass across 1,130 local files, including the disposable PostgreSQL fixture. This is source-only evidence; no Production, Auth, Supabase or real-user data was accessed or changed.

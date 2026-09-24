@@ -1042,6 +1042,7 @@ function tfApplyGuideHints() {
 
 // ป้ายบอกโหมด (เหมือนเกมอ่าน) — ให้ผู้เล่นรู้ตัวว่ากำลังเล่นแบบไม่คิดคะแนนอยู่
 function tfGuideNoteHtml() {
+  if (tfCurWordNoTools() && !(session && session.currentWordGuideUsed)) return '';
   if (!tfGuideMode && !(session && session.currentWordGuideUsed)) return '';
   return '<div class="tf-guide-note">💡 <b>練習模式</b>・純練習不計分（沒有分數、星星與複習進度）</div>';
 }
@@ -1158,9 +1159,9 @@ function tfResetWordScoring() {
   session.currentWordScored = false;
   session.currentWordFirstTry = false;
   session.currentWordScore = 0;
-  // Snapshot only the current word: once guidance is exposed, this whole word
-  // remains Free Practice even if the player toggles the visible Hint off.
-  session.currentWordGuideUsed = !!tfGuideMode;
+  // The next word's no-tools SRS flags are not known until tfSetupNextWord.
+  // Snapshot its Hint state only after those flags have been set.
+  session.currentWordGuideUsed = false;
   // ── คำหลายพยางค์: คิดคะแนนรายพยางค์ ──
   session.curWordAllFirstTry = true;   // จริงตราบที่ทุกพยางค์ยังถูกครั้งแรก
   session.scoredSyls = {};             // กันให้คะแนนซ้ำเมื่อกด "วิเคราะห์ใหม่"
@@ -1317,7 +1318,7 @@ function tfComboFlash(combo, mult) {
 // (เช่น 全部/ห้องพิเศษ) → กันไว้อีกชั้น: ถ้าคำนี้ mastered แล้วในบัญชีผู้เล่น ไม่ให้แต้มเกมซ้ำอีก
 function tfSoftPointsAllowed(entry) {
   if (entry && entry.isParticle) return false;
-  if (tfGuideMode || (session && session.currentWordGuideUsed)) return false;
+  if (session && session.currentWordGuideUsed) return false;
   if (!tfSrsLoggedIn()) return true; // ไม่ล็อกอิน = ไม่มี SRS อยู่แล้ว ให้แต้มปกติตามเดิม
   var rec = tfGetSrsRecord(entry, selectedLevel);
   return !(rec && rec.mastered); // mastered แล้ว → ห้ามแจกแต้มเกมซ้ำอีก (กันฟาร์ม)
@@ -1436,6 +1437,7 @@ function tfScoreDeduce() {
 }
 
 function tfUseHint(keys) {
+  if (tfCurWordNoTools()) return;
   if (tfCurWordIsParticle()) { showTip(keys); return; }
   if (session) {
     tfLockCurrentWordForGuide();
@@ -1540,7 +1542,7 @@ function tfAfterForcedRevealSyl(idx, tone) {
     hist = hist.slice(0, histPos + 1);
     hist.push(ns); histPos++;
     S = ns;
-    if (tfGuideMode) tfLockCurrentWordForGuide();
+    if (tfGuideMode && !tfCurWordNoTools()) tfLockCurrentWordForGuide();
     render();
   } else {
     tfCommitWordAndAdvance({ forced: true });
@@ -1679,7 +1681,7 @@ function tfProcessSrsOnWordCommit(entry, mistakes, firstTry, forced) {
   if (!tfSrsLoggedIn()) return; // Guest Free ไม่มี SRS และห้ามนำรอบก่อน Login ไปนับย้อนหลัง
   if (tfReviewOwns(entry)) return; // Login Free is committed only by LearningReview.
   if (!window.PAID_SRS_PRIVATE_BETA) return; // tone-round is retained for the gated Paid beta only.
-  if (tfGuideMode || (session && session.currentWordGuideUsed)) return;
+  if (session && session.currentWordGuideUsed) return;
   var wasFinalCheck = !!(session && session.curWordIsFinalSrsCheck);
   var wasKnownCheck = !!(session && session.curWordIsKnownCheck);
   // คำตอบที่ไม่สะอาดไม่เลื่อน SRS
@@ -1790,6 +1792,7 @@ function tfSetupNextWord() {
   var w = nx.word;
   session.currentWordGolden = tfRollGolden();
   tfSetupSrsFlagsForCurrentWord();   // เช็กรอบตัดสิน Day 7 ก่อนตั้งคำถัดไป
+  session.currentWordGuideUsed = !!tfGuideMode && !tfCurWordNoTools();
   session.currentWordGuideIntroPending = !!tfGuideMode && !tfCurWordNoTools();
   // Lin 2026-07-14: คำหลายพยางค์ ไม่มีหน้าเลือกพยางค์เองแล้ว → เริ่มพยางค์ที่ 1 ตรงเลย ไล่ตามลำดับอัตโนมัติ
   if (nx.readingTH && nx.readingTH.indexOf('-') !== -1) {
@@ -2900,7 +2903,7 @@ function startSetSession(words, opts) {
     score: 0, combo: 0,
     currentWordDeduction: 0, currentWordScored: false,
     currentWordFirstTry: false, currentWordScore: 0,
-    currentWordGuideUsed: !!tfGuideMode,
+    currentWordGuideUsed: false,
     currentWordGuideIntroPending: false,
     sessionScored: false,
     submissionLinked: false,
@@ -2916,6 +2919,7 @@ function startSetSession(words, opts) {
   if(window.LearningReview&&LearningReview.runtimeEnabled())tfRegisterRestoredReview();
   hist = []; histPos = -1;
   tfSetupSrsFlagsForCurrentWord();   // เช็กรอบตัดสิน Day 7 สำหรับคำแรกของ session
+  session.currentWordGuideUsed = !!tfGuideMode && !tfCurWordNoTools();
   session.currentWordGuideIntroPending = !!tfGuideMode && !tfCurWordNoTools();
   var entry = entries[0]; randomEntry = entry; var w = entry.word;
   // Lin 2026-07-14: คำหลายพยางค์ ไม่มีหน้าเลือกพยางค์เองแล้ว → เริ่มพยางค์ที่ 1 ตรงเลย
@@ -4224,7 +4228,7 @@ var TF = {
     hist = hist.slice(0, histPos+1);
     hist.push(ns); histPos++;
     S = ns;
-    if (tfGuideMode) tfLockCurrentWordForGuide();
+    if (tfGuideMode && !tfCurWordNoTools()) tfLockCurrentWordForGuide();
     render();
   },
   nextWord: function() {
@@ -4302,9 +4306,9 @@ var TF = {
     var wasGuideIntroPending = !!(session && session.currentWordGuideIntroPending);
     tfGuideMode = !tfGuideMode;
     try { localStorage.setItem('tf_guide_mode', tfGuideMode ? '1' : '0'); } catch(e){}
-    if (tfGuideMode && session && session.words && session.index < session.words.length && S && S.word && S.step !== 'result') {
+    if (tfGuideMode && session && session.words && session.index < session.words.length && S && S.word && S.step !== 'result' && !tfCurWordNoTools()) {
       tfLockCurrentWordForGuide();
-      if (S.step === 'session-guess' && !tfCurWordNoTools()) {
+      if (S.step === 'session-guess') {
         session.currentWordGuideIntroPending = true;
       }
     }

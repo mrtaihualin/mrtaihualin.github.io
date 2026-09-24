@@ -40,7 +40,7 @@ assert.match(contentClient, /用LINE問老師/);
 const tiered = [
   {
     page: 'tone-finder.html', game: 'tone', app: 'js/games/tone-finder-game.js',
-    boot: /GameContentLoader\.boot\(\['js\/games\/tone-finder-game\.min\.js\?v=101'\], \{game:'tone'\}\)/,
+    boot: /GameContentLoader\.boot\(\['js\/games\/tone-finder-game\.min\.js\?v=102'\], \{game:'tone'\}\)/,
     resume: /GameResume\.save\('tone-finder'/,
   },
   {

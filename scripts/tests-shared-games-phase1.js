@@ -885,15 +885,15 @@ test('Tone Hint carries its saved choice while preserving per-question Free Prac
   const tone = toneGame.appText;
   const toneMin = fs.readFileSync(path.join(root, 'js/games/tone-finder-game.min.js'), 'utf8');
   assert.doesNotMatch(tone, /tfResetGuideForNextUnit/, 'Tone: a new word or reload must not overwrite the saved Hint choice');
-  assert.match(tone, /function tfAdvanceCommittedWord\(\)[\s\S]{0,120}tfResetWordScoring\(\)/, 'Tone: the next word must snapshot the carried Hint choice');
-  assert.match(tone, /currentWordGuideUsed:\s*!!tfGuideMode/, 'Tone: a new round must inherit the saved Hint choice');
-  assert.match(tone, /tfGuideMode\s*\|\|\s*\(session\s*&&\s*session\.currentWordGuideUsed\)/, 'Tone: toggling guidance off must not restore scoring');
+  assert.match(tone, /function tfAdvanceCommittedWord\(\)[\s\S]{0,120}tfResetWordScoring\(\)/, 'Tone: the next word must reset its per-word Hint state');
+  assert.match(tone, /tfSetupSrsFlagsForCurrentWord\(\);[^\n]*\n\s*session\.currentWordGuideUsed\s*=\s*!!tfGuideMode\s*&&\s*!tfCurWordNoTools\(\)/, 'Tone: a new word inherits Hint only after its no-tools flags are known');
+  assert.match(tone, /var firstTry = [^\n]*&& !session\.currentWordGuideUsed;/, 'Tone: toggling guidance off must not restore scoring for an already guided word');
   assert.match(tone, /function tfLockCurrentWordForGuide\(\)[\s\S]{0,600}session\.score\s*=\s*Math\.max\(0,[\s\S]{0,120}- awarded\)/, 'Tone: points already awarded in the active question must be revoked');
   assert.doesNotMatch(tone.slice(tone.indexOf('function tfLockCurrentWordForGuide()'), tone.indexOf('// คำปัจจุบันเป็นหลายพยางค์ไหม')), /session\.combo\s*=/, 'Tone: Free Practice must preserve Combo');
   assert.match(tone, /function tfUseHint\(keys\)[\s\S]{0,260}tfLockCurrentWordForGuide\(\)[\s\S]{0,120}session\.hintUsed\s*=\s*true/, 'Tone: the question-mark Hint must make the whole word Free Practice');
   assert.doesNotMatch(tone.slice(tone.indexOf('function tfUseHint(keys)'), tone.indexOf('function tfHandleDeduceMistake', tone.indexOf('function tfUseHint(keys)'))), /onPeek|onWrong|tfForceRevealZero/, 'Tone: Hint must not consume the derivation mistake ladder');
   assert.match(tone, /S\.step\s*!==\s*'result'/, 'Tone: changing the default on a completed answer must not rewrite that result');
-  assert.match(tone, /S\s*=\s*ns;\s*if \(tfGuideMode\) tfLockCurrentWordForGuide\(\);\s*render\(\);/, 'Tone: a carried guide state must lock the next active syllable before render');
+  assert.match(tone, /S\s*=\s*ns;\s*if \(tfGuideMode && !tfCurWordNoTools\(\)\) tfLockCurrentWordForGuide\(\);\s*render\(\);/, 'Tone: guidance carries to the next syllable only outside a no-tools check');
   assert.match(tone, /wordScore\s*=\s*session\.currentWordGuideUsed\s*\?\s*0\s*:/, 'Tone: multi-syllable questions must remain zero after guidance');
   assert.match(tone, /hintUsed:\s*!!session\.hintUsed\s*\|\|\s*!!session\.currentWordGuideUsed/, 'Tone: Result evidence must record active guidance');
   assert.match(tone, /currentWordGuideIntroPending\s*=\s*!!tfGuideMode\s*&&\s*!tfCurWordNoTools\(\)/, 'Tone: the current guided question must stop at the intro gate');
@@ -919,7 +919,7 @@ test('Tone Hint carries its saved choice while preserving per-question Free Prac
   assert.match(tone, /function recordMistake\([\s\S]{0,900}currentWordMistakesTotal\s*=\s*\(session\.currentWordMistakesTotal \|\| 0\) \+ 1/, 'Tone: every real wrong answer must update the total mistake evidence');
   assert.match(tone, /function tfCommitWordAndAdvance\(opts\)[\s\S]{0,260}var mistakes = session\.currentWordMistakesTotal/, 'Tone: Result must retain mistake totals across syllables');
   assert.match(tone, /skipCurrentWord:\s*function\(\)[\s\S]{0,2500}is_skipped:\s*true[\s\S]{0,240}skip_reason:\s*'user_skip'/, 'Tone: Skip must create neutral result evidence');
-  assert.match(tone, /if \(S\.step === 'session-guess' && !tfCurWordNoTools\(\)\)[\s\S]{0,120}currentWordGuideIntroPending\s*=\s*true/, 'Tone: enabling guidance during an active question must return to the explicit start gate');
+  assert.match(tone, /S\.step !== 'result' && !tfCurWordNoTools\(\)\)[\s\S]{0,150}if \(S\.step === 'session-guess'\)[\s\S]{0,100}currentWordGuideIntroPending\s*=\s*true/, 'Tone: enabling guidance during an active non-check question must return to the explicit start gate');
   assert.match(tone, /function tfArmGuideIntroForPageReturn\(\)[\s\S]{0,400}currentWordGuideIntroPending\s*=\s*true/, 'Tone: returning to a preserved page must re-arm the guided-question gate');
   assert.match(toneMin, /currentWordGuideUsed/, 'Tone: deployed minified bundle must include the zero-lock state');
   assert.match(toneMin, /currentWordMistakesTotal/, 'Tone: deployed minified bundle must preserve the real wrong-answer total');
@@ -927,7 +927,7 @@ test('Tone Hint carries its saved choice while preserving per-question Free Prac
   assert.match(toneMin, /pageshow/, 'Tone: deployed minified bundle must include the page-return guard');
   assert.match(toneMin, /tfHandleInitialToneMistake/, 'Tone: deployed minified bundle must preserve the initial no-deduction handler');
   assert.doesNotMatch(toneMin, /聲調選擇錯誤/, 'Tone: deployed minified bundle must not retain the superseded initial scored-mistake branch');
-  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=101/, 'Tone: page must request the rebuilt gameplay runtime version');
+  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=102/, 'Tone: page must request the rebuilt gameplay runtime version');
 });
 
 test('Tone mobile touch surfaces keep Desktop gameplay free of keyboard-only copy', () => {
