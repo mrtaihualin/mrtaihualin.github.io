@@ -47,6 +47,7 @@ function harness(config, runtime, primes) {
       },
     },
     console: { error(...args) { errors.push(args); } },
+    tgRoundActive: false,
     tgCloseMobileKeyboard() {},
     tgPrimeReview() { return primes.shift().promise; },
     rgPrimeReview() { return primes.shift().promise; },

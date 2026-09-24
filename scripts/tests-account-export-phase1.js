@@ -49,6 +49,19 @@ test('service-role-only queries remain explicitly owner-filtered', () => {
   }
 });
 
+test('protected Typing export is owner-bound and excludes future answers and internal receipts', () => {
+  assert.match(source, /admin\.rpc\('phase1_typing_account_export', \{ p_user_id: callerUid, p_limit: HISTORY_ROW_CAP \}\)/);
+  assert.match(source, /phase1_typing_rounds: typingRoundExportRes\.data\?\.rounds \|\| \[\]/);
+  const migration = fs.readFileSync(path.join(root,
+    'supabase/migrations/20260923223000_phase1_typing_atomic_learning_score.sql'), 'utf8');
+  const exportFn = migration.slice(migration.indexOf('create or replace function public.phase1_typing_account_export'),
+    migration.indexOf('revoke all on function public.phase1_typing_round_issue'));
+  assert.match(exportFn, /where user_id=p_user_id/);
+  assert.doesNotMatch(exportFn, /'answer',e\.answer/);
+  assert.doesNotMatch(exportFn, /request_hash/);
+  assert.doesNotMatch(exportFn, /learning_state_token/);
+});
+
 test('raw internal account audit states are not selected or returned', () => {
   assert.doesNotMatch(source, /select\([^\n]*before_state/);
   assert.doesNotMatch(source, /select\([^\n]*after_state/);

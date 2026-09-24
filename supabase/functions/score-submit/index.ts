@@ -7,8 +7,13 @@ import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.112.3';
 import { validateCanonicalScoreEvidence, validateScoreSubmission } from './score-engine.mjs';
 import { readLearningCatalog } from './learning-catalog.mjs';
+import { readCurrentLearningSnapshot } from './learning-snapshot.mjs';
 import { HIDDEN_REVIEW_SCORE_DEFAULT_ENABLED, verifyLearningScore, verifyRoundLearningScores } from './learning-score-verifier.mjs';
 import { classifyLearningState, LOGIN_FREE_LEARNING_ENGINE_VERSION } from '../_shared/login-free-learning-engine.mjs';
+import { TYPING_ROUND_ACTIONS_ENABLED, handleTypingRoundAction } from './typing-round-service.mjs';
+import { handleTypingRoundStartWithProtectedContext } from './typing-round-issuance.mjs';
+import { handleTypingReserveRefillWithProtectedContext } from './typing-reserve-refill.mjs';
+import { typingRoundRateArgs } from './typing-round-rate-policy.mjs';
 
 const LOGIN_FREE_REVIEW_ACTIONS_ENABLED = true;
 const REVIEW_STAGING_PROJECT_REF = 'xufxvwcelbovzsxywawg';
@@ -222,12 +227,6 @@ async function handleLegacyReviewAction(origin: string, body: any, user: any, ad
     to_state: result.to_state, due_on: result.due_on, review_attempts_used: result.review_attempts_used });
 }
 
-function learningToken(itemId: string, row: any) {
-  if (row?.state_token) return String(row.state_token);
-  return 'legacy-stable:' + itemId + ':' + Number(row?.stage || 0) + ':' + String(row?.due_date || '') + ':' +
-    String(row?.ever_failed === true) + ':' + String(row?.mastered === true);
-}
-
 function shuffled<T>(input: T[]) {
   const rows = input.slice();
   for (let index = rows.length - 1; index > 0; index -= 1) {
@@ -256,49 +255,7 @@ async function learningCatalog(admin: any, user: any, game: any, level: number) 
 }
 
 async function currentLearningSnapshot(admin: any, user: any, game: any, level: number, catalog: any[], today: string) {
-  const review = await admin.from('phase1_learning_review_states')
-    .select('item_id,state,state_token,due_on,round_id,review_attempts_used,updated_at')
-    .eq('user_id', user.id).eq('game', game.database).eq('level', level).limit(2000);
-  const srs = await admin.from('tone_srs_state')
-    .select('item_id,word,state_token,stage,due_date,ever_failed,mastered,updated_at')
-    .eq('user_id', user.id).eq('game', game.database).eq('level', level).limit(2000);
-  if (review.error || srs.error) throw Object.assign(new Error('learning_queue_unavailable'), { code: 'learning_queue_unavailable' });
-
-  const reviewById = new Map((review.data || []).map((row: any) => [row.item_id, row]));
-  const srsById = new Map((srs.data || []).filter((row: any) => row.item_id).map((row: any) => [row.item_id, row]));
-  const blocked = new Set<string>();
-  for (const row of (srs.data || []).filter((item: any) => !item.item_id)) {
-    let matches = catalog.filter((item) => item.content_ref.key === row.word);
-    if (!matches.length && row.word) matches = catalog.filter((item) => item.content_ref.source === 'game_words' && item.content_ref.key.startsWith(String(row.word) + '@'));
-    if (matches.length > 1) throw Object.assign(new Error('legacy_srs_identity_ambiguous'), { code: 'legacy_srs_identity_ambiguous' });
-    if (matches.length === 1) blocked.add(matches[0].item_id);
-  }
-
-  const snapshots = catalog.map((item) => {
-    const reviewRow: any = reviewById.get(item.item_id);
-    const srsRow: any = srsById.get(item.item_id);
-    if (reviewRow && srsRow) throw Object.assign(new Error('state_owner_conflict'), { code: 'state_owner_conflict' });
-    if (blocked.has(item.item_id)) return { ...item, state: 'legacy_identity_unresolved', state_token: 'blocked:' + item.item_id,
-      due_on: null, stage: null, ever_failed: null, mastered: false, bucket: 'non_due_srs' };
-    if (srsRow) {
-      const state = srsRow.mastered ? 'mastered' : 'srs';
-      const snapshot = { ...item, state, state_token: learningToken(item.item_id, srsRow),
-        due_on: srsRow.due_date || null, stage: Number(srsRow.stage || 0), ever_failed: srsRow.ever_failed === true,
-        mastered: srsRow.mastered === true };
-      return { ...snapshot, bucket: classifyLearningState({ state, stage: snapshot.stage, dueOn: snapshot.due_on,
-        everFailed: snapshot.ever_failed, mastered: snapshot.mastered }, today) };
-    }
-    if (reviewRow) {
-      const snapshot = { ...item, state: reviewRow.state, state_token: String(reviewRow.state_token),
-        due_on: reviewRow.due_on, round_id: reviewRow.round_id, review_attempts_used: reviewRow.review_attempts_used,
-        stage: null, ever_failed: null, mastered: false };
-      return { ...snapshot, bucket: classifyLearningState({ state: snapshot.state, dueOn: snapshot.due_on,
-        roundId: snapshot.round_id, reviewAttemptsUsed: snapshot.review_attempts_used }, today) };
-    }
-    return { ...item, state: 'normal', state_token: 'normal:' + item.item_id, due_on: null,
-      stage: null, ever_failed: null, mastered: false, bucket: 'regular_or_new' };
-  });
-  return snapshots;
+  return readCurrentLearningSnapshot({ admin, userId: user.id, game: game.database, level, catalog, today });
 }
 
 async function handleLearningQueue(origin: string, body: any, user: any, admin: any, game: any, level: number, today: string) {
@@ -426,16 +383,44 @@ serve(async (req) => {
 
     const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
     const action = String(body.action || '');
+    const isTypingRoundNamespace = action.startsWith('typing_round_');
+    const isTypingRoundAction = ['typing_round_start', 'typing_round_resume',
+      'typing_round_event', 'typing_round_refill'].includes(action);
+    if (isTypingRoundNamespace && !isTypingRoundAction) return reply(origin, { error: 'invalid_typing_action' }, 400);
+    if (isTypingRoundAction && !TYPING_ROUND_ACTIONS_ENABLED) return reply(origin, { error: 'feature_disabled' }, 404);
     const isLegacyReviewAction = action.startsWith('review_');
     const isLearningAction = action.startsWith('learning_');
     const isLearningRequest = isLegacyReviewAction || isLearningAction;
     if (isLearningRequest && !reviewCallerAllowed(user, url)) return reply(origin, { error: 'feature_disabled' }, 404);
-    const rateArgs = isLearningRequest
-      ? { p_key: isLegacyReviewAction ? `learning-review:${user.id}` : `login-free-learning:${user.id}`, p_limit: 120, p_window: 600 }
-      : { p_key: `score-submit:${user.id}`, p_limit: 30, p_window: 600 };
+    const rateArgs = isTypingRoundAction
+      ? typingRoundRateArgs(action, user.id)
+      : isLearningRequest
+        ? { p_key: isLegacyReviewAction ? `learning-review:${user.id}` : `login-free-learning:${user.id}`, p_limit: 120, p_window: 600 }
+        : { p_key: `score-submit:${user.id}`, p_limit: 30, p_window: 600 };
     const { data: rateOk, error: rateError } = await admin.rpc('game_content_rl_check', rateArgs);
     if (rateError) return reply(origin, { error: 'rate_limit_unavailable' }, 503);
     if (rateOk !== true) return reply(origin, { error: 'rate_limited' }, 429);
+
+    if (isTypingRoundAction) {
+      let result;
+      if (action === 'typing_round_start') {
+        result = await handleTypingRoundStartWithProtectedContext({
+          admin, user, body, enabled: TYPING_ROUND_ACTIONS_ENABLED, catalogMode: 'off',
+        });
+      } else if (action === 'typing_round_refill') {
+        if (!body || Object.keys(body).length !== 3
+            || !Object.hasOwn(body, 'round_id') || !Object.hasOwn(body, 'batch_id')) {
+          return reply(origin, { error: 'invalid_typing_request' }, 400);
+        }
+        result = await handleTypingReserveRefillWithProtectedContext({
+          admin, user, roundId: body.round_id, batchId: body.batch_id,
+          enabled: TYPING_ROUND_ACTIONS_ENABLED, catalogMode: 'off',
+        });
+      } else {
+        result = await handleTypingRoundAction({ admin, user, body });
+      }
+      return reply(origin, result.body, result.status);
+    }
 
     if (isLegacyReviewAction) {
       try { return await handleLegacyReviewAction(origin, body, user, admin); }

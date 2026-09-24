@@ -51,7 +51,7 @@ check(read('js/core/login-surface.js').indexOf('reading-auth.js?v=35') !== -1, '
 check(read('reading-game.html').indexOf('reading-auth.js?v=35') !== -1, 'Reading direct provider flow fetches the account-aware auth client');
 check(read('tone-finder.html').indexOf('tone-finder-game.min.js?v=92') !== -1, 'Tone fetches the current game runtime');
 check(read('reading-game.html').indexOf('reading-game-app.min.js?v=63') !== -1, 'Reading fetches the current game runtime');
-check(read('typing-game.html').indexOf('typing-game-app.min.js?v=61') !== -1, 'Typing fetches the current game runtime');
+check(read('typing-game.html').indexOf('typing-game-app.min.js?v=63') !== -1, 'Typing fetches the current game runtime');
 check(read('word-order.html').indexOf('word-order-app.min.js?v=46') !== -1, 'Word Order fetches the current game runtime');
 
 [

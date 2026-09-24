@@ -268,6 +268,179 @@ var totalStars=0,totalBadges=0;
 var W=null;
 var WORD=null,sylList=[],sylIdx=0,wordHadWrong=false,wordFailed=false; // 中級 หลายพยางค์
 var wordGolden=false; // คำทอง (18%/คำ) — ตอบถูกครั้งแรกล้วน (ไม่มีผิดเลยทั้งคำ) = ×2
+// Login Free 初/中 uses the server-owned atomic round. Guest, direct ?word=
+// practice and 高 remain on the established local path.
+var tgProtectedRound=false,tgProtectedBusy=false,tgProtectedState=null,tgProtectedNextState=null;
+var tgProtectedApplyingEvent=false,tgProtectedHintPending=false,tgProtectedHintVersion=-1,tgProtectedRestoring=false;
+function tgProtectedEligible(){
+  if(curLevel!=='初'&&curLevel!=='中')return false;
+  try{if(/[?&]word=/.test(location.search||''))return false;}catch(e){}
+  try{return !!(window.TYPING_ROUND_LIVE&&TYPING_ROUND_LIVE.enabled&&TYPING_ROUND_LIVE.eligible(curLevel));}catch(e){return false;}
+}
+function tgProtectedSetBusy(on){
+  tgProtectedBusy=!!on;
+  var game=document.getElementById('game');if(!game)return;
+  if(on){game.setAttribute('aria-busy','true');game.inert=true;game.style.pointerEvents='none';}
+  else{game.removeAttribute('aria-busy');game.inert=false;game.style.pointerEvents='';}
+}
+function tgProtectedWordIndex(ref,level){
+  if(!ref||ref.source!=='game_words'||typeof ref.key!=='string')return null;
+  for(var i=0;i<WORDS.length;i++)if(WORDS[i].level===level&&tgContentKey(WORDS[i])===ref.key)return i;
+  return null;
+}
+function tgProtectedCheckpoint(state){
+  var cp=state&&state.checkpoint;
+  if(!cp||cp.serverVerified!==true||cp.game!=='typing'||(cp.difficulty!=='初'&&cp.difficulty!=='中'))throw new Error('invalid_typing_checkpoint');
+  curLevel=cp.difficulty;tgProtectedState=state;
+  roundTotal=cp.targetCompleted;okC=cp.primaryCompletedCount;cleanC=cp.cleanCount;
+  streak=cp.combo;maxStreak=cp.maxCombo;roundHadGuide=cp.hadGuide;
+  roundScore=Number(cp.confirmedScore&&cp.confirmedScore.decimal)||0;
+  badC=(cp.confirmedItems||[]).reduce(function(total,item){return total+(Number(item.wrong)||0);},0)+(Number(cp.currentWrongCount)||0);
+  wordWrongTotal=Number(cp.currentWrongCount)||0;wrongCount=wordWrongTotal;
+  wordHadWrong=wordWrongTotal>0;wordUsedGuide=!!cp.currentGuide;
+  wordFailed=wordWrongTotal>=rgQuotaFor(1);
+  return cp;
+}
+function tgProtectedQueueFromState(state){
+  var cp=tgProtectedCheckpoint(state),refs=(cp.confirmedItems||[]).map(function(item){return item.contentRef;});
+  if(state.currentPrompt)refs.push(state.currentPrompt.content_ref);
+  var queue=refs.map(function(ref){return tgProtectedWordIndex(ref,cp.difficulty);});
+  if(queue.some(function(index){return index==null;}))throw new Error('typing_content_unavailable');
+  roundQueue=queue;cur=cp.consumedPromptCount;
+  return cp;
+}
+function tgProtectedRebuildLog(cp){
+  roundLog=(cp.confirmedItems||[]).map(function(item){
+    var index=tgProtectedWordIndex(item.contentRef,cp.difficulty),w=WORDS[index];
+    return {th:w.th,contentKey:tgContentKey(w),zh:w.zh,reading:w.readingTH,
+      userAnswer:item.outcome==='completed'?w.th:'',correctAnswer:w.th,wrong:Number(item.wrong)||0,
+      attempts:item.outcome==='completed'?[{answer:w.th,is_correct:true}]:[],
+      skipped:item.outcome==='skipped',failed:item.outcome==='completed'&&!item.clean,
+      guide:!!item.guide,pts:Number(item.awardedScore&&item.awardedScore.decimal)||0,
+      srsDue:'',mastered:false};
+  });
+}
+function tgProtectedBlock(error){
+  tgProtectedSetBusy(true);
+  var code=(error&&error.code)||'typing_round_unavailable';
+  var banner=document.getElementById('banner');
+  if(banner){banner.textContent=code==='writer_busy'?'此帳號已在另一個分頁練習，請先完成那一頁':'進度尚未得到伺服器確認，請重新載入後繼續';banner.className='gsh-feedback-slot result-banner show no';}
+  try{console.error('[typing-round]',code);}catch(e){}
+}
+function tgProtectedRestorePartial(){
+  if(!tgProtectedRound||!window.TYPING_ROUND_LIVE)return;
+  try{
+    var max=(RG_TYPE&&RG_TYPE.target)?RG_TYPE.target.length:0;
+    var position=TYPING_ROUND_LIVE.restorePartial(max);
+    if(!position)return;
+    RG_TYPE.pos=position;
+    if(RG_CONT_ON&&RG_CONT_BOUNDS&&RG_CONT_BOUNDS.length){
+      RG_CONT_SEG=0;while(RG_CONT_SEG<RG_CONT_BOUNDS.length-1&&position>=RG_CONT_BOUNDS[RG_CONT_SEG])RG_CONT_SEG++;
+      sylIdx=RG_CONT_SEG;updateSyllableCounter();renderSylStrip();
+    }
+    rgTypeRenderTarget();rgTypeHighlightNextKey();
+  }catch(e){tgProtectedBlock(e);}
+}
+function tgProtectedSavePartial(){
+  if(!tgProtectedRound||tgProtectedBusy||!window.TYPING_ROUND_LIVE)return;
+  try{TYPING_ROUND_LIVE.savePartial(RG_TYPE.pos);}catch(e){tgProtectedBlock(e);}
+}
+function tgProtectedSyncUi(state){
+  var cp=tgProtectedCheckpoint(state);
+  document.getElementById('ok').textContent=okC;document.getElementById('bad').textContent=badC;
+  updateCombo();refreshUI();return cp;
+}
+function tgProtectedEvent(event,onConfirmed){
+  if(!tgProtectedRound||tgProtectedBusy)return Promise.resolve(false);
+  tgProtectedSetBusy(true);
+  return TYPING_ROUND_LIVE.sendEvent(event).then(function(state){
+    tgProtectedSyncUi(state);tgProtectedSetBusy(false);
+    if(typeof onConfirmed==='function')onConfirmed(state);
+    return true;
+  }).catch(function(error){tgProtectedBlock(error);return false;});
+}
+function tgProtectedWrong(replay){
+  return tgProtectedEvent({type:'wrong'},function(state){
+    var confirmed=Number(state&&state.checkpoint&&state.checkpoint.currentWrongCount)||0;
+    wordWrongTotal=Math.max(0,confirmed-1);wrongCount=Math.max(0,confirmed-1);badC=Math.max(0,badC-1);
+    tgProtectedApplyingEvent=true;try{replay();}finally{tgProtectedApplyingEvent=false;}
+    tgProtectedSyncUi(state);
+  });
+}
+function tgProtectedConfirmHint(){
+  if(!tgProtectedRound||tgProtectedBusy||tgProtectedHintPending)return;
+  var cp=tgProtectedState&&tgProtectedState.checkpoint;
+  if(!cp||cp.currentGuide||tgProtectedHintVersion===cp.stateVersion)return;
+  tgProtectedHintPending=true;tgProtectedSetBusy(true);
+  TYPING_ROUND_LIVE.sendEvent({type:'hint_opened'}).then(function(state){
+    tgProtectedHintPending=false;tgProtectedHintVersion=state.checkpoint.stateVersion;
+    tgProtectedSyncUi(state);tgProtectedSetBusy(false);rgTypeHighlightNextKey();
+  }).catch(function(error){tgProtectedHintPending=false;tgProtectedBlock(error);});
+}
+function tgProtectedRenderCompleted(state){
+  var cp=tgProtectedSyncUi(state),item=cp.confirmedItems[cp.confirmedItems.length-1];
+  checked=true;RG_CONT_ON=false;sylIdx=sylList.length-1;updateSyllableCounter();
+  var SY=sylList[sylIdx];
+  W={th:SY.th,read:SY.read,zh:WORD.zh,en:SY.en,cons:SY.cons,vowel:SY.vowel,tone:SY.tone,final:SY.final,lead:SY.lead,cluster:SY.cluster,tone_name:SY.tone_name,consRead:SY.consRead,finalRead:SY.finalRead,finalDisp:SY.finalDisp,silent:SY.silent,catalog:SY.catalog};
+  rgHideTypePanelForReveal();renderSylStrip();
+  if(sylList.length>1)showRevealMulti();else{evaluateBonus();showReveal();}
+  document.getElementById('retry-hint').className='retry-hint';setGameBtns('done');
+  var pts=Number(item&&item.awardedScore&&item.awardedScore.decimal)||0,b=document.getElementById('banner');
+  var scoreFill=document.getElementById('tg-ws-fill'),scoreNumber=document.getElementById('tg-ws-num');
+  if(scoreFill){scoreFill.style.width=Math.max(0,Math.min(100,pts*10))+'%';scoreFill.style.background=tgScoreBarColor(pts,10);}
+  if(scoreNumber)scoreNumber.textContent=pts;
+  if(item&&item.guide){b.textContent='這次用了提示，先不計分（下次試試看不看提示！）';b.className='gsh-feedback-slot result-banner show half';}
+  else if(item&&item.clean){b.textContent='全部正確！🎉 +'+pts+' 分';b.className='gsh-feedback-slot result-banner show ok';}
+  else{b.textContent='完成這個字！+'+pts+' 分';b.className='gsh-feedback-slot result-banner show half';}
+  if(pts>0)pop('+'+pts);
+  tgProtectedRebuildLog(cp);tgProtectedNextState=state;
+  document.getElementById('btn-next').textContent='下一題 →';
+}
+function tgProtectedCompleteWord(){
+  if(!tgProtectedRound||tgProtectedBusy)return false;
+  tgProtectedEvent({type:'completed',answer:WORD.th},tgProtectedRenderCompleted);return true;
+}
+function tgProtectedAdvance(state){
+  var cp=tgProtectedQueueFromState(state);tgProtectedNextState=null;tgProtectedRebuildLog(cp);
+  if(cp.complete){endRound();return;}
+  tgProtectedHintVersion=-1;tgProtectedRestoring=true;loadWord();tgProtectedRestorePartial();tgProtectedRestoring=false;rgTypeHighlightNextKey();
+}
+function tgProtectedSkip(){
+  if(!tgProtectedRound||tgProtectedBusy)return false;
+  tgProtectedEvent({type:'skipped'},function(state){tgProtectedAdvance(state);});return true;
+}
+function tgProtectedEndRound(){
+  var cp=tgProtectedState&&tgProtectedState.checkpoint;
+  if(!cp||cp.complete!==true){tgProtectedBlock({code:'invalid_typing_checkpoint'});return;}
+  tgCloseMobileKeyboard();tgRoundActive=false;tgProtectedSetBusy(false);tgProtectedRebuildLog(cp);
+  document.getElementById('game').style.display='none';document.getElementById('end').style.display='flex';
+  if(window.GameFlow)GameFlow.markResult('#end');
+  var finalScore=Number(cp.finalScore)||0,bonus=Number(cp.roundBonus&&cp.roundBonus.total)||0;
+  document.getElementById('end-score').textContent=finalScore+' 分';
+  var detail=cp.hadGuide?'這輪用了提示練習 🙂 下次試試看不看提示，就能拿分數！':(cp.perfectEligible?'完美一輪！✨ 全部 '+cp.targetCompleted+' 題答對':'乾淨答對 '+cp.cleanCount+'/'+cp.targetCompleted+' 題');
+  if(bonus)detail+='・含完成獎勵 +'+bonus;
+  document.getElementById('end-detail').textContent=detail;
+  var mistakes=document.getElementById('tg-mistakes-btn');if(mistakes)mistakes.style.display=roundLog.length?'':'none';
+  try{if(typeof gtag==='function')gtag('event','typing_game_complete',{category:'game',score:finalScore,total:cp.targetCompleted,perfect:cp.cleanCount,level:curLevel});}catch(e){}
+  if(roundReport&&window.RoundReport)RoundReport.finish(roundReport,{score:finalScore,submission_id:null});
+  if(window.GameFlow)GameFlow.enhanceResult({key:'typing-result',root:'#end',actions:'#end .gsh-end-actions',correct:cp.cleanCount,total:cp.targetCompleted,highlights:[],report:roundReport,onReplay:restart});
+  refreshUI();
+}
+function tgProtectedStart(){
+  if(!tgProtectedEligible())return false;
+  tgProtectedSetBusy(true);
+  TYPING_ROUND_LIVE.activate(curLevel).then(function(state){
+    tgProtectedRound=true;tgRoundActive=true;tgProtectedNextState=null;
+    var cp=tgProtectedQueueFromState(state);tgProtectedRebuildLog(cp);
+    roundReport=window.RoundReport?RoundReport.create({game_type:'typing',difficulty:curLevel,mode:'thai-keyboard'}):null;
+    document.querySelectorAll('.ltab').forEach(function(b){b.classList.toggle('active',b.id==='ltab-'+curLevel);});
+    document.getElementById('end').style.display='none';document.getElementById('game').style.display='flex';
+    tgProtectedSetBusy(false);refreshUI();
+    if(cp.complete)endRound();else{tgProtectedRestoring=true;loadWord();tgProtectedRestorePartial();tgProtectedRestoring=false;rgTypeHighlightNextKey();}
+  }).catch(tgProtectedBlock);
+  return true;
+}
+window.addEventListener('typing-round-owner-change',function(){if(tgProtectedRound)tgProtectedBlock({code:'owner_changed'});});
 var optTypes={};
 var optTiles=[],correctVal={}; // ระบบไทล์ผูกช่อง (กันบั๊ก "ค่าซ้ำข้ามช่อง" เช่น อ+ออ)
 function tileById(id){for(var i=0;i<optTiles.length;i++)if(optTiles[i].id===id)return optTiles[i];return null;}
@@ -387,6 +560,11 @@ function dispOpt(comp,x){
 // ════════════════════════════════════════════
 var tgLevelSwitchRequest=0;
 function setLevel(lv){
+  // รัฐธรรมนูญเกม: รอบปกติที่เริ่มแล้วต้องเล่นให้จบ ห้ามทิ้งรอบด้วยการเปลี่ยนระดับ
+  if(tgRoundActive){
+    try{rgToast('請先完成目前這一輪，再更換等級');}catch(e){}
+    return false;
+  }
   var request=++tgLevelSwitchRequest;
   tgCloseMobileKeyboard();
   try{ if(typeof gtag==='function') gtag('event','typing_game_level_change',{category:'game', level: lv}); }catch(e){}
@@ -423,7 +601,7 @@ function setLevel(lv){
     Promise.resolve(ready).then(go,function(error){
       if(request===tgLevelSwitchRequest)console.error('[typing-game] level queue unavailable:',error);
     });
-    return;
+    return true;
   }
   // Lin 2026-07-13: เครื่องใหม่ที่เพิ่งล็อกอิน → รอ sync สั้นๆ (≤1.5วิ) ให้รอบแรกถูกต้อง เน็ตล่ม/ช้าไปต่อทันที ไม่ค้าง
   if(rgLoggedIn() && !window.__tgSrsSyncedOnce){
@@ -432,12 +610,15 @@ function setLevel(lv){
   } else {
     try{Promise.race([tgPrimeReview(),new Promise(function(r){setTimeout(r,1500);})]).then(go);}catch(e){go();}
   }
+  return true;
 }
 
 // ════════════════════════════════════════════
 // GAME FLOW
 // ════════════════════════════════════════════
 function initGame(){
+  if(typeof tgProtectedStart==='function'&&tgProtectedStart())return;
+  tgProtectedRound=false;tgProtectedState=null;tgProtectedNextState=null;
   tgRoundActive=true;
   roundLog=[]; // เก็บ log ทุกคำในรอบนี้ไว้ทำรายงาน PDF ตอนจบรอบ — Lin 2026-07-07
   roundReport=window.RoundReport?RoundReport.create({game_type:'typing',difficulty:curLevel,mode:'thai-keyboard'}):null;
@@ -606,7 +787,7 @@ function loadWord(){
   var _tgParticle=(WORD.level==='高')?tgShowParticleFor(WORD):null;
   if(_tgParticle) sylList=sylList.concat([{th:_tgParticle,isParticle:true}]);
   sylIdx=0;wordHadWrong=false;wordFailed=false;wrongCount=0;wordWrongTotal=0;wordUsedGuide=false;sylCache=[]; // sylCache: เก็บ state แต่ละพยางค์ ให้เลือกพยางค์ไหนก่อนก็ได้ (คำใหม่ = ล้าง)
-  wordGolden=Math.random()<GOLDEN_WORD_CHANCE; // สุ่มคำทองใหม่ทุกคำ (Lin 2026-07-03)
+  wordGolden=(typeof tgProtectedRound!=='undefined'&&tgProtectedRound)?!!(tgProtectedState&&tgProtectedState.currentPrompt&&tgProtectedState.currentPrompt.golden):Math.random()<GOLDEN_WORD_CHANCE; // server owns Golden for protected rounds
   document.getElementById('wth').textContent=WORD.th+(_tgParticle||'');
   document.getElementById('wzh').textContent=WORD.zh;
   tgSyncParticleBtn();
@@ -909,6 +1090,7 @@ function check(){
   var allOk=comps.every(function(c){var id=slotFills[c];if(id==null)return false;var t=tileById(id);return t&&t.val===correctVal[c];});
 
   if(allOk){
+    if(typeof tgProtectedCompleteWord==='function'&&tgProtectedCompleteWord())return;
     checked=true;
     markOpts();markSlots();
     evaluateBonus();showReveal();renderSylStrip();
@@ -925,6 +1107,7 @@ function check(){
     document.getElementById('ok').textContent=okC;document.getElementById('bad').textContent=badC;
     refreshUI();
   } else {
+    if(typeof tgProtectedRound!=='undefined'&&tgProtectedRound&&!tgProtectedApplyingEvent){tgProtectedWrong(check);return;}
     wrongCount++;wordHadWrong=true;streak=0;badC++;
     try{ if(typeof gtag==='function') gtag('event','typing_game_wrong',{category:'game',word: WORD.th, wrongs: wrongCount}); }catch(e){}
     try{ if(typeof gtag==='function') gtag('event','game_wrong',{category:'game',game:'typing_game'}); }catch(e){}
@@ -1036,12 +1219,13 @@ function tgShowAllMastered(){
   div.addEventListener('click',function(e){if(e.target===div)div.remove();});
   document.body.appendChild(div);
   document.getElementById('tg-am-review').onclick=function(){try{ if(typeof gtag==='function') gtag('event','typing_game_allmastered_continue',{category:'game'}); }catch(e){}div.remove();};
-  document.getElementById('tg-am-level').onclick=function(){try{ if(typeof gtag==='function') gtag('event','typing_game_allmastered_switch_level',{category:'game'}); }catch(e){}div.remove();var el=document.getElementById('end');if(el)el.style.display='none';var g=document.getElementById('game');if(g)g.style.display='none';window.scrollTo(0,0);};
+  document.getElementById('tg-am-level').onclick=function(){try{ if(typeof gtag==='function') gtag('event','typing_game_allmastered_switch_level',{category:'game'}); }catch(e){}div.remove();try{rgToast('請先完成目前這一輪，再更換等級');}catch(e){}window.scrollTo(0,0);};
 }
 
 // Neutral skip: advance without answer, score, Combo, life, or SRS mutation.
 function skipWord(){
   try{ if(typeof gtag==='function') gtag('event','typing_game_skip_click',{category:'game', word:(typeof WORD!=='undefined'&&WORD)?WORD.th:''}); }catch(e){}
+  if(typeof tgProtectedSkip==='function'&&tgProtectedSkip())return;
   curWordIsKnownCheck=false;
   tgCloseMobileKeyboard();
   rgLogWord({skipped:true,guide:!!wordUsedGuide,wrong:0,attempts:[],userAnswer:'',pts:0});
@@ -1054,6 +1238,10 @@ function next(){
 }
 
 function nextWord(){
+  if(typeof tgProtectedRound!=='undefined'&&tgProtectedRound){
+    if(tgProtectedNextState){tgProtectedAdvance(tgProtectedNextState);return;}
+    return;
+  }
   if(window.LearningReview&&LearningReview.advance&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()){
     LearningReview.advance(roundReport,tgAdvanceToNextWord);
     return;
@@ -1068,6 +1256,7 @@ function tgAdvanceToNextWord(){
 }
 
 function endRound(){
+  if(typeof tgProtectedRound!=='undefined'&&tgProtectedRound){tgProtectedEndRound();return;}
   tgCloseMobileKeyboard();
   tgRoundActive=false;
   try{ if(window.GameResume&&(!window.LearningReview||!LearningReview.runtimeEnabled())) GameResume.clear('typing-game'); }catch(e){} // Phase E3: จบรอบแล้ว ไม่มีอะไรให้ resume อีก
@@ -1244,6 +1433,7 @@ function tgPrepareRestoredReview(ready){
 }
 function tgSaveResume(completedCurrent){
   try{
+    if(typeof tgProtectedRound!=='undefined'&&tgProtectedRound)return;
     if(!window.GameResume)return;
     if(!roundQueue||!roundQueue.length)return;
     GameResume.save('typing-game',{
@@ -1264,6 +1454,7 @@ function tgTryResume(){
     var detailEl=document.getElementById('tg-resume-detail');
     if(!banner||!detailEl)return false;
     window.__tgResumeData=saved;
+    tgRoundActive=true;
     if(window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()){
       tgResumeContinue();
       return true;
@@ -1282,6 +1473,7 @@ function tgResumeContinue(){
     // กู้ได้ต่อเมื่อทุกตัวตนยังตรงกับข้อมูลปัจจุบันทั้งรอบ ห้ามข้ามคำหายหรือซ่อมคิวบางส่วน
     var q=tgResolveResumeWordIds(saved.wordIds,saved.level);
     if(!q){ tgResumeRestart(); return; }
+    tgRoundActive=true;
     try{ if(typeof gtag==='function') gtag('event','typing_game_resume_continue',{category:'game', level: saved.level}); }catch(e){}
     curLevel=saved.level||curLevel;
     try{localStorage.setItem('tg_level',curLevel);}catch(e){}
@@ -1308,6 +1500,7 @@ function tgResumeContinue(){
   }catch(e){}
 }
 function tgResumeRestartSame(){
+  if(tgRoundActive){try{rgToast('請繼續完成上次尚未結束的一輪');}catch(e){}return false;}
   var saved=window.__tgResumeData;
   if(!saved){tgResumeNewRound();return;}
   var q=tgResolveResumeWordIds(saved.wordIds,saved.level);
@@ -1316,15 +1509,17 @@ function tgResumeRestartSame(){
   curLevel=saved.level||curLevel;roundQueue=q;roundTotal=q.length;cur=0;okC=0;badC=0;streak=0;maxStreak=0;roundScore=0;cleanC=0;roundHadGuide=false;roundLog=[];roundReport=window.RoundReport?RoundReport.create({game_type:'typing',difficulty:curLevel,mode:'thai-keyboard'}):null;window.__tgResumeData=null;
   tgPrepareRestoredReview(function(){document.getElementById('end').style.display='none';document.getElementById('game').style.display='flex';document.getElementById('bars-wrap').style.display='flex';var _statRow=document.getElementById('rg-stat-row');if(_statRow)_statRow.style.display='flex';refreshUI();tgSaveResume();loadWord();});
 }
-function tgResumeNewRound(){
+function tgResumeNewRound(forceRecovery){
+  if(tgRoundActive&&forceRecovery!==true){try{rgToast('請繼續完成上次尚未結束的一輪');}catch(e){}return false;}
   try{ if(typeof gtag==='function') gtag('event','typing_game_resume_restart',{category:'game'}); }catch(e){}
   var banner=document.getElementById('tg-resume-banner');
   if(banner)banner.style.display='none';
   try{ if(window.GameResume) GameResume.clear('typing-game'); }catch(e){}
   window.__tgResumeData=null;
   initGame();
+  return true;
 }
-function tgResumeRestart(){tgResumeNewRound();}
+function tgResumeRestart(){return tgResumeNewRound(true);}
 
 // ════════════════════════════════════════════
 // PDF 報告（本輪作答事實 + 登入後 SRS 下次複習日期）— Lin 2026-07-07
@@ -2008,6 +2203,11 @@ function rgTypeHighlightNextKey(){
   if(!expected){ shiftKeys.forEach(function(key){key.classList.remove('need');}); return; }
   var info=RG_REVERSE[expected];
   if(!info){ shiftKeys.forEach(function(key){key.classList.remove('need');}); return; }
+  if(typeof tgProtectedRound!=='undefined'&&tgProtectedRound&&tgProtectedRestoring){shiftKeys.forEach(function(key){key.classList.remove('need');});return;}
+  if(typeof tgProtectedRound!=='undefined'&&tgProtectedRound&&!(tgProtectedState&&tgProtectedState.checkpoint&&tgProtectedState.checkpoint.currentGuide)){
+    shiftKeys.forEach(function(key){key.classList.remove('need');});
+    tgProtectedConfirmHint();return;
+  }
   var keyEl=box.querySelector('.tk-key[data-code="'+info.code+'"]');
   if(keyEl)keyEl.classList.add('hint');
   shiftKeys.forEach(function(key){key.classList.toggle('need',!!info.shift);});
@@ -2035,6 +2235,7 @@ function rgTypeLoadSyl(){
 }
 // สาขา "ถูกทั้งพยางค์" — ทำตามรูปแบบเดียวกับ check() ฝั่งกดเลือก (ใช้ finalizeWord/คะแนน/badge ชุดเดียวกัน)
 function rgTypeSuccessBranch(){
+  if(typeof tgProtectedCompleteWord==='function'&&tgProtectedCompleteWord())return;
   checked=true;
   evaluateBonus();showReveal();renderSylStrip();
   document.getElementById('retry-hint').className='retry-hint';
@@ -2088,6 +2289,7 @@ function rgTypeChar(ch){
   if(!expected)return;
   if(ch===expected){
     RG_TYPE.pos++;
+    if(typeof tgProtectedSavePartial==='function')tgProtectedSavePartial();
     rgTypeRenderTarget();
     if(RG_TYPE.pos>=RG_TYPE.target.length){
       // Lin 2026-07-13: พิมพ์ครบพยางค์แล้ว ต้องเคลียร์ตัวใบ้ที่ค้างอยู่บนคีย์บอร์ดด้วย ไม่งั้นปุ่มล่าสุดยังสว่างค้าง ทำให้ไม่รู้ว่ากดไปแล้ว
@@ -2102,6 +2304,7 @@ function rgTypeChar(ch){
     // Lin 2026-09-14: คำสุภาพมีไว้ให้พิมพ์ครบเท่านั้น — พิมพ์ผิดให้ลองใหม่
     // แต่ห้ามเปลี่ยนคะแนน, สถิติผิด, streak หรือสถานะ clean ของคำ/รอบ
     if(tgIsParticleSegment(sylIdx)){rgTypeFlashWrong();rgTypeHighlightNextKey();return;}
+    if(typeof tgProtectedRound!=='undefined'&&tgProtectedRound&&!tgProtectedApplyingEvent){tgProtectedWrong(function(){rgTypeChar(ch);});return;}
     RG_TYPE.wrong++;wordWrongTotal++;wordHadWrong=true;streak=0;badC++;
     tgUpdateScoreBar(); // Lin 2026-07-06: หลอด 本題分數 ลดสด+ไล่สีตอนพิมพ์ผิด
     document.getElementById('ok').textContent=okC;document.getElementById('bad').textContent=badC;
@@ -2137,7 +2340,7 @@ function rgHandleEnterKey(e){
 function rgTypeBackspace(){
   if(RG_CONT_ON)return rgContBackspace();
   if(!RG_TYPE.on || checked || RG_TYPE.pos<=0)return;
-  RG_TYPE.pos--;rgTypeRenderTarget();rgTypeHighlightNextKey();
+  RG_TYPE.pos--;if(typeof tgProtectedSavePartial==='function')tgProtectedSavePartial();rgTypeRenderTarget();rgTypeHighlightNextKey();
 }
 
 // ════════════════════════════════════════════
@@ -2176,6 +2379,7 @@ function rgContChar(ch){
   if(!expected)return;
   if(ch===expected){
     RG_TYPE.pos++;
+    if(typeof tgProtectedSavePartial==='function')tgProtectedSavePartial();
     rgTypeRenderTarget();
     if(RG_CONT_SEG<RG_CONT_BOUNDS.length && RG_TYPE.pos>=RG_CONT_BOUNDS[RG_CONT_SEG]){
       document.getElementById('retry-hint').className='retry-hint';
@@ -2188,6 +2392,7 @@ function rgContChar(ch){
     // Lin 2026-09-14: คำสุภาพมีไว้ให้พิมพ์ครบเท่านั้น — พิมพ์ผิดให้ลองใหม่
     // แต่ห้ามเปลี่ยนคะแนน, สถิติผิด, streak หรือสถานะ clean ของคำ/รอบ
     if(tgIsParticleSegment(RG_CONT_SEG)){rgTypeFlashWrong();rgTypeHighlightNextKey();return;}
+    if(typeof tgProtectedRound!=='undefined'&&tgProtectedRound&&!tgProtectedApplyingEvent){tgProtectedWrong(function(){rgContChar(ch);});return;}
     RG_CONT_WRONG++;wordWrongTotal++;wordHadWrong=true;streak=0;badC++;
     tgUpdateScoreBar(); // Lin 2026-07-06: หลอด 本題分數 ลดสด+ไล่สีตอนพิมพ์ผิด
     document.getElementById('ok').textContent=okC;document.getElementById('bad').textContent=badC;
@@ -2227,6 +2432,7 @@ function rgContAdvanceSegment(isLast){
 // คำพิมพ์ครบทุกพยางค์แล้ว → ปิดจบเหมือน rgTypeSuccessBranch/rgTypeFailBranch ตอน lastSyl ทุกประการ
 // (ตั้ง W ให้ตรงพยางค์สุดท้ายก่อน เพราะ loadSyl() ถูกเรียกแค่ครั้งเดียวตอน sylIdx=0 — showReveal()/buildRevealRules ต้องใช้ W ของพยางค์ที่เพิ่งพิมพ์จบจริง)
 function rgContFinish(){
+  if(typeof tgProtectedCompleteWord==='function'&&tgProtectedCompleteWord())return;
   checked=true;
   RG_CONT_ON=false;
   sylIdx=sylList.length-1;
@@ -2250,7 +2456,7 @@ function rgContBackspace(){
   if(checked)return;
   var segStart=RG_CONT_SEG===0?0:RG_CONT_BOUNDS[RG_CONT_SEG-1];
   if(RG_TYPE.pos<=segStart)return;
-  RG_TYPE.pos--;rgTypeRenderTarget();rgTypeHighlightNextKey();
+  RG_TYPE.pos--;if(typeof tgProtectedSavePartial==='function')tgProtectedSavePartial();rgTypeRenderTarget();rgTypeHighlightNextKey();
 }
 
 // (rgToneKeyNum + คีย์ลัดกดเลข 1-5 เลือกวรรณยุกต์ ถูกลบแล้ว — เอา猜聲調ออก 2026-07-30)
@@ -2471,6 +2677,7 @@ function rgCheckWholeWord(){
     if(!ok){ wrongIdx=i; break; }
   }
   if(wrongIdx===-1){
+    if(typeof tgProtectedCompleteWord==='function'&&tgProtectedCompleteWord())return;
     rgJumpForCheck(sylList.length-1); // ให้ sylIdx จบที่พยางค์สุดท้ายเสมอ กัน next() งงว่าไปพยางค์ถัดไปหรือคำถัดไป
     checked=true; // ต้องตั้งหลังสลับพยางค์ เพราะ loadSyl() (ถ้าพยางค์นี้ยังไม่เคยแวะ) จะ reset checked=false ทับ
     rgFinalizeAllBonuses();
@@ -2483,6 +2690,7 @@ function rgCheckWholeWord(){
     document.getElementById('ok').textContent=okC;document.getElementById('bad').textContent=badC;
     refreshUI();
   } else {
+    if(typeof tgProtectedRound!=='undefined'&&tgProtectedRound&&!tgProtectedApplyingEvent){tgProtectedWrong(rgCheckWholeWord);return;}
     wrongCount++;wordHadWrong=true;streak=0;badC++;
     try{ if(typeof gtag==='function') gtag('event','typing_game_wrong',{category:'game',word: WORD.th, wrongs: wrongCount, syllable: wrongIdx+1}); }catch(e){}
     try{ if(typeof gtag==='function') gtag('event','game_wrong',{category:'game',game:'typing_game'}); }catch(e){}
@@ -2534,10 +2742,11 @@ try{
   }
 }catch(e){}
 loadSave();
-var _tgResumeHandled=false;
-var _tgLoginFreeResume=window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled();
-if(!_autoPlanTypingLevel||_tgLoginFreeResume){try{ _tgResumeHandled=tgTryResume(); }catch(e){ _tgResumeHandled=false; }}
-if(!_tgResumeHandled){
+function tgBootstrapInitialRound(){
+  var _tgResumeHandled=false;
+  var _tgLoginFreeResume=window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled();
+  if(!tgProtectedEligible()&&(!_autoPlanTypingLevel||_tgLoginFreeResume)){try{ _tgResumeHandled=tgTryResume(); }catch(e){ _tgResumeHandled=false; }}
+  if(_tgResumeHandled)return;
   // This is the only fresh-round bootstrap. Both optional account reads are bounded;
   // a rejected or stalled Review/SRS request must not leave the game on HTML placeholders.
   var _tgInitialStarted=false;
@@ -2546,6 +2755,7 @@ if(!_tgResumeHandled){
     _tgInitialStarted=true;
     initGame();
   };
+  if(tgProtectedEligible()){_tgInitialGo();return;}
   var _tgInitialSrsReady=Promise.resolve();
   var _tgInitialReviewReady=Promise.resolve();
   try{if(rgLoggedIn())_tgInitialSrsReady=tgSyncSrsFromServer(true);}catch(e){}
@@ -2560,6 +2770,9 @@ if(!_tgResumeHandled){
     setTimeout(_tgInitialGo,1700);
   }
 }
+if(window.TYPING_ROUND_LIVE&&TYPING_ROUND_LIVE.ready){
+  Promise.race([TYPING_ROUND_LIVE.ready(),new Promise(function(resolve){setTimeout(resolve,2000);})]).then(tgBootstrapInitialRound,tgBootstrapInitialRound);
+}else tgBootstrapInitialRound();
 try { rgRenderGameBar(); } catch(e){}
 
 // ── ฟ้อนต์โมเดิร์น (เหมือนเกมเสียง) ──

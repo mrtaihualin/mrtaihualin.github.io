@@ -263,7 +263,7 @@ test('Typing exposes 47 character keys and two synchronized one-shot Shift contr
   assert.match(typingApp, /'<span class="tk-shift">'\+sh\+'<\/span><span class="tk-base">'\+un\+'<\/span>'/);
   assert.doesNotMatch(typingApp, /function rgKeyboardLabelHTML\(/);
   assert.match(read('typing-game.html'), /\.tkbd\.shift-on \.tk-key \.tk-shift[^{]*\{font-size:15px/);
-  assert.match(read('typing-game.html'), /typing-game-app\.min\.js\?v=61/);
+  assert.match(read('typing-game.html'), /typing-game-app\.min\.js\?v=63/);
   assert.match(css, /data-gsh-game="typing"[\s\S]{0,180}#rg-kbd[^}]+max-width: none !important/);
   assert.match(css, /#rg-kbd \.gsh-split-kbd-row[^}]+grid-template-columns: minmax\(0, 30fr\) minmax\(0, 40fr\) minmax\(0, 30fr\) !important/);
   assert.match(css, /#rg-kbd \.gsh-split-kbd-half[^}]+padding-inline: clamp\(3px, \.8dvh, 5px\)/);
