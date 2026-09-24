@@ -1,5 +1,11 @@
 # ประวัติงานดูแลเว็บ
 
+## 2026-09-24 — Supabase backup migration to GitLab CI (`SOURCE_PASS / GITLAB_RUNTIME_NOT_CONFIGURED / PRODUCTION_UNCHANGED`)
+
+- Retired the unusable GitHub Actions backup workflow and moved the same Production backup owner into GitLab CI. The manual job is restricted to a default-branch web pipeline, requires a second manual confirmation, creates one encrypted roles/schema/data archive, performs exactly one Google Drive create plus remote size/MD5 verification, and has no Drive list/delete/retention or LINE path. A separate scheduled job can rotate old files and send LINE status only when both `CI_PIPELINE_SOURCE=schedule` and the dedicated `BACKUP_SCHEDULE=true` flag are present.
+- The GitLab runner pins the exact Production Supabase pooler for project `qzkxlhpcputsvbqmtqfi`, installs package-owned PostgreSQL 17, validates both dump executables before the first read, requires every protected variable before connecting, uses a private temporary directory, forces encryption before upload and removes plaintext/temp material. Backup jobs are serialized and non-interruptible; scheduled pipelines skip the unrelated full website verifier.
+- Verification: GitLab migration safety `18/18`, shell/Node/YAML syntax, fail-closed missing-secret/wrong-source runtime checks, secret scan and the complete elevated `node scripts/check-site.js` gate across `1,174` files PASS. No secret value was read or copied, no GitLab variable/schedule was created, no database dump/upload/Drive list/delete/LINE call, Supabase mutation, Edge deploy or website release occurred. Runtime activation remains blocked until Lin creates the eight protected masked/hidden GitLab variables and a dedicated 03:00 Asia/Bangkok schedule; the first BACKUP_ONLY execution still requires a fresh exact authorization.
+
 ## 2026-09-22 — Typing local playability audit (`SOURCE_PASS / CONTENT_REVIEW_DEFERRED / PRODUCTION_UNCHANGED`)
 
 - ตรวจ Typing ต่อจาก Reading checkpoint `7bb0f44` โดยจำกัดขอบเขตที่การพิมพ์/ตรวจคำ, item/data transport, save/continuation, error/recovery และ complete-round gates; ไม่แก้ keyboard button renderer, Product rule, UI, คำศัพท์, Auth, Supabase/Edge/DB หรือ Production และไม่ทำ Human matrix ซ้ำ
