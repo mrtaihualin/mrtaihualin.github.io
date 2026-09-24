@@ -4,11 +4,11 @@
 // deno-lint-ignore-file
 // @ts-nocheck
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'npm:@supabase/supabase-js@2.112.3';
 
 const CAPS = {
   anon: { '初': 50, '中': 50, sentences: 20 },
-  login: { '初': 100, '中': 100, sentences: 40 },
+  login: { '初': 100, '中': 100, sentences: 42 },
 };
 const ALLOWED_ORIGINS = [
   'https://mrtaihualin.com', 'https://www.mrtaihualin.com',

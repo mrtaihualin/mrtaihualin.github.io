@@ -217,7 +217,7 @@ serve(async (req) => {
     const [
       profileRes, gameAccountRes, rewardPointsRes, starLedgerRes,
       toneProgressRes, toneSessionsRes, toneSrsRes, readingSessionsRes, rewardEventsRes,
-      lineIdentityRes, auditLogRes, learningReviewRes,
+      lineIdentityRes, auditLogRes, learningReviewRes, typingRoundExportRes,
       wordVaultWrap,
     ] = await Promise.all([
       // ── ชั้นที่ 1: RLS-scoped client (ผูก Authorization ของผู้เรียก) — Postgres กรอง auth.uid()=user_id ให้เอง ──
@@ -236,6 +236,9 @@ serve(async (req) => {
       admin.from('line_identities').select('line_user_id,created_at').eq('user_id', callerUid),
       admin.from('account_audit_log').select('event_type,provider,created_at').eq('user_id', callerUid).order('created_at', { ascending: false }).limit(HISTORY_ROW_CAP),
       admin.from('phase1_learning_review_states').select('game,level,item_id,state,due_on,review_attempts_used,updated_at').eq('user_id', callerUid).order('updated_at', { ascending: false }).limit(HISTORY_ROW_CAP),
+      // Protected Typing export is a server-owned projection: own round/activity
+      // only, with no answer, future prompt/reserve, operation hash or learning token.
+      admin.rpc('phase1_typing_account_export', { p_user_id: callerUid, p_limit: HISTORY_ROW_CAP }),
 
       // 🆕 คลังคำ (單字庫) — ชั้นที่ 1 เหมือนกลุ่มบน (มี SELECT policy auth.uid()=user_id แล้ว)
       //    ห่อด้วยตัวช่วยเพราะต้องรองรับฐานข้อมูลที่ยังไม่มีคอลัมน์ deleted_at
@@ -250,6 +253,7 @@ serve(async (req) => {
       ['tone_srs_state', toneSrsRes], ['reading_sessions', readingSessionsRes], ['game_reward_events', rewardEventsRes],
       ['line_identities', lineIdentityRes], ['account_audit_log', auditLogRes],
       ['phase1_learning_review_states', learningReviewRes],
+      ['phase1_typing_account_export', typingRoundExportRes],
       ['learning_saved_items', wordVaultRes],
     ]) {
       if (res.error) {
@@ -298,6 +302,7 @@ serve(async (req) => {
       total_star_ledger_entries: starLedgerRes.data.length,
       total_words_in_srs: toneSrsRes.data.length,
       total_words_in_pre_srs_review: learningReviewRes.data.length,
+      total_typing_rounds: typingRoundExportRes.data?.rounds?.length || 0,
       linked_login_methods: providers.length + lineIdentityRes.data.length,
       total_saved_words: vaultActive.length,   // 🆕 คำในคลังคำที่ยังอยู่ (ไม่นับคำที่ลบแล้ว)
     };
@@ -308,6 +313,7 @@ serve(async (req) => {
       tone_sessions: toneSessionsRes.data.length >= HISTORY_ROW_CAP,
       tone_srs_state: toneSrsRes.data.length >= HISTORY_ROW_CAP,
       phase1_learning_review_states: learningReviewRes.data.length >= HISTORY_ROW_CAP,
+      phase1_typing_rounds: typingRoundExportRes.data?.capped === true,
       reading_sessions: readingSessionsRes.data.length >= HISTORY_ROW_CAP,
       game_reward_events: rewardEventsRes.data.length >= HISTORY_ROW_CAP,
       account_history: accountHistory.length >= HISTORY_ROW_CAP,
@@ -337,6 +343,7 @@ serve(async (req) => {
         tone_sessions: toneSessionsRes.data,
         tone_srs_state: toneSrsRes.data,
         phase1_learning_review_states: learningReviewRes.data,
+        phase1_typing_rounds: typingRoundExportRes.data?.rounds || [],
         reading_sessions: readingSessionsRes.data,
         game_reward_events: rewardEventsRes.data,
         account_changes: accountHistory, // สรุปภาษาคนจาก account_audit_log — ไม่ใช่แถวดิบ

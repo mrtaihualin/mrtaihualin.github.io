@@ -156,7 +156,8 @@
     'tf_badges_v1', 'tf_streak_v1', 'tf_word_wrong_v1', 'tf_wrong_stats_v1',
     'thai_game_acct_v1', 'linvault_v1', 'sentence_vault_v1', 'lego_vault_v1',
     'phase1_account_resume_v1', 'phase1_canonical_meta_v1',
-    'phase1_practice_event_pending_v1', 'gsh_study_plan_account_v1'
+    'phase1_practice_event_pending_v1', 'gsh_study_plan_account_v1',
+    'typing_round_scope_v1'
   ];
   function bindLearningOwner(user) {
     var uid = (user && user.id) ? String(user.id) : '';
@@ -165,6 +166,18 @@
     var changed = owner !== uid;
     if (changed) {
       try {
+        var typingScope = localStorage.getItem('typing_round_scope_v1') || '';
+        if (typingScope) {
+          localStorage.removeItem('typing-round-pending:v1:' + typingScope);
+          localStorage.removeItem('typing-round-draft:v1:' + typingScope);
+          localStorage.removeItem('typing-round-start:v1:' + typingScope);
+          for (var storageIndex = localStorage.length - 1; storageIndex >= 0; storageIndex--) {
+            var storageKey = localStorage.key(storageIndex) || '';
+            if (storageKey.indexOf('typing-round-refill:v1:' + typingScope + ':') === 0) {
+              localStorage.removeItem(storageKey);
+            }
+          }
+        }
         ACCOUNT_LEARNING_KEYS.forEach(function (key) { localStorage.removeItem(key); });
         if (uid) localStorage.setItem(LEARNING_OWNER_KEY, uid);
         else localStorage.removeItem(LEARNING_OWNER_KEY);

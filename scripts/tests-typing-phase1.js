@@ -160,7 +160,7 @@ test('continuous typing zero score keeps accepting input without reveal/finish',
 
 test('fully typed word reveals, shows Next, and Enter advances', () => {
   const wAssignments = Array.from(source.matchAll(/W=\{th:SY\.th,[^\n]+?\};/g), (match) => match[0]);
-  assert.strictEqual(wAssignments.length, 2, 'Typing must have exactly two reviewed-syllable W assignments');
+  assert.strictEqual(wAssignments.length, 3, 'Typing must have exactly three reviewed-syllable W assignments, including protected completion');
   wAssignments.forEach((assignment) => assert.match(assignment, /catalog:SY\.catalog/));
 
   function element() {
@@ -287,6 +287,105 @@ test('mobile software keyboard closes outside active Typing input states', () =>
   assert.doesNotMatch(source, /#wm-trigger/);
   assert.match(functionBlock('setLevel', 'initGame'), /tgCloseMobileKeyboard\(\)/);
   assert.match(functionBlock('endRound', 'tgAttachLoginSummary'), /tgCloseMobileKeyboard\(\)/);
+});
+
+test('an unfinished normal round cannot be abandoned by changing level', () => {
+  const levelSwitch = functionBlock('setLevel', 'initGame');
+  const events = [];
+  const elements = {
+    'ltab-初': { classList: { add() { events.push('tab-add-initial'); } } },
+    'ltab-中': { classList: { add() { events.push('tab-add-middle'); } } },
+    end: { style: {} },
+    'tg-resume-banner': { style: {} },
+    'bars-wrap': { style: {} },
+    'rg-stat-row': { style: {} },
+    game: {
+      style: {},
+      inert: false,
+      setAttribute() {},
+      removeAttribute() {},
+    },
+  };
+  const immediatePromise = {
+    resolve() { return { then(resolve) { resolve(); } }; },
+  };
+  const reviewRuntime = { runtimeEnabled() { return true; } };
+  const levelContext = {
+    window: { LearningReview: reviewRuntime, __tgSrsSyncedOnce: false },
+    LearningReview: reviewRuntime,
+    Promise: immediatePromise,
+    console,
+    curLevel: '初',
+    tgRoundActive: true,
+    tgLevelSwitchRequest: 0,
+    tgCloseMobileKeyboard() { events.push('keyboard-close'); },
+    rgToast(message) { events.push(`toast:${message}`); },
+    gtag() { events.push('analytics'); },
+    localStorage: { setItem() { events.push('storage'); } },
+    document: {
+      querySelectorAll() { return [{ classList: { remove() { events.push('tab-remove'); } } }]; },
+      getElementById(id) { return elements[id] || null; },
+    },
+    tgPrimeReview() { return {}; },
+    rgLoggedIn() { return false; },
+    initGame() { events.push('init'); },
+  };
+  vm.createContext(levelContext);
+  vm.runInContext(levelSwitch, levelContext);
+
+  assert.strictEqual(levelContext.setLevel('中'), false);
+  assert.strictEqual(levelContext.curLevel, '初');
+  assert.deepStrictEqual(events, ['toast:請先完成目前這一輪，再更換等級']);
+  assert.strictEqual(levelContext.tgLevelSwitchRequest, 0);
+
+  levelContext.tgRoundActive = false;
+  assert.strictEqual(levelContext.setLevel('中'), true);
+  assert.strictEqual(levelContext.curLevel, '中');
+  assert.ok(events.includes('keyboard-close'));
+  assert.ok(events.includes('storage'));
+  assert.ok(events.includes('init'));
+});
+
+test('a pending or restored round cannot be abandoned through Resume controls', () => {
+  const tryResume = functionBlock('tgTryResume', 'tgResumeContinue');
+  const resume = functionBlock('tgResumeContinue', 'tgResumeRestartSame');
+  const restartSame = functionBlock('tgResumeRestartSame', 'tgResumeNewRound');
+  const newRound = functionBlock('tgResumeNewRound', 'tgResumeRestart');
+  const gameResume = { clear() { events.push('clear'); } };
+  assert.match(tryResume, /window\.__tgResumeData=saved;\s*tgRoundActive=true/);
+  assert.match(resume, /tgRoundActive=true/);
+  assert.match(restartSame, /if\(tgRoundActive\)[\s\S]*return false/);
+
+  const events = [];
+  const context = {
+    tgRoundActive: true,
+    window: {
+      __tgResumeData: { level: '初' },
+      GameResume: gameResume,
+    },
+    GameResume: gameResume,
+    document: { getElementById() { return { style: {} }; } },
+    rgToast(message) { events.push(`toast:${message}`); },
+    gtag() { events.push('analytics'); },
+    initGame() { events.push('init'); },
+  };
+  vm.createContext(context);
+  vm.runInContext(newRound, context);
+  assert.strictEqual(context.tgResumeNewRound(), false);
+  assert.deepStrictEqual(events, ['toast:請繼續完成上次尚未結束的一輪']);
+  assert.deepStrictEqual(context.window.__tgResumeData, { level: '初' });
+
+  assert.strictEqual(context.tgResumeNewRound(true), true);
+  assert.ok(events.includes('clear'));
+  assert.ok(events.includes('init'));
+  assert.strictEqual(context.window.__tgResumeData, null);
+});
+
+test('all-mastered prompt keeps the unfinished round visible and locked', () => {
+  const allMastered = functionBlock('tgShowAllMastered', 'skipWord');
+  assert.match(allMastered, /請先完成目前這一輪，再更換等級/);
+  assert.doesNotMatch(allMastered, /getElementById\('game'\)[\s\S]*style\.display='none'/);
+  assert.doesNotMatch(allMastered, /tgRoundActive=false|initGame\(\)/);
 });
 
 test('Phone landscape uses the game keyboard while iPad stays native unless Hint is on', () => {
@@ -447,7 +546,7 @@ test('Typing counter follows active syllables including High continuous segments
 });
 
 test('Typing loads the rebuilt crash-safe bundle with a fresh cache key', () => {
-  assert.match(html, /typing-game-app\.min\.js\?v=62/);
+  assert.match(html, /typing-game-app\.min\.js\?v=63/);
 });
 
 test('Typing treats the shared-profile legacy stat row as optional', () => {

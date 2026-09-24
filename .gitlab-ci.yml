@@ -1,9 +1,11 @@
 stages:
   - verify
+  - operations
 
 workflow:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
     - if: '$CI_PIPELINE_SOURCE == "web"'
     - when: never
@@ -21,8 +23,53 @@ variables:
 required-tests-and-write-set:
   stage: verify
   timeout: 15m
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: never
+    - when: on_success
   script:
     - node scripts/tests-task-write-set.js
     - node scripts/check-task-write-set.js --gitlab
     - runuser -u postgres -- env PATH="/usr/lib/postgresql/15/bin:$PATH" node scripts/check-site.js
     - runuser -u postgres -- env PATH="/usr/lib/postgresql/15/bin:$PATH" node scripts/tests-phase1-free-gamification-db.mjs
+
+.production-backup-template:
+  stage: operations
+  image: node:22-bookworm
+  interruptible: false
+  resource_group: production-database-backup
+  timeout: 20m
+  needs: []
+  variables:
+    PGHOST: aws-1-ap-southeast-2.pooler.supabase.com
+    PGPORT: "5432"
+    PGDATABASE: postgres
+    PGUSER: postgres.qzkxlhpcputsvbqmtqfi
+  before_script:
+    - apt-get update -qq
+    - DEBIAN_FRONTEND=noninteractive apt-get install -y -qq gnupg curl ca-certificates lsb-release
+    - install -d /usr/share/postgresql-common/pgdg
+    - curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc
+    - echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list
+    - apt-get update -qq
+    - DEBIAN_FRONTEND=noninteractive apt-get install -y -qq postgresql-client-17
+    - npm ci --prefix scripts/backup
+
+backup-production-manual:
+  extends: .production-backup-template
+  script:
+    - bash scripts/backup/run-database-backup.sh backup-only
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "web" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      when: manual
+      allow_failure: true
+    - when: never
+  manual_confirmation: "Create one encrypted Production backup and verify its remote size/checksum?"
+
+backup-production-scheduled:
+  extends: .production-backup-template
+  script:
+    - bash scripts/backup/run-database-backup.sh scheduled-rotate
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $BACKUP_SCHEDULE == "true"'
+    - when: never

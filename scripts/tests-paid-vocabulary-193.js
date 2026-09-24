@@ -164,7 +164,7 @@ assert.match(rollback, /delete from public\.game_words where catalog_version='pa
 assert.match(rollback, /count\(\*\) from public\.game_words where status='queued' and access_tier='paid'\) <> 189/);
 assert.doesNotMatch(rollback, /delete from public\.phase2_paid_srs/i);
 
-assert.match(edge, /paid:\s*{\s*'初':\s*469,\s*'中':\s*113,\s*sentences:\s*40\s*}/);
+assert.match(edge, /paid:\s*{\s*'初':\s*469,\s*'中':\s*113,\s*sentences:\s*42\s*}/);
 assert.match(edge, /GAME_SURFACES = new Set\(\['tone', 'reading', 'typing', 'word_order', 'listening', 'lego'\]\)/);
 assert.match(edge, /FREE_RUNTIME_CATALOG_VERSION = 'free-200-v1'/);
 assert.match(integrity, /catalogVersion: 'free-200-v1'[\s\S]+catalogVersion: 'paid-queue-189-v1'[\s\S]+catalogVersion: 'paid-queue-193-v1'/);

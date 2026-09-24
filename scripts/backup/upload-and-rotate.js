@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // scripts/backup/upload-and-rotate.js
-// ใช้โดย .github/workflows/backup-database-to-drive.yml เท่านั้น (P2-07)
+// ใช้โดย GitLab scheduled backup job เท่านั้น (P2-07)
 //
 // ทำ 3 อย่างตามลำดับ:
 //   1) อัปโหลดไฟล์สำรองขึ้น Google Drive
@@ -8,16 +8,17 @@
 //   3) ลบของเก่าที่เกินจำนวนวันที่กำหนด — ทำได้ก็ต่อเมื่อข้อ 2 ผ่านแล้วเท่านั้น
 //      (กันเหตุการณ์ "ของใหม่พังเงียบ + ของเก่าโดนลบไปแล้ว = เหลือ 0 สำรอง")
 //
-// ไม่เห็น/ไม่บันทึกค่าลับใดๆ นอกจากอ่านจาก environment variable ที่ GitHub Actions ส่งมาให้ตอนรันเท่านั้น
+// ไม่เห็น/ไม่บันทึกค่าลับใดๆ นอกจากอ่านจาก protected GitLab CI variables ตอนรันเท่านั้น
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { google } = require('googleapis');
 
 function required(name) {
   const v = process.env[name];
   if (!v) {
-    console.error(`::error::ขาดตัวแปรแวดล้อม ${name} — ตั้ง secret นี้ใน GitHub ก่อน`);
+    console.error(`ERROR: ขาด protected GitLab variable ${name}`);
     process.exit(1);
   }
   return v;
@@ -40,6 +41,7 @@ async function main() {
     console.error(`::error::ไฟล์ ${filePath} เล็กผิดปกติ (${localSize} ไบต์) ไม่อัปโหลด`);
     process.exit(1);
   }
+  const localMd5 = crypto.createHash('md5').update(fs.readFileSync(filePath)).digest('hex');
 
   const oauth2Client = new google.auth.OAuth2(clientId, clientSecret);
   oauth2Client.setCredentials({ refresh_token: refreshToken });
@@ -47,7 +49,7 @@ async function main() {
 
   // 1) อัปโหลด
   const fileName = path.basename(filePath);
-  console.log(`กำลังอัปโหลด ${fileName} (${localSize} ไบต์) ไปที่โฟลเดอร์ ${folderId} ...`);
+  console.log(`กำลังอัปโหลด ${fileName} (${localSize} ไบต์) ไปยังโฟลเดอร์สำรองที่กำหนดไว้ ...`);
   let uploadedId;
   try {
     const uploadRes = await drive.files.create({
@@ -68,8 +70,14 @@ async function main() {
   // 2) ตรวจสอบว่าไฟล์บน Drive ขนาดตรงกับไฟล์ต้นทางจริง (ห้ามเชื่อแค่ HTTP 200)
   let remoteSize = -1;
   try {
-    const verifyRes = await drive.files.get({ fileId: uploadedId, fields: 'id,name,size' });
+    const verifyRes = await drive.files.get({
+      fileId: uploadedId,
+      fields: 'id,name,size,md5Checksum',
+    });
     remoteSize = parseInt(verifyRes.data.size || '0', 10);
+    if (verifyRes.data.md5Checksum !== localMd5) {
+      remoteSize = -1;
+    }
   } catch (err) {
     console.error(`::error::ตรวจสอบไฟล์บน Drive ไม่สำเร็จ: ${err.message}`);
     process.exit(1);

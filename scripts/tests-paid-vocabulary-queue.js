@@ -74,7 +74,7 @@ assert.doesNotMatch(migration, /delete\s+from\s+public\.game_words/i);
 assert.doesNotMatch(migration, /^\+/m);
 assert.match(migration, /revoke all on table public\.game_words from public,anon,authenticated/);
 assert.match(edge, /requestedGame && GAME_SURFACES\.has\(requestedGame\)[\s\S]+owner_all_access/);
-assert.match(edge, /paid:\s*{\s*'初':\s*469,\s*'中':\s*113,\s*sentences:\s*40\s*}/);
+assert.match(edge, /paid:\s*{\s*'初':\s*469,\s*'中':\s*113,\s*sentences:\s*42\s*}/);
 assert.match(edge, /FREE_RUNTIME_CATALOG_VERSION = 'free-200-v1'/);
 assert.match(integrity, /catalogVersion: 'free-200-v1'[\s\S]+catalogVersion: 'paid-queue-189-v1'[\s\S]+catalogVersion: 'paid-queue-193-v1'/);
 assert.match(edge, /selectWords\(level, spec\.statuses, spec\.tiers, \[spec\.catalogVersion\], expected\.count \+ 1\)/);

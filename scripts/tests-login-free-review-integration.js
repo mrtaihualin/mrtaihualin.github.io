@@ -9,6 +9,7 @@ const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 
 const edge = read('supabase/functions/score-submit/index.ts');
 const catalogTransport = read('supabase/functions/score-submit/learning-catalog.mjs');
+const snapshotOwner = read('supabase/functions/score-submit/learning-snapshot.mjs');
 const runtime = read('js/games/learning-review.js');
 const report = read('js/games/round-report.js');
 const gate = read('js/core/minimum-guest-launch.js');
@@ -43,7 +44,7 @@ pages.forEach(page => {
 });
 assert.match(read('js/score/phase1-canonical-state.js'), /whenReady:\s*whenReady/);
 assert.match(read('js/games/game-content-client.js'), /whenLoginFreeCanonicalReady\(data, game\)/);
-assert.match(games.typing, /_tgResumeHandled=tgTryResume\(\)[\s\S]*if\(!_tgResumeHandled\)[\s\S]*_tgInitialStarted[\s\S]*Promise\.all\(/);
+assert.match(games.typing, /function tgBootstrapInitialRound\(\)[\s\S]*!tgProtectedEligible\(\)[\s\S]*_tgResumeHandled=tgTryResume\(\)[\s\S]*if\(_tgResumeHandled\)return;[\s\S]*_tgInitialStarted[\s\S]*Promise\.all\(/);
 assert.match(games.reading, /_rgLoginFreeResume[\s\S]*!rgTryLoadResumeBanner\(\)/);
 assert.match(games.word_order, /LearningReview\.runtimeEnabled\(\)[\s\S]*woResumeContinue\(state,restoredSet\)/);
 assert.match(games.tone, /__tfLoginFreeResume[\s\S]*TF\.resumeSavedSession\(\)/);
@@ -78,8 +79,9 @@ assert.match(edge, /verifyLearningScore/);
 assert.match(edge, /phase1_login_free_learning_commit/);
 assert.match(edge, /\.eq\('user_id', user\.id\)/);
 assert.match(edge, /round_items: roundItems\.map\(clean\)/);
-assert.match(edge, /state_token: learningToken\(/);
-assert.match(edge, /legacy_srs_identity_ambiguous/);
+assert.match(edge, /readCurrentLearningSnapshot\(/);
+assert.match(snapshotOwner, /state_token: learningToken\(/);
+assert.match(snapshotOwner, /legacy_srs_identity_ambiguous/);
 assert.doesNotMatch(edge, /p_user_id:\s*body\./);
 assert.doesNotMatch(edge, /item_id:\s*body\./);
 assert.match(edge, /p_expected_state_token: expectedToken/);

@@ -6,10 +6,11 @@ const fs = require('fs');
 const path = require('path');
 
 const root = path.resolve(__dirname, '..');
-const workflow = fs.readFileSync(
-  path.join(root, '.github/workflows/backup-database-to-drive.yml'),
-  'utf8'
-);
+const ci = fs.readFileSync(path.join(root, '.gitlab-ci.yml'), 'utf8');
+const runner = fs.readFileSync(path.join(root, 'scripts/backup/run-database-backup.sh'), 'utf8');
+const uploadOnly = fs.readFileSync(path.join(root, 'scripts/backup/upload-only.js'), 'utf8');
+const rotate = fs.readFileSync(path.join(root, 'scripts/backup/upload-and-rotate.js'), 'utf8');
+const notify = fs.readFileSync(path.join(root, 'scripts/backup/notify-line.js'), 'utf8');
 
 let passed = 0;
 
@@ -25,95 +26,138 @@ function check(label, test) {
   }
 }
 
-check('pins the package-owned PostgreSQL 17 binary directory', () => {
-  assert.ok(workflow.includes('PG_BIN=/usr/lib/postgresql/17/bin'));
-  assert.ok(workflow.includes('echo "PG_BIN=$PG_BIN" >> "$GITHUB_ENV"'));
+function section(source, startLabel, endLabel) {
+  const start = source.indexOf(startLabel);
+  const end = endLabel ? source.indexOf(endLabel, start + startLabel.length) : source.length;
+  assert.ok(start >= 0 && end > start, `missing section ${startLabel}`);
+  return source.slice(start, end);
+}
+
+check('retires the GitHub backup workflow', () => {
+  assert.equal(fs.existsSync(path.join(root, '.github/workflows/backup-database-to-drive.yml')), false);
 });
 
-check('fails closed when either pinned executable is missing', () => {
-  assert.ok(workflow.includes('for tool in pg_dump pg_dumpall; do'));
-  assert.ok(workflow.includes('if [ ! -x "${PG_BIN}/${tool}" ]; then'));
+check('registers GitLab schedule and operations stage', () => {
+  assert.ok(ci.includes('- operations'));
+  assert.ok(ci.includes('CI_PIPELINE_SOURCE == "schedule"'));
 });
 
-check('requires both pinned executables to report PostgreSQL 17.x', () => {
-  assert.ok(workflow.includes('VERSION_OUTPUT=$("${PG_BIN}/${tool}" --version)'));
-  assert.ok(workflow.includes('if [[ "$VERSION_OUTPUT" != *"(PostgreSQL) 17."* ]]'));
+check('keeps the full repository verifier out of scheduled backup pipelines', () => {
+  const required = section(ci, 'required-tests-and-write-set:', '.production-backup-template:');
+  assert.match(required, /CI_PIPELINE_SOURCE == "schedule"[\s\S]*?when: never/);
 });
 
-check('rechecks the pinned directory before the Production read', () => {
-  const guard = workflow.indexOf('if [ "${PG_BIN:-}" != "/usr/lib/postgresql/17/bin" ]');
-  const firstDump = workflow.indexOf('"${PG_BIN}/pg_dumpall" --roles-only');
-  assert.ok(guard >= 0);
-  assert.ok(firstDump > guard);
+check('serializes Production backup jobs and disables interruption', () => {
+  const template = section(ci, '.production-backup-template:', 'backup-production-manual:');
+  assert.ok(template.includes('interruptible: false'));
+  assert.ok(template.includes('resource_group: production-database-backup'));
+  assert.ok(template.includes('needs: []'));
 });
 
-check('uses the pinned pg_dumpall executable for roles', () => {
-  assert.ok(workflow.includes('"${PG_BIN}/pg_dumpall" --roles-only  -f dump/roles.sql'));
+check('manual GitLab job is default-branch web-only and backup-only', () => {
+  const manual = section(ci, 'backup-production-manual:', 'backup-production-scheduled:');
+  assert.ok(manual.includes('CI_PIPELINE_SOURCE == "web"'));
+  assert.ok(manual.includes('CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'));
+  assert.ok(manual.includes('when: manual'));
+  assert.ok(manual.includes('manual_confirmation:'));
+  assert.ok(manual.includes('run-database-backup.sh backup-only'));
 });
 
-check('uses the pinned pg_dump executable for schema', () => {
-  assert.ok(workflow.includes('"${PG_BIN}/pg_dump"    --schema-only -f dump/schema.sql'));
+check('scheduled job requires the dedicated schedule flag', () => {
+  const scheduled = section(ci, 'backup-production-scheduled:');
+  assert.ok(scheduled.includes('CI_PIPELINE_SOURCE == "schedule"'));
+  assert.ok(scheduled.includes('CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'));
+  assert.ok(scheduled.includes('BACKUP_SCHEDULE == "true"'));
+  assert.ok(scheduled.includes('run-database-backup.sh scheduled-rotate'));
 });
 
-check('uses the pinned pg_dump executable for data', () => {
-  assert.ok(workflow.includes('"${PG_BIN}/pg_dump"    --data-only   -f dump/data.sql'));
+check('installs and pins PostgreSQL client 17', () => {
+  assert.ok(ci.includes('postgresql-client-17'));
+  assert.ok(runner.includes('pg_bin="/usr/lib/postgresql/17/bin"'));
+  assert.ok(runner.includes('"(PostgreSQL) 17."'));
 });
 
-check('contains no PATH-dependent dump command', () => {
-  assert.ok(!/^\s+pg_dump(?:all)?(?:\s|$)/m.test(workflow));
+check('hard-binds runtime mode to the GitLab pipeline source', () => {
+  assert.match(runner, /backup-only\)[\s\S]*?CI_PIPELINE_SOURCE:-}" != "web"/);
+  assert.match(runner, /scheduled-rotate\)[\s\S]*?CI_PIPELINE_SOURCE:-}" != "schedule"/);
+  assert.ok(runner.includes('"${BACKUP_SCHEDULE:-}" != "true"'));
 });
 
-check('hard-binds manual dispatch to backup-only and schedule to rotation', () => {
-  assert.ok(workflow.includes('case "${GITHUB_EVENT_NAME:-}" in'));
-  assert.match(workflow, /workflow_dispatch\)\s+BACKUP_ONLY=true/);
-  assert.match(workflow, /schedule\)\s+BACKUP_ONLY=false/);
-  assert.ok(workflow.includes('echo "BACKUP_ONLY=$BACKUP_ONLY" >> "$GITHUB_ENV"'));
+check('requires protected variables before the first Production dump', () => {
+  const required = runner.indexOf('for variable_name in "${required_variables[@]}"');
+  const firstDump = runner.indexOf('"$pg_bin/pg_dumpall" --roles-only');
+  assert.ok(required >= 0 && firstDump > required);
 });
 
-check('missing or ambiguous mode fails closed to backup-only', () => {
-  assert.match(workflow, /\*\)\s+[\s\S]*?BACKUP_ONLY=true/);
-  assert.ok(workflow.includes('MODE="${BACKUP_ONLY:-true}"'));
-  assert.ok(workflow.includes('BACKUP_ONLY ไม่ชัดเจน'));
+check('locks the exact Production pooler target before reading', () => {
+  const targetGuard = runner.indexOf('Production database target does not match the locked project');
+  const firstDump = runner.indexOf('"$pg_bin/pg_dumpall" --roles-only');
+  assert.ok(runner.includes('postgres.qzkxlhpcputsvbqmtqfi'));
+  assert.ok(targetGuard >= 0 && firstDump > targetGuard);
 });
 
-check('scheduled rotation requires both false mode and scheduled event', () => {
-  const modeGuard = workflow.indexOf('if [ "$MODE" = "false" ]');
-  const eventGuard = workflow.indexOf('if [ "${GITHUB_EVENT_NAME:-}" != "schedule" ]');
-  const rotate = workflow.indexOf('node scripts/backup/upload-and-rotate.js');
-  assert.ok(modeGuard >= 0 && eventGuard > modeGuard && rotate > eventGuard);
+check('uses only package-owned PostgreSQL 17 dump executables', () => {
+  assert.ok(runner.includes('"$pg_bin/pg_dumpall" --roles-only'));
+  assert.ok(runner.includes('"$pg_bin/pg_dump" --schema-only'));
+  assert.ok(runner.includes('"$pg_bin/pg_dump" --data-only'));
+  assert.ok(!/^\s*pg_dump(?:all)?(?:\s|$)/m.test(runner));
 });
 
-check('manual backup-only performs create then remote size and checksum verification', () => {
-  const start = workflow.indexOf("node <<'BACKUP_ONLY_NODE'");
-  const end = workflow.indexOf('\n          BACKUP_ONLY_NODE', start);
-  assert.ok(start >= 0 && end > start);
-  const manual = workflow.slice(start, end);
-  const create = manual.indexOf('drive.files.create');
-  const get = manual.indexOf('drive.files.get');
-  const verify = manual.indexOf("remoteMd5 !== localMd5");
+check('requires encryption and removes the plaintext archive before upload', () => {
+  const encrypt = runner.indexOf('gpg --batch --yes --pinentry-mode loopback');
+  const removePlaintext = runner.indexOf('rm -f -- "$archive_path"');
+  const uploadOnlyCall = runner.indexOf('node scripts/backup/upload-only.js');
+  assert.ok(runner.includes('BACKUP_ENCRYPT_PASSPHRASE'));
+  assert.ok(encrypt >= 0 && removePlaintext > encrypt && uploadOnlyCall > removePlaintext);
+});
+
+check('manual upload performs one create then size and checksum verification', () => {
+  const create = uploadOnly.indexOf('drive.files.create');
+  const get = uploadOnly.indexOf('drive.files.get');
+  const verify = uploadOnly.indexOf('remoteMd5 !== localMd5');
   assert.ok(create >= 0 && get > create && verify > get);
-  assert.ok(manual.includes("fields: 'id,size,md5Checksum'"));
+  assert.ok(uploadOnly.includes("fields: 'id,size,md5Checksum'"));
 });
 
-check('manual backup-only contains no Drive list, delete, or retention path', () => {
-  const start = workflow.indexOf("node <<'BACKUP_ONLY_NODE'");
-  const end = workflow.indexOf('\n          BACKUP_ONLY_NODE', start);
-  const manual = workflow.slice(start, end);
-  assert.ok(!manual.includes('drive.files.list'));
-  assert.ok(!manual.includes('drive.files.delete'));
-  assert.ok(!manual.includes('RETENTION_DAYS'));
-  assert.ok(!manual.includes('upload-and-rotate.js'));
+check('manual backup-only has no list, delete, retention, rotation, or LINE path', () => {
+  assert.ok(!uploadOnly.includes('drive.files.list'));
+  assert.ok(!uploadOnly.includes('drive.files.delete'));
+  assert.ok(!uploadOnly.includes('RETENTION_DAYS'));
+  const manualRuntime = section(runner, 'if [[ "$mode" == "backup-only" ]]', 'export RETENTION_DAYS=30');
+  assert.ok(!manualRuntime.includes('upload-and-rotate.js'));
+  assert.ok(!manualRuntime.includes('notify-line.js'));
 });
 
-check('LINE notifications are schedule-only and require explicit rotation mode', () => {
-  assert.ok(workflow.includes(
-    "if: ${{ failure() && github.event_name == 'schedule' && env.BACKUP_ONLY == 'false' }}"
-  ));
-  assert.ok(workflow.includes(
-    "if: ${{ success() && github.event_name == 'schedule' && env.BACKUP_ONLY == 'false' }}"
-  ));
+check('scheduled rotation verifies checksum before listing or deleting', () => {
+  const get = rotate.indexOf('drive.files.get');
+  const checksum = rotate.indexOf('verifyRes.data.md5Checksum !== localMd5');
+  const list = rotate.indexOf('drive.files.list');
+  const remove = rotate.indexOf('drive.files.delete');
+  assert.ok(get >= 0 && checksum > get && list > checksum && remove > checksum);
+});
+
+check('LINE notification contains no secret values and is schedule-only', () => {
+  assert.ok(notify.includes('BACKUP_LINE_CHANNEL_ACCESS_TOKEN'));
+  assert.ok(notify.includes('BACKUP_LINE_TEACHER_USER_ID'));
+  assert.ok(!notify.includes('console.log(token'));
+  assert.ok(!notify.includes('console.log(userId'));
+  assert.match(runner, /scheduled-rotate\)[\s\S]*?trap notify_failure ERR/);
+});
+
+check('does not print secrets or the Drive folder identifier', () => {
+  assert.ok(!runner.includes('set -x'));
+  assert.ok(!runner.includes('printenv'));
+  assert.ok(!/console\.(?:log|error)\([^)]*folderId/.test(rotate));
+  assert.ok(!/console\.(?:log|error)\([^)]*folderId/.test(uploadOnly));
+});
+
+check('uses a private temporary directory and bounded cleanup', () => {
+  assert.ok(runner.includes('umask 077'));
+  assert.ok(runner.includes('backup_tmp_dir=$(mktemp -d)'));
+  assert.ok(runner.includes('"$backup_tmp_dir" == /tmp/*'));
+  assert.ok(runner.includes('rm -rf -- "$backup_tmp_dir"'));
 });
 
 if (!process.exitCode) {
-  console.log(`\nBackup PostgreSQL runtime pin/manual guard: ${passed}/14 PASS`);
+  console.log(`\nGitLab backup migration safety: ${passed}/18 PASS`);
 }

@@ -45,12 +45,12 @@ test('report reuses canonical sentence words and submitted order', () => {
   assert.match(app, /woLogSentence\(\{skipped:true/);
 });
 
-test('all 30 current reports use reviewed word chunks with spaces without changing sentence identity', () => {
+test('all 42 current reports use reviewed word chunks with spaces without changing sentence identity', () => {
   const catalogContext = { window: {} };
   vm.createContext(catalogContext);
   vm.runInContext(sentenceSource, catalogContext, { filename: 'adv-sentences.js' });
   const sentences = catalogContext.window.ADV_SENTENCES_FULL;
-  assert.strictEqual(sentences.length, 30);
+  assert.strictEqual(sentences.length, 42);
   sentences.forEach((sentence) => {
     const chunks = sentence.words.map((word) => word.th);
     assert.strictEqual(chunks.join(''), sentence.th);

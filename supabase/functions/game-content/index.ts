@@ -17,7 +17,7 @@
 //   ระดับ    ไม่ล็อกอิน   ล็อกอินแล้ว(ยังไม่จ่ายเงิน)
 //   初        50 คำ        100 คำ
 //   中        50 คำ        100 คำ
-//   高(ประโยค) 20 ประโยค    40 ประโยค
+//   高(ประโยค) 20 ประโยค    42 ประโยค
 //   Paid owner runtime: เกมทั้ง 6 ใช้ Free 200 + Paid ทั้งสอง batch ในคลังกลางเดียวกัน
 //   รวม 582 semantic records (初 469 / 中 113); คำเขียนเหมือนกันแต่คนละความหมาย
 //   คงเป็นคนละ record ด้วย contentKey ที่ต่างกัน
@@ -36,14 +36,14 @@
 // @ts-nocheck  (Supabase Edge Function รันบน Deno ไม่ใช่ Node — เวลาแก้ไฟล์นี้ในเครื่องอาจมี type error ของ IDE ปกติ ไม่กระทบตอน deploy จริง)
 
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.112.3';
+import { createClient } from 'npm:@supabase/supabase-js@2.112.3';
 import { OWNER_CATALOG_SPECS, matchesExactCatalogSlice } from './catalog-integrity.mjs';
 
 // เพดานเนื้อหา — ปรับตัวเลขได้ตรงนี้ที่เดียว ไม่ต้องแก้โค้ดฝั่งเว็บ (ดูตารางที่คอมเมนต์หัวไฟล์)
 const CAPS = {
   anon:  { '初': 50,  '中': 50,  sentences: 20 },
-  login: { '初': 100, '中': 100, sentences: 40 },
-  paid:  { '初': 469, '中': 113, sentences: 40 },
+  login: { '初': 100, '中': 100, sentences: 42 },
+  paid:  { '初': 469, '中': 113, sentences: 42 },
 };
 const FREE_RUNTIME_CATALOG_VERSION = 'free-200-v1';
 const GAME_SURFACES = new Set(['tone', 'reading', 'typing', 'word_order', 'listening', 'lego']);
