@@ -48,6 +48,14 @@ function run(command, args, options = {}) {
   return result.stdout || '';
 }
 
+function initdbArgs() {
+  const args = ['-D', data, '--no-locale', '--encoding=UTF8', '--auth=trust'];
+  if (/--set(?:=|\s)/.test(run('initdb', ['--help']))) {
+    args.push('--set=shared_memory_type=mmap', '--set=dynamic_shared_memory_type=mmap');
+  }
+  return args;
+}
+
 function psql(sql) {
   return run('psql', [
     '-X', '-q', '-v', 'ON_ERROR_STOP=1', '-h', socket, '-p', port,
@@ -235,10 +243,10 @@ function create(owner = userId, level = 1, prompts = basePrompts) {
 }
 let started = false;
 try {
-  run('initdb', ['-D', data, '--no-locale', '--encoding=UTF8', '--auth=trust',
-    '--set=shared_memory_type=mmap', '--set=dynamic_shared_memory_type=mmap']);
+  run('initdb', initdbArgs());
   run('pg_ctl', ['-D', data, '-l', path.join(temp, 'postgres.log'),
-    '-o', `-F -c listen_addresses='' -p ${port} -k ${socket}`, '-w', 'start']);
+    '-o', `-F -c shared_memory_type=mmap -c dynamic_shared_memory_type=mmap -c listen_addresses='' -p ${port} -k ${socket}`,
+    '-w', 'start']);
   started = true;
   const apply = file => run('psql', ['-X', '-v', 'ON_ERROR_STOP=1', '-h', socket, '-p', port,
     '-d', 'postgres', '-f', file]);

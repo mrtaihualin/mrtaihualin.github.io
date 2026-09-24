@@ -61,6 +61,13 @@ function run(command, args) {
   if (result.status !== 0) throw new Error(`${command} failed\n${result.stdout}\n${result.stderr}`);
   return result.stdout.trim();
 }
+function initdbArgs() {
+  const args = ['-D',data,'--no-locale','--encoding=UTF8','--auth=trust'];
+  if (/--set(?:=|\s)/.test(run('initdb', ['--help']))) {
+    args.push('--set=shared_memory_type=mmap','--set=dynamic_shared_memory_type=mmap');
+  }
+  return args;
+}
 const psql = (sql) => run('psql', ['-X','-q','-v','ON_ERROR_STOP=1','-h',socket,'-p',port,'-d','postgres','-At','-c',sql]);
 const apply = (file) => run('psql', ['-X','-v','ON_ERROR_STOP=1','-h',socket,'-p',port,'-d','postgres','-f',file]);
 const psqlAsync = (sql) => new Promise((resolve, reject) => {
@@ -111,9 +118,10 @@ const call = ({ n, sequence, ordinal, type, answer = null, learning = null, fina
     ${final == null ? 'null' : q(JSON.stringify(mirror)) + '::jsonb'})::text;`;
 let started = false;
 try {
-  run('initdb', ['-D',data,'--no-locale','--encoding=UTF8','--auth=trust',
-    '--set=shared_memory_type=mmap','--set=dynamic_shared_memory_type=mmap']);
-  run('pg_ctl', ['-D',data,'-l',path.join(temp,'postgres.log'),'-o',`-F -c listen_addresses='' -p ${port} -k ${socket}`,'-w','start']);
+  run('initdb', initdbArgs());
+  run('pg_ctl', ['-D',data,'-l',path.join(temp,'postgres.log'),'-o',
+    `-F -c shared_memory_type=mmap -c dynamic_shared_memory_type=mmap -c listen_addresses='' -p ${port} -k ${socket}`,
+    '-w','start']);
   started = true; apply(fixture);
   for (const file of files.slice(0, 5)) apply(file);
 
