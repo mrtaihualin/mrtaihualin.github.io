@@ -8,6 +8,7 @@ export const TYPING_ROUND_ACTIONS_ENABLED = false;
 export const TYPING_ATOMIC_FINAL_COMMIT_ENABLED = false;
 const PAGE_SIZE = 64;
 const TIMEOUT_MS = 10000;
+const RECEIPT_FIELDS = 'operation_id,user_id,round_id,operation_type,request_hash,request_payload,response';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const RECORD_HASH = /^[0-9a-f]{64}$/;
 const own = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
@@ -204,6 +205,29 @@ async function eventHash(userId, event) {
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
+async function receipt(admin, operationId, signal) {
+  const data = await resultOf(admin.from('phase1_typing_round_operations')
+    .select(RECEIPT_FIELDS).eq('operation_id', operationId).maybeSingle(), signal);
+  if (data === null) return null;
+  if (!data || typeof data !== 'object' || Array.isArray(data)) fail('invalid_typing_evidence');
+  return data;
+}
+
+function replayEvent(saved, userId, event, hash) {
+  const payload = saved.request_payload;
+  const response = saved.response;
+  if (saved.operation_id !== event.operationId || saved.user_id !== userId
+      || saved.round_id !== event.roundId || saved.operation_type !== 'append_event'
+      || saved.request_hash !== hash || !payload || typeof payload !== 'object' || Array.isArray(payload)
+      || payload.round_id !== event.roundId || payload.expected_sequence !== event.sequence
+      || payload.prompt_ordinal !== event.promptOrdinal || payload.event_type !== event.type
+      || (payload.answer ?? null) !== event.answer) fail('replay_conflict', 409);
+  if (!response || typeof response !== 'object' || Array.isArray(response) || response.ok !== true
+      || response.operation_id !== event.operationId || response.round_id !== event.roundId
+      || typeof response.idempotent !== 'boolean') fail('invalid_typing_evidence');
+  return { ...response, idempotent: true };
+}
+
 // user must come from the entrypoint's verified auth.getUser(), never the body.
 export async function handleTypingRoundAction({ admin, user, body, enabled = TYPING_ROUND_ACTIONS_ENABLED,
   atomicEnabled = TYPING_ATOMIC_FINAL_COMMIT_ENABLED }) {
@@ -218,13 +242,13 @@ export async function handleTypingRoundAction({ admin, user, body, enabled = TYP
     let committed = null;
     if (event.action === 'typing_round_event') {
       if (atomicEnabled !== true) fail('typing_atomic_disabled', 404);
-      const evidence = await loadTypingRoundEvidence({ admin, userId, roundId: event.roundId, signal });
-      const replay = evidence.events.find((row) => row.operation_id === event.operationId);
-      if (replay) {
-        if (replay.sequence !== event.sequence || replay.prompt_ordinal !== event.promptOrdinal
-            || replay.type !== event.type || (replay.answer ?? null) !== event.answer) fail('replay_conflict', 409);
-        committed = { operation_id: event.operationId, round_id: event.roundId, idempotent: true };
+      const hash = await eventHash(userId, event);
+      const saved = await receipt(admin, event.operationId, signal);
+      if (saved) {
+        committed = replayEvent(saved, userId, event, hash);
+        writeConfirmed = true;
       } else {
+        const evidence = await loadTypingRoundEvidence({ admin, userId, roundId: event.roundId, signal });
         if (evidence.round.status !== 'active') fail('round_not_active', 409);
         const current = evidence.prompts[event.promptOrdinal - 1];
         if (!current?.learning_state || !current?.learning_state_token) fail('typing_atomic_schema_unavailable');
@@ -238,22 +262,35 @@ export async function handleTypingRoundAction({ admin, user, body, enabled = TYP
         writeAttempted = true;
         committed = rpcResult(await resultOf(admin.rpc(
           'phase1_typing_round_commit_event', {
-          p_operation_id: event.operationId, p_user_id: userId,
-          p_request_hash: await eventHash(userId, event), p_round_id: event.roundId,
-          p_expected_sequence: event.sequence, p_prompt_ordinal: event.promptOrdinal,
-          p_event_type: event.type, p_answer: event.answer,
-          p_server_learning_score: atomic.serverLearningScore,
-          p_score_verified_by: atomic.scoreVerifiedBy,
-          p_server_final_score: atomic.serverFinalScore,
-          p_evidence_hash: atomic.evidenceHash,
-          p_mirror_items: atomic.mirrorItems,
-        }), signal));
+            p_operation_id: event.operationId, p_user_id: userId,
+            p_request_hash: hash, p_round_id: event.roundId,
+            p_expected_sequence: event.sequence, p_prompt_ordinal: event.promptOrdinal,
+            p_event_type: event.type, p_answer: event.answer,
+            p_server_learning_score: atomic.serverLearningScore,
+            p_score_verified_by: atomic.scoreVerifiedBy,
+            p_server_final_score: atomic.serverFinalScore,
+            p_evidence_hash: atomic.evidenceHash,
+            p_mirror_items: atomic.mirrorItems,
+          }), signal));
         writeConfirmed = true;
         if (committed.operation_id !== event.operationId || committed.round_id !== event.roundId
             || typeof committed.idempotent !== 'boolean') fail('invalid_typing_evidence');
       }
     }
-    const verified = await loadTypingRoundCheckpoint({ admin, userId, roundId: event.roundId, signal });
+    let verified;
+    try {
+      verified = await loadTypingRoundCheckpoint({ admin, userId, roundId: event.roundId, signal });
+    } catch (error) {
+      // A durable exact-operation receipt is authoritative even when a later
+      // catalog change makes the current gameplay projection unavailable. Let
+      // the client retire the journaled operation, then require a fresh Resume.
+      if (committed && error?.typingBridgeError === true && error.code === 'typing_canonical_changed') {
+        return { status: 200, body: { ok: true, operation_id: event.operationId, round_id: event.roundId,
+          idempotent: committed.idempotent, event_committed: true,
+          checkpoint_unavailable: 'typing_canonical_changed' } };
+      }
+      throw error;
+    }
     if (committed && verified.checkpoint.stateVersion < event.sequence) fail('invalid_typing_evidence');
     return { status: 200, body: { ok: true, ...verified,
       ...(committed ? { operation_id: event.operationId, idempotent: committed.idempotent } : {}) } };
@@ -261,7 +298,7 @@ export async function handleTypingRoundAction({ admin, user, body, enabled = TYP
     const status = error?.typingBridgeError === true ? error.status : 503;
     const code = error?.typingBridgeError === true ? error.code : 'typing_round_unavailable';
     return { status, body: { error: code,
-      ...(writeAttempted && (status >= 500 || writeConfirmed)
+      ...((writeConfirmed || (writeAttempted && status >= 500))
         ? { operation_id: event.operationId, retry_same_operation: true,
           ...(writeConfirmed ? { event_committed: true } : {}) } : {}) } };
   }

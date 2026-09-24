@@ -19,7 +19,16 @@ check('one service-only RPC owns event, learning transition, Retry and final sco
   assert.match(migration, /grant execute on function public\.phase1_typing_round_commit_event[\s\S]+to service_role/);
   assert.doesNotMatch(migration, /grant execute on function public\.phase1_typing_round_commit_event[\s\S]{0,260}to (public|anon|authenticated)/);
   assert.match(migration, /revoke all on function public\.phase1_typing_round_append_event[\s\S]+service_role/);
+  assert.match(migration, /revoke all on function public\.phase1_typing_round_create[\s\S]+service_role/);
+  assert.match(migration, /revoke all on function public\.phase1_typing_round_append_prompts[\s\S]+service_role/);
   assert.match(migration, /revoke all on function public\.phase1_typing_round_issue_prelearning[\s\S]+service_role/);
+});
+
+check('atomic event locks and revalidates current plus every unconsumed canonical pin', () => {
+  assert.match(migration, /perform word\.content_key[\s\S]+for share of word/);
+  assert.match(migration, /phase1_typing_round_reserve_prompts reserve[\s\S]+reserve\.reserve_ordinal>state\.reserve_cursor/);
+  assert.match(migration, /word\.catalog_version is distinct from reserve\.catalog_version/);
+  assert.match(migration, /word\.record_hash is distinct from reserve\.record_hash/);
 });
 
 check('learning score is recomputed from protected primitives and canonical syllable count', () => {
@@ -61,6 +70,8 @@ check('rollback requires no active round, deactivates every issue/write owner an
   assert.match(rollback, /where status='active'/);
   assert.match(rollback, /revoke all on function public\.phase1_typing_round_commit_event/);
   assert.match(rollback, /revoke all on function public\.phase1_typing_round_append_event/);
+  assert.match(rollback, /revoke all on function public\.phase1_typing_round_create/);
+  assert.match(rollback, /revoke all on function public\.phase1_typing_round_append_prompts/);
   assert.match(rollback, /revoke all on function public\.phase1_typing_round_issue/);
   assert.match(rollback, /revoke all on function public\.phase1_typing_round_append_reserve/);
   assert.match(rollback, /revoke all on function public\.phase1_typing_round_refill/);

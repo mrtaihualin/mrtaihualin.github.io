@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -27,12 +27,13 @@ const user2 = '10000000-0000-4000-8000-000000000002';
 const user3 = '10000000-0000-4000-8000-000000000003';
 const user4 = '10000000-0000-4000-8000-000000000004';
 const user5 = '10000000-0000-4000-8000-000000000005';
+const user6 = '10000000-0000-4000-8000-000000000006';
 fs.mkdirSync(socket);
 fs.writeFileSync(fixture, `
 create extension if not exists pgcrypto;
 create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls;
 create schema auth; create table auth.users(id uuid primary key); insert into auth.users values
-  ('${user}'),('${user2}'),('${user3}'),('${user4}'),('${user5}');
+  ('${user}'),('${user2}'),('${user3}'),('${user4}'),('${user5}'),('${user6}');
 create table public.game_words(content_key text primary key,level text,status text,access_tier text,
   catalog_version text,record_hash text,canonical_record jsonb);
 create table public.learning_items(item_id uuid primary key,owner_user_id uuid,content_source text,content_key text);
@@ -62,6 +63,40 @@ function run(command, args) {
 }
 const psql = (sql) => run('psql', ['-X','-q','-v','ON_ERROR_STOP=1','-h',socket,'-p',port,'-d','postgres','-At','-c',sql]);
 const apply = (file) => run('psql', ['-X','-v','ON_ERROR_STOP=1','-h',socket,'-p',port,'-d','postgres','-f',file]);
+const psqlAsync = (sql) => new Promise((resolve, reject) => {
+  const child = spawn('psql', ['-X','-q','-v','ON_ERROR_STOP=1','-h',socket,'-p',port,'-d','postgres','-At','-c',sql]);
+  let stdout = ''; let stderr = '';
+  child.stdout.on('data', (chunk) => { stdout += chunk; });
+  child.stderr.on('data', (chunk) => { stderr += chunk; });
+  child.on('error', reject);
+  child.on('close', (status) => status === 0 ? resolve(stdout.trim())
+    : reject(new Error(`psql failed\n${stdout}\n${stderr}`)));
+});
+function psqlInteractiveLock(sql, marker) {
+  let readyResolve; let readyReject; let sawMarker = false; let child;
+  const ready = new Promise((resolve, reject) => { readyResolve = resolve; readyReject = reject; });
+  const done = new Promise((resolve, reject) => {
+    child = spawn('psql', ['-X','-q','-A','-t','-v','ON_ERROR_STOP=1','-h',socket,'-p',port,'-d','postgres']);
+    let stdout = ''; let stderr = '';
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk;
+      if (!sawMarker && stdout.includes(marker)) { sawMarker = true; readyResolve(); }
+    });
+    child.stderr.on('data', (chunk) => { stderr += chunk; });
+    child.on('error', (error) => { readyReject(error); reject(error); });
+    child.on('close', (status) => {
+      if (status === 0) {
+        if (!sawMarker) readyReject(new Error(`psql marker not seen: ${marker}`));
+        resolve(stdout.trim());
+      } else {
+        const error = new Error(`psql failed\n${stdout}\n${stderr}`);
+        readyReject(error); reject(error);
+      }
+    });
+    child.stdin.write(sql + '\n');
+  });
+  return { ready, done, release() { child.stdin.end('commit;\n\\q\n'); } };
+}
 const q = (value) => `'${String(value).replaceAll("'", "''")}'`;
 const hash = (value) => createHash('sha256').update(value).digest('hex');
 const op = (n) => `00000000-0000-4000-8000-${n.toString(16).padStart(12,'0')}`;
@@ -82,7 +117,7 @@ try {
   started = true; apply(fixture);
   for (const file of files.slice(0, 5)) apply(file);
 
-  const prompts = Array.from({ length: 5 }, (_, i) => {
+  const prompts = Array.from({ length: 6 }, (_, i) => {
     const n = i + 1; const key = `atomic-${n}`; const item = op(100 + n);
     psql(`insert into public.game_words values(${q(key)},'初','active','login','atomic-v1',${q(hash(key))},
       ${q(JSON.stringify({ contentKey: key, word: `คำ${n}`, level: '初', syllables: [{}] }))}::jsonb);
@@ -97,13 +132,17 @@ try {
   assert.equal(psql(`select (timestamptz '2026-09-24 16:30:00+00' at time zone 'Asia/Taipei')::date;`), '2026-09-25');
   assert.equal(psql(`select (timestamptz '2026-09-24 16:30:00+00' at time zone 'Asia/Bangkok')::date;`), '2026-09-24');
   const oldWriter = 'public.phase1_typing_round_append_event(uuid,uuid,text,uuid,bigint,bigint,text,text)';
+  const oldCreate = 'public.phase1_typing_round_create(uuid,uuid,text,smallint,bigint,jsonb)';
+  const oldAppend = 'public.phase1_typing_round_append_prompts(uuid,uuid,text,uuid,bigint,jsonb)';
   const atomicWriter = 'public.phase1_typing_round_commit_event(uuid,uuid,text,uuid,bigint,bigint,text,text,smallint,text,integer,text,jsonb)';
-  assert.equal(psql(`select has_function_privilege('service_role',${q(oldWriter)},'execute');`), 'f');
+  for (const signature of [oldWriter, oldCreate, oldAppend]) {
+    assert.equal(psql(`select has_function_privilege('service_role',${q(signature)},'execute');`), 'f');
+  }
   assert.equal(psql(`select has_function_privilege('service_role',${q(atomicWriter)},'execute');`), 't');
   assert.equal(psql(`select has_function_privilege('service_role',
     'public.phase1_typing_round_issue_prelearning(uuid,uuid,text,smallint,bigint,jsonb,jsonb)','execute');`), 'f');
 
-  const issue = (targetUser, n, selectedPrompts = prompts, reserve = []) => JSON.parse(psql(`
+  const issue = (targetUser, n, selectedPrompts = prompts.slice(0, 5), reserve = []) => JSON.parse(psql(`
     select public.phase1_typing_round_issue(${q(op(n))}::uuid,${q(targetUser)}::uuid,
       ${q(hash('issue-'+n))},1::smallint,0::bigint,${q(JSON.stringify(selectedPrompts))}::jsonb,
       ${q(JSON.stringify(reserve))}::jsonb)::text;`));
@@ -140,6 +179,31 @@ try {
   assert.equal(psql(`select state from public.phase1_learning_review_states where user_id=${q(user)}::uuid
     and game='typing' and item_id=${q(op(101))}::uuid;`), 'next_day_check');
   assert.equal(psql(`select status from public.phase1_typing_round_retry_queue where round_id=${q(round)}::uuid;`), 'resolved');
+
+  const raceRound = issue(user6, 601, prompts.slice(0, 5), [prompts[5]]).round_id;
+  const reserveKey = prompts[5].content_ref.key;
+  const reserveHash = prompts[5].record_hash;
+  const canonicalBlocker = psqlInteractiveLock(`begin;
+    update public.game_words set record_hash=${q('8'.repeat(64))} where content_key=${q(reserveKey)};
+    select 'ATOMIC_CANONICAL_RACE_READY';`, 'ATOMIC_CANONICAL_RACE_READY');
+  await canonicalBlocker.ready;
+  const racedEvent = psqlAsync(`set role service_role; ${call({ n: 602, sequence: 1, ordinal: 1,
+    type: 'wrong', targetUser: user6, roundId: raceRound })}`).then(JSON.parse);
+  let waited = false;
+  for (let attempt = 0; attempt < 80 && !waited; attempt++) {
+    waited = Number(psql(`select count(*) from pg_stat_activity where pid<>pg_backend_pid()
+      and backend_type='client backend' and state='active' and wait_event_type='Lock';`)) > 0;
+    if (!waited) await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  assert.equal(waited, true);
+  canonicalBlocker.release();
+  const raceResult = await racedEvent; await canonicalBlocker.done;
+  assert.equal(raceResult.reason, 'typing_canonical_changed');
+  assert.equal(psql(`select next_event_sequence||':'||completed_count||':'||skip_count
+    from public.phase1_typing_rounds where round_id=${q(raceRound)}::uuid;`), '1:0:0');
+  assert.equal(psql(`select count(*) from public.phase1_typing_round_events where round_id=${q(raceRound)}::uuid;`), '0');
+  assert.equal(psql(`select count(*) from public.phase1_typing_round_operations where operation_id=${q(op(602))}::uuid;`), '0');
+  psql(`update public.game_words set record_hash=${q(reserveHash)} where content_key=${q(reserveKey)};`);
 
   const exported = JSON.parse(psql(`set role service_role; select public.phase1_typing_account_export(${q(user)}::uuid,1000)::text;`));
   assert.equal(exported.ok, true); assert.equal(exported.rounds.length, 1);
@@ -192,7 +256,7 @@ try {
   assert.equal(psql(`select score from public.game_score_submissions where submission_id=${q(conflictRound)}::uuid;`), '1');
 
   const dueToken = op(999);
-  const duePrompts = structuredClone(prompts);
+  const duePrompts = structuredClone(prompts.slice(0, 5));
   duePrompts[4].learning_state = 'next_day_check'; duePrompts[4].learning_state_token = dueToken;
   psql(`insert into public.phase1_learning_review_states(user_id,game,level,item_id,state,state_token,due_on)
     values(${q(user5)}::uuid,'typing',1,${q(op(105))}::uuid,'next_day_check',${q(dueToken)}::uuid,
@@ -214,12 +278,12 @@ try {
   console.log('Typing negative atomicity, single-writer ACL and Taipei due-boundary regression: PASS');
 
   psql(`delete from public.phase1_typing_rounds where user_id in
-    (${q(user2)}::uuid,${q(user3)}::uuid,${q(user4)}::uuid);`);
+    (${q(user2)}::uuid,${q(user3)}::uuid,${q(user4)}::uuid,${q(user6)}::uuid);`);
 
   apply(rollback);
   assert.equal(psql(`select score from public.game_score_submissions where submission_id=${q(round)}::uuid;`), '93');
   assert.equal(psql(`select count(*) from public.phase1_typing_round_retry_queue where round_id=${q(round)}::uuid;`), '1');
-  for (const signature of [atomicWriter, oldWriter,
+  for (const signature of [atomicWriter, oldWriter, oldCreate, oldAppend,
     'public.phase1_typing_round_issue(uuid,uuid,text,smallint,bigint,jsonb,jsonb)',
     'public.phase1_typing_round_append_reserve(uuid,uuid,text,uuid,bigint,jsonb)',
     'public.phase1_typing_round_refill(uuid,uuid,text,uuid,bigint,bigint,bigint,smallint,bigint,bigint,bigint,jsonb)']) {
@@ -227,6 +291,13 @@ try {
   }
   assert.equal(psql(`select has_function_privilege('service_role',
     'public.phase1_typing_account_export(uuid,integer)','execute');`), 't');
+  apply(files.at(-1));
+  for (const signature of [oldWriter, oldCreate, oldAppend]) {
+    assert.equal(psql(`select has_function_privilege('service_role',${q(signature)},'execute');`), 'f');
+  }
+  assert.equal(psql(`select has_function_privilege('service_role',${q(atomicWriter)},'execute');`), 't');
+  assert.equal(psql(`select has_function_privilege('service_role',
+    'public.phase1_typing_round_issue(uuid,uuid,text,smallint,bigint,jsonb,jsonb)','execute');`), 't');
   console.log('Typing atomic rollback deactivates writers and preserves completed evidence: PASS');
 } finally {
   if (started) spawnSync('pg_ctl', ['-D',data,'-m','immediate','-w','stop'], { encoding: 'utf8' });

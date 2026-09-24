@@ -603,6 +603,20 @@ try {
       });
     },
     from(name) {
+      if (name === 'phase1_typing_round_operations') {
+        let operationId;
+        return Object.assign(query(() => JSON.parse(asService(`select coalesce((select jsonb_build_object(
+          'operation_id',operation_id,'user_id',user_id,'round_id',round_id,'operation_type',operation_type,
+          'request_hash',request_hash,'request_payload',request_payload,'response',response)
+          from public.phase1_typing_round_operations where operation_id=${quote(operationId)}::uuid),'null'::jsonb)::text;`))), {
+          select(fields) {
+            assert.deepEqual(new Set(fields.split(',')), new Set(['operation_id','user_id','round_id',
+              'operation_type','request_hash','request_payload','response'])); return this;
+          },
+          eq(field, value) { assert.equal(field, 'operation_id'); operationId = value; return this; },
+          maybeSingle() { return this; },
+        });
+      }
       assert.equal(name, 'game_words'); let keys; let level;
       return Object.assign(query(() => JSON.parse(asService(`select coalesce(jsonb_agg(t), '[]'::jsonb)::text
         from public.game_words t where level=${quote(level)} and content_key in (${keys.map(quote).join(',')});`))), {

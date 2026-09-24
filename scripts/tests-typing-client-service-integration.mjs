@@ -62,7 +62,7 @@ function fixture({ count = 5, level = 1, combo = 0, units = 1, golden = [], srs 
         }
         assert.equal(name, 'phase1_typing_round_commit_event');
         const previous = operations.get(args.p_operation_id);
-        if (previous) return { data: previous.hash === args.p_request_hash
+        if (previous) return { data: previous.request_hash === args.p_request_hash
           ? { ...previous.response, idempotent: true } : { ok: false, reason: 'replay_conflict' } };
         if (round.status !== 'active') return { data: { ok: false, reason: 'round_not_active' } };
         if (args.p_expected_sequence !== round.next_event_sequence || args.p_prompt_ordinal !== round.current_prompt_ordinal) {
@@ -106,11 +106,26 @@ function fixture({ count = 5, level = 1, combo = 0, units = 1, golden = [], srs 
         }
         if (round.primary_completed_count === 5 && round.pending_retry_count === 0) round.status = 'completed';
         const response = { ok: true, idempotent: false, operation_id: args.p_operation_id, round_id: ROUND };
-        operations.set(args.p_operation_id, { hash: args.p_request_hash, response });
+        operations.set(args.p_operation_id, { operation_id: args.p_operation_id, user_id: args.p_user_id,
+          round_id: args.p_round_id, operation_type: 'append_event', request_hash: args.p_request_hash,
+          request_payload: { round_id: args.p_round_id, expected_sequence: args.p_expected_sequence,
+            prompt_ordinal: args.p_prompt_ordinal, event_type: args.p_event_type, answer: args.p_answer },
+          response });
         return { data: response };
       });
     },
     from(name) {
+      if (name === 'phase1_typing_round_operations') {
+        let operationId;
+        return Object.assign(query(() => ({ data: clone(operations.get(operationId) || null) })), {
+          select(fields) {
+            assert.deepEqual(new Set(fields.split(',')), new Set(['operation_id','user_id','round_id',
+              'operation_type','request_hash','request_payload','response'])); return this;
+          },
+          eq(field, value) { assert.equal(field, 'operation_id'); operationId = value; return this; },
+          maybeSingle() { return this; },
+        });
+      }
       assert.equal(name, 'game_words'); let keys; let requestedLevel;
       return Object.assign(query(() => ({ data: clone(rows.filter((r) => keys.includes(r.content_key) && r.level === requestedLevel)) })), {
         select() { return this; }, in(field, values) { assert.equal(field, 'content_key'); keys = values; return this; },

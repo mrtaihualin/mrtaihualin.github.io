@@ -84,6 +84,9 @@ await check('service routes prepared rounds to the atomic RPC while all public g
   const service = fs.readFileSync(new URL('../supabase/functions/score-submit/typing-round-service.mjs', import.meta.url), 'utf8');
   assert.match(service, /phase1_typing_round_commit_event/);
   assert.doesNotMatch(service, /'phase1_typing_round_append_event'/);
+  assert.ok(service.indexOf("from('phase1_typing_round_operations')")
+    < service.indexOf('loadTypingRoundEvidence({ admin, userId, roundId: event.roundId'));
+  assert.match(service, /checkpoint_unavailable: 'typing_canonical_changed'/);
   assert.match(service, /atomicEnabled !== true\) fail\('typing_atomic_disabled'/);
   assert.match(service, /TYPING_ROUND_ACTIONS_ENABLED = false/);
   assert.match(service, /TYPING_ATOMIC_FINAL_COMMIT_ENABLED = false/);

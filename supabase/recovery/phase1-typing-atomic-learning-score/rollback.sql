@@ -17,6 +17,12 @@ revoke all on function public.phase1_typing_round_commit_event(
 revoke all on function public.phase1_typing_round_append_event(
   uuid,uuid,text,uuid,bigint,bigint,text,text
 ) from public,anon,authenticated,service_role;
+revoke all on function public.phase1_typing_round_create(
+  uuid,uuid,text,smallint,bigint,jsonb
+) from public,anon,authenticated,service_role;
+revoke all on function public.phase1_typing_round_append_prompts(
+  uuid,uuid,text,uuid,bigint,jsonb
+) from public,anon,authenticated,service_role;
 revoke all on function public.phase1_typing_round_issue(
   uuid,uuid,text,smallint,bigint,jsonb,jsonb
 ) from public,anon,authenticated,service_role;

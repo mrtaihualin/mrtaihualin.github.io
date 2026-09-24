@@ -70,7 +70,7 @@ function fixture(count = 5, level = 1) {
         assert.match(args.p_request_hash, /^[a-f0-9]{64}$/);
         if (state.failWrite) return { error: { message: 'PRIVATE SQL ERROR' } };
         const old = state.operations.get(args.p_operation_id);
-        if (old) return { data: old.hash === args.p_request_hash
+        if (old) return { data: old.request_hash === args.p_request_hash
           ? { ...old.response, idempotent: true } : { ok: false, reason: 'replay_conflict' } };
         if (round.status !== 'active') return { data: { ok: false, reason: 'round_not_active' } };
         if (args.p_expected_sequence !== round.next_event_sequence || args.p_prompt_ordinal !== round.current_prompt_ordinal) {
@@ -88,13 +88,29 @@ function fixture(count = 5, level = 1) {
         if (['completed', 'skipped'].includes(record.type)) round.current_prompt_ordinal++;
         if (round.primary_completed_count === 5) round.status = 'completed';
         const response = { ok: true, idempotent: false, operation_id: args.p_operation_id, round_id: roundId };
-        state.operations.set(args.p_operation_id, { hash: args.p_request_hash, response });
+        state.operations.set(args.p_operation_id, { operation_id: args.p_operation_id, user_id: args.p_user_id,
+          round_id: args.p_round_id, operation_type: 'append_event', request_hash: args.p_request_hash,
+          request_payload: { round_id: args.p_round_id, expected_sequence: args.p_expected_sequence,
+            prompt_ordinal: args.p_prompt_ordinal, event_type: args.p_event_type, answer: args.p_answer },
+          response });
         if (state.lostWriteResponse) { state.lostWriteResponse = false; return { error: { message: 'connection lost after commit' } }; }
         if (state.failPostWriteLoad) { state.failPostWriteLoad = false; state.failLoad = true; }
         return { data: response };
       });
     },
     from(name) {
+      if (name === 'phase1_typing_round_operations') {
+        let operationId;
+        const result = query(() => ({ data: structuredClone(state.operations.get(operationId) || null) }));
+        return Object.assign(result, {
+          select(fields) {
+            assert.deepEqual(new Set(fields.split(',')), new Set(['operation_id','user_id','round_id',
+              'operation_type','request_hash','request_payload','response'])); return this;
+          },
+          eq(field, value) { assert.equal(field, 'operation_id'); operationId = value; return this; },
+          maybeSingle() { return this; },
+        });
+      }
       assert.equal(name, 'game_words');
       let keys; let requestedLevel;
       const result = query(() => {
@@ -273,6 +289,18 @@ await check('lost commit response and post-commit read failure preserve same ope
   f.failLoad = false;
   assert.equal((await f.call(event({ operation_id: op(2), expected_sequence: 2, type: 'hint_opened' }))).body.idempotent, true);
   assert.equal(f.events.length, 2);
+});
+
+await check('exact receipt is checked before canonical projection and retires a committed replay', async () => {
+  const f = fixture();
+  assert.equal((await f.call(event())).status, 200);
+  f.loadReason = 'typing_canonical_changed';
+  const replay = await f.call(event());
+  assert.deepEqual(replay, { status: 200, body: { ok: true, operation_id: op(1), round_id: roundId, idempotent: true,
+    event_committed: true, checkpoint_unavailable: 'typing_canonical_changed' } });
+  const foreign = await f.call(event(), { id: stranger });
+  assert.equal(foreign.status, 409); assert.equal(foreign.body.error, 'replay_conflict');
+  assert.equal(f.events.length, 1);
 });
 
 // Execute the real TypeScript request handler with in-memory dependencies. The

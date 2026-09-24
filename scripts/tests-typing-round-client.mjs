@@ -117,6 +117,21 @@ await test('lost committed response, reload and resume replay the exact durable 
   assert.equal(f.records.size, 0);
 });
 
+await test('authoritative receipt-only replay retires the journal and requires a fresh Resume', async () => {
+  const f = fixture();
+  const client = f.create(async (request, ctx) => {
+    if (request.action !== 'typing_round_event') return f.transport(request, ctx);
+    return { status: 200, body: { ok: true, operation_id: request.operation_id, round_id: request.round_id, idempotent: true,
+      event_committed: true, checkpoint_unavailable: 'typing_canonical_changed' } };
+  });
+  client.setOwner(owner); await client.resume();
+  const before = client.getState().checkpoint;
+  const state = await client.sendEvent({ type: 'wrong' });
+  assert.equal(state.status, 'needs_resume'); assert.equal(state.error, 'typing_canonical_changed');
+  assert.equal(state.pendingOperationId, null); assert.deepEqual(state.checkpoint, before);
+  assert.equal(f.records.size, 0);
+});
+
 await test('503 and definite reserve rejection retain same primitive pending ID', async () => {
   const f = fixture(); let status = 503;
   const client = f.create((request, ctx) => request.action === 'typing_round_event' && status

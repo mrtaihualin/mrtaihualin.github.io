@@ -196,6 +196,14 @@ export function createTypingRoundClient({ transport, storage, createOperationId 
       error = typeof body.error === 'string' && /^[a-z_]{1,80}$/.test(body.error) ? body.error : 'request_failed';
       fail(error);
     }
+    if (write && keys(body, ['ok', 'operation_id', 'round_id', 'idempotent', 'event_committed', 'checkpoint_unavailable'])
+        && body.ok === true && body.operation_id === request.operation_id && body.round_id === request.round_id
+        && typeof body.idempotent === 'boolean' && body.event_committed === true
+        && body.checkpoint_unavailable === 'typing_canonical_changed') {
+      clearPending();
+      status = 'needs_resume'; error = 'typing_canonical_changed';
+      return getState();
+    }
     let verified;
     try { verified = verifiedResponse(body, request.round_id, checkpoint, write ? request : null); }
     catch (cause) { status = 'blocked'; error = cause.code; throw cause; }

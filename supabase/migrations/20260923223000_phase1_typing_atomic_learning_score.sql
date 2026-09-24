@@ -299,12 +299,42 @@ begin
   if not found or v_prompt.learning_state is null or v_prompt.learning_state_token is null then
     return pg_catalog.jsonb_build_object('ok',false,'reason','prompt_not_found');
   end if;
-  select * into v_word from public.game_words where content_key=v_prompt.content_key for share;
+  -- Hold every canonical identity that this event may keep active or promote.
+  -- The lock is acquired only after the round lock, matching the issuance and
+  -- refill owners, and the validations below run after any catalog-writer wait.
+  perform word.content_key
+  from public.game_words word
+  where word.content_key in (
+    select prompt.content_key from public.phase1_typing_round_prompts prompt
+    where prompt.round_id=p_round_id and prompt.prompt_ordinal=p_prompt_ordinal
+    union
+    select reserve.content_key from public.phase1_typing_round_reserve_prompts reserve
+    join public.phase1_typing_round_reserve_state state on state.round_id=reserve.round_id
+    where reserve.round_id=p_round_id and reserve.reserve_ordinal>state.reserve_cursor
+  )
+  for share of word;
+  select * into v_word from public.game_words where content_key=v_prompt.content_key;
   if not found or v_word.level is distinct from (case v_round.level when 1 then '初' when 2 then '中' end)
      or v_word.status is distinct from 'active' or v_word.access_tier not in ('guest','login')
      or v_word.catalog_version is distinct from v_prompt.catalog_version
      or v_word.record_hash is distinct from v_prompt.record_hash
      or v_word.canonical_record->>'word' is distinct from v_prompt.canonical_answer then
+    return pg_catalog.jsonb_build_object('ok',false,'reason','typing_canonical_changed');
+  end if;
+  if exists (
+    select 1 from public.phase1_typing_round_reserve_prompts reserve
+    join public.phase1_typing_round_reserve_state state on state.round_id=reserve.round_id
+    left join public.game_words word on word.content_key=reserve.content_key
+    where reserve.round_id=p_round_id and reserve.reserve_ordinal>state.reserve_cursor
+      and (reserve.catalog_version is null or reserve.record_hash is null
+        or word.content_key is null
+        or word.level is distinct from (case v_round.level when 1 then '初' when 2 then '中' end)
+        or word.status is distinct from 'active'
+        or (word.access_tier is distinct from 'guest' and word.access_tier is distinct from 'login')
+        or word.catalog_version is distinct from reserve.catalog_version
+        or word.record_hash is distinct from reserve.record_hash
+        or word.canonical_record->>'word' is distinct from reserve.canonical_answer)
+  ) then
     return pg_catalog.jsonb_build_object('ok',false,'reason','typing_canonical_changed');
   end if;
   if p_event_type='completed' and p_answer is distinct from v_prompt.canonical_answer then
@@ -496,6 +526,10 @@ revoke all on function public.phase1_typing_account_export(uuid,integer) from pu
 -- Atomic cutover has one completion writer. The prior event RPC and renamed
 -- implementation helpers remain only as recovery evidence, never API owners.
 revoke all on function public.phase1_typing_round_append_event(uuid,uuid,text,uuid,bigint,bigint,text,text)
+  from public,anon,authenticated,service_role;
+revoke all on function public.phase1_typing_round_create(uuid,uuid,text,smallint,bigint,jsonb)
+  from public,anon,authenticated,service_role;
+revoke all on function public.phase1_typing_round_append_prompts(uuid,uuid,text,uuid,bigint,jsonb)
   from public,anon,authenticated,service_role;
 revoke all on function public.phase1_typing_round_issue_prelearning(uuid,uuid,text,smallint,bigint,jsonb,jsonb)
   from public,anon,authenticated,service_role;
