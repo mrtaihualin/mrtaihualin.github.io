@@ -31,7 +31,8 @@
 const fs = require('fs');
 const path = require('path');
 const root = path.resolve(__dirname, '..');
-const SITE = 'https://mrtaihualin.com';
+const SITE = 'https://www.mrtaihualin.com';
+const LEGACY_SITE = 'https://mrtaihualin.com';
 const showFull = process.argv.includes('--full');
 
 const errors = [];
@@ -162,6 +163,15 @@ for (const rel of publicPages) {
   if (!metaContent(h, 'name', 'twitter:image')) warns.push(`${rel}: ไม่มี twitter:image`);
 }
 
+// WWW is the public canonical host. Keep this blocking so a later page cannot
+// silently reintroduce apex canonical, social, structured-data, or hard-coded links.
+for (const [rel, info] of pages) {
+  if (info.cat === 'E-dev') continue;
+  if (info.html.includes(LEGACY_SITE)) {
+    errors.push(`${rel}: ยังมี absolute URL ของ apex host — ต้องใช้ ${SITE}`);
+  }
+}
+
 // ════════════════════════════════════════════════════════════════════════════
 // 2) sitemap.xml เทียบกับไฟล์จริง
 // ════════════════════════════════════════════════════════════════════════════
@@ -218,6 +228,30 @@ if (!fs.existsSync(sitemapPath)) {
   }
 
   infos.push(`sitemap มี ${locs.length} URL · หน้าสาธารณะที่ควรอยู่ ${publicPages.length} หน้า`);
+}
+
+const robotsPath = path.join(root, 'robots.txt');
+if (!fs.existsSync(robotsPath)) {
+  errors.push('ไม่มีไฟล์ robots.txt');
+} else {
+  const robots = fs.readFileSync(robotsPath, 'utf8');
+  const sitemapDirective = robots.match(/^\s*Sitemap:\s*(\S+)\s*$/im);
+  const expectedSitemap = SITE + '/sitemap.xml';
+  if (!sitemapDirective) errors.push('robots.txt ไม่มี Sitemap directive');
+  else if (sitemapDirective[1] !== expectedSitemap) {
+    errors.push(`robots.txt ชี้ sitemap ผิด canonical host — ${sitemapDirective[1]}`);
+  }
+}
+
+for (const rel of [
+  'js/acquisition/index-content-modals.js',
+  'js/classroom/classroom-views.js',
+  'js/classroom/student-requests.js',
+  'js/core/shared.js',
+  'js/core/shared.min.js',
+]) {
+  const source = fs.readFileSync(path.join(root, rel), 'utf8');
+  if (source.includes(LEGACY_SITE)) errors.push(`${rel}: runtime link ยังใช้ apex host`);
 }
 
 // ════════════════════════════════════════════════════════════════════════════

@@ -280,14 +280,19 @@ function srsHarness(kind) {
   const client = deferredClient();
   const SITE_AUTH = { learningOwnerEpoch: 1 };
   const boundary = { ownerKey: 'phase1_learning_owner_v1' };
-  const READING_AUTH = { user: { id: 'account-a' } };
+  const READING_AUTH = { user: null, srsUser: { id: 'account-a' } };
   const context = {
     window: null, localStorage, SITE_AUTH, PHASE1_ACCOUNT_BOUNDARY: boundary, READING_AUTH,
     srsRecords: {}, totalStars: 0, totalBadges: 0, LEVEL_NUM: 3,
     ADV_SENTENCES: [{ th: 'A-old' }, { th: 'B-new' }],
+    WORDS: [{ th: 'A-old', contentKey: 'A-old', level: '初' }, { th: 'B-new', contentKey: 'B-new', level: '初' }],
+    WORD_LIST: [{ word: 'A-old', contentKey: 'A-old', level: 1 }, { word: 'B-new', contentKey: 'B-new', level: 1 }],
+    RG_LEVEL_TO_NUM: { '初': 1, '中': 2, '高': 3 },
+    rgContentKey(word) { return word.contentKey; },
+    tgContentKey(word) { return word.contentKey; },
     getSupabaseClient() { return client; },
     doSave() { context.saveCount++; }, woSaveSrs() { context.saveCount++; },
-    rgLoggedIn() { return !!READING_AUTH.user; }, woLoggedIn() { return !!READING_AUTH.user; },
+    rgLoggedIn() { return !!READING_AUTH.srsUser; }, woLoggedIn() { return !!READING_AUTH.srsUser; },
     tfLoadSrs() { return Object.assign({}, context._toneStore); },
     tfSaveSrs(value) { context._toneStore = Object.assign({}, value); context.saveCount++; },
     TF_SRS: { keyFor(word, level) { return word + '@' + level; } },
@@ -298,67 +303,43 @@ function srsHarness(kind) {
   return { spec, context, localStorage, client, SITE_AUTH, READING_AUTH, boundary };
 }
 
-for (const kind of ['reading', 'typing', 'wordorder']) {
-  test(kind + ' SRS discards Account A completion without clearing Account B request', async () => {
-    const h = srsHarness(kind);
-    const promiseA = h.context[h.spec.sync](true);
-    h.READING_AUTH.user = { id: 'account-b' }; h.SITE_AUTH.learningOwnerEpoch = 2;
-    h.localStorage.setItem(h.boundary.ownerKey, 'account-b');
-    h.context[h.spec.reset]();
-    const promiseB = h.context[h.spec.sync](true);
-    const [requestA, requestB] = h.client.requests;
-    requestB.resolve({ data: [{ word: 'B-new', level: h.spec.level, stage: 1, due_date: '2026-08-17', mastered: false }] });
-    await promiseB; await settle();
-    requestA.resolve({ data: [{ word: 'A-old', level: h.spec.level, stage: 2, due_date: '2026-08-20', mastered: false }] });
-    await promiseA; await settle();
-    const state = h.context[h.spec.state];
-    assert.ok(state['B-new@' + h.spec.level], 'new owner SRS was not applied');
-    assert.ok(!state['A-old@' + h.spec.level], 'old owner SRS leaked into new owner');
-    assert.strictEqual(h.context[h.spec.promise], promiseB, 'stale completion replaced/cleared newer promise');
-    assert.deepStrictEqual(requestA.filters.find(([key]) => key === 'user_id'), ['user_id', 'account-a']);
-  });
-}
-
-test('Tone SRS resets on logout and discards the late authenticated response', async () => {
-  const h = srsHarness('tone');
-  const promiseA = h.context[h.spec.sync]();
-  h.READING_AUTH.user = null; h.SITE_AUTH.learningOwnerEpoch = 2;
-  h.localStorage.removeItem(h.boundary.ownerKey);
-  h.context[h.spec.reset]();
-  const requestA = h.client.requests[0];
-  requestA.resolve({ data: [{ word: 'A-old', level: 1, stage: 2, due_date: '2026-08-20', mastered: false }] });
-  await promiseA; await settle();
-  assert.deepStrictEqual(h.context._toneStore, {});
-  assert.strictEqual(h.context.__tfSrsSyncedOnce, false);
-  assert.strictEqual(h.context.__tfSrsSyncPromise, null);
+test('Login Free Learning Engine clears owner projections and rejects late commits', async () => {
+  const learning = read('js/games/learning-review.js');
+  assert.match(learning, /ownerId: String\(currentUser\(\) && currentUser\(\)\.id \|\| ''\), ownerEpoch: ownerScope\(\)/);
+  assert.match(learning, /if \(!runtimeEnabled\(\) \|\| !user \|\| context\.ownerId !== String\(user\.id \|\| ''\) \|\| context\.ownerEpoch !== ownerScope\(\) \|\| context\.ownerGeneration !== ownerGeneration\) fail\('LEARNING_OWNER_CHANGED'\)/);
+  assert.match(learning, /SITE_AUTH\.onChange\(function \(user\) \{[\s\S]{0,220}ownerGeneration\+\+;[\s\S]{0,220}queues = Object\.create\(null\); packets = Object\.create\(null\); latestRound = Object\.create\(null\)/);
+  assert.doesNotMatch(learning.slice(learning.indexOf('SITE_AUTH.onChange')), /rounds = Object\.create\(null\)/, 'retain old-round tombstones so owner changes cannot bypass continuation');
 });
 
-test('Reading exposes isolated Login Core while owner-safe account runtimes remain parked', async () => {
-  const corePages = ['tone-finder.html', 'listening-game.html', 'typing-game.html', 'word-order.html'];
+test('Four games expose Login Free learning runtimes while Listening, Paid and Lego remain outside', async () => {
+  const corePages = ['tone-finder.html', 'typing-game.html', 'word-order.html'];
   for (const page of corePages) {
     const html = read(page);
-    assert.doesNotMatch(html, /phase1-canonical-state\.js/, page + ' canonical runtime parked');
-    assert.doesNotMatch(html, /game-account\.js/, page + ' GameAccount runtime parked');
-    assert.doesNotMatch(html, /reading-auth\.js/, page + ' reading-auth runtime parked');
+    assert.match(html, /phase1-canonical-state\.js\?v=3/, page + ' canonical runtime active');
+    assert.match(html, /game-account\.js\?v=6/, page + ' GameAccount runtime active');
+    assert.match(html, /reading-auth\.js\?v=35/, page + ' Login Free account runtime');
+    assert.match(html, /practice-events\.js\?v=5/, page + ' durable report runtime');
+    assert.match(html, /learning-review\.js\?v=\d+/, page + ' Review runtime');
   }
   const reading = read('reading-game.html');
-  assert.doesNotMatch(reading, /phase1-canonical-state\.js/, 'reading canonical runtime parked');
-  assert.doesNotMatch(reading, /game-account\.js/, 'reading GameAccount runtime parked');
-  assert.match(reading, /reading-auth\.js\?v=29/, 'reading isolated Login Core runtime');
+  assert.match(reading, /phase1-canonical-state\.js\?v=3/, 'reading canonical runtime active');
+  assert.match(reading, /game-account\.js\?v=6/, 'reading GameAccount runtime active');
+  assert.match(reading, /reading-auth\.js\?v=35/, 'reading Login Free account runtime');
+  assert.doesNotMatch(read('listening-game.html'), /(?:tone-server|learning-review)\.js/, 'Listening learning loop stays absent');
   assert.match(read('js/games/reading-auth.js'), /API\.user = publicLoginOnly \? null : loginUser/);
   for (const page of ['my-progress.html', 'vault.html']) {
-    assert.match(read(page), /phase1-canonical-state\.js\?v=2/, page + ' canonical cache');
+    assert.match(read(page), /phase1-canonical-state\.js\?v=3/, page + ' canonical cache');
   }
   for (const page of ['vault.html']) {
-    assert.match(read(page), /reading-auth\.js\?v=28/, page + ' reading-auth cache');
+    assert.match(read(page), /reading-auth\.js\?v=35/, page + ' reading-auth cache');
   }
-  assert.doesNotMatch(read('lego.html'), /game-account\.js/);
-  assert.match(read('tone-finder.html'), /tone-finder-game\.min\.js\?v=78/);
-  assert.match(read('reading-game.html'), /reading-game-app\.min\.js\?v=45/);
-  assert.match(read('typing-game.html'), /typing-game-app\.min\.js\?v=43/);
-  assert.match(read('word-order.html'), /word-order-app\.min\.js\?v=32/);
-  assert.match(read('listening-game.html'), /Preserved paused runtime: js\/games\/listening-game-app\.js\?v=19/);
-  assert.doesNotMatch(read('listening-game.html'), /GameContentLoader\.boot\(\['js\/games\/listening-game-app\.js/);
+  assert.match(read('lego.html'), /game-account\.js\?v=6/);
+  assert.match(read('lego.html'), /auth-widget\.js\?v=24/);
+  assert.match(read('tone-finder.html'), /tone-finder-game\.min\.js\?v=102/);
+  assert.match(read('reading-game.html'), /reading-game-app\.min\.js\?v=65/);
+  assert.match(read('typing-game.html'), /typing-game-app\.min\.js\?v=63/);
+  assert.match(read('word-order.html'), /word-order-app\.min\.js\?v=47/);
+  assert.match(read('listening-game.html'), /GameContentLoader\.boot\(\['js\/games\/listening-game-app\.js\?v=21'/);
 });
 
 process.on('beforeExit', () => {

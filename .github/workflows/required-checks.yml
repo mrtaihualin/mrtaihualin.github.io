@@ -25,6 +25,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Add PostgreSQL test tools to PATH
+        run: echo "$(pg_config --bindir)" >> "$GITHUB_PATH"
       - name: Verify enforcement logic
         run: node scripts/tests-task-write-set.js
       - name: Enforce Pull Request Task/write-set

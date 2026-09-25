@@ -1,4 +1,6 @@
--- Run only after 2026-08-16_email_otp_auth_security.sql in a disposable/local DB.
+-- Run only after 2026-08-16_email_otp_auth_security.sql,
+-- 20260903125640_email_otp_resend_one_minute.sql, and
+-- 20260905043843_email_otp_idempotent_resend.sql in a disposable/local DB.
 -- The transaction rolls back all challenge, abuse, and log fixtures.
 
 begin;
@@ -15,6 +17,8 @@ declare
   v_attempts integer;
   v_state text;
   v_cooldown timestamptz;
+  v_cooldown_before timestamptz;
+  v_count integer;
 begin
   if has_function_privilege('anon', 'public.begin_email_otp_challenge_internal(uuid,text,text,text)', 'execute')
      or has_function_privilege('authenticated', 'public.verify_email_otp_challenge_internal(uuid,text,text,text)', 'execute') then
@@ -23,11 +27,20 @@ begin
   if not has_function_privilege('service_role', 'public.begin_email_otp_challenge_internal(uuid,text,text,text)', 'execute') then
     raise exception 'service_role cannot execute internal Email OTP RPCs';
   end if;
+  if has_function_privilege('anon', 'public.confirm_email_otp_delivery_internal(uuid,text,text)', 'execute')
+     or has_function_privilege('authenticated', 'public.get_email_otp_delivery_status_internal(uuid,text)', 'execute') then
+    raise exception 'browser roles can execute internal Email OTP delivery RPCs';
+  end if;
 
   v_result := public.begin_email_otp_challenge_internal(
     '10000000-0000-4000-8000-000000000001', repeat('a', 64), repeat('b', 64), repeat('c', 64)
   );
-  if (v_result->>'accepted')::boolean is not true then raise exception 'initial challenge rejected'; end if;
+  if (v_result->>'accepted')::boolean is not true or v_result->>'status' <> 'claimed' then
+    raise exception 'initial challenge rejected';
+  end if;
+  if not public.confirm_email_otp_delivery_internal(
+    '10000000-0000-4000-8000-000000000001', repeat('a', 64), repeat('c', 64)
+  ) then raise exception 'initial delivery confirmation failed'; end if;
 
   for v_attempts in 1..4 loop
     v_result := public.verify_email_otp_challenge_internal(
@@ -60,18 +73,20 @@ begin
   select attempts, state into v_attempts, v_state
     from private.email_otp_challenges where challenge_id = '20000000-0000-4000-8000-000000000002';
   if v_attempts <> 5 or v_state <> 'invalidated' then raise exception 'fifth wrong OTP did not invalidate'; end if;
+  select cooldown_until into v_cooldown_before from private.email_otp_abuse_state
+   where subject_kind = 'email' and subject_hmac = repeat('e', 64);
   v_result := public.verify_email_otp_challenge_internal(
     '20000000-0000-4000-8000-000000000002', repeat('e', 64), repeat('f', 64), repeat('1', 64)
   );
   if v_result->>'status' <> 'rejected' then raise exception 'locked challenge accepted correct OTP'; end if;
 
-  perform public.begin_email_otp_challenge_internal(
+  v_result := public.begin_email_otp_challenge_internal(
     '20000000-0000-4000-8000-000000000003', repeat('e', 64), repeat('f', 64), repeat('1', 64)
   );
   select cooldown_until into v_cooldown from private.email_otp_abuse_state
    where subject_kind = 'email' and subject_hmac = repeat('e', 64);
-  if v_cooldown < clock_timestamp() + interval '59 minutes' then
-    raise exception 'repeated lockout abuse did not escalate to 60 minutes';
+  if v_result->>'status' <> 'duplicate_failed' or v_cooldown <> v_cooldown_before then
+    raise exception 'duplicate request changed the five-wrong-attempt cooldown';
   end if;
 
   v_result := public.begin_email_otp_challenge_internal(
@@ -91,24 +106,72 @@ begin
   v_result := public.begin_email_otp_challenge_internal(
     '40000000-0000-4000-8000-000000000004', repeat('6', 64), repeat('7', 64), repeat('8', 64)
   );
+  if not public.confirm_email_otp_delivery_internal(
+    '40000000-0000-4000-8000-000000000004', repeat('6', 64), repeat('8', 64)
+  ) then raise exception 'resend fixture delivery confirmation failed'; end if;
   v_result := public.begin_email_otp_challenge_internal(
-    '40000000-0000-4000-8000-000000000005', repeat('6', 64), repeat('7', 64), repeat('8', 64)
+    '40000000-0000-4000-8000-000000000005', repeat('6', 64), repeat('7', 64), repeat('9', 64)
   );
-  select cooldown_until into v_cooldown from private.email_otp_abuse_state
-   where subject_kind = 'email' and subject_hmac = repeat('6', 64);
-  if (v_result->>'accepted')::boolean is not false or v_cooldown < clock_timestamp() + interval '14 minutes' then
-    raise exception 'same-email 15 minute cooldown missing';
+  if (v_result->>'accepted')::boolean is not false
+     or v_result->>'status' <> 'duplicate_delivered'
+     or v_result->>'challenge_id' <> '40000000-0000-4000-8000-000000000004' then
+    raise exception 'duplicate request did not reuse the delivered challenge';
   end if;
-  select cooldown_until into v_cooldown from private.email_otp_abuse_state
-   where subject_kind = 'ip' and subject_hmac = repeat('8', 64);
-  if v_cooldown is not null then raise exception 'single-email resend blocked the shared IP'; end if;
+  for v_attempts in 1..20 loop
+    perform public.begin_email_otp_challenge_internal(
+      '40000000-0000-4000-8000-000000000006', repeat('6', 64), repeat('7', 64), repeat('9', 64)
+    );
+  end loop;
+  select cooldown_until, violation_count into v_cooldown, v_count
+    from private.email_otp_abuse_state
+   where subject_kind = 'email' and subject_hmac = repeat('6', 64);
+  if v_cooldown is not null or v_count <> 0 then
+    raise exception 'duplicate requests created or increased account cooldown';
+  end if;
+  select count(*) into v_count from private.email_otp_security_events
+   where email_hmac = repeat('6', 64) and event_type = 'request_accepted';
+  if v_count <> 1 then raise exception 'duplicate requests counted as provider sends'; end if;
+
+  update private.email_otp_abuse_state
+     set last_request_at = clock_timestamp() - interval '61 seconds'
+   where subject_kind = 'email' and subject_hmac = repeat('6', 64);
+  v_result := public.begin_email_otp_challenge_internal(
+    '40000000-0000-4000-8000-000000000007', repeat('6', 64), repeat('9', 64), repeat('8', 64)
+  );
+  if (v_result->>'accepted')::boolean is not true or v_result->>'status' <> 'claimed' then
+    raise exception 'same-email resend after one minute was rejected';
+  end if;
+  if not public.confirm_email_otp_delivery_internal(
+    '40000000-0000-4000-8000-000000000007', repeat('6', 64), repeat('8', 64)
+  ) then raise exception 'replacement delivery confirmation failed'; end if;
+  v_result := public.verify_email_otp_challenge_internal(
+    '40000000-0000-4000-8000-000000000004', repeat('6', 64), repeat('7', 64), repeat('8', 64)
+  );
+  if v_result->>'status' <> 'rejected' then raise exception 'older OTP survived a new request'; end if;
+  v_result := public.verify_email_otp_challenge_internal(
+    '40000000-0000-4000-8000-000000000007', repeat('6', 64), repeat('9', 64), repeat('8', 64)
+  );
+  if v_result->>'status' <> 'verified' then raise exception 'latest OTP was not usable'; end if;
+
+  insert into private.email_otp_security_events (
+    event_type, challenge_id, email_hmac, ip_hmac, outcome, occurred_at
+  )
+  select 'request_accepted', null, repeat('d', 64), repeat('e', 64), 'accepted',
+         clock_timestamp() - interval '2 minutes'
+    from generate_series(1, 10);
+  v_result := public.begin_email_otp_challenge_internal(
+    '50000000-0000-4000-8000-000000000005', repeat('d', 64), repeat('f', 64), repeat('e', 64)
+  );
+  if v_result->>'status' <> 'blocked' then raise exception 'hard email send limit did not block'; end if;
+  select cooldown_until into v_cooldown_before from private.email_otp_abuse_state
+   where subject_kind = 'email' and subject_hmac = repeat('d', 64);
   perform public.begin_email_otp_challenge_internal(
-    '40000000-0000-4000-8000-000000000006', repeat('6', 64), repeat('7', 64), repeat('8', 64)
+    '50000000-0000-4000-8000-000000000006', repeat('d', 64), repeat('f', 64), repeat('e', 64)
   );
   select cooldown_until into v_cooldown from private.email_otp_abuse_state
-   where subject_kind = 'email' and subject_hmac = repeat('6', 64);
-  if v_cooldown < clock_timestamp() + interval '59 minutes' then
-    raise exception 'repeated request abuse did not escalate to 60 minutes';
+   where subject_kind = 'email' and subject_hmac = repeat('d', 64);
+  if v_cooldown <> v_cooldown_before then
+    raise exception 'requests during hard cooldown extended the cooldown';
   end if;
 
   for v_attempts in 1..46 loop

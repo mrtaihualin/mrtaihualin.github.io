@@ -18,9 +18,9 @@ function test(name, fn) {
   console.log('✓ ' + name);
 }
 
-test('字母練習區 opens the overlay instead of resetting game state', () => {
+test('字母練習區 uses the overlay outside the dedicated Landscape surface', () => {
   assert.match(html, /id="tf-alpha-btn"[^>]+TF\.openAlphabetOverlay\('home'\)/);
-  assert.doesNotMatch(html.match(/id="tf-alpha-btn"[^>]+>/)[0], /TF\.openAlpha\(\)/);
+  assert.match(html.match(/id="tf-alpha-btn"[^>]+>/)[0], /gsh-ml-active[^>]+TF\.openAlpha\(\)[^>]+TF\.openAlphabetOverlay\('home'\)/);
   const opener = app.match(/function tfOpenAlphabetOverlay[\s\S]+?\n}\n\nfunction tfAlphaView/)[0];
   assert.doesNotMatch(opener, /\bS\s*=|\bsession\s*=|\bhist\s*=|score\s*[+\-=]/);
 });
@@ -34,6 +34,22 @@ test('overlay home has the approved four-card structure', () => {
   assert.match(html, /\.tf-alpha-dialog \{[\s\S]{0,80}--tf-alpha-font-scale:\.85;[\s\S]{0,180}font-size:85%/);
   assert.match(html, /@media \(max-width:720px\)[\s\S]{0,180}--tf-alpha-font-scale:\.8;[\s\S]{0,160}font-size:80%/);
   assert.match(html, /\.tf-alpha-menu-card strong \{[^}]*font-size:calc\(25px \* var\(--tf-alpha-font-scale\)\)/);
+});
+
+test('Desktop Computer scales the complete overlay by 15% within viewport bounds only', () => {
+  assert.match(html, /@media \(min-width:1025px\) and \(min-height:601px\) \{[\s\S]{0,360}\.tf-alpha-dialog \{[\s\S]{0,260}transform:scale\(1\.15\)/);
+  assert.match(html, /width:min\(748px,calc\(86\.9565vw - 34\.7826px\)\)/);
+  assert.match(html, /height:min\(612px,calc\(86\.9565vh - 34\.7826px\)\)/);
+  const desktopScale = html.match(/@media \(min-width:1025px\) and \(min-height:601px\) \{[\s\S]+?\n  \}/)[0];
+  assert.doesNotMatch(desktopScale, /\.tf-alpha-overlay\s*\{/);
+  assert.match(html, /@media \(max-width:720px\)[\s\S]{0,180}\.tf-alpha-dialog \{ --tf-alpha-font-scale:\.8/);
+  assert.match(html, /@media \(max-width:720px\) and \(orientation:portrait\)[\s\S]{0,220}width:80vw; height:80vh; height:80dvh/);
+});
+
+test('every alphabet overlay element follows Tone standard and modern font state', () => {
+  assert.match(html, /body:not\(\.tf-modern-font\) \.tf-alpha-dialog,[\s\S]{0,180}\.tf-alpha-dialog \* \{[\s\S]{0,100}font-family:'Sarabun','Noto Sans TC',sans-serif !important/);
+  assert.match(html, /body\.tf-modern-font \.tf-alpha-dialog,[\s\S]{0,180}\.tf-alpha-dialog \* \{[\s\S]{0,110}font-family:'Noto Sans Thai','Noto Sans TC',sans-serif !important/);
+  assert.match(app, /toggleFont: function\(\) \{[\s\S]{0,120}document\.body\.classList\.toggle\('tf-modern-font'\)/);
 });
 
 test('two-choice live/dead cards remain equal instead of inheriting the featured-card span', () => {
@@ -85,10 +101,12 @@ test('tone marks are visible and have no fabricated audio', () => {
   assert.match(app, /這一區只顯示符號，不製作假錄音/);
 });
 
-test('existing hint charge and zero-lock order remains ahead of the same-overlay link', () => {
-  const hint = app.match(/function tfUseHint\(keys\)[\s\S]+?\n}/)[0];
-  assert.match(hint, /TF_WORDSCORE\.onPeek\(session\)[\s\S]+showTip\(keys\)[\s\S]+tfForceRevealZero\(\)/);
-  assert.match(app, /showTip\(keys\)[\s\S]{0,1500}查看拼音規則手冊/);
+test('alphabet manual and tutorial stay isolated from the vocabulary answer authority', () => {
+  assert.match(app, /function navigateToInflection\(\)/);
+  assert.match(app, /function catalogExpectedTeachingChoice\(step\)/);
+  assert.match(app, /var newTone = nextStep === 'result' \? catalogToneNumber\(\) : null/);
+  assert.doesNotMatch(app, /\bTH\.|TH_ENGINE|computeTone|TONE_OVERRIDE|getInitClass|getVowelType|isLiveWord/);
+  assert.match(app, /startGuidedQuestion:[\s\S]{0,420}navigateToInflection\(\)/);
   assert.match(app, /openManualFromTip[\s\S]{0,420}tfOpenAlphabetOverlay\('manual'/);
 });
 

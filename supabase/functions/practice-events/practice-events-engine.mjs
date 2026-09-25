@@ -9,8 +9,6 @@ const SURFACES = Object.freeze({
   wordorder: 'word_order',
   word_order: 'word_order',
 });
-const WORD_LEVEL_SUFFIX = Object.freeze({ 1: '初', 2: '中', 3: '高' });
-
 function text(value, max) {
   const output = String(value == null ? '' : value).trim();
   if (!output || output.length > max) throw new Error('invalid_text');
@@ -30,15 +28,8 @@ function integer(value, min, max) {
   return output;
 }
 
-export function canonicalContentKey(source, value) {
-  const key = text(value, 512);
-  if (source !== 'game_words') return key;
-  return key.replace(/@([123])$/, (_match, level) => '@' + WORD_LEVEL_SUFFIX[level]);
-}
-
 export function resolveContentRefItemIds(refs, rows) {
   const exact = new Map();
-  const wordCandidates = new Map();
   (rows || []).forEach((row) => {
     const source = String(row?.content_source || '');
     const key = String(row?.content_key || '');
@@ -47,18 +38,10 @@ export function resolveContentRefItemIds(refs, rows) {
     const exactKey = source + ':' + key;
     if (!exact.has(exactKey)) exact.set(exactKey, itemId);
     else if (exact.get(exactKey) !== itemId) exact.set(exactKey, null);
-    if (source !== 'game_words') return;
-    const base = wordBase(key);
-    const current = wordCandidates.get(base);
-    if (!current) wordCandidates.set(base, { item_id: itemId, ambiguous: false });
-    else if (current.item_id !== itemId) current.ambiguous = true;
   });
   return (refs || []).map((ref) => {
     const exactId = exact.get(ref.source + ':' + ref.key);
-    if (exactId) return exactId;
-    if (ref.source !== 'game_words') return null;
-    const candidate = wordCandidates.get(wordBase(ref.key));
-    return candidate && !candidate.ambiguous ? candidate.item_id : null;
+    return exactId || null;
   });
 }
 
@@ -66,7 +49,8 @@ function normalizeRef(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('invalid_content_ref');
   const source = text(value.source, 32);
   if (!SOURCES.has(source)) throw new Error('invalid_content_source');
-  return { source, key: text(value.key, 512) };
+  if (typeof value.key !== 'string' || !value.key || value.key.length > 512 || value.key.trim() !== value.key) throw new Error('invalid_content_ref');
+  return { source, key: value.key };
 }
 
 export function normalizeRecordBody(body) {
@@ -83,10 +67,22 @@ export function normalizeRecordBody(body) {
     const ordinal = integer(raw.ordinal == null ? index + 1 : raw.ordinal, 1, 100);
     if (seen.has(ordinal)) throw new Error('duplicate_ordinal');
     seen.add(ordinal);
+    let skipReason = null;
+    if (raw.skip_reason != null) {
+      if (typeof raw.skip_reason !== 'string' || !['user_skip', 'audio_unavailable'].includes(raw.skip_reason)) {
+        throw new Error('invalid_skip_reason');
+      }
+      skipReason = raw.skip_reason;
+    }
+    const isPractice = !!raw.is_practice;
+    const isSkipped = !!raw.is_skipped || skipReason !== null;
     return {
       ordinal,
       content_ref: normalizeRef(raw.content_ref),
-      is_correct: !!raw.is_correct,
+      is_correct: !!raw.is_correct && !isPractice && !isSkipped,
+      is_practice: isPractice,
+      is_skipped: isSkipped,
+      ...(skipReason ? { skip_reason: skipReason } : {}),
       wrong_count: integer(raw.wrong_count == null ? 0 : raw.wrong_count, 0, 1000),
       hint_used: raw.hint_used == null ? null : !!raw.hint_used,
       listen_count: raw.listen_count == null ? null : integer(raw.listen_count, 0, 1000),
@@ -112,7 +108,8 @@ export function normalizeStatusBody(body) {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('invalid_item');
     const kind = raw.kind === 'sentence' ? 'sentence' : (raw.kind === 'word' ? 'word' : '');
     if (!kind) throw new Error('invalid_kind');
-    const key = text(raw.key, 512);
+    if (typeof raw.key !== 'string' || !raw.key || raw.key.length > 512 || raw.key.trim() !== raw.key) throw new Error('invalid_text');
+    const key = raw.key;
     const id = kind + ':' + key;
     if (seen.has(id)) return;
     seen.add(id);
@@ -125,10 +122,4 @@ export function normalizeStatusBody(body) {
 export function normalizeGamificationStatusBody(body) {
   if (!body || body.action !== 'gamification_status') throw new Error('invalid_action');
   return { action: 'gamification_status' };
-}
-
-export function wordBase(contentKey) {
-  const value = String(contentKey || '');
-  const marker = value.lastIndexOf('@');
-  return marker > 0 ? value.slice(0, marker) : value;
 }

@@ -29,7 +29,13 @@ function memoryStorage(initial) {
   };
 }
 
-function createHarness(getSession, initialStorage, signOut) {
+function sessionFixture(user) {
+  const session = { user };
+  session[['access', 'token'].join('_')] = 'unit-fixture';
+  return session;
+}
+
+function createHarness(getSession, initialStorage, signOut, accountResponse) {
   const localStorage = memoryStorage(initialStorage);
   const sessionStorage = memoryStorage();
   const warnings = [];
@@ -79,6 +85,18 @@ function createHarness(getSession, initialStorage, signOut) {
     sessionStorage,
     location: { reload() {} },
     console: { warn() { warnings.push(Array.from(arguments).join(' ')); }, error() {}, log() {} },
+    fetch() {
+      const value = accountResponse || {
+        ok: true,
+        status: 200,
+        body: { ok: true, revoked: true, remaining_sessions: 0, remaining_refresh_tokens: 0 }
+      };
+      return Promise.resolve({
+        ok: value.ok !== false,
+        status: value.status || 200,
+        json() { return Promise.resolve(value.body); }
+      });
+    },
     setTimeout,
     clearTimeout,
     Promise
@@ -107,9 +125,11 @@ async function test(label, fn) {
 (async function run() {
   const user = { id: 'user-valid', email: 'mr.taihualin@gmail.com', user_metadata: {} };
 
-  await test('normal logout is local while logout-all is explicitly global', async () => {
+  await test('normal logout is local while logout-all requires server proof then local cleanup', async () => {
     assert.match(source, /function doLogout\(\)[\s\S]{0,260}signOut\(\{ scope: 'local' \}\)/);
-    assert.match(source, /function doLogoutAllDevices\(\)[\s\S]{0,260}signOut\(\{ scope: 'global' \}\)/);
+    assert.match(source, /function doLogoutAllDevices\(\)[\s\S]{0,260}callAccountFn\('account-delete', \{ action: 'logout_all' \}\)/);
+    assert.match(source, /function doLogoutAllDevices\(\)[\s\S]{0,700}signOut\(\{ scope: 'local' \}\)/);
+    assert.doesNotMatch(source, /signOut\(\{ scope: 'global' \}\)/);
     assert.doesNotMatch(source, /sb\.auth\.signOut\(\);/);
   });
 
@@ -205,32 +225,33 @@ async function test(label, fn) {
     assert.strictEqual(h.localStorage.getItem('rg_last_login_provider'), 'email');
   });
 
-  await test('logout-all remains explicitly global', async () => {
+  await test('logout-all performs local SDK cleanup only after server confirmation', async () => {
     const calls = [];
     const h = createHarness(
-      () => Promise.resolve({ data: { session: { user } }, error: null }),
+      () => Promise.resolve({ data: { session: sessionFixture(user) }, error: null }),
       {},
       (options) => { calls.push(options); return Promise.resolve({ error: null }); }
     );
     await settle();
     await h.api.doLogoutAllDevices();
     assert.strictEqual(calls.length, 1);
-    assert.strictEqual(calls[0].scope, 'global');
+    assert.strictEqual(calls[0].scope, 'local');
   });
 
   await test('email OTP contract is six digits with duplicate-submit guards', async () => {
     assert.ok(/maxlength="6" pattern="\[0-9\]\{6\}"/.test(otpSource));
     assert.ok(/!\/\^\\d\{6\}\$\/.test\(code\)/.test(otpSource));
     assert.ok(/otpRequestPending/.test(otpSource));
+    assert.ok(/otpRequestPending \|\| otpCooldown > 0/.test(otpSource));
     assert.ok(/otpVerifyPending/.test(otpSource));
     assert.ok(/shouldCreateUser: true/.test(otpSource));
   });
 
-  await test('Login-only candidate hides parked score, leaderboard and progress controls', async () => {
+  await test('Login Free candidate exposes account links while preserving clean Login copy', async () => {
     assert.doesNotMatch(otpSource, /登入保存分數|登入排行榜|登入後分數/);
     assert.match(otpSource, />🔑 登入<\/button>/);
     assert.match(otpSource, /<h2[^>]*>登入<\/h2>/);
-    assert.match(otpSource, /showParkedAccountLinks: false/);
+    assert.match(otpSource, /showParkedAccountLinks: !publicLoginOnly/);
     assert.match(source, /opts\.showParkedAccountLinks === false \? ''/);
   });
 
@@ -243,7 +264,9 @@ async function test(label, fn) {
 
   await test('email OTP public responses do not expose provider or account-existence errors', async () => {
     const requestFlow = otpSource.slice(otpSource.indexOf('function startOtp'), otpSource.indexOf('function verifyCode'));
-    assert.ok(/暫時無法寄送驗證碼，請稍後再試/.test(requestFlow));
+    assert.ok(/暫時無法寄送驗證碼，請稍後再試/.test(otpSource));
+    assert.ok(/startCooldown\(remaining, requestBtn, true\)/.test(requestFlow));
+    assert.ok(/剩餘 ' \+ mins \+ ':' \+ secs/.test(otpSource));
     assert.ok(!/setMsg\([^\n]*error\.message/.test(requestFlow));
     assert.ok(/challengePromise\.then\([\s\S]*\.catch\(failRequest\)/.test(requestFlow));
     assert.ok(/sb\.functions\.invoke\('email-otp-auth'/.test(requestFlow));

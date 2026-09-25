@@ -26,14 +26,16 @@ corePages.forEach((page) => {
 const client = read('js/games/game-content-client.js');
 check('content client ไม่มี embedded Supabase production fallback', !/\.supabase\.co/.test(client) && !/eyJ[A-Za-z0-9_-]{20,}/.test(client));
 check('content client fail-closed เมื่อ config ไม่มี', /function currentConfig\(\)/.test(client) && /Supabase config unavailable/.test(client));
-check('content client รอ deferred config ก่อน fetch', /function whenDeferredConfigReady\(\)/.test(client) && /whenDeferredConfigReady\(\)\.then\(fetchGameContent\)/.test(client));
+check('content client รอ deferred config ก่อน fetch', /function whenDeferredConfigReady\(\)/.test(client) && /whenDeferredConfigReady\(\)\.then\(function \(\) \{ return fetchGameContent\(game\); \}\)/.test(client));
 check('content client ต้องได้ audioAvailable contract', /Array\.isArray\(data\.audioAvailable\)/.test(client));
 check('content client ส่ง availability ให้ protected audio ก่อน boot เกม', /WordAudio\.setAvailability\(data\.audioAvailable\)/.test(client));
 
 const contentEdge = read('supabase/functions/game-content/index.ts');
 check('game-content คืน audio availability เฉพาะ entitled response', /entitledTexts/.test(contentEdge) && /audioAvailable/.test(contentEdge));
-check('game-content response ไม่คืน storage path/catalog metadata', /return json\(\{ tier, words, sentences, audioAvailable, capped \}/.test(contentEdge));
-check('quota เดิมคง 50\/100 และ 20\/40', /anon:\s*\{ '初': 50,\s*'中': 50,\s*sentences: 20 \}/.test(contentEdge) && /login:\s*\{ '初': 100,\s*'中': 100,\s*sentences: 40 \}/.test(contentEdge));
+check('game-content response ไม่คืน private audio storage metadata',
+  /return json\(\{ tier, game: requestedGame \|\| null, words, sentences, audioAvailable, capped,/.test(contentEdge) &&
+  !/\b(?:storage_path|audio_key|bucket_name)\s*:/i.test(contentEdge));
+check('quota คง 50\/100 และประโยคเป็น 20\/42', /anon:\s*\{ '初': 50,\s*'中': 50,\s*sentences: 20 \}/.test(contentEdge) && /login:\s*\{ '初': 100,\s*'中': 100,\s*sentences: 42 \}/.test(contentEdge));
 
 const audioClient = read('js/games/protected-word-audio.js');
 check('protected audio ไม่อ่าน AUDIO_MANIFEST หรือ static asset path', !/AUDIO_MANIFEST|assets\/(word|sentence)-audio/.test(audioClient));

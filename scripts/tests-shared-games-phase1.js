@@ -8,9 +8,12 @@ const vm = require('vm');
 
 const root = path.resolve(__dirname, '..');
 const sharedCss = fs.readFileSync(path.join(root, 'css/shared.css'), 'utf8');
+const mobileLandscapeCss = fs.readFileSync(path.join(root, 'css/mobile-landscape.css'), 'utf8');
 const sharedJs = fs.readFileSync(path.join(root, 'js/core/shared.js'), 'utf8');
 const sharedMin = fs.readFileSync(path.join(root, 'js/core/shared.min.js'), 'utf8');
+const accountOverflow = fs.readFileSync(path.join(root, 'js/core/account-toolbar-overflow.js'), 'utf8');
 const switcherJs = fs.readFileSync(path.join(root, 'js/games/game-switcher.js'), 'utf8');
+const navTemplateJs = fs.readFileSync(path.join(root, 'data/nav-template.js'), 'utf8');
 const wordMenuJs = fs.readFileSync(path.join(root, 'js/games/word-menu.js'), 'utf8');
 const games = [
   { id: 'tone', html: 'tone-finder.html', app: 'js/games/tone-finder-game.js', howto: 'tf-howto-modal', resume: 'tf-resume-banner' },
@@ -44,16 +47,13 @@ test('Listening keeps its ordinary Desktop Account Bar compact without changing 
   assert.match(listening, /@media \(min-width:769px\) and \(min-height:601px\)[\s\S]{0,180}\.lg-account-context-chip\{display:none;\}/, 'Listening must hide only the duplicate context on ordinary Desktop');
 });
 
-test('Listening is temporarily closed without deleting its paused game implementation', () => {
+test('Listening is active through the protected central-content runtime', () => {
   const practice = fs.readFileSync(path.join(root, 'games-practice.html'), 'utf8');
   const listening = games.find((g) => g.id === 'listening').htmlText;
-  assert.match(practice, /class="gh-card gh-soon"[^>]+data-game-availability="coming-soon"/);
-  assert.doesNotMatch(practice, /<a[^>]+href="listening-game\.html"/);
-  assert.match(listening, /data-listening-availability="coming-soon"/);
-  assert.match(listening, /id="listening-coming-soon"[\s\S]{0,500}即將開幕/);
-  assert.match(listening, /id="listening-live-game"[^>]+aria-hidden="true"/);
-  assert.match(listening, /Preserved paused runtime: js\/games\/listening-game-app\.js\?v=19/);
-  assert.doesNotMatch(listening, /GameContentLoader\.boot\(\['js\/games\/listening-game-app\.js/);
+  assert.match(practice, /<a class="gh-card" href="listening-game\.html"/);
+  assert.doesNotMatch(practice, /data-game-availability="coming-soon"/);
+  assert.doesNotMatch(listening, /data-listening-availability="coming-soon"|id="listening-coming-soon"|id="listening-live-game"[^>]+aria-hidden="true"/);
+  assert.match(listening, /GameContentLoader\.boot\(\['js\/games\/listening-game-app\.js\?v=21'\], \{game:'listening'\}\)/);
 });
 
 test('Tone ordinary Desktop main and secondary headers exactly match the Core game header contract', () => {
@@ -105,7 +105,7 @@ test('active Desktop games keep the canonical level, status and gameplay order',
   assert.ok(woSessionAt > -1 && woGameplayAt > woSessionAt && woScoreAt > woGameplayAt, 'Word Order keeps its game-owned single-level status in the shared fixed Session slot before the item-score row');
 });
 
-test('Tone keeps one equal four-button Level and alphabet row on Desktop and Portrait', () => {
+test('Tone keeps one original four-button Level and alphabet row on every supported surface', () => {
   const tone = games.find((g) => g.id === 'tone').htmlText;
   const header = tone.slice(tone.indexOf('<div class="gsh-session-header">'), tone.indexOf('<div class="gsh-resume-banner"'));
   assert.strictEqual((header.match(/class="tf-ltab"/g) || []).length, 4, 'Tone header must contain exactly four equal buttons');
@@ -116,15 +116,14 @@ test('Tone keeps one equal four-button Level and alphabet row on Desktop and Por
   assert.match(tone, /@media \(max-width:768px\) and \(orientation:portrait\)[\s\S]{0,1900}\.tf-level-tabs \{[\s\S]{0,180}grid-template-columns:repeat\(4,minmax\(0,1fr\)\)[\s\S]{0,100}max-width:none !important/, 'Portrait must show four equal buttons across the available width');
   assert.match(tone, /@media \(max-width:768px\) and \(orientation:portrait\)[\s\S]{0,1500}\.gsh-session-header \{[\s\S]{0,140}flex-direction:column; flex-wrap:nowrap; gap:10px; padding:0 0 10px;[\s\S]{0,180}\.gsh-session-header > \.gsh-level-selector \{ flex:none; \}[\s\S]{0,120}\.gsh-gameplay \{ margin-top:0; \}/, 'Tone Portrait round status must keep equal 10px gaps between Level and gameplay');
   assert.match(tone, /#tf-alpha-btn \{[\s\S]{0,180}font-size:11\.5px !important; white-space:nowrap;[\s\S]{0,100}#tf-alpha-btn \.tf-alpha-icon \{ display:none; \}/, 'Portrait alphabet label must fit without changing the four equal button widths');
-  assert.match(tone, /@media \(orientation:landscape\) and \(max-width:1024px\) and \(max-height:600px\)[\s\S]{0,180}#tf-alpha-btn \{ display:none !important; \}/, 'Mobile Landscape must preserve the accepted three-level Switch surface');
+  assert.doesNotMatch(tone, /@media \(orientation:landscape\) and \(max-width:1024px\) and \(max-height:600px\)[\s\S]{0,180}#tf-alpha-btn \{ display:none !important; \}/, 'Mobile Landscape must expose the original Desktop alphabet action');
   assert.doesNotMatch(tone.slice(tone.indexOf('<div class="tf-tools-row">'), tone.indexOf('<div class="gsh-session-header">')), /id="tf-alpha-btn"/, 'Account bar must no longer share width with the alphabet button');
 });
 
 test('active ordinary Desktop cards and toolbars keep the locked Gold Standard', () => {
   assert.match(sharedCss, /data-gsh-game="tone"\] \.gsh-gameplay,[\s\S]{0,220}data-gsh-game="word-order"\] \.gsh-gameplay \{[\s\S]{0,100}border:1\.5px solid rgba\(139,99,16,0\.15\)/, 'active cards must use the approved Tone border');
   assert.match(sharedCss, /gsh-resume-banner:not\(\[style\*="display:none"\]\):not\(\[style\*="display: none"\]\)[\s\S]{0,420}> \.gsh-gameplay \{[\s\S]{0,80}display:none !important/, 'Resume must remain an exclusive pre-play state');
-  assert.match(sharedCss, /#rg-sound-toggle \{ order:1; \}[\s\S]{0,900}#font-toggle-slot \{ order:5; \}[\s\S]{0,900}#rg-vault-btn-slot \{ order:9; \}/, 'ordinary Desktop tools must follow the canonical order');
-  assert.match(sharedCss, /data-gsh-game="typing"\] \.gsh-learning-tools > #rg-webkbd-toggle \{ display:none !important; \}/, 'Typing must not expose a standalone ordinary-Desktop screen-keyboard tool');
+  assert.match(sharedCss, /#rg-sound-toggle \{ order:1; \}[\s\S]{0,900}#font-toggle-slot \{ order:5; \}[\s\S]{0,900}#rg-vault-btn-slot \{ order:8; \}/, 'ordinary Desktop tools must follow the canonical order');
 });
 
 test('shared shell stays bounded and resume actions stay compact on narrow screens', () => {
@@ -146,7 +145,8 @@ test('all six games bind the locked two-hand mobile landscape layout', () => {
   };
   for (const [id, html] of Object.entries(expectedBodies)) {
     assert.match(html, new RegExp(`<body[^>]*data-gsh-game="${id}"[^>]*>`), `${id}: missing landscape scope marker`);
-    assert.match(html, /css\/shared\.css\?v=36/, `${id}: must load current shared CSS without changing the Landscape rules`);
+    const sharedVersion = ['tone', 'reading', 'typing', 'word-order'].includes(id) ? 38 : id === 'lego' ? 36 : 37;
+    assert.match(html, new RegExp(`css/shared\\.css\\?v=${sharedVersion}`), `${id}: must load its locked shared CSS version`);
   }
   assert.match(sharedCss, /@media \(orientation:landscape\) and \(max-width:1024px\) and \(max-height:600px\)/);
   assert.match(sharedCss, /\.rg-ctl-wrap \{[\s\S]{0,260}top:var\(--gsh-safe-t\); left:50%/);
@@ -158,14 +158,19 @@ test('all six games bind the locked two-hand mobile landscape layout', () => {
   assert.match(sharedCss, /\.rg-tools-row,[\s\S]{0,500}max-width:29% !important/);
   assert.match(sharedCss, /\[data-shared-result-ui="v1"\] \.gsh-result-primary-actions \{[\s\S]{0,180}right:var\(--gsh-safe-r\)/);
   assert.match(sharedCss, /\[data-shared-result-ui="v1"\] \.gsh-result-utility-actions,[\s\S]{0,240}left:var\(--gsh-safe-l\)/);
-  assert.match(sharedCss, /data-gsh-game="tone"\] #tf-body \.sg-tone-grid \{[\s\S]{0,160}grid-template-rows:repeat\(3,auto\); grid-auto-flow:column/);
-  assert.match(sharedCss, /data-gsh-game="tone"\] #tf-body \.tf-options:has\(> :nth-child\(3\):last-child\) > :first-child/);
-  for (const id of ['reading', 'typing']) {
-    assert.match(sharedCss, new RegExp(`data-gsh-game="${id}"\\] #pool`), `${id}: lower split-answer zone missing`);
-  }
+  assert.doesNotMatch(sharedCss, /data-gsh-game="tone"\] #tf-body \.sg-tone-grid/);
+  assert.doesNotMatch(sharedCss, /data-gsh-game="reading"\] #pool/);
+  assert.doesNotMatch(sharedCss, /data-gsh-game="typing"\] #pool/);
+  assert.doesNotMatch(sharedCss, /data-gsh-game="word-order"\] #wo-bank/);
+  assert.match(mobileLandscapeCss, /data-gsh-ml-split="tone"/);
+  assert.match(mobileLandscapeCss, /data-gsh-ml-split="reading"/);
+  assert.match(mobileLandscapeCss, /data-gsh-game="typing"/);
+  assert.match(mobileLandscapeCss, /data-gsh-ml-split="word-order"/);
+  assert.match(mobileLandscapeCss, /--wo-ml-choice-row:\s*34px[\s\S]{0,120}grid-auto-rows:\s*var\(--wo-ml-choice-row\)\s*!important/, 'Word Order choices must size rows from enabled reading and translation content');
+  assert.match(mobileLandscapeCss, /overflow-y:\s*auto/, 'Word Order choices must scroll vertically only when their content overflows');
+  assert.match(mobileLandscapeCss, /\[data-gsh-ml-split="word-order"\] > \.wo-tile \{[\s\S]{0,700}flex-direction:\s*column/, 'Word Order choice details must stack below the Thai word');
   assert.match(sharedCss, /data-gsh-game="listening"\] #lg-mc-wrap[\s\S]{0,260}grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
   assert.match(sharedCss, /data-gsh-game="listening"\] #lg-type-wrap[\s\S]{0,180}left:29%; right:29%/);
-  assert.match(sharedCss, /data-gsh-game="word-order"\] #wo-bank[\s\S]{0,260}grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
   assert.match(sharedCss, /data-gsh-game="lego"\] #baseplate[\s\S]{0,260}left:var\(--gsh-safe-l\); width:28%/);
   assert.match(sharedCss, /data-gsh-game="lego"\] #baseplate \.slot-menu[\s\S]{0,220}right:var\(--gsh-safe-r\)/);
 });
@@ -184,20 +189,26 @@ test('all five games expose the shared cross-game switcher', () => {
   }
 });
 
-test('shared switcher contains exactly the Phase 1 Core 5 in canonical order', () => {
+test('shared switcher renders the fixed six games plus 泰語單字庫 in canonical order', () => {
   const core5Block = switcherJs.slice(switcherJs.indexOf('var CORE5_TABS'), switcherJs.indexOf('var CORE6_TABS'));
   const ids = Array.from(core5Block.matchAll(/\{ id: '([^']+)'/g), (match) => match[1]);
   assert.deepStrictEqual(ids, ['tone_finder', 'reading_game', 'listening_game', 'typing_game', 'word_order']);
   assert.doesNotMatch(core5Block, /href: '(?:lego|vault|games-challenge)\.html'/);
-  assert.match(switcherJs, /var CORE6_TABS = CORE5_TABS\.concat\([\s\S]{0,180}id: 'lego'/, 'Tone Desktop switcher variant must include Lego');
-  assert.match(switcherJs, /includeLego \? CORE6_TABS : CORE5_TABS/, 'Core 5 pages without the opt-in must keep the original switcher');
-  assert.match(switcherJs, /var VAULT_TAB = \{ id: 'vault', href: 'vault\.html', label: '🔖 泰語單字庫'/, 'all game switchers must append the approved Vault route');
-  assert.match(switcherJs, /if \(core5\) tabs = tabs\.concat\(\[VAULT_TAB\]\)/, 'Core game menus must append exactly one Vault route');
-  assert.match(switcherJs, /data-vault-portrait-entry/, 'Portrait bottom navigation must expose the additional Vault route');
-  assert.match(switcherJs, /DOMContentLoaded[\s\S]{0,180}addPortraitVaultEntry/, 'Portrait Vault route must wait for late bottom-navigation markup');
+  assert.match(switcherJs, /var CORE6_TABS = CORE5_TABS\.concat\([\s\S]{0,180}id: 'lego'/, 'fixed game switcher must include Lego sixth');
+  assert.match(switcherJs, /var tabs = CORE6_TABS\.concat\(\[VAULT_TAB\]\)/, 'every game must use the same six-game menu plus library route');
+  assert.match(switcherJs, /var VAULT_TAB = \{ id: 'vault', href: 'vault\.html', label: '🔖 泰語單字庫'/, 'all game switchers must append the approved library route');
+  assert.doesNotMatch(switcherJs, /data-vault-portrait-entry|addPortraitVaultEntry/, 'Game switcher must not add a fifth item to the canonical mobile bottom navigation');
   assert.match(switcherJs, /if \(current === 'vault'\) tabs = tabs\.filter/, 'Vault must not render a self entry');
-  assert.match(games.find((g) => g.id === 'tone').htmlText, /data-include-lego="1"/, 'Tone must opt into the six-game switcher on every viewport');
   assert.match(switcherJs, /role="menuitem" aria-current="page"/);
+});
+
+test('mobile bottom navigation keeps the canonical four actions and safe clearance', () => {
+  const bottomNavBlock = navTemplateJs.slice(navTemplateJs.indexOf('var BOTTOM_NAV_ITEMS'), navTemplateJs.indexOf('// ── ของพิเศษเฉพาะบางหน้า'));
+  const labels = Array.from(bottomNavBlock.matchAll(/label: '([^']+)'/g), (match) => match[1]);
+  assert.deepStrictEqual(labels, ['首頁', '試聽', '遊戲', '學習']);
+  assert.match(bottomNavBlock, /label: '學習', href: '\/my-progress\.html'/);
+  assert.match(sharedCss, /@media\(max-width:768px\)\{#bottom-nav\{display:flex;\}body\{padding-bottom:60px;\}\}/, 'Mobile bottom navigation must remain visible with content clearance');
+  assert.match(sharedCss, /#bottom-nav\{[^}]*bottom:0;[^}]*padding-bottom:env\(safe-area-inset-bottom\)/, 'Mobile bottom navigation must stay anchored above the safe area');
 });
 
 test('floating controls use the locked switcher, focus and More Menu copy', () => {
@@ -208,7 +219,7 @@ test('floating controls use the locked switcher, focus and More Menu copy', () =
   assert.match(sharedJs, /fitMenuToViewport\(\)/);
   assert.match(sharedJs, /fitMoreMenuToViewport\(\)/);
   assert.match(sharedJs, /path\.indexOf\('listening-game'\) > -1\) GAME_ID = 'listening'/, 'Listening must use the shared More mapping');
-  assert.match(games.find((g) => g.id === 'listening').htmlText, /shared\.min\.js\?v=47/, 'Listening must load the announcement-free shared mapping version');
+  assert.match(games.find((g) => g.id === 'listening').htmlText, /shared\.min\.js\?v=53/, 'Listening loads the current announcement-free shared runtime');
 });
 
 test('all game pages permanently omit the automatic Login cap popup', () => {
@@ -218,7 +229,7 @@ test('all game pages permanently omit the automatic Login cap popup', () => {
   assert.doesNotMatch(gameContentClient, /免費內容你都練過一輪|登入帳號（完全免費）可以解鎖更多/);
   for (const g of games) {
     assert.doesNotMatch(g.htmlText, /gc-cap-banner/, `${g.id}: removed Login popup marker remains`);
-    assert.match(g.htmlText, /game-content-client\.js\?v=11/, `${g.id}: must load the popup-free game content client`);
+    assert.match(g.htmlText, /game-content-client\.js\?v=\d+/, `${g.id}: must load the popup-free game content client`);
   }
   assert.doesNotMatch(legoHtml, /gc-cap-banner|免費內容你都練過一輪|登入帳號（完全免費）可以解鎖更多/);
 });
@@ -227,6 +238,7 @@ test('all scoped pages use one fail-closed Login surface and game pages permanen
   const loginCss = fs.readFileSync(path.join(root, 'css/login-surface.css'), 'utf8');
   const loginJs = fs.readFileSync(path.join(root, 'js/core/login-surface.js'), 'utf8');
   const minimumGuest = fs.readFileSync(path.join(root, 'js/core/minimum-guest-launch.js'), 'utf8');
+  const authWidget = fs.readFileSync(path.join(root, 'js/core/auth-widget.js'), 'utf8');
   const readingAuth = fs.readFileSync(path.join(root, 'js/games/reading-auth.js'), 'utf8');
   const toneApp = fs.readFileSync(path.join(root, 'js/games/tone-finder-game.js'), 'utf8');
   const gamePages = [
@@ -237,20 +249,26 @@ test('all scoped pages use one fail-closed Login surface and game pages permanen
     'my-progress.html', 'vault.html', 'all-board.html', 'leaderboard.html', 'reading-board.html',
     'listening-board.html', 'typing-board.html', 'word-order-board.html'
   ];
+  const scopedInventory = gamePages.concat(nonGameScopedPages);
   assert.equal(fs.existsSync(path.join(root, 'lego-board.html')), false, 'Lego leaderboard placeholder page must not exist');
   assert.equal(fs.existsSync(path.join(root, 'mix-board.html')), false, 'Challenge leaderboard placeholder page must not exist');
   for (const file of gamePages) {
     const html = fs.readFileSync(path.join(root, file), 'utf8');
     assert.doesNotMatch(html, /ANN-BAND|ann-band|avail-band|annDismissed|annGoTo|annPrev|annNext/, `${file}: announcement DOM/marker/script/style hook must be removed`);
-    assert.match(html, /minimum-guest-launch\.js\?v=6/, `${file}: must load the Reading-authority Login gate`);
-    assert.match(html, /shared\.min\.js\?v=47/, `${file}: must load the announcement-free game runtime`);
+    assert.match(html, /minimum-guest-launch\.js\?v=25/, `${file}: must load the current Reading-authority Login gate`);
+    assert.match(html, /shared\.min\.js\?v=53/, `${file}: must load the announcement-free game runtime`);
   }
   for (const file of nonGameScopedPages) {
     const html = fs.readFileSync(path.join(root, file), 'utf8');
     assert.match(html, /<!--ANN-BAND:START--><!-- Login UI scope: no announcement strip\. --><!--ANN-BAND:END-->/, `${file}: existing non-game announcement capability boundary must remain`);
-    assert.match(html, file === 'games.html' ? /minimum-guest-launch\.js\?v=7/ : /minimum-guest-launch\.js\?v=6/, `${file}: must load the Reading-authority Login gate`);
-    assert.match(html, file === 'vault.html' ? /shared\.min\.js\?v=47/ : /shared\.min\.js\?v=45/, `${file}: non-game cache binding must stay on its current runtime`);
+    assert.match(html, /minimum-guest-launch\.js\?v=25/, `${file}: must load the current Reading-authority Login gate`);
+    assert.match(html, /shared\.min\.js\?v=52/, `${file}: non-game cache binding must stay on its current runtime`);
   }
+  assert.equal(scopedInventory.length, 17, 'FB-01 inventory must stay on the six games and eleven existing account surfaces');
+  for (const file of scopedInventory) {
+    assert.match(loginJs, new RegExp("'" + file.replace('.', '\\.') + "'"), `${file}: shared controller inventory must include the existing account surface`);
+  }
+  assert.doesNotMatch(loginJs, /classroom|teacher|student-admin/i, 'FB-01 must not turn the separate Classroom authorization UI into a player account menu');
   assert.doesNotMatch(sharedJs, /suppressScopedAnnouncement|staleScopedAnnouncement|avail-band-placeholder/);
   assert.doesNotMatch(sharedMin, /suppressScopedAnnouncement|staleScopedAnnouncement|avail-band-placeholder/);
   assert.doesNotMatch(sharedJs, /band\s*=\s*document\.createElement\('div'\)[\s\S]{0,180}band\.id\s*=\s*'ann-band'/, 'shared runtime must not dynamically create an announcement band');
@@ -258,8 +276,17 @@ test('all scoped pages use one fail-closed Login surface and game pages permanen
   assert.match(sharedMin, /document\.body&&!document\.body\.hasAttribute\("data-gsh-game"\)\?document\.getElementById\("ann-band"\):null/, 'deployed shared runtime must keep the non-game announcement guard');
   assert.doesNotMatch(sharedCss, /(^|[},]\s*)\.avail-band\s*\{/m, 'announcement CSS must never target an unscoped game surface');
   assert.match(minimumGuest, /window\.MRT_PARKED_ACCOUNT_SURFACE = parked\.test\(path\)/);
+  assert.match(minimumGuest, /loginController\.src = 'js\/core\/login-surface\.js\?v=16'/, 'public pages must request the current account-menu controller');
   assert.doesNotMatch(minimumGuest, /location\.replace\('\/games\.html\?guest_launch=1'\)/);
   assert.match(loginJs, /'tone-finder\.html'[\s\S]*'reading-game\.html'[\s\S]*'listening-game\.html'[\s\S]*'typing-game\.html'[\s\S]*'word-order\.html'[\s\S]*'lego\.html'/);
+  assert.match(loginJs, /function sourceFilename\(pathname\)[\s\S]{0,520}if \(filename\.indexOf\('\.'\) === -1\) filename \+= '\.html'[\s\S]{0,120}var filename = sourceFilename\(window\.location\.pathname\)/, 'Cloudflare extensionless routes must resolve to canonical Login page keys');
+  const filenameStart = loginJs.indexOf('function sourceFilename(pathname)');
+  const filenameEnd = loginJs.indexOf('\n\n  var filename = sourceFilename', filenameStart);
+  const filenameContext = {};
+  vm.runInNewContext(loginJs.slice(filenameStart, filenameEnd) + '\nthis.sourceFilename = sourceFilename;', filenameContext);
+  assert.equal(filenameContext.sourceFilename('/tone-finder'), 'tone-finder.html', 'Production extensionless game route must activate the Tone Login surface');
+  assert.equal(filenameContext.sourceFilename('/vault'), 'vault.html', 'Production extensionless account route must activate the Vault Login surface');
+  assert.equal(filenameContext.sourceFilename('/reading-game.html'), 'reading-game.html', 'local .html preview route must remain unchanged');
   assert.match(loginJs, /function readingHeader\(title, subtitle\)/, 'all six game headers must use the one Reading template');
   assert.match(loginJs, /function readingSlot\(sourceSlot\) \{[\s\S]{0,120}document\.createElement\('div'\)/, 'every scoped page must use Reading exact DIV Login slot markup');
   assert.match(loginJs, /function readingSurface\(slot, withHelp, originalHelp\)/, 'all scoped pages must use the one Reading Account Bar template');
@@ -271,15 +298,33 @@ test('all scoped pages use one fail-closed Login surface and game pages permanen
   assert.ok(loginJs.includes(`surface.setAttribute('style', '${readingProfileStyle}')`), 'shared template must copy the exact Reading profile markup style');
   assert.ok(loginJs.includes(`slot.setAttribute('style', '${readingSlotStyle}')`), 'shared template must copy the exact Reading Login-slot style');
   assert.match(loginJs, /help\.className = 'tf-streak-chip mrt-login-howto'[\s\S]{0,320}help\.textContent = '📖 玩法'/, 'game Help must use the Reading class/order/copy');
-  assert.match(loginJs, /stats\.className = 'rg-stat-row'[\s\S]{0,180}stats\.setAttribute\('style', 'display:none;justify-content:flex-start;margin:0;width:auto;max-width:none;gap:8px;'\)/, 'shared template must retain Reading hidden stat slot');
+  assert.doesNotMatch(loginJs, /stats\.className = 'rg-stat-row'/, 'shared surface must not duplicate Streak outside the account menu');
   assert.match(loginJs, /cta\.id = 'rg-cta-login'[\s\S]{0,120}cta\.setAttribute\('style', 'flex:1;min-width:220px;'\)/, 'shared template must retain Reading hidden CTA slot');
   assert.match(loginCss, /\[data-reading-login-component="header"\][\s\S]{0,520}font-size: clamp\(20px, 4vw, 28px\) !important;/, 'header geometry must come from Reading');
   assert.match(loginCss, /\[data-reading-login-component="row"\][\s\S]{0,320}max-width: 640px;[\s\S]{0,80}padding-bottom: 2px;/, 'Account Bar outer geometry must come from Reading');
   assert.match(loginCss, /#rg-profile-wrap:not\(:has\(\.mrt-login-howto\)\)[\s\S]{0,100}justify-content: center !important;/, 'single Login must be centered by Help omission only');
+  assert.match(loginCss, /a\[title="字庫"\]::after \{ content: '字庫'; \}/, 'Vault must be a labeled account-menu action');
+  assert.match(loginCss, /@media \(min-width: 769px\)[\s\S]*\.sa-edit::after \{ content: '編輯'; \}[\s\S]*a\[title="排行榜"\]::after \{ content: '排行'; \}[\s\S]*a\[title="進度"\]::after \{ content: '進度'; \}[\s\S]*a\[title="字庫"\]::after \{ content: '字庫'; \}/, 'Desktop Account Bar must show short Edit, Board, Progress and Vault labels');
+  assert.match(loginCss, /@media \(orientation: landscape\) and \(max-width: 1024px\) and \(max-height: 600px\)[\s\S]*a\[title="排行榜"\]::after,[\s\S]*a\[title="進度"\]::after[\s\S]*content: none;/, 'Mobile Landscape must not inherit Desktop Board and Progress labels');
+  assert.match(authWidget, /class="sa-account-bar" role="group" aria-label="帳號選單"/, 'authenticated controls must expose one named account group');
+  assert.match(authWidget, /<button type="button" class="sa-nick"[\s\S]{0,220}aria-label="編輯個人檔案：/, 'the displayed account name must remain an accessible profile-edit action');
+  assert.match(authWidget, /class="sa-account-action sa-leaderboard-link"[\s\S]{0,220}class="sa-account-action sa-progress-link"/, 'existing account destinations must share one action hook without changing destinations');
+  assert.match(authWidget, /class="sa-account-action sa-edit"[\s\S]{0,200}leaderboardAccountLinkHTML \+[\s\S]{0,360}class="sa-account-streak"[\s\S]{0,260}learningAccountLinksHTML \+[\s\S]{0,400}class="sa-account-action sa-logout"[\s\S]{0,280}globalSearchHTML/, 'account actions must stay in the approved edit, board, streak, progress, vault, logout, search order');
+  assert.match(loginCss, /#rg-profile-wrap \{[\s\S]{0,520}background: #FAF4E8 !important;[\s\S]{0,120}border: 2px solid #C8973A !important;[\s\S]{0,80}border-radius: 26px !important;/, 'Desktop and Portrait must use the approved cream, gold and long-rounded account frame');
+  assert.match(loginCss, /\.sa-edit,[\s\S]{0,260}\.sa-logout \{[\s\S]{0,360}border-radius: 999px !important;[\s\S]{0,120}background: rgba\(255, 255, 255, 0\.72\) !important;/, 'all existing account actions must use the approved pill language');
+  assert.match(loginCss, /\.sa-nick:focus-visible,[\s\S]{0,520}a\[title="字庫"\]:focus-visible,[\s\S]{0,420}\.sa-logout:focus-visible,[\s\S]{0,140}\.tf-streak-chip:focus-visible[\s\S]{0,100}outline: 2px solid #C8973A;/, 'keyboard focus must stay visible on every account action');
+  assert.match(loginCss, /@media \(max-width: 600px\)[\s\S]{0,620}border-radius: 22px !important;[\s\S]{0,420}max-width: min\(38vw, 150px\) !important;/, 'Portrait must retain the existing account-name truncation inside the frame');
+  assert.match(accountOverflow, /#rg-profile-wrap\{flex-wrap:nowrap!important;overflow:visible!important;max-width:1080px!important;\}/, 'Account container must remain one row while progressive overflow uses its measured width');
+  assert.match(accountOverflow, /new window\.ResizeObserver\(schedule\)[\s\S]{0,120}observer\.observe\(surface \|\| bar\)/, 'Account overflow must observe the real container instead of a fixed viewport breakpoint');
+  assert.doesNotMatch(accountOverflow, /window\.innerWidth|matchMedia\(/, 'Progressive overflow decisions must not use a fixed screen breakpoint');
+  assert.match(accountOverflow, /event\.key === 'Escape'[\s\S]{0,120}close\(true\)[\s\S]*document\.addEventListener\('pointerdown', onDocumentPointer, true\)/, 'More menu must support Escape, focus return and outside-click close');
+  assert.match(mobileLandscapeCss, /#sa-badge-rg-login-slot\[data-gsh-ml-account-panel="true"\][\s\S]*a\[title="排行榜"\]::after[\s\S]*content: '排行榜';[\s\S]*a\[title="進度"\]::after[\s\S]*content: '學習進度';[\s\S]*a\[title="字庫"\]::after[\s\S]*content: '泰語單字庫';[\s\S]*\.sa-account-streak::before[\s\S]*content: '🔥 連續';[\s\S]*\.sa-global-search-toggle::after[\s\S]*content: '全站搜尋';/, 'Mobile Landscape popup must retain every existing account action with readable Chinese labels');
   assert.doesNotMatch(loginCss, /data-gsh-game=|tone|listening|typing|word-order|lego/i, 'Login CSS must not contain a page-specific substitute geometry');
   assert.match(loginJs, /activateLegacyLandscapeSurface\(\)[\s\S]{0,1800}gameState\.header\.insertAdjacentElement\('afterend', gameState\.row\)/, 'Mobile Landscape must restore the existing per-game surface');
   assert.match(loginCss, /@media \(orientation: landscape\) and \(max-width: 1024px\) and \(max-height: 600px\)[\s\S]{0,180}\.mrt-login-surface,[\s\S]{0,100}display: none !important;/, 'Mobile Landscape must show no Login');
   assert.match(readingAuth, /id="rg-login-btn" class="mrt-login-button"/, 'Reading provider flow must own the standardized Login button');
+  assert.match(readingAuth, /id="rg-login-btn" class="mrt-login-button" style="display:flex;/, 'standardized Login button must remain visible while optional CTA placeholders are empty');
+  assert.doesNotMatch(readingAuth, /hideDup|document\.getElementById\('rg-cta-login'\).*display/, 'optional CTA placeholders must not hide the stable Login entry');
   assert.doesNotMatch(toneApp, /tf-result-login-card|tone_finder_summary_login_click/, 'Tone Result must not create a second Login CTA');
 
   for (const file of ['my-progress.html', 'vault.html', 'leaderboard.html', 'reading-board.html', 'listening-board.html', 'typing-board.html', 'word-order-board.html']) {
@@ -288,7 +333,7 @@ test('all scoped pages use one fail-closed Login surface and game pages permanen
   }
   for (const file of ['my-progress.html', 'leaderboard.html', 'reading-board.html', 'listening-board.html', 'typing-board.html', 'word-order-board.html']) {
     const html = fs.readFileSync(path.join(root, file), 'utf8');
-    assert.match(html, /type="text\/plain" data-mrt-parked-runtime/, `${file}: data runtime must remain parked`);
+    assert.doesNotMatch(html, /type="text\/plain" data-mrt-parked-runtime/, `${file}: Login Free data runtime must be active`);
   }
   const vaultHtml = fs.readFileSync(path.join(root, 'vault.html'), 'utf8');
   assert.match(vaultHtml, /<script src="js\/score\/personal-search\.js\?v=2"><\/script>[\s\S]*<script src="js\/score\/personal-content\.js\?v=5"><\/script>/, 'Vault Personal Search runtime must be active');
@@ -300,7 +345,8 @@ test('all six games keep the right-side vertical control stack on Desktop and Po
   const lego = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
   const tone = games.find((g) => g.id === 'tone').htmlText;
   for (const game of games) {
-    assert.match(game.htmlText, /css\/shared\.css\?v=36/, `${game.id}: must bind the current shared positioning layer`);
+    const sharedVersion = game.id === 'listening' ? 37 : 38;
+    assert.match(game.htmlText, new RegExp(`css/shared\\.css\\?v=${sharedVersion}`), `${game.id}: must bind the current shared positioning layer`);
   }
   assert.match(lego, /css\/shared\.css\?v=36/, 'Lego must bind the current shared positioning layer');
   assert.match(sharedCss, /SHARED PAGE POSITIONING — Tone-authoritative Desktop \+ Portrait/);
@@ -325,7 +371,7 @@ test('Core 5 retain original skip placement and game-owned dimensions', () => {
   const lego = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
   assert.doesNotMatch(sharedCss, /gsh-skip-slot|gsh-skip-action|--gsh-skip-/, 'the positioning layer must not introduce skip dimensions');
   assert.doesNotMatch(tone.htmlText, /gsh-skip-slot|data-gsh-action-slot/);
-  assert.match(tone.appText, /body\.innerHTML \+= tfNeutralSkipSurface\(\)[\s\S]{0,300}class="tf-known-bar"[\s\S]{0,180}TF\.skipCurrentWord\(\)/, 'Tone must keep its original Skip body and action');
+  assert.match(tone.appText, /body\.innerHTML \+= '<div class="tf-known-bar">[\s\S]{0,220}TF\.skipCurrentWord\(\)/, 'Tone must expose neutral Skip on every layout');
   assert.match(listening, /<div class="btn-row">\s*<button class="btn btn-secondary" id="lg-skip-btn"/, 'Listening must keep its original Skip button row');
   for (const [id, html] of [['reading', reading], ['typing', typing], ['wordorder', wordOrder], ['lego', lego]]) {
     assert.doesNotMatch(html, /gsh-skip-slot|data-gsh-action-slot/, `${id}: no synthetic empty skip row may resize gameplay`);
@@ -336,7 +382,7 @@ test('Lego keeps PR98 lower gameplay and participates only through Login', () =>
   const lego = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
   assert.match(lego, /id="rg-login-slot"/, 'Lego must retain the PR98 Login host');
   assert.match(lego, /css\/shared\.css\?v=36/);
-  assert.match(lego, /js\/core\/shared\.min\.js\?v=47/);
+  assert.match(lego, /js\/core\/shared\.min\.js\?v=53/);
   assert.doesNotMatch(lego, /gsh-session-placeholder|gsh-question-surface|gsh-wordorder-content-slot/);
   assert.match(lego, /<div class="card out">[\s\S]{0,220}<div class="out-banner">[\s\S]{0,220}id="sentTh"[\s\S]{0,160}id="sentZh"[\s\S]{0,160}id="sentZhFull"/);
   assert.match(lego, /id="lego-reveal" class="card lego-flow-card hidden"[\s\S]{0,160}id="lego-reveal-th"[\s\S]{0,160}id="lego-reveal-zh"/);
@@ -352,25 +398,24 @@ test('Reading Desktop reuses the shared vertical controls without a page-specifi
   assert.match(sharedCss, /body\[data-gsh-game\] \.rg-ctl-wrap > #game-switcher,[\s\S]{0,140}body\[data-gsh-game\] \.rg-ctl-wrap > \.grw-menu/, 'Reading must inherit the shared menu anchors');
 });
 
-test('Tone-authority four-row stacks use exact 5px boundaries without resizing text', () => {
+test('active-game vocabulary stacks use collision-safe spacing without forced heights', () => {
   const tone = games.find((g) => g.id === 'tone');
   const reading = games.find((g) => g.id === 'reading').htmlText;
   const typing = games.find((g) => g.id === 'typing').htmlText;
-  const listening = games.find((g) => g.id === 'listening').htmlText;
   const wordOrder = games.find((g) => g.id === 'wordorder').htmlText;
   assert.doesNotMatch(sharedCss, /--gsh-copy-|--gsh-progress-height|--gsh-tools-height|height:136px/, 'shared positioning must not impose new content heights');
   assert.doesNotMatch(tone.appText, /gsh-question-stack|gsh-copy-slot/, 'Tone runtime must retain its existing content DOM');
   assert.match(tone.appText, /mainBoxHtml \+ '<div id="tf-read-line">'[\s\S]{0,180}zhHtml \+ sentReadingHtml \+ sentCtxZhHtml/, 'Tone must retain its original content order');
-  assert.match(tone.htmlText, /#tf-banner > #tf-read-line \{ margin-top:5px; \}/);
-  assert.match(tone.htmlText, /#tf-banner > #tf-read-line \.tf-read-th \{ margin-top:0; \}/);
-  assert.match(tone.htmlText, /\.tf-read-en \{[\s\S]{0,180}margin-top: 5px;/);
-  assert.match(tone.htmlText, /#tf-banner > \.word-zh \{ margin-top:5px; \}/);
+  assert.match(tone.htmlText, /#tf-banner > #tf-read-line \{[\s\S]{0,180}gap:8px;[\s\S]{0,100}margin-top:10px/);
+  assert.match(tone.htmlText, /#tf-banner > \.tf-banner-word,[\s\S]{0,180}line-height:1\.6 !important;[\s\S]{0,80}padding-block:\.08em/);
+  assert.match(tone.htmlText, /#tf-banner > #tf-read-line > \.tf-read-th,[\s\S]{0,650}line-height:1\.65;[\s\S]{0,100}margin-top:8px/);
   assert.doesNotMatch(wordOrder, /gsh-wordorder-content-slot/);
   assert.match(reading, /gsh-four-row-stack[\s\S]{0,900}gsh-copy-row/);
-  assert.match(reading, /gsh-four-row-stack > \.gsh-copy-row \{ margin-top:5px !important; \}/);
-  assert.match(typing, /gsh-four-row-stack > \.gsh-copy-row\{margin-top:5px !important;\}/);
-  assert.match(listening, /\.lg-reveal > div \+ div\{margin-top:5px;\}/);
-  assert.match(reading, /@media \(max-width:768px\) and \(orientation:portrait\) \{[\s\S]{0,900}gsh-four-row-stack > \.gsh-copy-row \{ margin-top:5px !important; \}[\s\S]{0,700}\.word-th \{ padding-top:0; \}[\s\S]{0,180}#word-ctl-row \{ margin-top:1px !important; \}/, 'Reading Portrait must keep 5\/5\/5 copy gaps while preserving the prior gold-band height');
+  assert.match(reading, /gsh-four-row-stack > \.gsh-copy-row \{ margin-top:9px !important; \}/);
+  assert.match(typing, /gsh-four-row-stack > \.gsh-copy-row\{margin-top:9px !important;line-height:1\.6;\}/);
+  assert.match(reading, /@media \(max-width:768px\) and \(orientation:portrait\) \{[\s\S]{0,900}gsh-four-row-stack > \.gsh-copy-row \{ margin-top:9px !important; \}[\s\S]{0,700}\.word-th \{ padding-top:\.08em; \}/, 'Reading Portrait must preserve collision-safe copy gaps and Thai-mark clearance');
+  assert.match(wordOrder, /\.wo-slot\.filled\{flex-direction:column;gap:5px;\}/);
+  assert.match(wordOrder, /\.wo-word-th\{[^}]*line-height:1\.55;[^}]*padding-block:\.06em/);
 });
 
 test('five-game Progress DOM and runtime are removed while item-score HUDs remain', () => {
@@ -428,8 +473,8 @@ test('Reading Desktop copies the complete Tone gold-band rhythm while retaining 
   assert.match(reading, /data-gsh-game="reading"\] \.gold-banner \{\s*padding:16px 22px 0;\s*border-bottom:0;/, 'Reading Desktop gold band must use Tone horizontal and top spacing');
   assert.match(reading, /\.gold-banner \.bars-wrap \{\s*margin:6px 0 4px;/, 'Reading Desktop item-score row must use Tone placement');
   assert.match(reading, /data-gsh-game="reading"\] \.word-area \{ margin:0; \}/, 'Reading Desktop word area must remove the old extra offset');
-  assert.match(reading, /data-gsh-game="reading"\] \.word-th \{\s*padding-top:0;\s*font-family:'Sarabun',sans-serif;/, 'Reading Desktop Thai prompt must use Tone placement and font');
-  assert.match(reading, /gsh-four-row-stack > \.gsh-copy-row \{ margin-top:5px !important; \}/, 'Reading four-row boundaries must be exact 5px');
+  assert.match(reading, /data-gsh-game="reading"\] \.word-th \{\s*padding-top:\.08em;\s*font-family:'Sarabun',sans-serif;/, 'Reading Desktop Thai prompt must preserve Tone placement, font, and Thai-mark clearance');
+  assert.match(reading, /gsh-four-row-stack > \.gsh-copy-row \{ margin-top:9px !important; \}/, 'Reading four-row boundaries must provide collision-safe clearance');
   assert.match(reading, /gsh-four-row-stack > \.gsh-copy-row > \.rev-pron,[\s\S]{0,160}gsh-four-row-stack > \.gsh-copy-row > \.rev-en \{ margin-top:0 !important; \}/, 'Reading nested row children must not add hidden margins');
   assert.match(reading, /data-gsh-game="reading"\] #word-ctl-row \{[\s\S]{0,280}width:calc\(100% \+ 44px\);[\s\S]{0,120}margin:10px -22px 0 !important;[\s\S]{0,120}padding:0 22px 14px;[\s\S]{0,180}border-bottom:2px solid rgba\(184,134,40,\.50\);/, 'Reading-specific tools must occupy Tone\'s full-width gold tool row');
   assert.match(reading, /id="rg-en-toggle"/, 'Reading must retain its additional English-reading tool');
@@ -447,8 +492,8 @@ test('all games omit the removed leave-game control and dialog', () => {
   const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
   assert.doesNotMatch(sharedJs, /要離開遊戲嗎？|繼續遊戲|離開遊戲/);
   assert.doesNotMatch(sharedJs, /data-act="exit"|openGameExit|gsh-game-exit-dialog/);
-  for (const g of games) assert.match(g.htmlText, /shared\.min\.js\?v=47/, `${g.id}: must load the exit-free shared runtime`);
-  assert.match(legoHtml, /shared\.min\.js\?v=47/, 'Lego must load the exit-free shared runtime');
+  for (const g of games) assert.match(g.htmlText, /shared\.min\.js\?v=53/, `${g.id}: must load the exit-free shared runtime`);
+  assert.match(legoHtml, /shared\.min\.js\?v=53/, 'Lego must load the exit-free shared runtime');
 });
 
 test('the sitewide exit-intent survey and its submission path stay removed', () => {
@@ -478,9 +523,41 @@ test('shared font control binds after asynchronous Core 5 game startup', () => {
   assert.match(sharedJs, /var fontOn = isFontOn\(\);[\s\S]{0,500}aria-pressed/, 'font control must derive its visible and accessible state from the live body class');
   assert.match(sharedJs, /data-font-mode/, 'font control must expose its exact standard or modern state');
   assert.match(sharedJs, /MutationObserver\(renderFontBtn\)/, 'font control must resync when the game-owned font class changes');
-  assert.match(sharedJs, /e\.key !== 'rg_modern_font'/, 'font control must resync the shared preference across tabs');
+  assert.match(sharedJs, /e\.key !== fontStorageKey/, 'font control must resync only this game\'s preference across tabs');
   for (const g of games) {
     assert.match(g.htmlText, /id="font-toggle-slot"/, `${g.id}: missing shared font slot`);
+  }
+});
+
+test('game-owned preferences use distinct browser keys in all six games', () => {
+  const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
+  const expected = {
+    tone: ['tf_en_mode', 'tf_guide_mode', 'tf_modern_font', 'tf_particle_mode', 'tf_pron_mode'],
+    reading: ['rg_en_mode', 'rg_guide_mode', 'rg_modern_font', 'rg_particle_mode', 'rg_pron_mode'],
+    listening: ['lg_en_mode', 'lg_modern_font', 'lg_pron_mode'],
+    typing: ['tg_en_mode', 'tg_guide_mode', 'tg_modern_font', 'tg_particle_mode', 'tg_pron_mode'],
+    wordorder: ['wo_en_mode', 'wo_hide_zh', 'wo_modern_font', 'wo_particle_mode', 'wo_pron_mode'],
+    lego: ['lego_modern_font']
+  };
+  const allKeys = new Set();
+  for (const [id, keys] of Object.entries(expected)) {
+    const app = id === 'lego' ? legoApp : games.find((g) => g.id === id).appText;
+    const actual = [...new Set([...app.matchAll(/localStorage\.(?:getItem|setItem|removeItem)\(['"]([^'"]+)['"]/g)]
+      .map((match) => match[1])
+      .filter((key) => /_(?:en_mode|guide_mode|modern_font|particle_mode|pron_mode|hide_zh)$/.test(key)))].sort();
+    assert.deepStrictEqual(actual, keys.slice().sort(), `${id}: game-owned preference keys drifted`);
+    for (const key of actual) {
+      assert.ok(!allKeys.has(key), `${id}: ${key} is reused by another game`);
+      allKeys.add(key);
+    }
+  }
+  assert.match(sharedJs, /var fontStorageKey = gameStoragePrefix \+ '_modern_font'/);
+  assert.match(sharedJs, /var KEY = gameStoragePrefix \+ '_hide_zh'/);
+  for (const [page, prefix] of [
+    ['tone-finder', 'tf'], ['reading-game', 'rg'], ['listening-game', 'lg'],
+    ['typing-game', 'tg'], ['word-order', 'wo'], ['lego', 'lego']
+  ]) {
+    assert.ok(sharedJs.includes(`'${page}': '${prefix}'`), `${page}: shared UI must use its game-owned key`);
   }
 });
 
@@ -494,11 +571,11 @@ test('Tone question words and advanced sentences both follow the shared font mod
 test('Lego consumes the shared two-mode font path without a particle control', () => {
   const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
   const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
-  assert.match(legoHtml, /shared\.min\.js\?v=47/, 'Lego must load the current shared game runtime');
-  assert.match(legoHtml, /lego-game-app\.js\?v=12/, 'Lego must load its Guest-only quota runtime');
+  assert.match(legoHtml, /shared\.min\.js\?v=53/, 'Lego loads the current shared game runtime');
+  assert.match(legoHtml, /lego-game-app\.js\?v=16/, 'Lego must load its central-vocabulary quota runtime');
   assert.match(legoApp, /window\.rgToggleFont\s*=\s*function/, 'Lego must expose the shared font adapter API');
   assert.match(legoApp, /classList\.toggle\('rg-modern-font'\)/, 'Lego must preserve the existing standard/modern modes');
-  assert.match(legoApp, /localStorage\.setItem\('rg_modern_font'/, 'Lego must reuse the shared font preference');
+  assert.match(legoApp, /localStorage\.setItem\('lego_modern_font'/, 'Lego must keep its own font preference');
   assert.match(legoHtml, /body\.rg-modern-font \.out-th[\s\S]{0,500}Noto Sans Thai/, 'Lego Thai gameplay text must respond to the shared mode');
   assert.doesNotMatch(legoHtml + legoApp, /games_particle_mode|rg-particle-toggle|ToggleParticle/, 'Lego must not receive the particle control');
 });
@@ -515,7 +592,7 @@ test('Lego exposes only the locked minimum-release presentation', () => {
   assert.match(legoHtml, /onclick="legoEndGame\(\)">結束遊戲<\/button>/);
   assert.match(legoHtml, /onclick="legoContinueBuilding\(\)">繼續造句<\/button>/);
   assert.match(legoHtml, /id="lego-reveal-th"[\s\S]{0,180}id="lego-reveal-zh"/, 'reveal must retain the original full sentence and zh-TW translation order');
-  assert.match(legoHtml, /js\/games\/game-flow\.js\?v=11/, 'Lego Result must use the countdown-free shared flow runtime');
+  assert.match(legoHtml, /js\/games\/game-flow\.js\?v=14/, 'Lego Result must use the current countdown-free shared flow runtime');
   for (const role of ['replay','print','detail-action','switch','cta','home']) {
     assert.match(legoHtml, new RegExp(`data-game-result-${role}="v1"`), `Lego Result missing ${role}`);
   }
@@ -526,7 +603,7 @@ test('Lego exposes only the locked minimum-release presentation', () => {
   assert.match(legoApp, /showFirstCorrect:false/, 'non-applicable first-attempt proof must be omitted from Lego Result');
 });
 
-test('Lego exposes only the locked word sets and branch grammar', () => {
+test('Lego projects every runtime word role from the authenticated central catalog', () => {
   const legoHtml = fs.readFileSync(path.join(root, 'lego.html'), 'utf8');
   const legoApp = fs.readFileSync(path.join(root, 'js/games/lego-game-app.js'), 'utf8');
   const block = (start, end) => {
@@ -536,24 +613,28 @@ test('Lego exposes only the locked word sets and branch grammar', () => {
     return legoApp.slice(from, to);
   };
   const words = block('const WORDS={', '// ════════ SESSION POOL');
-  const locations = block('const LOCATION_WORDS=[', 'const SLEEP_LOCATION');
-  for (const th of ['ตอนนี้','วันนี้','พรุ่งนี้','เรา','ผม','พี่','อยาก','จะ','กำลัง','กิน','ไป','ไปกิน','นอน','ไปนอน','ซื้อ','ไปซื้อ','ข้าว','ขนม','ผลไม้','ไก่ย่าง','ก๋วยเตี๋ยว','ของกิน','เสื้อ','รองเท้า','กระเป๋า','กางเกง','ตั๋ว','อยู่','พ่อ','แม่','เพื่อน','แฟน','นะ','นะครับ','นะคะ','อะ','ครับ','ค่ะ']) {
-    assert.match(words, new RegExp(`th:'${th}'`), `locked word ${th} is missing`);
-  }
-  for (const th of ['ห้าง','บ้านเพื่อน','เซเว่น','ร้านอาหาร']) {
-    assert.match(locations, new RegExp(`th:'${th}'`), `locked location ${th} is missing`);
-  }
+  assert.match(legoApp, /const CENTRAL_CATALOG=Array\.isArray\(window\.WORDS_MASTER\)[\s\S]{0,120}row&&row\.catalog/);
+  assert.match(legoApp, /const CENTRAL_NOUNS=legoUniqueRole/);
+  assert.match(legoApp, /const CENTRAL_SUBJECTS=legoUniqueRole/);
+  assert.match(legoApp, /const CENTRAL_VERBS=legoUniqueRole/);
+  assert.match(legoApp, /const LOCATION_WORDS=legoUniqueRole/);
+  assert.match(legoApp, /const PERSON_WORDS=legoUniqueRole/);
+  assert.match(legoApp, /const TIME_WORDS=legoUniqueRole/);
+  assert.match(words, /time:TIME_WORDS[\s\S]*subj:CENTRAL_SUBJECTS[\s\S]*verb:CENTRAL_VERBS[\s\S]*obj:CENTRAL_NOUNS[\s\S]*adv:PERSON_WORDS/);
+  assert.doesNotMatch(legoApp, /const SLEEP_LOCATION|const SUBJ_EXTRA|objTags|tags:\['/);
   const active = block('function activeSlots(){', '// ════════ CSS VARS');
-  assert.match(active, /verb==='ไป'\|\|verb==='นอน'/, 'only ไป/นอน may expose a location branch');
-  assert.match(active, /verb==='ไป'&&!!state\.advObj/, 'Who must follow a selected ไป location');
+  assert.match(active, /s\.id==='obj'\) return !!verb/, 'every selected central verb must expose the optional object role');
+  assert.match(active, /!LOCATION_OBJECT_VERBS\.has\(verb\)/, 'location-object verbs must not duplicate the ที่ branch');
+  assert.match(active, /s\.id==='adv'/, 'every selected central verb must expose the optional กับ-person role');
   const renderBaseplate = block('function renderBaseplate(){', 'function applyOpen(){');
-  assert.match(renderBaseplate, /sessionPool\.obj\|\|\[\]\)\.filter\(isObjCompatible\)/, 'Eat and buy branches must show only compatible objects');
-  const actions = block('function pickWord(id,th){', 'function addCustomSubj(){');
+  assert.match(renderBaseplate, /const pool=getPoolForSlot\(s\.id\)/, 'every dropdown must use a role-filtered central pool');
+  const actions = block('function pickWord(id,encodedRef){', 'function addCustomSubj(){');
   assert.match(actions, /word\.th==='กำลัง'\?WORDS\.prog\[0\]:null/, 'กำลัง must default to rear อยู่');
   assert.match(actions, /id==='prog'&&!state\.modal/, 'rear อยู่ must not be removable without front grammar');
   const output = block('function renderOut(){', 'function render(){');
-  assert.match(output, /thParts\.push\('กับ'\+w\.th\)/, 'Who must use กับ after ไป and a location');
-  assert.doesNotMatch(output, /thParts\.push\('ที่'/, 'ไป location must not insert ที่');
+  assert.match(output, /thParts\.push\('กับ'\+w\.th\)/, 'Who must use กับ');
+  assert.match(output, /thParts\.push\('ที่'\+w\.th\)/, 'ordinary verb locations must use ที่');
+  assert.match(legoApp, /const LOCATION_OBJECT_VERBS=new Set\(\['ไป','มา','เที่ยว','อยู่'\]\)/, 'location verbs must use direct place objects');
   assert.doesNotMatch(legoApp, /title="加入我的造句單字庫/, 'word saving must not interrupt the build surface');
   assert.match(legoHtml, /沒有前置文法時，句尾的 อยู่ 會保留/);
   assert.match(legoHtml, /只有按過「完成句子」的內容會進入本輪結果；未完成的草稿不會儲存/);
@@ -570,11 +651,11 @@ test('Lego custom fields stay inside the locked slots and translation boundary',
   const customEnd = legoApp.indexOf('function clearAll(){', customStart);
   const custom = legoApp.slice(customStart, customEnd);
   assert.match(render, /\['time','subj','adv'\]\.includes\(s\.id\)/, 'custom input must be limited to Time, Subject and Who by default');
-  assert.match(render, /s\.id==='advObj'&&state\.verb&&state\.verb\.th==='ไป'/, 'custom Location must exist only in the ไป branch');
+  assert.match(render, /s\.id==='advObj'&&state\.verb&&!LOCATION_OBJECT_VERBS\.has\(state\.verb\.th\)/, 'custom Location must follow the central location-role branch');
   assert.match(render, /<span>ชื่อ<\/span>/, 'Subject must preserve the player-name field');
   assert.match(render, /<span>ใส่เอง<\/span>/, 'locked custom-input label must be visible');
   assert.match(custom, /\['time','subj','adv','advObj'\]\.includes\(id\)/);
-  assert.match(custom, /id==='advObj'&&\(!state\.verb\|\|state\.verb\.th!=='ไป'\)/, 'custom Location must fail closed outside ไป');
+  assert.match(custom, /id==='advObj'&&\(!state\.verb\|\|LOCATION_OBJECT_VERBS\.has\(state\.verb\.th\)\)/, 'custom Location must fail closed for direct-location object verbs');
   assert.match(custom, /const w=\{th:name,zh:name,custom:true,customType:'name'\}/, 'a proper name may stay Thai in the translated sentence');
   assert.match(custom, /state\[id\]=\{th:th,zh:zh,custom:true,customType:'custom'\}/, 'player translation must remain player-owned data');
   assert.doesNotMatch(custom, /WORDS\.(?:time|subj|adv)\.push|sessionPool\.(?:time|subj|adv)\.push/, 'custom input must not expand the locked candidate pools');
@@ -617,16 +698,16 @@ test('all six games keep learning helpers without any rice-button contract', () 
   assert.doesNotMatch(sharedMin, /wm-trigger|textContent\s*=\s*['"]🍚['"]/);
   for (const g of games) {
     assert.match(g.htmlText, /js\/games\/word-menu\.js\?v=10/, `${g.id}: must load the inline learning-tool binder`);
-    assert.match(g.htmlText, /js\/core\/shared\.min\.js\?v=47/, `${g.id}: must load the rice-button-free shared runtime`);
+    assert.match(g.htmlText, /js\/core\/shared\.min\.js\?v=53/, `${g.id}: must load the rice-button-free shared runtime`);
     assert.doesNotMatch(g.htmlText, /wm-trigger|點 🍚|<button[^>]*>[^<]*🍚/, `${g.id}: retired rice-button source contract remains`);
   }
-  assert.match(legoHtml, /js\/core\/shared\.min\.js\?v=47/);
+  assert.match(legoHtml, /js\/core\/shared\.min\.js\?v=53/);
   assert.doesNotMatch(legoHtml, /wm-trigger|點 🍚|<button[^>]*>[^<]*🍚/);
   for (const app of [readingApp, typingApp, listeningApp]) assert.doesNotMatch(app, /#wm-trigger/);
   assert.match(games.find((g) => g.id === 'listening').htmlText, /id="zh-toggle-slot"/, 'Listening: translation control ต้องอยู่ใน inline learning tools');
   assert.match(sharedJs, /fab\.id = 'zh-fab-standalone'/, 'Lego must retain its existing non-rice translation control');
   assert.match(sharedJs, /GAME_ID === 'lego'[\s\S]{0,260}document\.getElementById\('zh-fab-standalone'\)[\s\S]{0,800}menu\.insertBefore\(legoTranslationRow, menu\.firstChild\)/, 'Lego translation must move inside its existing More menu instead of adding a fourth floating button');
-  assert.match(sharedJs, /var controlPage = String\(location\.pathname \|\| ''\)\.split\('\/'\)\.pop\(\)\.toLowerCase\(\);[\s\S]{0,120}if \(controlPage === 'vault\.html'\) return;/, 'Vault must stop before shared game translation controls are created');
+  assert.match(sharedJs, /if \(gamePage === 'vault'\) return;/, 'Vault must stop before shared game translation controls are created');
   assert.doesNotMatch(vaultHtml, /wm-trigger|zh-fab-standalone|<button[^>]*>[^<]*(?:🍚|🍙)/, 'Vault source must not define a floating rice control');
   assert.match(vaultHtml, /@media\(max-width:768px\) and \(orientation:portrait\)\{[\s\S]{0,500}html body \.rg-ctl-wrap\{[\s\S]{0,320}right:12px!important;[\s\S]{0,320}flex-direction:row!important;/, 'Vault Portrait controls must stay in one row at the right corner');
   assert.match(vaultHtml, /html body \.rg-ctl-wrap > #game-switcher\{[\s\S]{0,260}position:absolute!important;[\s\S]{0,180}right:0!important;[\s\S]{0,180}bottom:calc\(100% \+ 8px\)!important;/, 'Vault Portrait game menu must open above the right-corner controls');
@@ -641,24 +722,24 @@ test('all five games provide recoverable round resume UI', () => {
 
 test('mobile resume uses one compact shared-copy line and three horizontal actions', () => {
   assert.match(sharedJs, /window\.GameUiCopy[\s\S]{0,700}prefix: '上次進度：'/, 'resume copy must live outside game logic');
-  assert.match(sharedJs, /continueAction: '▶ 繼續上次'/);
-  assert.match(sharedJs, /restartAction: '↺ 重新開始'/);
-  assert.match(sharedJs, /newAction: '＋ 開始新一輪'/);
+  assert.match(sharedJs, /continueAction: '繼續上次練習'/);
+  assert.match(sharedJs, /restartAction: '重新開始本次練習'/);
+  assert.match(sharedJs, /newAction: '開始新一輪'/);
   assert.match(sharedCss, /@media\(max-width:480px\)[\s\S]{0,500}\.gsh-resume-actions \{ flex-direction:row; flex-wrap:nowrap;/, 'mobile resume actions must stay horizontal');
   assert.match(sharedCss, /\.gsh-resume-actions button \{ flex:1 1 0;[^}]*min-height:36px;/, 'mobile resume actions must stay compact');
   for (const g of games) {
-    const sharedCssVersion = 36;
+    const sharedCssVersion = g.id === 'listening' ? 37 : 38;
     assert.match(g.htmlText, new RegExp(`css/shared\\.css\\?v=${sharedCssVersion}`), `${g.id}: must load current shared game CSS`);
-    assert.match(g.htmlText, /js\/core\/shared\.min\.js\?v=47/, `${g.id}: must load shared resume copy`);
+    assert.match(g.htmlText, /js\/core\/shared\.min\.js\?v=53/, `${g.id}: must load shared resume copy`);
     assert.match(g.appText, /GameUiCopy\.resumeLine/, `${g.id}: resume detail must use shared semantic copy`);
   }
 });
 
-test('all five games keep one in-memory current-round DTO identity without Login summary', () => {
+test('all five games keep one current-round DTO identity with the Login Free canonical summary', () => {
   for (const g of games) {
-    const reportVersion = g.id === 'tone' ? 4 : 3;
+    const reportVersion = g.id === 'listening' ? 5 : g.id === 'tone' ? 10 : 8;
     assert.match(g.htmlText, new RegExp(`js/games/round-report\\.js\\?v=${reportVersion}`), `${g.id}: missing Round Report DTO loader`);
-    assert.doesNotMatch(g.htmlText, /js\/score\/learning-summary\.js/, `${g.id}: Login summary must stay parked in Minimum Guest Launch`);
+    assert.match(g.htmlText, /js\/score\/learning-summary\.js\?v=1/, `${g.id}: Login Free summary runtime must be active`);
     assert.match(g.appText, /RoundReport\.(?:create|restore)/, `${g.id}: round identity is not wired`);
     assert.match(g.appText, /report:/, `${g.id}: active GameResume must carry the report snapshot`);
   }
@@ -670,13 +751,13 @@ test('all six games use the shared A4 browser Print structure and daily Result a
   const roundReport = fs.readFileSync(path.join(root, 'js/games/round-report.js'), 'utf8');
   const gameFlow = fs.readFileSync(path.join(root, 'js/games/game-flow.js'), 'utf8');
   for (const g of games) {
-    const reportVersion = g.id === 'tone' ? 4 : 3;
+    const reportVersion = g.id === 'listening' ? 5 : g.id === 'tone' ? 10 : 8;
     assert.match(g.htmlText, new RegExp(`js/games/round-report\\.js\\?v=${reportVersion}`), `${g.id}: must load shared print renderer`);
-    assert.match(g.htmlText, /js\/games\/game-flow\.js\?v=11/, `${g.id}: must load countdown-free Result runtime`);
+    assert.match(g.htmlText, /js\/games\/game-flow\.js\?v=14/, `${g.id}: must load current countdown-free Result runtime`);
     assert.match(g.appText, /RoundReport\.openPrint/, `${g.id}: print action must use the shared renderer`);
   }
   assert.match(legoHtml, /js\/games\/round-report\.js\?v=3/);
-  assert.match(legoHtml, /js\/games\/game-flow\.js\?v=11/);
+  assert.match(legoHtml, /js\/games\/game-flow\.js\?v=14/);
   assert.match(legoApp, /RoundReport\.openPrint/);
   assert.match(roundReport, /@page\{size:A4 portrait/);
   assert.match(roundReport, /data-print-section=\\?"summary\\?"[\s\S]+data-print-section=\\?"activity\\?"[\s\S]+data-print-section=\\?"detail\\?"/);
@@ -731,7 +812,7 @@ test('Guest/Login Free reports contain facts only and no personalized analysis o
   assert.match(toneSummary, /tfDesktopOrPortrait\(\)[\s\S]{0,180}user_answer[\s\S]{0,100}correct_answer/, 'Tone Result must name the wrong and correct answers on Desktop/Portrait');
   assert.match(toneSummary, /class="tf-score-summary-formula"/, 'Tone Result must separate the weighted-score formula from the total');
   assert.match(toneSummary, /class="tf-result-reward-row"[\s\S]{0,300}tf-score-summary-bonus[\s\S]{0,300}tf-streak-chip/, 'Tone Result must keep reward and streak in one visual row');
-  assert.match(toneSummary, /reportResults\.length === total[\s\S]{0,180}!r\.is_skipped && r\.is_correct[\s\S]{0,180}!r\.skipped && r\.firstTry/, 'Tone Result count must use the same first-time-correct evidence as its detail rows');
+  assert.match(toneSummary, /reportResults\.length === total[\s\S]{0,220}!tfResultIsNeutral\(r\) && r\.is_correct[\s\S]{0,220}!tfResultIsNeutral\(r\) && r\.firstTry/, 'Tone Result count must use the same neutral-safe Clean evidence as its detail rows and fallback');
   assert.doesNotMatch(toneSummary, /perfectCount\s*=\s*results\.filter\(function\(r\)\{ return !r\.skipped && r\.mistakes === 0;/, 'Tone Result must not treat a wrong initial guess as first-time correct');
   assert.match(toneSummary, /class="gsh-end-actions tf-result-actions"/, 'Tone Result must expose its scoped action layout');
   assert.match(games.find((g) => g.id === 'tone').htmlText, /\.tf-result-actions\[data-game-result-actions-normalized="v1"\] \{\s*display:none !important; height:0 !important; margin:0 !important;/, 'Tone Result must not leave the emptied normalized action wrapper as a visual gap');
@@ -754,7 +835,7 @@ test('Guest/Login Free reports contain facts only and no personalized analysis o
 });
 
 test('first-time help is persistent for four mature games and explicit on Listening start', () => {
-  for (const g of games.filter((x) => x.id !== 'listening')) {
+  for (const g of games.filter((game) => game.id !== 'listening')) {
     assert.match(g.htmlText, new RegExp(`howto_tour_seen_${g.id}`), `${g.id}: ไม่มี first-time persistence`);
     assert.match(g.htmlText, /GT_TOUR_STEPS/, `${g.id}: ไม่มี guided steps`);
   }
@@ -770,7 +851,7 @@ test('Tone help layers own Escape and exit without leaking the key to page short
   assert.match(tone, /e\.stopImmediatePropagation\(\)[\s\S]{0,80}gtTourEnd\(\)/);
 });
 
-test('all five replayable help modals close on Escape and restore focus to their opener', () => {
+test('all active replayable help modals close on Escape and restore focus to their opener', () => {
   const handles = {
     tone: '__tfHowtoModalReg',
     reading: '__rgHowtoModalReg',
@@ -778,7 +859,7 @@ test('all five replayable help modals close on Escape and restore focus to their
     typing: '__tgHowtoModalReg',
     wordorder: '__woHowtoModalReg',
   };
-  for (const g of games) {
+  for (const g of games.filter((x) => x.id !== 'listening')) {
     assert.match(g.htmlText + g.appText, new RegExp(`window\\.${handles[g.id]}\\s*=\\s*window\\.registerGameModal`), `${g.id}: help modal is not registered`);
     assert.match(g.htmlText, new RegExp(`${handles[g.id]}\\)window\\.${handles[g.id]}\\.notifyOpen\\(this\\)`), `${g.id}: opener does not register focus return`);
   }
@@ -799,38 +880,54 @@ test('Typing has native mobile input while Listening typed mode is keyboard-focu
   assert.match(games.find((g) => g.id === 'listening').appText, /typeInput\.focus/);
 });
 
-test('Tone active-question guidance permanently locks that question to zero', () => {
+test('Tone Hint carries its saved choice while preserving per-question Free Practice scoring', () => {
   const toneGame = games.find((g) => g.id === 'tone');
   const tone = toneGame.appText;
   const toneMin = fs.readFileSync(path.join(root, 'js/games/tone-finder-game.min.js'), 'utf8');
-  assert.match(tone, /currentWordGuideUsed\s*=\s*!!tfGuideMode/, 'Tone: next question must inherit the latest guide state');
-  assert.match(tone, /tfGuideMode\s*\|\|\s*\(session\s*&&\s*session\.currentWordGuideUsed\)/, 'Tone: toggling guidance off must not restore scoring');
+  assert.doesNotMatch(tone, /tfResetGuideForNextUnit/, 'Tone: a new word or reload must not overwrite the saved Hint choice');
+  assert.match(tone, /function tfAdvanceCommittedWord\(\)[\s\S]{0,120}tfResetWordScoring\(\)/, 'Tone: the next word must reset its per-word Hint state');
+  assert.match(tone, /tfSetupSrsFlagsForCurrentWord\(\);[^\n]*\n\s*session\.currentWordGuideUsed\s*=\s*!!tfGuideMode\s*&&\s*!tfCurWordNoTools\(\)/, 'Tone: a new word inherits Hint only after its no-tools flags are known');
+  assert.match(tone, /var firstTry = [^\n]*&& !session\.currentWordGuideUsed;/, 'Tone: toggling guidance off must not restore scoring for an already guided word');
   assert.match(tone, /function tfLockCurrentWordForGuide\(\)[\s\S]{0,600}session\.score\s*=\s*Math\.max\(0,[\s\S]{0,120}- awarded\)/, 'Tone: points already awarded in the active question must be revoked');
+  assert.doesNotMatch(tone.slice(tone.indexOf('function tfLockCurrentWordForGuide()'), tone.indexOf('// คำปัจจุบันเป็นหลายพยางค์ไหม')), /session\.combo\s*=/, 'Tone: Free Practice must preserve Combo');
+  assert.match(tone, /function tfUseHint\(keys\)[\s\S]{0,260}tfLockCurrentWordForGuide\(\)[\s\S]{0,120}session\.hintUsed\s*=\s*true/, 'Tone: the question-mark Hint must make the whole word Free Practice');
+  assert.doesNotMatch(tone.slice(tone.indexOf('function tfUseHint(keys)'), tone.indexOf('function tfHandleDeduceMistake', tone.indexOf('function tfUseHint(keys)'))), /onPeek|onWrong|tfForceRevealZero/, 'Tone: Hint must not consume the derivation mistake ladder');
   assert.match(tone, /S\.step\s*!==\s*'result'/, 'Tone: changing the default on a completed answer must not rewrite that result');
-  assert.match(tone, /S\s*=\s*ns;\s*if \(tfGuideMode\) tfLockCurrentWordForGuide\(\);\s*render\(\);/, 'Tone: a carried guide state must lock the next active syllable before render');
+  assert.match(tone, /S\s*=\s*ns;\s*if \(tfGuideMode && !tfCurWordNoTools\(\)\) tfLockCurrentWordForGuide\(\);\s*render\(\);/, 'Tone: guidance carries to the next syllable only outside a no-tools check');
   assert.match(tone, /wordScore\s*=\s*session\.currentWordGuideUsed\s*\?\s*0\s*:/, 'Tone: multi-syllable questions must remain zero after guidance');
   assert.match(tone, /hintUsed:\s*!!session\.hintUsed\s*\|\|\s*!!session\.currentWordGuideUsed/, 'Tone: Result evidence must record active guidance');
-  assert.match(tone, /currentWordGuideIntroPending\s*=\s*!!tfGuideMode\s*&&\s*!tfCurWordNoTools\(\)/, 'Tone: a new guided question must stop at the intro gate');
-  assert.match(tone, /currentWordGuideIntroPending[\s\S]{0,500}開始練習/, 'Tone: the intro gate must hide choices behind the explicit start action');
-  assert.match(tone, /id="tf-guide-start-btn"[\s\S]{0,180}開始練習/, 'Tone: guided Start must expose a stable Enter target');
+  assert.match(tone, /currentWordGuideIntroPending\s*=\s*!!tfGuideMode\s*&&\s*!tfCurWordNoTools\(\)/, 'Tone: the current guided question must stop at the intro gate');
+  assert.match(tone, /currentWordGuideIntroPending[\s\S]{0,500}開始推導/, 'Tone: the intro gate must expose the approved derivation action');
+  assert.match(tone, /id="tf-guide-start-btn"[\s\S]{0,220}開始推導/, 'Tone: derivation action must expose a stable Enter target');
   assert.match(tone, /tfOrdinaryDesktop\(\) \? document\.getElementById\('tf-guide-start-btn'\)/, 'Tone: Desktop Enter must prefer guided Start and never infer Skip');
   assert.match(tone, /active\.closest\('\.tf-known-btn'\)[\s\S]{0,120}e\.preventDefault\(\)[\s\S]{0,120}return;/, 'Tone: Enter on the focused Skip action must be blocked');
-  assert.match(tone, /startGuidedQuestion:\s*function\(\)[\s\S]{0,520}currentWordGuideIntroPending\s*=\s*false[\s\S]{0,320}navigateToInflection\(\)/, 'Tone: Desktop guided Start must bypass tone choice and enter derivation directly');
+  assert.match(tone, /startGuidedQuestion:\s*function\(\)[\s\S]{0,520}currentWordGuideIntroPending\s*=\s*false[\s\S]{0,320}navigateToInflection\(\)/, 'Tone: guidance must enter the approved teaching derivation');
+  assert.match(tone, /function navigateToInflection\(\)[\s\S]{0,420}step: 's1'/, 'Tone: approved derivation route must remain');
+  assert.match(tone, /var newTone = nextStep === 'result' \? catalogToneNumber\(\) : null/, 'Tone: derivation must never become a second tone authority');
   assert.match(tone, /guessRow\s*=\s*\(tfDesktopOrPortrait\(\)\s*&&\s*initialGuess\s*==\s*null\)\s*\?\s*''/, 'Tone: guided Result must not invent an uncertain choice on Desktop or Portrait');
   assert.match(tone, /TF\.skipCurrentWord\(\)[^>]*>跳過<\/button>/, 'Tone: Desktop gameplay must expose neutral 跳過');
-  assert.match(tone, /เดาเสียงผิดต้องนับผิด 1 ครั้ง[\s\S]{0,700}recordMistake\([\s\S]{0,140}TF_WORDSCORE\.onWrong\(session\)[\s\S]{0,100}TF_WORDSCORE\.onNextStep\(session\)/, 'Tone: a wrong initial tone answer must count once and drop the score ladder before derivation');
+  assert.match(tone, /function tfHandleInitialToneMistake\(entry\)[\s\S]{0,260}session\.curWordWrongGuess\s*=\s*true[\s\S]{0,180}tfUpdateWordScoreGauge\(\)/, 'Tone: a wrong initial 1–5 choice must enter teaching without dropping the score ladder');
+  assert.doesNotMatch(tone.slice(tone.indexOf('function tfHandleInitialToneMistake(entry)'), tone.indexOf('function stepSessionGuess()', tone.indexOf('function tfHandleInitialToneMistake(entry)'))), /session\.combo\s*=\s*0|curWordAllFirstTry\s*=\s*false/, 'Tone: a wrong initial 1–5 choice must preserve Combo and Clean eligibility');
+  assert.match(tone, /function tfScoreDeduce\(\)[\s\S]{0,700}currentWordDeduct[\s\S]{0,180}tfScoreFirstTry\(\)/, 'Tone: a clean teaching path after the initial guess must receive normal Clean scoring');
+  assert.doesNotMatch(tone, /聲調選擇錯誤/, 'Tone: a wrong initial 1–5 choice must not be recorded as a scored mistake');
+  assert.match(tone, /function tfHandleDeduceMistake\(choiceLabel, errMsg\)[\s\S]{0,220}recordMistake\(choiceLabel, errMsg\)[\s\S]{0,420}TF_WORDSCORE\.onWrong\(session\)/, 'Tone: a scored wrong answer inside derivation must begin the score deduction ladder');
+  assert.match(tone, /if \(session\.currentWordGuideUsed\)[\s\S]{0,260}return;[\s\S]{0,80}TF_WORDSCORE\.onWrong\(session\)/, 'Tone: Free Practice mistakes must bypass the score ladder and preserve Combo');
   assert.match(tone, /function tfResetWordScoring\(\)[\s\S]{0,220}currentWordMistakesTotal\s*=\s*0/, 'Tone: each new word must reset its total mistake evidence');
+  assert.match(tone, /var hadNeutralResult\s*=\s*scoredResults\.some\(tfResultIsNeutral\)[\s\S]{0,220}sessionBonus\(total, perfectCount\)/, 'Tone: a round containing any neutral result must receive no completion or perfect bonus');
+  assert.match(tone, /needReview:\s*!session\.currentWordGuideUsed\s*&&/, 'Tone: Free Practice must not enter Retry or Review');
+  assert.match(tone, /if \(_tfResult\.hintUsed\) roundReport\.learning_exempt = true/, 'Tone: Free Practice must not be committed to Login Free learning state');
   assert.match(tone, /function recordMistake\([\s\S]{0,900}currentWordMistakesTotal\s*=\s*\(session\.currentWordMistakesTotal \|\| 0\) \+ 1/, 'Tone: every real wrong answer must update the total mistake evidence');
   assert.match(tone, /function tfCommitWordAndAdvance\(opts\)[\s\S]{0,260}var mistakes = session\.currentWordMistakesTotal/, 'Tone: Result must retain mistake totals across syllables');
-  assert.match(tone, /skipCurrentWord:\s*function\(\)[\s\S]{0,1500}is_skipped:\s*true[\s\S]{0,240}skip_reason:\s*'user_skip'/, 'Tone: Skip must create neutral result evidence');
-  assert.match(tone, /if \(S\.step === 'session-guess' && !tfCurWordNoTools\(\)\)[\s\S]{0,120}currentWordGuideIntroPending\s*=\s*true/, 'Tone: enabling guidance during an active question must return to the explicit start gate');
+  assert.match(tone, /skipCurrentWord:\s*function\(\)[\s\S]{0,2500}is_skipped:\s*true[\s\S]{0,240}skip_reason:\s*'user_skip'/, 'Tone: Skip must create neutral result evidence');
+  assert.match(tone, /S\.step !== 'result' && !tfCurWordNoTools\(\)\)[\s\S]{0,150}if \(S\.step === 'session-guess'\)[\s\S]{0,100}currentWordGuideIntroPending\s*=\s*true/, 'Tone: enabling guidance during an active non-check question must return to the explicit start gate');
   assert.match(tone, /function tfArmGuideIntroForPageReturn\(\)[\s\S]{0,400}currentWordGuideIntroPending\s*=\s*true/, 'Tone: returning to a preserved page must re-arm the guided-question gate');
   assert.match(toneMin, /currentWordGuideUsed/, 'Tone: deployed minified bundle must include the zero-lock state');
   assert.match(toneMin, /currentWordMistakesTotal/, 'Tone: deployed minified bundle must preserve the real wrong-answer total');
-  assert.match(toneMin, /聲調選擇錯誤/, 'Tone: deployed minified bundle must charge a wrong initial tone answer');
-  assert.match(toneMin, /開始練習/, 'Tone: deployed minified bundle must include the guided-question gate');
+  assert.match(toneMin, /開始推導/, 'Tone: deployed minified bundle must include the derivation start gate');
   assert.match(toneMin, /pageshow/, 'Tone: deployed minified bundle must include the page-return guard');
-  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=78/, 'Tone: page must request the rebuilt shared-framework runtime version');
+  assert.match(toneMin, /tfHandleInitialToneMistake/, 'Tone: deployed minified bundle must preserve the initial no-deduction handler');
+  assert.doesNotMatch(toneMin, /聲調選擇錯誤/, 'Tone: deployed minified bundle must not retain the superseded initial scored-mistake branch');
+  assert.match(toneGame.htmlText, /tone-finder-game\.min\.js\?v=102/, 'Tone: page must request the rebuilt gameplay runtime version');
 });
 
 test('Tone mobile touch surfaces keep Desktop gameplay free of keyboard-only copy', () => {
@@ -840,8 +937,8 @@ test('Tone mobile touch surfaces keep Desktop gameplay free of keyboard-only cop
   assert.match(tone.appText, /function tfWireToneKeyboard\(\)[\s\S]{0,140}if \(tfTouchMobileSurface\(\)\) return;/, 'mobile surfaces must ignore number-key gameplay');
   assert.match(tone.appText, /function tfWireEnterNext\(\)[\s\S]{0,140}if \(tfTouchMobileSurface\(\)\) return;/, 'mobile surfaces must ignore Enter gameplay');
   assert.match(tone.appText, /\(tfTouchMobileSurface\(\) \? '' : '<div[\s\S]{0,220}電腦也可以直接按鍵盤 1–5/, 'mobile surfaces must omit the computer keyboard hint');
-  assert.match(tone.appText, /body\.innerHTML \+= tfNeutralSkipSurface\(\)[\s\S]{0,260}>跳過<\/button>/, 'Portrait and Landscape must retain Tone original Skip placement and dimensions');
-  assert.match(tone.appText, /startGuidedQuestion:[\s\S]{0,300}if \(tfDesktopOrPortrait\(\)\)[\s\S]{0,180}navigateToInflection\(\)/, 'Portrait Hint must enter derivation directly');
+  assert.match(tone.appText, /body\.innerHTML \+= '<div class="tf-known-bar">[\s\S]{0,260}TF\.skipCurrentWord\(\)">跳過<\/button>/, 'all layouts must retain Tone original neutral Skip placement and dimensions');
+  assert.match(tone.appText, /startGuidedQuestion:[\s\S]{0,360}navigateToInflection\(\)/, 'Portrait Hint must enter the approved teaching derivation');
   assert.match(tone.htmlText, /@media \(max-width:768px\) and \(orientation:portrait\)[\s\S]{0,12000}\.gsh-next-countdown,[\s\S]{0,220}\{ display:none !important; \}/, 'Portrait must render no countdown surface');
   assert.match(tone.htmlText, /\.sg-tone-btn \{[\s\S]{0,180}width:clamp\(44px,12vw,52px\)/, 'Portrait tone choices must stay compact and tappable');
   assert.match(tone.htmlText, /\.gsh-resume-actions button \{[\s\S]{0,180}min-height:34px/, 'Portrait Resume must stay compact in the Desktop position');
@@ -849,11 +946,11 @@ test('Tone mobile touch surfaces keep Desktop gameplay free of keyboard-only cop
   assert.match(tone.htmlText, /\.tf-page \{[\s\S]{0,100}padding-top:10px;/, 'Portrait must not count the fixed navigation height twice above the Tone title');
   assert.match(tone.htmlText, /\.tf-result-login-card \{[\s\S]{0,180}padding-top:12px !important; padding-bottom:12px !important;[\s\S]{0,100}line-height:1\.5 !important;/, 'Portrait Result login card must keep equal top and bottom spacing');
   assert.match(tone.htmlText, /\.tf-result-login-card button \{[\s\S]{0,100}display:block; margin:9px auto 0 !important;/, 'Portrait Result login button must stay visibly separated from its copy');
-  assert.match(tone.htmlText, /game-switcher\.js\?v=6/, 'Tone must request the Vault-capable switcher');
+  assert.match(tone.htmlText, /game-switcher\.js\?v=9/, 'Tone must request the fixed six-game switcher');
   assert.match(tone.htmlText, /點選 1–5 就可以。/, 'Portrait Tour must not advertise computer keyboard controls');
 });
 
-test('active Desktop D4-D5 keeps manual question/result flow and optional Hint carry-off', () => {
+test('active Desktop D4-D5 keeps manual question/result flow and optional current-word Hint-off', () => {
   const tone = games.find((g) => g.id === 'tone');
   const reading = games.find((g) => g.id === 'reading');
   const typing = games.find((g) => g.id === 'typing');
@@ -861,7 +958,7 @@ test('active Desktop D4-D5 keeps manual question/result flow and optional Hint c
   const flow = fs.readFileSync(path.join(root, 'js/games/game-flow.js'), 'utf8');
 
   for (const game of [tone, reading, typing, wordOrder]) {
-    assert.match(game.htmlText, /css\/shared\.css\?v=36/, `${game.id}: must request the current Desktop CSS`);
+    assert.match(game.htmlText, /css\/shared\.css\?v=38/, `${game.id}: must request the current Desktop CSS`);
     assert.match(game.appText, /GameFlow\.enhanceResult/, `${game.id}: Result must keep the shared manual replay flow`);
   }
   assert.doesNotMatch(flow, /下一輪將在|game_auto_next_pause/, 'shared question/Result flow must not restore countdown copy or pause controls');

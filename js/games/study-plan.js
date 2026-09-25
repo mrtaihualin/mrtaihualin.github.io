@@ -101,6 +101,7 @@
     if(!a.resolved||a.unavailable)return {ok:false,reason:'auth_unavailable'};
     var valid=Core.validateMinutes(minutes,!!a.user);
     if(!valid.ok)return {ok:false,reason:'minutes',min:valid.min,max:valid.max};
+    setHubMessage('');
     var preview=previewGames(a.user?2:1);
     var proposal={
       version:1,requestId:uuid(),owner:ownerIdentity(),minutes:valid.minutes,
@@ -145,9 +146,8 @@
     return {ok:true,items:queue.items,index:index,phase:phase,item:phase==='initial'?queue.items[index]:null};
   }
 
-  function endPlan(reason){
-    var p=sessionRead();if(!p)return;
-    p.active=false;p.reason=reason||'ended';
+  function endPlan(){
+    if(!sessionRead())return;
     sessionWrite(null);
     renderPlanUi();
   }
@@ -356,12 +356,13 @@
     confirm.disabled=confirmInFlight||!(p.recommendedItems||[]).some(function(item){return item.selected;});
   }
 
-  function showHubResult(){
+  function showHubMessage(){
     var msg=document.getElementById('timePlanMessage');if(!msg)return;
-    var reason='';
+    var reason='',parts=[];
     try{reason=new URL(location.href).searchParams.get('time_plan')||'';}catch(_){}
-    if(reason==='limit')msg.textContent='今天的自動安排已使用 1 次。';
-    else if(reason)msg.textContent='目前無法開始安排，請稍後再試。';
+    if(reason==='limit')parts.push('今天的自動安排已使用 1 次。');
+    else if(reason)parts.push('目前無法開始安排，請稍後再試。');
+    msg.textContent=parts.join(' ');
   }
 
   function bindTimePlanUi(){
@@ -376,8 +377,8 @@
       var hint=document.getElementById('timePlanHint');
       if(hint)hint.textContent=a.user?'登入會員：每天 1 次・5–20 分鐘':'訪客：每天 1 次・5–10 分鐘';
     }
-    paint();showHubResult();renderProposalUi();
-    if(window.SITE_AUTH&&SITE_AUTH.onChange)SITE_AUTH.onChange(paint);
+    paint();showHubMessage();renderProposalUi();
+    if(window.SITE_AUTH&&SITE_AUTH.onChange)SITE_AUTH.onChange(function(){paint();});
     btn.onclick=function(){
       var r=startPlan(input.value);
       if(!r.ok&&msg)msg.textContent=r.reason==='minutes'?'請輸入 '+r.min+'–'+r.max+' 分鐘':'目前無法開始安排，請稍後再試。';
@@ -428,6 +429,7 @@
   }else if(location.pathname==='/games.html'||location.pathname.endsWith('/games.html')){
     // Returning to hub means the player exited Auto Plan unless this page is preparing a new start.
     if(sessionRead())endPlan('exit_to_games');
+    showHubMessage();
   }
 
   window.StudyPlan={

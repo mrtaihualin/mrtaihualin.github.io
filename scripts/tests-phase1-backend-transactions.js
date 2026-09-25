@@ -43,17 +43,27 @@ test('tone-round transaction serializes per account and persists an exact replay
   serviceOnly(toneSql, 'phase1_tone_round_commit');
 });
 
-test('tone-round Edge fails closed on SRS reads/commit and never performs reward-table writes', () => {
+test('tone-round Edge is Paid-only while Login Free uses one canonical owner', () => {
   assert.doesNotMatch(toneEdge, /accountRead|account_read_unavailable|from\("game_accounts"\)/);
-  assert.match(toneEdge, /if \(srsRead\.error\).*srs_read_unavailable/);
-  assert.match(toneEdge, /admin\.rpc\("phase1_tone_round_commit"/);
+  assert.match(toneEdge, /if \(paidPrivateBeta\)/);
+  assert.match(toneEdge, /admin\.rpc\('phase2_paid_srs_commit'/);
+  assert.match(toneEdge, /learning_engine_required/);
+  assert.doesNotMatch(toneEdge, /admin\.rpc\("phase1_tone_round_commit"/);
   assert.match(toneEdge, /tone_round_operations[\s\S]+request_hash,response/);
   assert.match(toneEdge, /const earlyReplay = await committedReplayResponse\(\)/);
-  assert.match(toneEdge, /if \(!R\.ok\) \{[\s\S]{0,120}const concurrentReplay = await committedReplayResponse\(\)/);
   assert.doesNotMatch(toneEdge, /from\("tone_srs_state"\)\s*\.update/);
   assert.doesNotMatch(toneEdge, /from\("game_accounts"\)\.upsert/);
   assert.doesNotMatch(toneEdge, /from\("star_ledger"\)\.insert/);
   assert.match(toneEdge, /stars:\s*0,[\s\S]{0,80}totalStars:\s*0/);
+  assert.match(scoreEdge, /admin\.rpc\('phase1_login_free_learning_commit'/);
+});
+
+test('score Edge preserves legacy review writes until unified migration rollout', () => {
+  assert.match(scoreEdge, /async function handleLegacyReviewAction/);
+  assert.match(scoreEdge, /admin\.rpc\('phase1_learning_review_commit'/);
+  assert.match(scoreEdge, /const isLegacyReviewAction = action\.startsWith\('review_'\)/);
+  assert.match(scoreEdge, /if \(isLegacyReviewAction\) \{[\s\S]+handleLegacyReviewAction/);
+  assert.match(scoreEdge, /if \(isLearningAction\) \{[\s\S]+handleLearningAction/);
 });
 
 test('tone-round client retries once with the same generated round id', () => {
@@ -116,20 +126,24 @@ test('Lego client reuses uncertain request id and rejects stale owner completion
   assert.match(legoClient, /if\(quota\._owner&&!legoQuotaSameOwner\(quota\._owner\)\) quota=\{ok:false,reason:'owner_changed'\}/);
 });
 
-test('Reading exposes isolated Login Core while all personal transaction clients remain parked', () => {
-  for (const page of ['tone-finder.html','listening-game.html','typing-game.html','word-order.html']) {
+test('Login Core exposes the four-game SRS and Review transaction clients', () => {
+  for (const page of ['tone-finder.html','reading-game.html','typing-game.html','word-order.html']) {
     const html = read(page);
-    assert.doesNotMatch(html, /tone-server\.js/, page);
-    assert.doesNotMatch(html, /reading-auth\.js/, page);
+    if (page === 'tone-finder.html') assert.match(html, /tone-server\.js\?v=6/, page);
+    else assert.doesNotMatch(html, /tone-server\.js/, page);
+    assert.match(html, /reading-auth\.js\?v=35/, page);
+    assert.match(html, /learning-review\.js\?v=\d+/, page);
+    assert.match(html, /game-account\.js\?v=6/, page);
+    assert.match(html, /practice-events\.js\?v=5/, page);
   }
-  const reading = read('reading-game.html');
-  assert.doesNotMatch(reading, /tone-server\.js/);
-  assert.match(reading, /reading-auth\.js\?v=29/);
+  assert.doesNotMatch(read('listening-game.html'), /(?:tone-server|learning-review)\.js/);
   assert.match(read('js/games/reading-auth.js'), /if \(publicLoginOnly\) return null;/);
+  assert.match(read('js/games/reading-auth.js'), /API\.srsUser = publicLoginSrs \? loginUser : API\.user/);
   const lego = read('lego.html');
-  assert.match(lego, /network-guard\.js\?v=1[\s\S]+lego-game-app\.js\?v=12/);
-  assert.doesNotMatch(lego, /reading-auth\.js/);
-  assert.match(read('vault.html'), /reading-auth\.js\?v=28/);
+  assert.match(lego, /network-guard\.js\?v=1[\s\S]+lego-game-app\.js\?v=16/);
+  assert.match(lego, /reading-auth\.js\?v=35/);
+  assert.doesNotMatch(lego, /(?:tone-server|learning-review)\.js/);
+  assert.match(read('vault.html'), /reading-auth\.js\?v=35/);
 });
 
 if (!process.exitCode) console.log('\n✅ Phase 1 backend transaction contracts passed (' + passed + ' checks)');

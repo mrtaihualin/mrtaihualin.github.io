@@ -1,6 +1,6 @@
 # mrtaihualin.com
 
-เว็บไซต์แบบ static ของ **泰華眼裡的泰語教學** เผยแพร่ผ่าน GitHub Pages ที่ `mrtaihualin.com`
+เว็บไซต์แบบ static ของ **泰華眼裡的泰語教學** โดย GitLab เป็น Canonical Source/CI, Cloudflare เป็น Production และ GitHub เป็น read-only mirror
 
 ประวัติงานจัดระบบและผลตรวจล่าสุดอยู่ใน [MAINTENANCE.md](MAINTENANCE.md)
 
@@ -15,8 +15,8 @@
 | `blog/`, `en/` | หน้าบทความและหน้าภาษาอังกฤษ |
 | `classroom/` | หน้าระบบห้องเรียนและ CSS เฉพาะระบบ |
 | `css/` | CSS ส่วนกลางของเว็บ |
-| `data/` | คลังคำ/ประโยคจริง (`words-data.js`, `adv-sentences.js`, `tone-engine.js` ฯลฯ) + หน้าแอดมิน 2 หน้า (ตั้งใจไม่ย้าย — ผูกโดเมนจริง ดู `data/game-content-tester.html`, `data/review-tool.html`) |
-| `data/tools/` | ตัวตรวจ/ตัวทดสอบข้อมูลเกม (`check-data-health.js`, `tests-*.js`, `regression-check-tone.js` ฯลฯ) — ย้ายออกจาก `data/` แล้ว 2026-08-08 |
+| `data/` | คลังข้อมูลและเครื่องมือตรวจข้อมูลที่ยังใช้งานอยู่; คำตอบภาษาในเกมมาจาก canonical catalog ผ่าน `game-content` เท่านั้น |
+| `data/tools/` | เครื่องมือข้อมูลที่ยังได้รับอนุญาต; ตัวโหลดคลังเก่าและตัวคำนวณคำตอบถูกลบแล้ว |
 | `data/reports/` | รายงาน/เอกสารที่ตัวตรวจสร้างหรือใช้ (`tone-regression-report.json`, `game-behavioral-checklist-manual.md`) — ย้ายออกจาก `data/` แล้ว 2026-08-08 |
 | `js/core/` | ระบบกลาง เช่น auth, shared UI และ Supabase |
 | `js/classroom/` | logic ระบบห้องเรียน |
@@ -42,12 +42,14 @@ node scripts/check-site.js
 
 ## Automation enforcement
 
-- GitHub Actions `Required checks / required-tests-and-write-set` รัน `node scripts/check-site.js` อัตโนมัติบน Pull Request, `main`, merge queue และ manual run
-- Pull Request ต้องระบุ `Task-ID` และ `Write-Set` ใน template; รองรับ exact path หรือ `directory/**` และ check จะ fail หากมีไฟล์นอกขอบเขตปน
+- GitLab CI job `required-tests-and-write-set` รัน `node scripts/check-site.js` อัตโนมัติบน Merge Request, `main` และ manual pipeline
+- Merge Request ต้องระบุ `Task-ID` และ `Write-Set` ใน description; รองรับ exact path หรือ `directory/**` และ check จะ fail หากมีไฟล์นอกขอบเขตปน
 - ก่อน commit ในเครื่อง ให้คัดลอก `.task-write-set.example.json` เป็น `.task-write-set.json`, ใส่ Task/write-set จริง และเปิดใช้ tracked hook ที่ `.githooks/pre-commit`
-- การบล็อก merge/direct push ต้องตั้ง GitHub ruleset ให้ `main` รับการเปลี่ยนผ่าน Pull Request เท่านั้น, ห้าม bypass และ require check ชื่อข้างต้น; source ใน repo ไม่สามารถเปิด ruleset ของ remote แทน owner ได้
+- การบล็อก merge/direct push ต้องตั้ง GitLab protected branch ให้ `main` รับการเปลี่ยนผ่าน Merge Request เท่านั้นและเปิด `Pipelines must succeed`; source ใน repo ไม่สามารถเปิดค่าของ remote แทน Owner ได้
 - หนึ่ง Task ใช้หนึ่ง `codex/*` branch และแยก worktree เมื่อทำพร้อมกัน; independent branches เตรียม/push คู่ขนานได้ และ MAIN serialize เฉพาะ collision/integration/default-branch merge. เมื่อ exact-head required check ผ่านและเทียบกับ `main` ล่าสุดแล้ว ให้ใช้ canonical LOW/MEDIUM/HIGH gate: authorized LOW-risk merge ทำต่อและ verify ได้เอง; หยุดขอ Lin เฉพาะ exact gate ที่ Current authority กำหนด
 - Rollback ใช้ revert PR/commit ผ่าน task branch ใหม่และ required check เดิม ห้าม force-push หรือ rewrite `main`
+
+GitHub รับการเปลี่ยนจาก GitLab ผ่าน push mirror เท่านั้น ห้ามแก้หรือ merge บน GitHub โดยตรง และ GitLab CI ไม่มี job deploy Cloudflare, DNS, AWS, Supabase หรือข้อมูลจริง
 
 ### แต่ละตัวตรวจอะไร · ไม่ผ่านแปลว่าอะไร
 
@@ -63,11 +65,11 @@ node scripts/check-site.js
 | `check-nav-consistency.js` | เมนู/แถบประกาศ/เมนูล่างทุกหน้า ตรงกับ `data/nav-template.js` | 🔴 มีหน้าตกหล่นจาก generator |
 | `check-mobile-accessibility.js` | `<img>` ไม่มี `alt` · ปุ่มไม่มีชื่อที่โปรแกรมอ่านหน้าจอเรียกได้ ฯลฯ | ⚠️ คำเตือนล้วน ไม่บล็อก |
 | `tests-*-behavioral.js` | กฎที่ **เคยพังมาแล้วจริง** ของ marketing / เกม / ห้องเรียน / Search / คลังคำ | 🔴 มีคนแก้โค้ดจนกฎเดิมหาย |
-| `data/tools/*` | ความถูกต้องของคลังคำ/ประโยค + เครื่องคิดวรรณยุกต์ | 🔴 ข้อมูลเกมพัง |
+| `data/tools/*` | ความถูกต้องของคลังคำ/ประโยคตามข้อมูลที่ Lin ตรวจแล้ว | 🔴 ข้อมูลเกมพัง |
 
 ```bash
 node scripts/check-seo-sitemap.js --full   # ดูรายการ SEO/sitemap ครบทุกบรรทัด
-node scripts/audit-learning-content.js --full
+node scripts/tests-current-free-200.js
 node scripts/check-minified-sync.js        # ต้องรันมือ (ไม่อยู่ใน check-site.js — ดูคอมเมนต์ในไฟล์)
 ```
 

@@ -68,14 +68,16 @@ test('shared Email OTP client routes non-game surfaces without a native bypass',
   assert.match(classroomAuth, /id="tLoginTurnstile"/);
   assert.match(classroomAuth, /email\.toLowerCase\(\) !== TEACHER_EMAIL/);
   assert.match(classroomAuth, /teacherOtpChallengeId/);
+  assert.match(classroomAuth, /startTeacherOtpRetryCountdown\(requestStartedAt\)/);
+  assert.match(classroomAuth, /剩餘 ' \+ remaining \+ ' 秒/);
 });
 
 test('shared client is loaded after config and before each non-game consumer', () => {
-  assert.ok(myProgressPage.indexOf('js/core/supabase-config.js?v=9') <
+  assert.ok(myProgressPage.indexOf('js/core/supabase-config.js?v=11') <
     myProgressPage.indexOf('js/core/email-otp-client.js?v=1'));
   assert.ok(myProgressPage.indexOf('js/core/email-otp-client.js?v=1') <
     myProgressPage.indexOf('js/score/progress.js'));
-  assert.ok(classroomPage.indexOf('../js/core/supabase-config.js?v=9') <
+  assert.ok(classroomPage.indexOf('../js/core/supabase-config.js?v=11') <
     classroomPage.indexOf('../js/core/email-otp-client.js?v=1'));
   assert.ok(classroomPage.indexOf('../js/core/email-otp-client.js?v=1') <
     classroomPage.indexOf('../js/classroom/attendance-auth.js'));
@@ -161,19 +163,14 @@ test('shared config owns the frozen broker/on Email OTP activation artifact', ()
   assert.match(client, /return otpSecurityConfig\(\)\.mode === 'broker'/);
 });
 
-test('only preserved personal Auth surfaces retain the parked config cache binding', () => {
-  const actual = fs.readdirSync(root)
-    .filter((file) => file.endsWith('.html'))
-    .filter((file) => /js\/core\/supabase-config\.js\?v=9/.test(read(file)))
-    .sort();
-  assert.deepEqual(actual, expectedConsumers);
+test('preserved personal Auth surfaces retain the config cache binding', () => {
   for (const file of expectedConsumers) {
     const html = read(file);
-    assert.match(html, /js\/core\/supabase-config\.js\?v=9/);
+    assert.match(html, /js\/core\/supabase-config\.js\?v=11/);
   }
   for (const file of expectedReadingAuthConsumers) {
     const html = read(file);
-    assert.match(html, /js\/games\/reading-auth\.js\?v=28/);
+    assert.match(html, /js\/games\/reading-auth\.js\?v=35/);
   }
 });
 

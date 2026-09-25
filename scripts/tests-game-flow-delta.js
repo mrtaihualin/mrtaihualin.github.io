@@ -179,11 +179,11 @@ const due = Array.from({ length: 8 }, (_, i) => ({ id: `d${i}` }));
 const regular = Array.from({ length: 12 }, (_, i) => ({ id: `r${i}` }));
 const free = GameFlow.allocateSrs({ tier: 'free', total: 10, due, regular, idOf: (x) => x.id, scope: 'test-free' });
 assert.strictEqual(free.selectedDue.length, 2, 'Login Free SRS Due quota must be 20%');
-assert.strictEqual(free.reviewLimit, 1, 'Login Free Review Needed must be one time');
+assert.strictEqual(Object.prototype.hasOwnProperty.call(free, 'reviewLimit'), false, 'SRS Due allocator must not expose pre-SRS Review attempt metadata');
 assert.notDeepStrictEqual(free.items.slice(0, 2).map((x) => x.id), ['d0', 'd1'], 'Due items must be distributed, not grouped at the front');
 const paid = GameFlow.allocateSrs({ tier: 'paid', total: 10, due, regular, idOf: (x) => x.id, scope: 'test-paid' });
 assert.strictEqual(paid.selectedDue.length, 3, 'Paid SRS Due quota architecture must be 30%');
-assert.strictEqual(paid.reviewLimit, 4, 'Paid Review Needed must be capped at four times');
+assert.strictEqual(Object.prototype.hasOwnProperty.call(paid, 'reviewLimit'), false, 'Paid SRS Due allocator must stay separate from dormant pre-SRS Review limits');
 const deduped = GameFlow.allocateSrs({ tier: 'free', total: 5, due: [due[0], due[0]], regular: [due[0], regular[0], regular[0], regular[1], regular[2], regular[3]], idOf: (x) => x.id, scope: 'test-dedupe' });
 assert.strictEqual(new Set(deduped.items.map((x) => x.id)).size, deduped.items.length, 'SRS allocation must dedupe questions');
 delete storage.gsh_srs_quota_v1;
@@ -214,7 +214,8 @@ assert(dueOnly.fractionCarry < 0, 'an all-Due overflow must become quota debt fo
 const pages = ['tone-finder.html', 'reading-game.html', 'typing-game.html', 'word-order.html', 'listening-game.html', 'lego.html'];
 pages.forEach((file) => {
   const html = fs.readFileSync(path.join(root, file), 'utf8');
-  assert(html.includes('js/games/game-flow.js?v=11'), `${file} must load the countdown-free shared flow`);
+  const flowVersion = '14';
+  assert(html.includes(`js/games/game-flow.js?v=${flowVersion}`), `${file} must load the countdown-free shared flow`);
   assert(/▶ 繼續上次/.test(html) || file === 'tone-finder.html' || file === 'lego.html', `${file} must expose resume continue where markup is static`);
   assert(/↺ 重新開始/.test(html) || file === 'tone-finder.html' || file === 'lego.html', `${file} must expose restart-same where markup is static`);
   assert(/＋ 開始新一輪/.test(html) || file === 'tone-finder.html' || file === 'lego.html', `${file} must expose new-round where markup is static`);

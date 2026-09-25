@@ -156,7 +156,8 @@
     'tf_badges_v1', 'tf_streak_v1', 'tf_word_wrong_v1', 'tf_wrong_stats_v1',
     'thai_game_acct_v1', 'linvault_v1', 'sentence_vault_v1', 'lego_vault_v1',
     'phase1_account_resume_v1', 'phase1_canonical_meta_v1',
-    'phase1_practice_event_pending_v1', 'gsh_study_plan_account_v1'
+    'phase1_practice_event_pending_v1', 'gsh_study_plan_account_v1',
+    'typing_round_scope_v1'
   ];
   function bindLearningOwner(user) {
     var uid = (user && user.id) ? String(user.id) : '';
@@ -165,6 +166,18 @@
     var changed = owner !== uid;
     if (changed) {
       try {
+        var typingScope = localStorage.getItem('typing_round_scope_v1') || '';
+        if (typingScope) {
+          localStorage.removeItem('typing-round-pending:v1:' + typingScope);
+          localStorage.removeItem('typing-round-draft:v1:' + typingScope);
+          localStorage.removeItem('typing-round-start:v1:' + typingScope);
+          for (var storageIndex = localStorage.length - 1; storageIndex >= 0; storageIndex--) {
+            var storageKey = localStorage.key(storageIndex) || '';
+            if (storageKey.indexOf('typing-round-refill:v1:' + typingScope + ':') === 0) {
+              localStorage.removeItem(storageKey);
+            }
+          }
+        }
         ACCOUNT_LEARNING_KEYS.forEach(function (key) { localStorage.removeItem(key); });
         if (uid) localStorage.setItem(LEARNING_OWNER_KEY, uid);
         else localStorage.removeItem(LEARNING_OWNER_KEY);
@@ -623,18 +636,22 @@
     });
   }
 
-  // ── ข้อ 6: ออกจากระบบทุกอุปกรณ์ (ต่างจาก doLogout() ปกติที่ signOut scope 'local' แค่เครื่องนี้) ──
+  // ── ข้อ 6: ออกจากระบบทุกอุปกรณ์ ──
+  // Hosted Auth เคยตอบ 204 แต่ยังเหลือ session/refresh token จริง จึงให้ server ลบและยืนยัน 0 ก่อน
+  // แล้วค่อยล้าง session ของ SDK ในเครื่องนี้ ห้ามปิด UI แบบสำเร็จจาก HTTP logout อย่างเดียว
   function doLogoutAllDevices() {
-    return sb.auth.signOut({ scope: 'global' }).then(function (res) {
-      if (res && res.error) {
-        console.warn('[auth] global signOut failed:', res.error.message || res.error);
-        showAuthActionFailure('⚠️ 無法登出所有裝置，登入狀態仍保留，請檢查網路後再試一次');
-        return res;
+    return callAccountFn('account-delete', { action: 'logout_all' }).then(function (proof) {
+      if (!proof || proof.ok !== true || proof.revoked !== true ||
+          proof.remaining_sessions !== 0 || proof.remaining_refresh_tokens !== 0) {
+        throw clientFailureError('無法確認所有裝置都已登出', 'logout_not_confirmed', true);
       }
-      clearAuthUiCaches();
-      return res;
-    }, function (error) {
-      console.warn('[auth] global signOut failed:', (error && error.message) || error);
+      return sb.auth.signOut({ scope: 'local' }).then(function (res) {
+        if (res && res.error) throw res.error;
+        clearAuthUiCaches();
+        return { error: null, revoked: true };
+      });
+    }).catch(function (error) {
+      console.warn('[auth] verified logout-all failed:', (error && error.message) || error);
       showAuthActionFailure('⚠️ 無法登出所有裝置，登入狀態仍保留，請檢查網路後再試一次');
       return { error: error };
     });
@@ -935,6 +952,104 @@
   // มี modal อื่นเปิดอยู่ไหม (จองเรียน/QR ฯลฯ) → ถ้าเปิด ซ่อน badge กันทับปุ่มกากบาท
   function anyModalOpen() { try { return !!document.querySelector('.modal-overlay.open'); } catch (e) { return false; } }
 
+  var accountSearchReady = null;
+  var accountStreakOwner = '';
+  function loadAccountScript(src, readyCheck) {
+    if (readyCheck && readyCheck()) return Promise.resolve();
+    var base = src.split('?')[0];
+    var existing = Array.prototype.find.call(document.scripts, function (node) {
+      return String(node.src || '').indexOf(base) !== -1;
+    });
+    if (existing) {
+      return new Promise(function (resolve, reject) {
+        if (readyCheck && readyCheck()) return resolve();
+        existing.addEventListener('load', resolve, { once: true });
+        existing.addEventListener('error', reject, { once: true });
+        window.setTimeout(function () {
+          if (!readyCheck || readyCheck()) resolve();
+          else reject(new Error('account_search_dependency_timeout'));
+        }, 5000);
+      });
+    }
+    return new Promise(function (resolve, reject) {
+      var script = document.createElement('script');
+      script.src = src;
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+  }
+
+  function accountSearchDependencies() {
+    if (window.GlobalSearchUI && typeof window.GlobalSearchUI.render === 'function') return Promise.resolve();
+    if (accountSearchReady) return accountSearchReady;
+    accountSearchReady = loadAccountScript('data/search-index.js?v=1', function () { return !!window.SEARCH_INDEX; })
+      .then(function () { return loadAccountScript('data/game-problem-corpus-v2_3.js?v=1', function () { return !!window.GAME_PROBLEM_CORPUS; }); })
+      .then(function () { return loadAccountScript('js/core/search-engine.js?v=3', function () { return !!window.SearchEngine; }); })
+      .then(function () { return loadAccountScript('js/games/game-problem-search.js?v=2', function () { return !!window.GameProblemSearch; }); })
+      .then(function () { return loadAccountScript('js/core/global-search-game-adapter.js?v=2', function () { return !!window.GlobalSearchGameAdapter; }); })
+      .then(function () { return loadAccountScript('js/core/search-ui.js?v=7', function () { return !!window.GlobalSearchUI; }); });
+    accountSearchReady.catch(function () { accountSearchReady = null; });
+    return accountSearchReady;
+  }
+
+  function paintAccountStreaks() {
+    var value = 0;
+    try { if (window.GAME_ACCOUNT) value = GAME_ACCOUNT.getStreak(); } catch (e) {}
+    Array.prototype.forEach.call(document.querySelectorAll('[data-account-streak]'), function (node) {
+      node.textContent = String(value);
+    });
+  }
+
+  function refreshAccountStreak() {
+    loadAccountScript('js/games/game-account.js?v=7', function () { return !!window.GAME_ACCOUNT; }).then(function () {
+      paintAccountStreaks();
+      if (API.user && window.GAME_ACCOUNT && typeof GAME_ACCOUNT.sync === 'function') {
+        if (accountStreakOwner === API.user.id) return;
+        accountStreakOwner = API.user.id;
+        GAME_ACCOUNT.sync(sb, API.user.id);
+      } else {
+        accountStreakOwner = '';
+      }
+    }).catch(function () {});
+  }
+
+  if (window.addEventListener) window.addEventListener('phase1-gamification-status', paintAccountStreaks);
+
+  var accountOverflowPromise = null;
+  function accountOverflowReady() {
+    if (window.AccountToolbarOverflow) return Promise.resolve(window.AccountToolbarOverflow);
+    if (accountOverflowPromise) return accountOverflowPromise;
+    accountOverflowPromise = new Promise(function (resolve, reject) {
+      var src = 'js/core/account-toolbar-overflow.js?v=1';
+      var script = Array.prototype.find.call(document.scripts, function (node) {
+        return String(node.src || '').indexOf('js/core/account-toolbar-overflow.js') !== -1;
+      });
+      function ready() {
+        if (window.AccountToolbarOverflow) resolve(window.AccountToolbarOverflow);
+        else reject(new Error('account toolbar overflow unavailable'));
+      }
+      if (script) {
+        script.addEventListener('load', ready, { once: true });
+        script.addEventListener('error', reject, { once: true });
+        window.setTimeout(ready, 1500);
+        return;
+      }
+      script = document.createElement('script');
+      script.src = src;
+      script.onload = ready;
+      script.onerror = reject;
+      document.head.appendChild(script);
+    }).catch(function () { return null; });
+    return accountOverflowPromise;
+  }
+
+  function destroyAccountOverflow(el) {
+    if (el && el.__mrtAccountOverflow && typeof el.__mrtAccountOverflow.destroy === 'function') {
+      el.__mrtAccountOverflow.destroy();
+    }
+  }
+
   // ── badge ต่อหน้า: แต่ละหน้าเรียก renderBadge(containerId, opts) ครั้งเดียวตอน init ──
   //    ระบบสร้าง <span id="sa-badge-<containerId>"> เป็นลูกของ container นั้น แล้วคุมแค่ตัวเอง
   //    ไม่แตะ children อื่นของ container (กันไปลบปุ่ม/element อื่นที่หน้านั้นวางไว้ในสล็อตเดียวกัน)
@@ -954,6 +1069,7 @@
     var el = document.getElementById(badgeId);
 
     if (API.authError) {
+      destroyAccountOverflow(el);
       if (!el) { el = document.createElement('span'); el.id = badgeId; host.appendChild(el); }
       el.style.display = 'inline-flex'; el.setAttribute('role', 'status');
       el.innerHTML = '<span style="color:#78350f;background:#fff3d8;border:1px solid #C8973A;border-radius:12px;padding:7px 10px;font:700 12px Noto Sans TC,sans-serif;">登入狀態暫時無法確認，可先使用訪客模式。 <button type="button" class="sa-auth-retry" style="border:1px solid #8B6310;border-radius:999px;background:#fff;color:#8B6310;padding:4px 9px;cursor:pointer;font:inherit;">重新載入</button></span>';
@@ -962,6 +1078,7 @@
     }
 
     if (!API.user) {
+      destroyAccountOverflow(el);
       if (el) { el.style.display = 'none'; el.innerHTML = ''; }
       return;
     }
@@ -977,37 +1094,88 @@
     var selAvatar = myAvatar || getAvatarCache();
     var avatarHTML = '';
     if (selAvatar && selAvatar !== 'none' && selAvatar !== 'google') {
-      avatarHTML = '<span style="width:24px;height:24px;border-radius:50%;background:#FBF6EA;display:inline-flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">' + esc(selAvatar) + '</span>';
+      avatarHTML = '<span class="sa-avatar" aria-hidden="true">' + esc(selAvatar) + '</span>';
     }
     var pinHTML = '';
     var pin = myBadge || getPinBadgeCache();
     if (pin && window.TF_BADGES_DEF) {
       var bdef = null;
       window.TF_BADGES_DEF.forEach(function (b) { if (b.id === pin) bdef = b; });
-      if (bdef) pinHTML = '<span title="' + esc(bdef.zh) + '" style="display:inline-flex;align-items:center;flex-shrink:0;">' + window.tfBadgeIcon(bdef, 20) + '</span>';
+      if (bdef) pinHTML = '<span class="sa-badge-pin" title="' + esc(bdef.zh) + '">' + window.tfBadgeIcon(bdef, 20) + '</span>';
     }
     var leaderboardHref = opts.leaderboardHref || 'leaderboard.html';
     var progressHref = opts.progressHref || 'my-progress.html';
-    var parkedAccountLinksHTML = opts.showParkedAccountLinks === false ? '' :
-      '<a href="' + esc(leaderboardHref) + '" title="排行榜" style="text-decoration:none;font-size:13px;">🏆</a>' +
-      '<a href="' + esc(progressHref) + '" title="進度" style="text-decoration:none;font-size:13px;">📊</a>';
+    var leaderboardAccountLinkHTML = opts.showParkedAccountLinks === false ? '' :
+      '<a class="sa-account-action sa-leaderboard-link" href="' + esc(leaderboardHref) + '" title="排行榜" aria-label="排行榜">🏆</a>';
+    var learningAccountLinksHTML = opts.showParkedAccountLinks === false ? '' :
+      '<a class="sa-account-action sa-progress-link" href="' + esc(progressHref) + '" title="進度" aria-label="學習進度">📊</a>' +
+      '<a class="sa-account-action sa-vault-link" href="vault.html" title="字庫" aria-label="泰語單字庫">🔖</a>';
+    var globalSearchHTML =
+      '<button type="button" class="sa-global-search-toggle" title="全站搜尋" aria-label="開啟全站搜尋" aria-expanded="false">🔎</button>' +
+      '<form class="sa-global-search-form" role="search" hidden>' +
+        '<input class="sa-global-search-input" type="search" name="search" maxlength="100" autocomplete="off" aria-label="全站搜尋" placeholder="全站搜尋">' +
+        '<button class="sa-global-search-submit" type="submit">搜尋</button>' +
+      '</form>' +
+      '<div class="sa-global-search-results" aria-live="polite" hidden></div>';
 
+    destroyAccountOverflow(el);
     el.style.display = anyModalOpen() ? 'none' : 'inline-flex';
     el.innerHTML =
-      '<div style="display:flex;align-items:center;gap:7px;background:#fff;' +
+      '<div class="sa-account-bar" role="group" aria-label="帳號選單" style="display:flex;align-items:center;gap:7px;background:#fff;' +
       'border:1.5px solid rgba(200,151,58,0.45);border-radius:20px;padding:5px 12px 5px 8px;' +
       'box-shadow:0 2px 8px rgba(139,99,16,0.12);font-family:\'Noto Sans TC\',sans-serif;">' +
-      (avatarHTML || '<span style="font-size:15px;flex-shrink:0;">👤</span>') +
-      '<span class="sa-nick" title="點此編輯個人檔案" style="color:#5C4410;font-weight:700;font-size:12.5px;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;">' + esc(displayName) + '</span>' +
+      (avatarHTML || '<span class="sa-avatar" aria-hidden="true">👤</span>') +
+      '<button type="button" class="sa-nick" title="點此編輯個人檔案" aria-label="編輯個人檔案：' + esc(displayName) + '">' + esc(displayName) + '</button>' +
       pinHTML +
-      '<button class="sa-edit" title="編輯" style="border:none;background:none;color:#A07A1E;cursor:pointer;font-size:12px;padding:0;line-height:1;">✏️</button>' +
-      parkedAccountLinksHTML +
-      '<button class="sa-logout" style="border:none;background:rgba(139,99,16,0.12);color:#8B6310;' +
+      '<button type="button" class="sa-account-action sa-edit" title="編輯" aria-label="編輯個人檔案">✏️</button>' +
+      leaderboardAccountLinkHTML +
+      '<span class="sa-account-streak" title="連續天數"><span aria-hidden="true">🔥</span> <span class="sa-account-streak-label">連續</span> <b data-account-streak>0</b></span>' +
+      learningAccountLinksHTML +
+      '<button type="button" class="sa-account-action sa-logout" style="border:none;background:rgba(139,99,16,0.12);color:#8B6310;' +
       'border-radius:20px;padding:3px 10px;cursor:pointer;font-size:11.5px;font-weight:700;">登出</button>' +
+      globalSearchHTML +
       '</div>';
     el.querySelector('.sa-logout').onclick = doLogout;
     el.querySelector('.sa-edit').onclick = openProfileEditor;
     el.querySelector('.sa-nick').onclick = openProfileEditor;
+    var searchToggle = el.querySelector('.sa-global-search-toggle');
+    var searchForm = el.querySelector('.sa-global-search-form');
+    var searchInput = el.querySelector('.sa-global-search-input');
+    var searchSubmit = el.querySelector('.sa-global-search-submit');
+    var searchResults = el.querySelector('.sa-global-search-results');
+    var overflowController = null;
+    function setSearchOpen(open) {
+      if (!searchToggle || !searchForm) return;
+      if (open && overflowController) overflowController.close(false);
+      searchForm.hidden = !open;
+      if (searchResults) searchResults.hidden = !open;
+      searchToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      searchToggle.setAttribute('aria-label', open ? '關閉全站搜尋' : '開啟全站搜尋');
+      if (open && searchInput) window.setTimeout(function () { searchInput.focus(); }, 0);
+    }
+    if (searchToggle) searchToggle.onclick = function () { setSearchOpen(searchForm.hidden); };
+    if (searchForm) searchForm.onsubmit = function (event) {
+      event.preventDefault();
+      var query = searchInput ? searchInput.value.trim() : '';
+      if (!query) { if (searchInput) searchInput.focus(); return; }
+      if (searchSubmit) searchSubmit.disabled = true;
+      if (searchResults) { searchResults.hidden = false; searchResults.innerHTML = '<div class="hs-empty">搜尋中…</div>'; }
+      accountSearchDependencies().then(function () {
+        return window.GlobalSearchUI.render(query, searchResults);
+      }).catch(function () {
+        if (searchResults) searchResults.innerHTML = '<div class="hs-empty">搜尋功能暫時無法載入，請稍後再試。</div>';
+      }).finally(function () {
+        if (searchSubmit) searchSubmit.disabled = false;
+      });
+    };
+    if (searchInput) searchInput.onkeydown = function (event) {
+      if (event.key === 'Escape') { event.preventDefault(); setSearchOpen(false); searchToggle.focus(); }
+    };
+    accountOverflowReady().then(function (overflow) {
+      if (!overflow || !el.isConnected || !el.querySelector('.sa-account-bar')) return;
+      overflowController = overflow.setup(el, { closeSearch: function () { setSearchOpen(false); } });
+    });
+    refreshAccountStreak();
   }
 
   // ── เฝ้าการเปิด/ปิด modal → ซ่อน/โชว์ badge ทุกอันให้ถูก (ครอบทุกวิธีปิด modal) ──

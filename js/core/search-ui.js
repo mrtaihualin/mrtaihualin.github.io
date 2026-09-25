@@ -171,9 +171,9 @@
 
   var renderSerial = 0;
 
-  function render(query) {
+  function render(query, target) {
     var serial = ++renderSerial;
-    var out = document.getElementById('homeSearchResults');
+    var out = target || document.getElementById('homeSearchResults');
     if (!out) return;
 
     if (!window.GlobalSearchGameAdapter || !window.GameProblemSearch || !window.SearchEngine || !window.SEARCH_INDEX) {
@@ -252,7 +252,15 @@
     input.addEventListener('keydown', function (e) {
       if (e.key === 'Enter') { e.preventDefault(); run(); }
     });
+    var initialQuery = '';
+    try { initialQuery = new URLSearchParams(window.location.search).get('search') || ''; } catch (_) {}
+    initialQuery = initialQuery.trim().slice(0, 100);
+    if (initialQuery) { input.value = initialQuery; run(); }
   }
+
+  // Shared account-menu Search reuses the exact same result/quota pipeline and
+  // supplies its own inline result host. The home page remains unchanged.
+  window.GlobalSearchUI = { render: render };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();

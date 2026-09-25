@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>帳號工具列漸進收納 Preview</title>
+  <link rel="stylesheet" href="../../css/login-surface.css?v=15">
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body { padding: 24px; background: #f5f0e8; color: #49350d; font-family: 'Noto Sans TC', system-ui, sans-serif; }
+    .controls { max-width: 720px; margin: 0 auto 18px; padding: 14px 16px; border: 1px solid #dfc88d; border-radius: 14px; background: #fffdf7; }
+    .controls h1 { margin: 0 0 10px; color: #8B6310; font-size: 18px; }
+    .control-row { display: grid; grid-template-columns: 120px minmax(120px,1fr) 80px; gap: 10px; align-items: center; margin: 8px 0; }
+    .preview-stage { width: 100%; overflow: auto; padding: 28px 0 220px; border: 1px dashed #c8a24b; background: #fffdf7; }
+    .preview-shell { --preview-text-scale: 1; width: 640px; max-width: 100%; margin: 0 auto; }
+    .preview-shell .sa-nick,
+    .preview-shell .sa-account-action,
+    .preview-shell .sa-account-streak,
+    .preview-shell .sa-global-search-toggle,
+    .preview-shell .mrt-login-howto,
+    .preview-shell .sa-more-toggle { font-size: calc(13.5px * var(--preview-text-scale)) !important; }
+    [data-reading-login-component="host"] { width: 100% !important; padding-left: 10px !important; padding-right: 10px !important; }
+    [data-reading-login-component="row"] { max-width: none; }
+    .status { margin: 12px auto 0; color: #80682f; font-size: 13px; text-align: center; }
+    @media (max-width: 600px) { body { padding: 10px; } .control-row { grid-template-columns: 90px 1fr 70px; } }
+  </style>
+</head>
+<body>
+  <section class="controls" aria-label="Preview controls">
+    <h1>帳號工具列：調整容器寬度與文字大小</h1>
+    <label class="control-row">容器寬度 <input id="width" type="range" min="240" max="900" step="5" value="640"> <output id="width-out">640px</output></label>
+    <label class="control-row">文字大小 <input id="scale" type="range" min="100" max="150" step="5" value="100"> <output id="scale-out">100%</output></label>
+  </section>
+  <main class="preview-stage">
+    <div class="preview-shell" id="preview-shell">
+      <section data-reading-login-component="host">
+        <div data-reading-login-component="row">
+          <div id="rg-profile-wrap" class="mrt-login-surface">
+            <div id="rg-login-slot">
+              <span id="sa-badge-rg-login-slot">
+                <div class="sa-account-bar" role="group" aria-label="帳號選單">
+                  <span class="sa-avatar" aria-hidden="true">👤</span>
+                  <button type="button" class="sa-nick" aria-label="編輯個人檔案：Lin 泰語學習帳號">Lin 泰語學習帳號</button>
+                  <span class="sa-badge-pin" title="學習徽章">⭐</span>
+                  <button type="button" class="sa-account-action sa-edit" title="編輯" aria-label="編輯個人檔案">✏️</button>
+                  <a class="sa-account-action sa-leaderboard-link" href="#排行" title="排行榜" aria-label="排行榜">🏆</a>
+                  <span class="sa-account-streak" title="連續天數"><span aria-hidden="true">🔥</span> <span class="sa-account-streak-label">連續</span> <b>7</b></span>
+                  <a class="sa-account-action sa-progress-link" href="#進度" title="進度" aria-label="學習進度">📊</a>
+                  <a class="sa-account-action sa-vault-link" href="#字庫" title="字庫" aria-label="泰語單字庫">🔖</a>
+                  <button type="button" class="sa-account-action sa-logout">登出</button>
+                  <button type="button" class="sa-global-search-toggle" title="全站搜尋" aria-label="開啟全站搜尋" aria-expanded="false">🔎</button>
+                  <form class="sa-global-search-form" role="search" hidden>
+                    <input class="sa-global-search-input" type="search" aria-label="全站搜尋" placeholder="全站搜尋">
+                    <button class="sa-global-search-submit" type="submit">搜尋</button>
+                  </form>
+                  <div class="sa-global-search-results" aria-live="polite" hidden><div class="hs-empty">Preview 搜尋結果</div></div>
+                </div>
+              </span>
+            </div>
+            <span class="tf-streak-chip mrt-login-howto" role="button" tabindex="0" title="怎麼玩">📖 玩法</span>
+          </div>
+        </div>
+      </section>
+      <p class="status" id="status" aria-live="polite"></p>
+    </div>
+  </main>
+  <script src="../../js/core/account-toolbar-overflow.js?v=1"></script>
+  <script>
+    (function () {
+      'use strict';
+      var shell = document.getElementById('preview-shell');
+      var badge = document.getElementById('sa-badge-rg-login-slot');
+      var form = document.querySelector('.sa-global-search-form');
+      var results = document.querySelector('.sa-global-search-results');
+      var search = document.querySelector('.sa-global-search-toggle');
+      function closeSearch() { form.hidden = true; results.hidden = true; search.setAttribute('aria-expanded', 'false'); }
+      search.addEventListener('click', function () {
+        var open = form.hidden;
+        form.hidden = !open;
+        results.hidden = !open;
+        search.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+      form.addEventListener('submit', function (event) { event.preventDefault(); });
+      document.querySelectorAll('a').forEach(function (link) { link.addEventListener('click', function (event) { event.preventDefault(); }); });
+      var controller = window.AccountToolbarOverflow.setup(badge, { closeSearch: closeSearch });
+      window.__accountToolbarPreviewController = controller;
+      var width = document.getElementById('width');
+      var scale = document.getElementById('scale');
+      function update() {
+        shell.style.width = width.value + 'px';
+        shell.style.setProperty('--preview-text-scale', Number(scale.value) / 100);
+        document.getElementById('width-out').value = width.value + 'px';
+        document.getElementById('scale-out').value = scale.value + '%';
+        window.requestAnimationFrame(function () {
+          controller.fit();
+          var count = document.getElementById('rg-profile-wrap').getAttribute('data-account-overflow-count') || '0';
+          document.getElementById('status').textContent = '收進「更多」：' + count + ' 項；工具列水平溢出：' + Math.max(0, document.querySelector('.sa-account-bar').scrollWidth - document.querySelector('.sa-account-bar').clientWidth) + 'px';
+        });
+      }
+      width.addEventListener('input', update);
+      scale.addEventListener('input', update);
+      update();
+    })();
+  </script>
+</body>
+</html>

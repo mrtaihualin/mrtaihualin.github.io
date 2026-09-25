@@ -90,11 +90,17 @@ function listeningPoints(item) {
 
 function normalizeItem(game, item) {
   if (!item || typeof item !== 'object' || Array.isArray(item)) fail('invalid_item');
-  const key = String(item.key || '').trim();
-  if (!key || key.length > 200) fail('invalid_content_key');
+  const key = typeof item.key === 'string' ? item.key : '';
+  if (!key || key.trim() !== key || key.length > 200) fail('invalid_content_key');
+  const rawRef = item.contentRef || item.content_ref;
+  const refSource = String(rawRef && rawRef.source || '');
+  const refKey = rawRef && typeof rawRef.key === 'string' ? rawRef.key : '';
+  if ((refSource !== 'game_words' && refSource !== 'game_sentences') ||
+      !refKey || refKey.trim() !== refKey || refKey !== key) fail('invalid_content_ref');
   const points = finiteInt(item.points, 'invalid_item_points', 0, ITEM_CAP[game]);
   const wrong = finiteInt(item.wrong, 'invalid_wrong_count', 0, 100);
-  const guide = item.guide === true;
+  const guide = item.guide === true || (game === 'tone' && item.hint_used === true);
+  const skipped = game === 'tone' && item.skipped === true;
   const failed = item.failed === true;
   const mastered = item.mastered === true;
 
@@ -102,7 +108,7 @@ function normalizeItem(game, item) {
     const expected = listeningPoints(item);
     if (points !== expected) fail('score_evidence_mismatch');
   } else {
-    if (guide && points !== 0) fail('score_evidence_mismatch');
+    if ((guide || skipped) && points !== 0) fail('score_evidence_mismatch');
     if (game !== 'reading' && game !== 'tone' && failed && points !== 0) fail('score_evidence_mismatch');
   }
 
@@ -111,8 +117,10 @@ function normalizeItem(game, item) {
     points,
     wrong,
     guide,
+    ...(skipped ? { skipped: true } : {}),
     failed,
     mastered,
+    contentRef: { source: refSource, key: refKey },
     mode: game === 'listening' ? item.mode : undefined,
     listens: game === 'listening' ? item.listens : undefined,
     correct: game === 'listening' ? item.correct === true : undefined,
@@ -140,17 +148,19 @@ export function validateScoreSubmission(body) {
   items.forEach((item) => {
     const count = (seen.get(item.key) || 0) + 1;
     seen.set(item.key, count);
-    if (game !== 'listening' && count > 1) fail('duplicate_content_item');
+    const sentenceWordEvidence = game === 'tone' && difficulty === '高';
+    if (game !== 'listening' && !sentenceWordEvidence && count > 1) fail('duplicate_content_item');
     if (game === 'listening' && count > 10) fail('excessive_content_replay');
   });
 
   const roundBonus = finiteInt(body.evidence.roundBonus, 'invalid_round_bonus', 0, 70);
   if (![0, 20, 70].includes(roundBonus)) fail('invalid_round_bonus');
   const srsBonus = finiteInt(body.evidence.srsBonus, 'invalid_srs_bonus', 0, items.length * 3);
-  const cleanItems = items.filter((item) => item.wrong === 0 && !item.guide && !item.failed).length;
+  const cleanItems = items.filter((item) => item.wrong === 0 && !item.guide && !item.skipped && !item.failed).length;
   const perfectEligible = cleanItems === items.length;
   if (roundBonus === 70 && !perfectEligible) fail('invalid_perfect_bonus');
-  if ((game === 'reading' || game === 'typing') && items.some((item) => item.guide) && roundBonus !== 0) {
+  if ((game === 'tone' || game === 'reading' || game === 'typing') &&
+      items.some((item) => item.guide || (game === 'tone' && item.skipped)) && roundBonus !== 0) {
     fail('invalid_round_bonus');
   }
   if ((game === 'reading' || game === 'typing' || game === 'listening') && srsBonus !== 0) fail('invalid_srs_bonus');
@@ -176,12 +186,24 @@ export function validateScoreSubmission(body) {
 // always recalculated above and never copied from client_score.
 export function validateCanonicalScoreEvidence(accepted, canonicalRows) {
   const rows = Array.isArray(canonicalRows) ? canonicalRows : [];
-  const byKey = new Map(rows.map((row) => [String(row.th || row.word || ''), row]));
+  const identityField = accepted.difficulty === '高' || accepted.game === 'word_order' ? 'th' : 'content_key';
+  const byKey = new Map(rows.map((row) => {
+    const key = row && typeof row[identityField] === 'string' ? row[identityField] : '';
+    if (!key || key.trim() !== key) fail('invalid_content_evidence');
+    return [key, row];
+  }));
+  if (accepted.game === 'tone' && accepted.difficulty === '高') {
+    const keys = new Set(accepted.evidence.items.map((item) => item.key));
+    if (keys.size !== 1) fail('invalid_content_evidence');
+    const sentence = byKey.get(accepted.evidence.items[0].key);
+    const units = finiteInt(sentence && sentence.wc, 'invalid_canonical_units', 1, 20);
+    if (accepted.evidence.items.length !== units) fail('invalid_total');
+  }
   let cleanStreak = 0;
   accepted.evidence.items.forEach((item) => {
     const row = byKey.get(item.key);
     if (!row) fail('invalid_content_evidence');
-    const clean = item.wrong === 0 && !item.guide && !item.failed;
+    const clean = item.wrong === 0 && !item.guide && !item.skipped && !item.failed;
     cleanStreak = clean ? cleanStreak + 1 : 0;
     const combo = clean ? comboMultiplier(cleanStreak) : 1;
     const golden = clean ? 2 : 1;
@@ -189,9 +211,8 @@ export function validateCanonicalScoreEvidence(accepted, canonicalRows) {
     let embeddedSrsMax = 0;
     if (accepted.game === 'tone') baseMax = 10;
     if (accepted.game === 'typing') {
-      const units = Array.isArray(row.read_syls) && row.read_syls.length
-        ? row.read_syls.length
-        : Array.isArray(row.syls) && row.syls.length ? row.syls.length
+      const units = Array.isArray(row.syllables) && row.syllables.length
+        ? row.syllables.length
         : finiteInt(row.wc, 'invalid_canonical_units', 1, 100);
       const quota = Math.min(4 + Math.max(0, units - 4), 9);
       baseMax = item.wrong >= quota ? 0 : Math.round(10 - (10 / quota) * item.wrong);

@@ -1,616 +1,31 @@
-// ════════════════════════════════════════════════════════════
-// Supabase Edge Function: tone-round — BUNDLED single file (Phase 4)
-// วางไฟล์นี้ไฟล์เดียวใน Supabase ได้เลย (รวมเครื่องยนต์ทั้งหมดไว้ในนี้แล้ว)
-// engines = ก๊อปจาก .mjs จริง (byte-for-byte) ผ่านสคริปต์ build — ไม่พิมพ์ใหม่
-// ════════════════════════════════════════════════════════════
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+// Supabase Edge Function: tone-round
+// Language authority: public.game_words.canonical_record only.
+// This file contains no Thai spelling, tone, consonant, vowel or exception rules.
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.3";
 
-/* ===== toneEngine ===== */
-// ════════════════════════════════════════════════════════════
-// toneEngine.mjs — Server-authoritative port of computeTone()
-// ════════════════════════════════════════════════════════════
-// SOURCE OF TRUTH: /Users/taihualin/Developer/mrtaihualin.github.io/tone-finder.html
-//   - TH module:        lines 2786–2905
-//   - TONE_OVERRIDE:    lines 4495–4502
-//   - computeTone():    lines 4504–4534
-//
-// This file is a byte-for-byte-logic port (var kept as var, same variable
-// names, same order of checks) — NOT a rewrite. Any future change to the
-// client's tone rules must be mirrored here manually, then re-verified
-// with the parity tester before shipping.
-//
-// Plain ESM, no Deno-specific APIs used here on purpose, so the exact
-// same file can be:
-//   (a) imported by the Supabase Edge Function (index.ts) at runtime, and
-//   (b) imported by a local Node test server / batch-test script
-// — guaranteeing the thing we test is the thing that ships.
-// ════════════════════════════════════════════════════════════
+function normalizeGuess(value) {
+  return Number.isInteger(value) && value >= 0 && value <= 5 ? value : -1;
+}
+function taipeiDay(ms = Date.now()) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(new Date(ms));
+}
 
-var TH = (function() {
-  var LOW_SET  = new Set('คฅฆงชซฌญฑฒณทธนพฟภมยรลวฬฮ'.split(''));
-  var HIGH_SET = new Set('ขฃฉฐถผฝศษสห'.split(''));
-  var MID_SET  = new Set('กจดตบปอฎฏ'.split(''));
-  var SHORT_TAIL = new Set('กขคฆบปพฟภจชซฎฏฐฑฒดตถทธศษส'.split(''));
-  var LONG_TAIL  = new Set('นณญรลฬมยวง'.split(''));
-  var CONS_SET   = new Set('กขฃคฅฆงจฉชซฌญฎฏฐฑฒณดตถทธนบปผฝพฟภมยรลวศษสหฬอฮ'.split(''));
-  var LEAD_PATS  = ['หน','หม','หล','หว','หย','หร','หญ','หง','อย'];
-  // Short vowel characters
-  var SHORT_V = new Set(['ะ','ั','ิ','ึ','ุ','็']); // ะ ั ิ ึ ุ + ็ (ไม้ไต่คู้ = ย่อเสียงสระให้สั้น)
-  // Long vowel characters
-  var LONG_V  = new Set(['า','ี','ื','ู','เ','แ','โ']); // า ี ื ู เ แ โ
-  // Tone mark characters
-  var TONE_CHARS = new Set(['่','้','๊','๋']); // ่ ้ ๊ ๋
-  // สระพิเศษที่ลงท้ายด้วยเสียงก้อง (semivowel/นาสิก) = "คำเป็น" เสมอ: ไ(-ai) ใ(-ai) ำ(-am)
-  var LIVE_V = new Set(['ไ','ใ','ำ']);
-  // Lin 2026-07-04: รองรับอักษรควบกล้ำ (ปร กร คร ฯลฯ) + สระออ (อ ทำหน้าที่สระยาว)
-  var CLUSTER2 = new Set('รลว'.split(''));            // ตัวที่สองของควบกล้ำ
-  var CLUSTER_INIT = new Set('กขคฆปผพภตบดฟ'.split('')); // ตัวนำที่ควบได้
-  function _initChar(word){
-    for (var i=0;i<LEAD_PATS.length;i++){ if (word.indexOf(LEAD_PATS[i])===0) return LEAD_PATS[i]; }
-    for (var j=0;j<word.length;j++){ if (CONS_SET.has(word[j])) return word[j]; }
-    return null;
+function paidOutcome(input: any) {
+  const opts = input.opts || {};
+  if (opts.knownCheck) return { ok: false, reason: 'known_check_disabled' };
+  if (opts.spellingGame) return { ok: true, outcome: opts.spellingClean === true ? 'clean' : 'fail' };
+  const approved = input.approvedToneNumbers;
+  if (!Array.isArray(approved) || !approved.length || approved.some(function (tone) {
+    return !Number.isInteger(tone) || tone < 1 || tone > 5;
+  })) return { ok: false, reason: 'catalog_authority_incomplete' };
+  let clean = false;
+  if (approved.length === 1) clean = normalizeGuess(input.initialGuess) === approved[0];
+  else {
+    const guesses = Array.isArray(input.guesses) ? input.guesses : [];
+    if (guesses.length !== approved.length) return { ok: false, reason: 'bad_guesses_len' };
+    clean = approved.every(function (tone, index) { return normalizeGuess(guesses[index]) === tone; });
   }
-  // สระออ: มี อ ที่ไม่ใช่พยัญชนะต้น และมีพยัญชนะนำหน้ามัน (เช่น ทอด คฺรอบ = เสียงยาว)
-  function _hasSaraOr(word){
-    var ic=_initChar(word), firstOr=word.indexOf('อ');
-    for (var i=0;i<word.length;i++){
-      if (word[i]==='อ' && i>0){
-        var hasConsBefore=false;
-        for (var k=0;k<i;k++){ if (CONS_SET.has(word[k])){ hasConsBefore=true; break; } }
-        if (hasConsBefore && !(ic==='อ' && firstOr===i)) return true;
-      }
-    }
-    return false;
-  }
-  // รายชื่อพยัญชนะสำหรับหา "ตัวสะกด" — ตัดตัวที่สองของควบกล้ำออก (ปร กร คร) ถ้าตามด้วยสระ/พยางค์
-  function _codaCons(word){
-    var cons=[]; for (var i=0;i<word.length;i++){ if (CONS_SET.has(word[i])) cons.push(word[i]); }
-    if (cons.length>=2 && CLUSTER_INIT.has(cons[0]) && CLUSTER2.has(cons[1])){
-      var idx0=word.indexOf(cons[0]);
-      var idx2=word.indexOf(cons[1], idx0+1);
-      var after=word.slice(idx2+1), clusterOK=false;
-      for (var a=0;a<after.length;a++){
-        var ch=after[a];
-        if (SHORT_V.has(ch)||LONG_V.has(ch)||ch==='อ'||CONS_SET.has(ch)||LIVE_V.has(ch)){ clusterOK=true; break; }
-      }
-      if (clusterOK) cons=[cons[0]].concat(cons.slice(2));
-    }
-    return cons;
-  }
-
-  return {
-    hasToneMark: function(word) {
-      for (var i=0; i<word.length; i++) if (TONE_CHARS.has(word[i])) return true;
-      return false;
-    },
-    getToneMark: function(word) {
-      for (var i=0; i<word.length; i++) if (TONE_CHARS.has(word[i])) return word[i];
-      return null;
-    },
-    getInitClass: function(word) {
-      for (var i=0; i<LEAD_PATS.length; i++) {
-        if (word.indexOf(LEAD_PATS[i]) === 0) return 'lead';
-      }
-      for (var j=0; j<word.length; j++) {
-        var c = word[j];
-        if (LOW_SET.has(c))  return 'low';
-        if (HIGH_SET.has(c)) return 'high';
-        if (MID_SET.has(c))  return 'mid';
-      }
-      return null;
-    },
-    getInitChar: function(word) {
-      for (var i=0; i<LEAD_PATS.length; i++) {
-        if (word.indexOf(LEAD_PATS[i]) === 0) return LEAD_PATS[i];
-      }
-      for (var j=0; j<word.length; j++) {
-        if (CONS_SET.has(word[j])) return word[j];
-      }
-      return null;
-    },
-    isLiveWord: function(word) {
-      var cons = _codaCons(word);
-      if (cons.length >= 2) {
-        var last = cons[cons.length-1];
-        // อ ตัวสุดท้าย = สระออ (เสียงยาว เปิด) ไม่ใช่ตัวสะกด → คำเป็น
-        if (last === 'อ' && word[word.length-1] === 'อ' && this.getInitChar(word) !== 'อ') return true;
-        if (SHORT_TAIL.has(last)) return false;
-        if (LONG_TAIL.has(last))  return true;
-      }
-      for (var n=0; n<word.length; n++) if (LIVE_V.has(word[n])) return true; // ไ ใ ำ = คำเป็น
-      for (var j=0; j<word.length; j++) if (SHORT_V.has(word[j])) return false;
-      for (var k=0; k<word.length; k++) if (LONG_V.has(word[k]))  return true;
-      if (_hasSaraOr(word)) return true; // สระออ ไม่มีตัวสะกด = คำเป็น
-      return null;
-    },
-    classLabel: function(cls) {
-      return {low:'低子音',high:'高子音',mid:'中子音',lead:'前引字'}[cls] || cls;
-    },
-    getVowelType: function(word) {
-      for (var i=0; i<word.length; i++) if (SHORT_V.has(word[i])) return 'short';
-      for (var j=0; j<word.length; j++) if (LONG_V.has(word[j]))  return 'long';
-      if (_hasSaraOr(word)) return 'long'; // สระออ = สระยาว
-      return null;
-    },
-    hasTailCons: function(word) {
-      return _codaCons(word).length >= 2;
-    },
-    getEndConsType: function(word) {
-      var cons = _codaCons(word);
-      if (cons.length >= 2) {
-        var last = cons[cons.length-1];
-        if (SHORT_TAIL.has(last)) return 'short';
-        if (LONG_TAIL.has(last))  return 'long';
-      }
-      return null;
-    }
-  };
-})();
-
-// TONE OVERRIDES — คำทับศัพท์ที่ไม่ตามกฎมาตรฐาน ระบุเสียงตรงๆ
-var TONE_OVERRIDE = {
-  'เอาท์': 4,  // เช็คเอาท์ → พยางค์ 2 เสียงตรี
-  'คีย์':  1,  // คีย์การ์ด → พยางค์ 1 เสียงสามัญ
-  'การ์ด': 4,  // คีย์การ์ด → พยางค์ 2 เสียงตรี
-  'ออฟ':  4,  // ออฟฟิศ   → พยางค์ 1 เสียงตรี
-  'ออบ':  4,  // ออฟฟิศ (คำอ่าน ออบ) → พยางค์ 1 เสียงตรี (Lin 2026-07-04)
-  'ญาติ': 3   // สะกดพิเศษ (ิ ไม่ออกเสียง) → ยา-ตา เสียงโท
-};
-
-function computeTone(word) {
-  if (TONE_OVERRIDE[word] !== undefined) return TONE_OVERRIDE[word];
-  var cls  = TH.getInitClass(word);
-  var mark = TH.getToneMark(word);
-  var live = TH.isLiveWord(word);
-  var vowel = TH.getVowelType(word);
-  if (!cls) return null;
-  var e = (cls === 'lead') ? 'high' : cls;
-  if (mark) {
-    if (e === 'low') {
-      if (mark === '่') return 3;
-      if (mark === '้') return 4;
-    } else if (e === 'mid') {
-      if (mark === '่') return 2;
-      if (mark === '้') return 3;
-      if (mark === '๊') return 4;
-      if (mark === '๋') return 5;
-    } else {
-      if (mark === '่') return 2;
-      if (mark === '้') return 3;
-    }
-  } else {
-    if (live) return (e === 'high') ? 5 : 1;
-    if (e === 'high' || e === 'mid') return 2;
-    // คำตาย+อักษรต่ำ: สระสั้น→ตรี(4) / สระยาว→โท(3)
-    // ไม่มีรูปสระ = สระแฝงสั้น (โอะ/อะ เช่น รถ นก) → นับเป็นสระสั้น
-    var isShort = (vowel === 'short') || (vowel == null);
-    return isShort ? 4 : 3;
-  }
-  return null;
-}
-/* ===== srsEngine ===== */
-// ════════════════════════════════════════════════════════════
-// srsEngine.mjs — Server-authoritative port of the SRS state machine
-// ════════════════════════════════════════════════════════════
-// SOURCE OF TRUTH: /Users/taihualin/Developer/mrtaihualin.github.io/tone-finder.html
-//   TF_SRS_CFG + TF_SRS: lines 3077-3156 — sliced verbatim, zero retyping.
-// Already pure logic in the original (no DOM/localStorage inside TF_SRS itself —
-// tfLoadSrs/tfSaveSrs wrap it with localStorage in the client; the Edge Function
-// will wrap it with a Supabase row read/write instead — same pure core either way).
-// ════════════════════════════════════════════════════════════
-
-var TF_SRS_CFG = {
-  INTERVALS: [1, 7],       // Phase 1: New → Day 1 → Day 7 → Mastered
-  CLEAN_ROUNDS_TO_MASTER: 3
-};
-
-var TF_SRS = {
-  cfg: TF_SRS_CFG,
-  // สร้าง key เฉพาะคำ/ประโยค + ระดับ (คำเดียวกันคนละระดับ = คนละรายการ)
-  keyFor: function (word, level) { return (level || 0) + '|' + word; },
-
-  // ── Lin 2026-07-04: วันที่แบบไต้หวัน (Asia/Taipei) สำหรับตัด "ครบวันหรือยัง" ของ SRS ให้สม่ำเสมอ ──
-  //   twDate(ms) → 'YYYY-MM-DD' เวลาไต้หวัน · twDatePlusDays(ms, n) → วันที่ไต้หวันของ ms บวก n วัน
-  //   ใช้วันที่ (ไม่ใช่ ms ดิบ) ตัดกำหนดทบทวน → คนเล่นคนละ timezone เห็น "ขึ้นวันใหม่" ตรงกันเสมอ
-  twDate: function (ms) {
-    var d = (ms == null) ? new Date() : new Date(ms);
-    try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(d); }
-    catch (e) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
-  },
-  twDatePlusDays: function (ms, days) {
-    return this.twDate((ms == null ? Date.now() : ms) + (days || 0) * 86400000);
-  },
-
-  // สร้าง record เริ่มต้นของคำใหม่ที่ยังไม่เคยเข้า SRS
-  blank: function () {
-    return {
-      stage: 0,            // ผ่านรอบสะอาดติดกันกี่รอบแล้ว (0,1,2 → ครบ 3 = mastered)
-      dueDate: '',         // Lin 2026-07-04: วันครบกำหนดทบทวน 'YYYY-MM-DD' เวลาไต้หวัน ('' = พร้อมเล่นได้ทันที)
-      dueAt: 0,             // (เดิม/สำรอง) timestamp ms — เก็บไว้เผื่อ record เก่าที่ยังไม่มี dueDate
-      everFailed: false,    // เคยผิด/แอบดูระหว่างเส้นทางนี้ไหม (คุมว่าจะได้ "จำเอง"=3 หรือ "กู้กลับมาได้"=1)
-      mastered: false,      // ตัดออกจาก SRS แล้ว (ถาวร ไม่โผล่ซ้ำ)
-      firstPassSoftAwarded: false  // เคยได้ "แต้มเกม" รอบแรกของ loop นี้แล้วหรือยัง (กันฟาร์มคะแนนซ้ำ)
-    };
-  },
-
-  // วันนี้ (เวลาไต้หวัน) ถึงกำหนดทบทวนคำนี้หรือยัง (true = ยังไม่เคยเล่น หรือครบกำหนดแล้ว)
-  // Lin 2026-07-04: ตัดด้วย "วันที่ไต้หวัน" — dueDate (string) ก่อน · ถ้าเป็น record เก่าที่มีแต่ dueAt (ms) ก็ยังรองรับ
-  isDue: function (rec, nowMs) {
-    if (!rec || rec.mastered) return false;
-    var today = this.twDate(nowMs || Date.now());
-    if (rec.dueDate) return rec.dueDate <= today;          // ครบกำหนดเมื่อวันไต้หวันวันนี้ >= วันครบกำหนด
-    if (rec.dueAt) return this.twDate(rec.dueAt) <= today; // fallback record เก่า (มีแต่ ms)
-    return true;                                           // ยังไม่เคยตั้งกำหนด = พร้อมเล่นทันที
-  },
-
-  // นี่คือรอบตัดสิน Day 7 ก่อน mastered ไหม — stage 2 คือรอบที่ 3 (0-based)
-  isFinalCheck: function (rec) {
-    return !!rec && rec.stage === (this.cfg.CLEAN_ROUNDS_TO_MASTER - 1);
-  },
-
-  // ตอบถูก "สะอาด" (ไม่แอบดู ไม่ผิดในรอบนี้) → เลื่อนขั้นถัดไป หรือ mastered ถ้าครบ 3 รอบ
-  // คืน { rec, justMastered, clean } — clean = mastered แบบไม่เคย fail/peek เลยตลอดเส้นทาง (จำเอง)
-  // หมายเหตุ index: รอบที่เพิ่งผ่าน (stage ก่อนบวก) กำหนดว่ารออีกกี่วันถึงรอบถัดไป
-  //   stage 0 ผ่าน (New) → รอ 1 วัน · stage 1 ผ่าน (Day 1) → รอ 7 วัน
-  //   stage 2 ผ่าน (รอบตัดสิน Day 7) → mastered ทันที
-  advanceOnClean: function (rec, nowMs) {
-    rec = rec || this.blank();
-    nowMs = nowMs || Date.now();
-    var justPassedStage = rec.stage;   // stage ก่อนบวก = รอบที่เพิ่งผ่านสำเร็จ
-    rec.stage += 1;
-    if (rec.stage >= this.cfg.CLEAN_ROUNDS_TO_MASTER) {
-      rec.mastered = true;
-      return { rec: rec, justMastered: true, clean: !rec.everFailed };
-    }
-    var days = this.cfg.INTERVALS[justPassedStage] || this.cfg.INTERVALS[this.cfg.INTERVALS.length - 1];
-    // Lin 2026-07-04: กำหนดวันครบเป็น "วันที่ไต้หวัน" (dueDate) + คง dueAt (ms) ไว้สำรอง
-    rec.dueDate = this.twDatePlusDays(nowMs, days);
-    rec.dueAt = nowMs + days * 86400000;
-    return { rec: rec, justMastered: false, clean: !rec.everFailed };
-  },
-
-  // ตอบผิด (รวมรอบตัดสิน Day 7) → รีเซ็ตกลับ stage 0 เข้าคิว SRS ใหม่
-  resetOnFail: function (rec) {
-    rec = rec || this.blank();
-    rec.stage = 0;
-    rec.dueDate = '';   // Lin 2026-07-04: พร้อมทบทวนใหม่ได้ทันที (เข้าคิว)
-    rec.dueAt = 0;
-    rec.everFailed = true;
-    return rec;
-  }
-};
-/* ===== scoreEngine ===== */
-// ════════════════════════════════════════════════════════════
-// scoreEngine.mjs — Server-authoritative port of the scoring engines
-// ════════════════════════════════════════════════════════════
-// SOURCE OF TRUTH: /Users/taihualin/Developer/mrtaihualin.github.io/tone-finder.html
-//   TF_SCORE_CFG + TF_SCORE: lines 2927-3002 — sliced verbatim.
-//   TF_WORDSCORE:            lines 3012-3031 — sliced verbatim.
-// Both already pure in the original (operate on plain objects passed in,
-// no DOM/localStorage) — that's why Lin's comments call them
-// '本 pure logic ทดสอบได้จริง'. Ported unchanged.
-// ════════════════════════════════════════════════════════════
-
-var TF_SCORE_CFG = {
-  SCORE_FIRST_TRY: 10,       // ถูกตั้งแต่ครั้งแรก = 10 (= WRONG_LADDER[0])
-  // ── Lin 2026-07-04: คะแนนต่อคำ/พยางค์ "นับตามจำนวนครั้งที่กดผิด" เหมือนเกมอ่าน ──
-  //   ทุกคนเริ่ม 10 เท่ากัน · ผิด 1=7 · 2=4 · 3=1 · 4=0(fail เฉลย+SRS รีเซ็ต day1)
-  //   "กดผิด" = เดาวรรณยุกต์ผิดตอนแรก + กดผิดในทุกขั้น推導 + กดปุ่มแอบดู(?) · กด "🤷 ไม่มั่นใจ" ไม่นับผิด
-  WRONG_LADDER: [10, 7, 4, 1, 0],
-  SRS_REVIEW_BONUS: [3, 2, 1],  // Phase 1: New+3 · Day 1+2 · รอบตัดสิน Day 7+1
-  SCORE_DEDUCE_BASE: 5,      // (เลิกใช้แล้ว — เก็บไว้กันโค้ดเก่าอ้างถึง)
-  SCORE_MIN_PER_WORD: 1,     // (เลิกใช้แล้ว)
-  SCORE_FAIL_ZERO: 0,        // ผิดครบเพดาน (fail) = 0 pt เสมอ
-  DEDUCE_WRONG_LIMIT: 4,     // Lin 2026-07-04: กดผิดครบ 4 ครั้งในคำเดียว → 0 แต้ม (fail) + เฉลย + คำใหม่ (เดิม 3)
-  COMBO_TIERS: { 3: 1.5, 5: 2, 8: 3 },   // สตรีคตอบถูกครั้งแรกติดกัน → ตัวคูณ
-  SET_COMPLETE_BONUS: 20,    // เล่นจบ 1 ชุด (เดิม 200)
-  SET_PERFECT_BONUS: 50,     // จบชุดแบบ perfect (เดิม 500) → perfect = 20+50 = 70
-  LEVEL_WEIGHT: { 1: 1, 2: 1.5, 3: 2 },   // กฎ MASTER 2026-07-05: ตัวคูณระดับชุดเดียวทั้งระบบ (初1/中1.5/高2) = ตรงเกมอ่าน + ตรงตัวคูณดาวเงิน → ลีกยุติธรรมข้ามเกม
-  // จำนวนตัวเลือกในแต่ละขั้น推導 → ใช้คำนวณการหัก = round(BASE / optionsInStep)
-  OPTIONS_IN_STEP: {
-    s1: 2, s2a: 2, s2a_low: 2, s2a_other: 3, s2a_mid: 4, s2a_hi: 2,
-    s2b: 2, s2b_live: 2, s2b_dead: 2, s2b_dl: 2
-  },
-  // ขั้นเครื่องมือช่วย (ไม่มีในตารางสเปค) → ใช้ค่า default
-  DEFAULT_OPTIONS: 2
-};
-
-var TF_SCORE = {
-  cfg: TF_SCORE_CFG,
-
-  // หักต่อการกดผิด 1 ครั้งในขั้นนั้น = round(BASE / จำนวนตัวเลือก)
-  deductPerWrong: function (step) {
-    var opts = this.cfg.OPTIONS_IN_STEP[step] || this.cfg.DEFAULT_OPTIONS;
-    return Math.round(this.cfg.SCORE_DEDUCE_BASE / opts);
-  },
-
-  // ตัวคูณคอมโบจากสตรีคตอบถูกครั้งแรกติดกัน (เลือก tier สูงสุดที่ถึง)
-  comboMultiplier: function (streak) {
-    var tiers = this.cfg.COMBO_TIERS, mult = 1;
-    Object.keys(tiers).map(Number).sort(function (a, b) { return a - b; }).forEach(function (k) {
-      if (streak >= k) mult = tiers[k];
-    });
-    return mult;
-  },
-
-  // คะแนนเมื่อตอบถูกครั้งแรก (รับ streak "หลังบวกแล้ว")
-  firstTryScore: function (streak) {
-    return Math.round(this.cfg.SCORE_FIRST_TRY * this.comboMultiplier(streak));
-  },
-
-  // Lin 2026-07-04: คะแนนต่อคำ/พยางค์ ตาม "จำนวนครั้งที่กดผิด" → บันได [10,7,4,1,0]
-  ladderScore: function (wrongCount) {
-    var L = this.cfg.WRONG_LADDER;
-    return L[Math.min(wrongCount || 0, L.length - 1)];
-  },
-  // (เลิกใช้แล้ว — แทนที่ด้วย ladderScore · เก็บไว้กันโค้ดเก่าอ้างถึง)
-  deduceScore: function (totalDeduction) {
-    return Math.max(this.cfg.SCORE_MIN_PER_WORD, this.cfg.SCORE_DEDUCE_BASE - totalDeduction);
-  },
-
-  // กดผิดถึงเพดานหรือยัง (ครบ 3 → 0 แต้ม)
-  reachedWrongLimit: function (mistakes) {
-    return mistakes >= this.cfg.DEDUCE_WRONG_LIMIT;
-  },
-
-  // โบนัสจบชุด: จบ = +COMPLETE, ถ้า perfect (ถูกครั้งแรกทุกคำ) เพิ่ม +PERFECT
-  sessionBonus: function (total, perfectCount) {
-    var bonus = 0;
-    if (total > 0) bonus += this.cfg.SET_COMPLETE_BONUS;
-    if (total > 0 && perfectCount === total) bonus += this.cfg.SET_PERFECT_BONUS;
-    return bonus;
-  },
-
-  // คะแนนถ่วงน้ำหนักตามระดับ (ส่งเข้ากระดานอันดับ) — ในเกมยังโชว์คะแนนดิบ
-  weightedScore: function (rawScore, level) {
-    var w = this.cfg.LEVEL_WEIGHT[level] || 1;
-    return Math.round(rawScore * w);
-  }
-};
-
-var TF_WORDSCORE = {
-  LADDER: [10, 7, 4, 1, 0],
-  FAIL_AT: 4,
-  score: function (s) { return this.LADDER[Math.min((s && s.currentWordDeduct) || 0, this.FAIL_AT)]; },
-  isDead: function (s) { return ((s && s.currentWordDeduct) || 0) >= this.FAIL_AT; },
-  // กดผิดในขั้น推導 → หัก 1 ขั้น + เปิดสิทธิ์แอบดูฟรีของขั้นนี้ (การนับ "กดผิดจริง" อยู่ที่ recordMistake แยกกัน)
-  onWrong: function (s) {
-    s.currentWordDeduct = (s.currentWordDeduct || 0) + 1;
-    s.stepWrong = true;
-    return s;
-  },
-  // แอบดู(?) → ฟรีถ้าเพิ่งผิดในขั้นนี้ + ยังไม่เคยใช้สิทธิ์ฟรี · ไม่งั้นหัก 1 · คืน true = ถูกหัก
-  onPeek: function (s) {
-    if (s.stepWrong && !s.stepFreePeekUsed) { s.stepFreePeekUsed = true; return false; }
-    s.currentWordDeduct = (s.currentWordDeduct || 0) + 1;
-    return true;
-  },
-  // ไปขั้น推導ถัดไป → รีเซ็ตสิทธิ์รายขั้น
-  onNextStep: function (s) { s.stepWrong = false; s.stepFreePeekUsed = false; return s; }
-};
-/* ===== starsEngine ===== */
-// ════════════════════════════════════════════════════════════
-// starsEngine.mjs — Server-authoritative port of the "hard star" + streak math
-// ════════════════════════════════════════════════════════════
-// SOURCE OF TRUTH: /Users/taihualin/Developer/mrtaihualin.github.io/game-account.js
-//   dstr():                          lines 12-16   — verbatim
-//   HARD_CAPS / LEVEL_TOTAL_WORDS /
-//     effectiveCap() / LEVEL_MULT /
-//     BASE_CLEAN / BASE_RECOVERED:   lines 28-54    — verbatim
-//   wordsCounted() / bumpWordsCounted(): lines 56-65 — verbatim (already pure,
-//     take the account object `a` as a parameter — no change needed)
-//
-// ⚠️ ADAPTED (not verbatim) — flagging this honestly rather than hiding it:
-//   addHardStars() (game-account.js lines 71-83) and bumpStreakToday()
-//   (lines 105-111) call load()/save() on localStorage INSIDE the function.
-//   An Edge Function has no localStorage — it will read/write a Supabase row
-//   instead. So here those two are refactored into pure functions that take
-//   the current account object in and return { account, ...result } out,
-//   with the load/save extracted to whatever calls them (Edge Function reads
-//   the row, calls the pure fn, writes the row back). The CAP CHECK MATH,
-//   THE BASE×MULT ROUNDING, AND THE DAY-DIFF STREAK LOGIC ARE UNCHANGED —
-//   only the I/O boundary moved. Nothing here has been redesigned or "improved."
-// ════════════════════════════════════════════════════════════
-
-// ── dstr(): Taiwan-time 'YYYY-MM-DD' — verbatim from game-account.js lines 12-16 ──
-function dstr(ts) {
-  var d = (ts == null) ? new Date() : new Date(ts);
-  try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(d); }
-  catch (e) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
-}
-
-// ── constants — verbatim from game-account.js lines 32, 41, 53-54 ──
-var HARD_CAPS = { 1: 200, 2: 300, 3: 200 };
-var LEVEL_TOTAL_WORDS = { 1: 330, 2: 246, 3: 10 };
-var LEVEL_MULT = { 1: 1, 2: 1.5, 3: 2 };
-var BASE_CLEAN = 3, BASE_RECOVERED = 1;
-
-// ── effectiveCap() — verbatim from game-account.js lines 46-52 ──
-function effectiveCap(level) {
-  var hardCap = HARD_CAPS[level] || 0;
-  var wc = LEVEL_TOTAL_WORDS[level] || 0;
-  if (!(wc > 0)) return hardCap;
-  var tenPct = Math.floor(0.10 * wc);
-  return Math.min(tenPct, hardCap);
-}
-
-// ── wordsCounted() / bumpWordsCounted() — verbatim from game-account.js lines 57-65 ──
-// (already pure: take the account object `a` as a parameter, no I/O inside)
-function wordsCounted(a, level) {
-  var wc = a.hardWordsByLevel || {};
-  return wc[level] || 0;
-}
-function bumpWordsCounted(a, level) {
-  a.hardWordsByLevel = a.hardWordsByLevel || {};
-  a.hardWordsByLevel[level] = (a.hardWordsByLevel[level] || 0) + 1;
-  return a.hardWordsByLevel[level];
-}
-
-// ── addHardStars() — ADAPTED from game-account.js lines 71-83 ──
-// Original signature: addHardStars(clean, level, levelWordCount) — read/wrote localStorage
-// internally via load()/save(). Here: pass in the CURRENT account row explicitly, get back
-// the NEXT account row explicitly. Cap check + base×mult rounding math is byte-identical.
-function addHardStars(account, clean, level) {
-  var a = { hardWordsByLevel: Object.assign({}, account.hardWordsByLevel), stars: account.stars || 0 };
-  var cap = effectiveCap(level);
-  var used = wordsCounted(a, level);
-  if (used >= cap) return { account: a, stars: 0, capped: true };
-  bumpWordsCounted(a, level);
-  var base = clean ? BASE_CLEAN : BASE_RECOVERED;
-  var mult = LEVEL_MULT[level] || 1;
-  var n = Math.round(base * mult);
-  a.stars = (a.stars || 0) + n;
-  return { account: a, stars: n, capped: false };
-}
-
-// ── hardCapReached() — ADAPTED from game-account.js lines 85-88 (same reasoning as above) ──
-function hardCapReached(account, level) {
-  return wordsCounted(account, level) >= effectiveCap(level);
-}
-
-// ── bumpStreakToday() — ADAPTED from game-account.js lines 105-111 ──
-// Original read/wrote localStorage (a.lastPlay / a.streak) via load()/save().
-// Here: pass in { lastPlay, streak } explicitly, get the next state back explicitly.
-// The "played today already? / played yesterday (continue) : (reset to 1)" logic
-// is byte-identical to the original.
-function bumpStreakToday(account, nowMs) {
-  var lastPlay = account.lastPlay || null;
-  var streak = account.streak || 0;
-  var t = dstr(nowMs);
-  if (lastPlay === t) return { lastPlay: lastPlay, streak: streak }; // เล่นแล้ววันนี้ ไม่บวกซ้ำ
-  var y = dstr((nowMs == null ? Date.now() : nowMs) - 86400000);
-  var nextStreak = (lastPlay === y) ? (streak + 1) : 1;
-  return { lastPlay: t, streak: nextStreak };
-}
-/* ===== serverAuthority ===== */
-// ════════════════════════════════════════════════════════════
-// serverAuthority.mjs — Phase 4 core "money decision" (server-authoritative)
-// ════════════════════════════════════════════════════════════
-// นี่คือ "สมอง" ฝั่งเซิร์ฟเวอร์ที่ตัดสินว่า "รอบนี้ให้ดาว/เลื่อน SRS/รีเซ็ต" ยังไง
-// โดย **ไม่เชื่อ** ตัวเลขใดๆ จาก client เลย นอกจาก "คำเดาวรรณยุกต์ (1-5)" ที่ผู้เล่นกด
-//
-// ทำไมแค่ "คำเดา" ก็พอ (ผลจากไล่โค้ด tone-finder.html จริง):
-//   ดาวเงิน (= เงินจริง) ถูกแจก "เฉพาะตอน SRS mastered" (tfProcessSrsOnWordCommit)
-//   และ SRS จะ "เลื่อนขั้น" ได้เฉพาะเมื่อ cleanThisRound = ตอบถูก "ครั้งแรก" สะอาด
-//   (firstTry && !forced && mistakes===0) — พอเข้า推導/แอบดู/เดาผิด = ไม่ clean = รีเซ็ต
-//   → เส้นทางเดียวที่ทำให้ได้ดาว = "เดาวรรณยุกต์ถูกตั้งแต่ครั้งแรก" ตามนัด SRS
-//   → เซิร์ฟเวอร์แค่: รู้ computeTone(คำ) เอง + เทียบกับที่ผู้เล่นเดา + คุมปฏิทิน SRS + คุมเพดาน
-//   ⇒ ไม่ต้อง replay ทั้ง推導 (推導มีผลแค่คะแนนโชว์ 分 ไม่ใช่ดาว) · คำทอง ×2 ก็ไม่แตะดาว
-//
-// ⚠️ เพดานความปลอดภัยที่ทำได้จริง (พูดตรงๆ ตามกฎ Lin ข้อ 9):
-//   computeTone อยู่ฝั่ง client เปิด DevTools อ่านได้ → คนที่ "รู้คำตอบ" ส่งเดาถูกได้เสมอ
-//   เซิร์ฟเวอร์กันไม่ได้ที่ "รู้คำตอบ" แต่กันได้ว่า:
-//     (1) เขียนดาวตรงไม่ได้ (RLS ล็อก — ดู SQL)
-//     (2) เร่ง SRS เร็วกว่าปฏิทินไม่ได้ (isDue gate)
-//     (3) เกินเพดานตลอดชีพต่อระดับไม่ได้ (cap)
-//   ⇒ "ดาวสูงสุดที่โกงได้ = ดาวสูงสุดที่คนเล่นเพอร์เฟกต์จริงได้ ไม่มากกว่า ไม่เร็วกว่า ไม่เกินเพดาน"
-//   ส่วนที่เหลือ (จับคนตอบไวผิดมนุษย์/หลายบัญชี) = rate-limit + anomaly detection ใน Phase 5
-// ════════════════════════════════════════════════════════════
-
-
-// บังคับ level ให้เป็น 1/2/3 เท่านั้น (กัน level เพี้ยน/นอกช่วงที่เจอตอนตรวจ Phase 3)
-function normalizeLevel(level) {
-  var n = Number(level);
-  return (n === 1 || n === 2 || n === 3) ? n : null;
-}
-
-// บังคับ guess ให้เป็น int 1-5 (0 = "ไม่มั่นใจ") · อื่นๆ = -1 (ถือว่าผิด)
-// ปิดรูที่เจอตอนตรวจ Phase 3: null/NaN/ติดลบ ห้ามเล็ดลอดเข้า logic คะแนน
-function normalizeGuess(g) {
-  return (Number.isInteger(g) && g >= 0 && g <= 5) ? g : -1;
-}
-
-// ── ตัดสินหนึ่ง "รอบทบทวน" ของหนึ่งคำ — pure function ทดสอบได้จริง ──
-// input:
-//   account   : { stars, hardWordsByLevel } (แถวปัจจุบันจาก DB — เซิร์ฟเวอร์อ่านมาให้)
-//   srsRecord : record SRS ของ (user, word, level) จาก DB (null = ยังไม่เคยเล่น)
-//   word, level, initialGuess : จาก request (initialGuess = สิ่งเดียวที่รับจาก client)
-//   nowMs     : เวลาเซิร์ฟเวอร์ (ห้ามใช้เวลา client)
-//   opts.knownCheck : true = ผู้เล่นกด "✓ 已記得" (พิสูจน์ครั้งเดียว → master แต่ไม่ให้ดาว)
-// output: { ok, reason, correct, justMastered, starsAwarded, capped, newSrsRecord, newAccount }
-function resolveRound(input) {
-  var account = input.account || { stars: 0, hardWordsByLevel: {} };
-  var level = normalizeLevel(input.level);
-  var guess = normalizeGuess(input.initialGuess);
-  var nowMs = (typeof input.nowMs === 'number') ? input.nowMs : Date.now();
-  var opts = input.opts || {};
-  var word = String(input.word == null ? '' : input.word);
-
-  if (!level) return reject('bad_level', account);
-  if (!word)  return reject('bad_word', account);
-
-  var hadSrsRecord = !!input.srsRecord;
-  var rec = hadSrsRecord ? cloneRec(input.srsRecord) : TF_SRS.blank();
-
-  // มาสเตอร์ไปแล้ว = ไม่ต้องเล่นซ้ำ (กันฟาร์มคำที่ตัดออกจาก SRS แล้ว)
-  if (rec.mastered) return reject('already_mastered', account, { newSrsRecord: rec });
-
-  // ── ปฏิทิน SRS (สำคัญสุดด้านกันโกงความเร็ว): ยังไม่ถึงกำหนด = ปฏิเสธ ──
-  // กันเล่นคำเดิมซ้ำๆ วันเดียวเพื่อเร่งขั้น 3 รอบรวดแล้วรับดาว
-  if (!TF_SRS.isDue(rec, nowMs)) return reject('not_due', account, { newSrsRecord: rec });
-
-  // ── เซิร์ฟเวอร์คิดวรรณยุกต์ที่ถูกต้องเอง แล้วเทียบ ──
-  // รองรับ 2 กรณี:
-  //   (ก) คำพยางค์เดียว → เทียบ guess เดียวกับ computeTone(word)
-  //   (ข) คำหลายพยางค์ (level 2/3) → ต้องส่ง syllables[] + guesses[] มา
-  //        clean = "ทุกพยางค์ถูกครั้งแรก" (ตรงกับ curWordAllFirstTry ในเกม)
-  var correctClean;
-  if (opts.spellingGame) {
-    // ── เกมสะกด (อ่าน/พิมพ์): ดาว = สะกดถูก ไม่ใช่วรรณยุกต์ ──
-    //   เซิร์ฟเวอร์ตรวจ "สะกดถูกจริงไหม" เองไม่ได้ (โจทย์+คำตอบอยู่ฝั่ง client)
-    //   → เชื่อ flag clean จาก client · โกงได้แค่ "อ้างว่า clean"
-    //   แต่ยังกันด้วย: ปฏิทิน SRS (isDue ด้านบน) + เพดาน (addHardStars) + RLS
-    //   ⇒ เพดานเท่าเกมเสียง: คำละครั้ง เร่งเวลาไม่ได้ เกินเพดานไม่ได้
-    correctClean = (opts.spellingClean === true);
-  } else if (Array.isArray(input.syllables) && input.syllables.length > 1) {
-    var syls = input.syllables.map(function (s) { return String(s); });
-    var guesses = Array.isArray(input.guesses) ? input.guesses : [];
-    if (guesses.length !== syls.length) return reject('bad_guesses_len', account, { newSrsRecord: rec });
-    correctClean = syls.every(function (syl, i) {
-      var tt = computeTone(syl);
-      return (tt !== null) && (normalizeGuess(guesses[i]) === tt);
-    });
-  } else {
-    var trueTone = computeTone(word);               // 1-5 หรือ null (คำนวณไม่ได้)
-    correctClean = (trueTone !== null) && (guess === trueTone);
-  }
-
-  // known-check (กด "已記得"): ถูกสะอาด 1 ครั้ง → master ถาวร แต่ "ไม่ให้ดาว ไม่ bump เพดาน"
-  if (opts.knownCheck) {
-    if (correctClean) { rec.mastered = true; return ok('known_master', true, false, 0, false, rec, account); }
-    return ok('known_reset', false, false, 0, false, TF_SRS.resetOnFail(rec), account);
-  }
-
-  if (correctClean) {
-    var res = TF_SRS.advanceOnClean(rec, nowMs);    // เลื่อนขั้น / mastered ถ้าครบ 3 รอบ
-    if (res.justMastered) {
-      // เกมสะกด/เรียงประโยค (trust-clean): ให้ client บอก "จำเอง(3⭐) vs กู้/ใช้คำใบ้(1⭐)" ผ่าน starClean
-      //   ให้เลขดาวตรงกับที่เกมโชว์ local · ไม่ส่ง starClean → ใช้ res.clean เดิม (เกมเสียง/อ่าน/พิมพ์)
-      var cleanForStars = (opts.spellingGame && typeof opts.starClean === 'boolean') ? opts.starClean : res.clean;
-      // แจกดาว atomic-ready: addHardStars เช็กเพดานเอง (ถ้าชนเพดาน stars=0 แต่ยัง mastered)
-      var aw = addHardStars(account, cleanForStars, level);
-      return ok('mastered', true, true, aw.stars, aw.capped, res.rec, aw.account);
-    }
-    return ok('advanced', true, false, 0, false, res.rec, account);
-  }
-
-  // Phase 1 entry rule: คะแนนต่ำกว่า 10/10 ของ item ใหม่ยังอยู่ Normal Pool
-  // และต้องไม่สร้างแถว SRS/Mastered evidence ขึ้นมาก่อน ผ่าน 10/10 ครั้งแรก
-  if (!hadSrsRecord) return reject('below_entry_score', account, { newSrsRecord: null });
-
-  // เดาผิด/ไม่มั่นใจ/คำนวณไม่ได้ → รีเซ็ต SRS กลับ day1 (everFailed=true → คราวหน้าได้แค่ "กู้กลับมา"=1 ดาว)
-  return ok('reset', false, false, 0, false, TF_SRS.resetOnFail(rec), account);
-}
-
-// ── helpers ──
-function cloneRec(r) { return JSON.parse(JSON.stringify(r)); }
-function reject(reason, account, extra) {
-  return Object.assign({ ok: false, reason: reason, correct: false, justMastered: false,
-    starsAwarded: 0, capped: false, newSrsRecord: null, newAccount: account }, extra || {});
-}
-function ok(reason, correct, justMastered, stars, capped, rec, account) {
-  return { ok: true, reason: reason, correct: correct, justMastered: justMastered,
-    starsAwarded: stars, capped: capped, newSrsRecord: rec, newAccount: account };
+  return { ok: true, outcome: clean ? 'clean' : 'fail' };
 }
 
 function stableJson(value: unknown): string {
@@ -620,176 +35,150 @@ function stableJson(value: unknown): string {
   }
   return JSON.stringify(value);
 }
-
 async function sha256(value: unknown) {
-  const bytes = new TextEncoder().encode(stableJson(value));
-  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(stableJson(value)));
   return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-
-/* ===== HTTP handler ===== */
 const SB_URL = Deno.env.get("SUPABASE_URL")!;
 const SB_ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SB_SVC = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ALLOWED_ORIGINS = [
   "https://mrtaihualin.com",
-  // 2026-08-10 (P7-02 staging): หน้าทดสอบ staging บน Netlify
   "https://gentle-moxie-bf64ad.netlify.app",
+  "https://mrtaihualin-preview-learning-e4ea92c.mrtaihualin.workers.dev",
 ];
 
 Deno.serve(async (req: Request) => {
   const origin = req.headers.get("Origin") || "";
   const allowOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
-  const CORS = {
-    "Access-Control-Allow-Origin": allowOrigin,
-    "Vary": "Origin",
+  const CORS = { "Access-Control-Allow-Origin": allowOrigin, "Vary": "Origin",
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-  };
-  const json = (o: unknown, s = 200) =>
-    new Response(JSON.stringify(o), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
-
+    "Access-Control-Allow-Methods": "POST, OPTIONS" };
+  const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
+    status, headers: { ...CORS, "Content-Type": "application/json" }
+  });
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
 
-  // ── ตัวตนจาก JWT เท่านั้น (ห้ามเชื่อ user_id จาก client) ──
   const authHeader = req.headers.get("Authorization") || "";
   const userClient = createClient(SB_URL, SB_ANON, { global: { headers: { Authorization: authHeader } } });
-  const { data: ud } = await userClient.auth.getUser();
-  const user = ud?.user;
+  const { data: userData } = await userClient.auth.getUser();
+  const user = userData?.user;
   if (!user) return json({ error: "unauthorized" }, 401);
-
   const admin = createClient(SB_URL, SB_SVC, { auth: { persistSession: false } });
 
   let body: any;
-  try { body = await req.json(); } catch { return json({ error: "bad json" }, 400); }
-
+  try { body = await req.json(); } catch (_) { return json({ error: "bad json" }, 400); }
+  if (body?.action === 'paid_state') {
+    const entitlement = await admin.from('phase1_product_entitlements').select('entitlement')
+      .eq('user_id', user.id).eq('entitlement', 'owner_all_access').limit(2);
+    if (entitlement.error) return json({ error: 'entitlement_unavailable' }, 503);
+    if (!entitlement.data || entitlement.data.length !== 1) return json({ error: 'feature_disabled' }, 404);
+    const state = await admin.from('phase2_paid_srs_states')
+      .select('game,level,content_key,phase,next_checkpoint,due_on,mastered,active_challenge,ever_failed,reschedule_pending')
+      .eq('user_id', user.id).eq('game', 'tone');
+    if (state.error) return json({ error: 'paid_srs_state_unavailable' }, 503);
+    return json({ ok: true, tier: 'paid', items: state.data || [] });
+  }
   const suppliedOperationId = String(body.round_id || "").toLowerCase();
   const legacyCompatibility = !suppliedOperationId;
   if (suppliedOperationId && !UUID_V4.test(suppliedOperationId)) return json({ error: "invalid_round_id" }, 400);
-  // Old cached clients predate round_id. A server-generated operation keeps their write atomic;
-  // concurrent/late duplicates are still rejected by the expected SRS snapshot inside the RPC.
   const operationId = suppliedOperationId || crypto.randomUUID();
-
   const word = String(body.word || "");
   const level = Number(body.level);
-  if (!word || ![1, 2, 3].includes(level)) return json({ error: "bad word/level" }, 400);
-
-  // ── game: แยก SRS ต่อเกม (default 'tone' = backward-compatible กับ client เกมเสียงเดิม) ──
-  // Phase 1: Mini-Game Challenge is Paid-only. Paid entitlement does not exist yet, so fail closed.
+  const contentKey = String(body.content_key || "");
   const game = String(body.game || "tone");
-  if (!["tone", "reading", "listening", "typing", "wordorder"].includes(game)) return json({ error: "bad game" }, 400);
-  const spellingGame = game !== "tone"; // อ่าน/พิมพ์/เรียงประโยค = trust-clean (เซิร์ฟเวอร์ตรวจเองไม่ได้ → เชื่อ flag clean)
+  if (!word || word.trim() !== word || !contentKey || contentKey.trim() !== contentKey || ![1, 2, 3].includes(level)) {
+    return json({ error: "bad content identity/level" }, 400);
+  }
+  if (!["tone", "reading", "typing", "wordorder"].includes(game)) return json({ error: "bad game" }, 400);
+  if (game === "tone" && level === 3) return json({ error: "catalog_authority_incomplete" }, 503);
+  if ((game === "wordorder" || level === 3) && contentKey !== word) return json({ error: "bad content_key" }, 400);
+  const levelCode = ({ 1: "初", 2: "中", 3: "高" } as Record<number, string>)[level];
+  const stateWord = contentKey;
+  const spellingGame = game !== "tone";
 
-  const requestHash = await sha256({
-    game, word, level,
-    clean: body.clean === true,
+  const requestHash = await sha256({ game, word, contentKey, level, clean: body.clean === true,
     starClean: typeof body.starClean === "boolean" ? body.starClean : null,
-    initialGuess: body.initialGuess ?? null,
-    syllables: Array.isArray(body.syllables) ? body.syllables.map(String) : null,
-    guesses: Array.isArray(body.guesses) ? body.guesses : null,
-    knownCheck: body.knownCheck === true,
-  });
+    initialGuess: body.initialGuess ?? null, guesses: Array.isArray(body.guesses) ? body.guesses : null,
+    knownCheck: body.knownCheck === true });
 
-  // Exact retry after an HTTP timeout returns the committed result before rate limiting or re-resolving SRS.
-  // The second call below closes a concurrent-request window: another invocation may commit after this
-  // first lookup but before our SRS read, which would otherwise be misreported as not_due/already_mastered.
   async function committedReplayResponse() {
     const replay = await admin.from("tone_round_operations")
       .select("user_id,game,level,word,request_hash,response")
       .eq("operation_id", operationId).maybeSingle();
     if (replay.error) return json({ error: "round_replay_unavailable" }, 503);
     if (!replay.data) return null;
-    const same = replay.data.user_id === user.id && replay.data.game === game &&
-      Number(replay.data.level) === level && replay.data.word === word && replay.data.request_hash === requestHash;
+    const same = replay.data.user_id === user.id && replay.data.game === game && Number(replay.data.level) === level &&
+      replay.data.word === stateWord && replay.data.request_hash === requestHash;
     if (!same) return json({ error: "replay_conflict" }, 409);
-    return json(Object.assign({}, replay.data.response || {}, {
-      idempotent: true,
-      stars: 0,
-      totalStars: 0,
-    }));
+    return json(Object.assign({}, replay.data.response || {}, { idempotent: true, stars: 0, totalStars: 0 }));
   }
   const earlyReplay = await committedReplayResponse();
   if (earlyReplay) return earlyReplay;
 
-  // ── rate limit: กันสคริปต์ยิงรัวถล่ม DB (เพดานดาว+ปฏิทินกันดาวเกินอยู่แล้ว อันนี้เกราะเสริม) ──
-  //   60 รอบ/นาที/คน — คนเล่นเร็วสุด ~20-30/นาที, สคริปต์ยิงเป็นพัน → 60 ไม่บล็อกคนจริง
-  //   fail-closed: ถ้าด่านตรวจล่ม ให้หยุดก่อนเขียน SRS/ดาว ป้องกันการยิงข้าม rate limit
-  // Use the canonical text-key limiter that is present in the tracked Production schema.
-  // The older rl_check dependency was not part of the recoverable schema contract and a
-  // missing/signature-mismatched function made every authenticated round fail closed.
   const { data: rlOk, error: rlErr } = await admin.rpc("game_content_rl_check", {
-    p_key: `tone-round:${user.id}`, p_limit: 60, p_window: 60,
+    p_key: `tone-round:${user.id}`, p_limit: 60, p_window: 60
   });
   if (rlErr) return json({ error: "rate_limit_unavailable" }, 503);
   if (rlOk !== true) return json({ error: "rate_limited" }, 429);
 
-  // ── อ่าน state จริงจาก DB (source of truth) ──
-  const srsRead = await admin.from("tone_srs_state")
-    .select("stage, due_date, ever_failed, mastered")
-    .eq("user_id", user.id).eq("game", game).eq("level", level).eq("word", word).maybeSingle();
-  if (srsRead.error) return json({ error: "srs_read_unavailable" }, 503);
-  const srsRow = srsRead.data;
-
-  // Phase 1 Free has no Star or XP. SRS remains authoritative, but every
-  // obsolete reward input/output is pinned to zero until cached clients age out.
-  const account = { stars: 0, hardWordsByLevel: {} };
-  const srsRecord = srsRow ? {
-    stage: srsRow.stage, dueDate: srsRow.due_date, dueAt: 0,
-    everFailed: srsRow.ever_failed, mastered: srsRow.mastered,
-  } : null;
-
-  // ── ตัดสินแบบ server-authoritative (computeTone คิดเอง ไม่เชื่อ client นอกจาก initialGuess) ──
-  const R = resolveRound({
-    account, srsRecord, word, level,
-    initialGuess: body.initialGuess,
-    syllables: body.syllables,
-    guesses: body.guesses,
-    nowMs: Date.now(),
-    opts: { knownCheck: !!body.knownCheck, spellingGame, spellingClean: !!body.clean,
-            starClean: (typeof body.starClean === "boolean") ? body.starClean : undefined },
-  });
-  if (!R.ok) {
-    const concurrentReplay = await committedReplayResponse();
-    if (concurrentReplay) return concurrentReplay;
-    return json({ ok: false, reason: R.reason, stars: 0, totalStars: 0 });
+  let approvedToneNumbers: number[] | null = null;
+  let paidPrivateBeta = false;
+  const vocabularyRound = game !== "wordorder" && level !== 3;
+  if (vocabularyRound) {
+    const authority = await admin.from("game_words").select("content_key,word,level,status,access_tier,canonical_record")
+      .eq("level", levelCode)
+      .eq("content_key", contentKey).limit(2);
+    if (authority.error) return json({ error: "catalog_authority_unavailable" }, 503);
+    if (!authority.data || authority.data.length !== 1) return json({ error: "catalog_authority_ambiguous" }, 503);
+    const row = authority.data[0];
+    const freeContent = row.status === 'active' && ['guest', 'login'].includes(row.access_tier);
+    const paidContent = row.status === 'queued' && row.access_tier === 'paid';
+    if (!freeContent && !paidContent) return json({ error: 'catalog_authority_ambiguous' }, 503);
+    if (paidContent) {
+      if (game !== 'tone') return json({ error: 'feature_disabled' }, 404);
+      const entitlement = await admin.from('phase1_product_entitlements').select('entitlement')
+        .eq('user_id', user.id).eq('entitlement', 'owner_all_access').limit(2);
+      if (entitlement.error) return json({ error: 'entitlement_unavailable' }, 503);
+      if (!entitlement.data || entitlement.data.length !== 1) return json({ error: 'feature_disabled' }, 404);
+      paidPrivateBeta = true;
+    }
+    const catalog = row.canonical_record;
+    if (!catalog || catalog.contentKey !== row.content_key || catalog.word !== row.word || catalog.level !== row.level ||
+        catalog.contentKey !== contentKey || catalog.word !== word || catalog.level !== levelCode ||
+        !Array.isArray(catalog.syllables) || !catalog.syllables.length) {
+      return json({ error: "catalog_authority_incomplete" }, 503);
+    }
+    if (!spellingGame) {
+      approvedToneNumbers = catalog.syllables.map((syllable: any) => syllable?.toneNumber);
+      if (approvedToneNumbers.some((tone) => !Number.isInteger(tone) || tone < 1 || tone > 5)) {
+        return json({ error: "catalog_authority_incomplete" }, 503);
+      }
+    }
   }
 
-  // One RPC owns the SRS transition, account increment, ledger and durable replay result.
-  // PostgreSQL rolls every write back together on any failure and serializes all rewards per account.
-  const rec = R.newSrsRecord;
-  const rewardClean = spellingGame && typeof body.starClean === "boolean"
-    ? body.starClean : !(srsRecord && srsRecord.everFailed);
-  const committed = await admin.rpc("phase1_tone_round_commit", {
-    p_operation_id: operationId,
-    p_user_id: user.id,
-    p_request_hash: requestHash,
-    p_game: game,
-    p_level: level,
-    p_word: word,
-    p_expected_exists: !!srsRow,
-    p_expected_stage: srsRow?.stage ?? null,
-    p_expected_due_date: srsRow?.due_date ?? null,
-    p_expected_ever_failed: srsRow?.ever_failed ?? null,
-    p_expected_mastered: srsRow?.mastered ?? null,
-    p_next_stage: rec.stage,
-    p_next_due_date: rec.dueDate,
-    p_next_ever_failed: rec.everFailed,
-    p_next_mastered: rec.mastered,
-    p_reason: R.reason,
-    p_correct: R.correct,
-    p_just_mastered: R.justMastered,
-    p_reward_clean: rewardClean,
-  });
-  if (committed.error) return json({ error: "round_commit_unavailable" }, 503);
-  const result = committed.data;
-  if (!result || typeof result !== "object") return json({ error: "round_commit_unavailable" }, 503);
-  if (result.ok !== true && result.reason === "replay_conflict") return json({ error: "replay_conflict" }, 409);
-  return json(Object.assign({}, result, {
-    roundId: operationId,
-    compatibility: legacyCompatibility ? "legacy-no-id" : "explicit-id",
-  }));
+  if (paidPrivateBeta) {
+    const evaluated = paidOutcome({ initialGuess: body.initialGuess, guesses: body.guesses,
+      approvedToneNumbers, opts: { knownCheck: !!body.knownCheck, spellingGame, spellingClean: !!body.clean } });
+    if (!evaluated.ok) return json({ ok: false, reason: evaluated.reason, tier: 'paid', stars: 0, totalStars: 0 }, 400);
+    const committed = await admin.rpc('phase2_paid_srs_commit', {
+      p_operation_id: operationId, p_user_id: user.id, p_request_hash: requestHash,
+      p_game: game, p_level: level, p_content_key: contentKey,
+      p_outcome: evaluated.outcome, p_occurred_on: taipeiDay()
+    });
+    if (committed.error) return json({ error: 'paid_srs_write_unavailable' }, 503);
+    const result = committed.data;
+    if (!result || typeof result !== 'object') return json({ error: 'paid_srs_write_unavailable' }, 503);
+    if (result.ok !== true && result.reason === 'replay_conflict') return json({ error: 'replay_conflict' }, 409);
+    return json(Object.assign({}, result, { roundId: operationId, stars: 0, totalStars: 0,
+      compatibility: legacyCompatibility ? 'legacy-no-id' : 'explicit-id' }));
+  }
+
+  // Login Free progress is owned by score-submit/phase1_login_free_learning_commit.
+  // Keep tone-round available only for the separately gated Paid private beta so
+  // a stale client can never write the retired Free transition path.
+  return json({ error: 'learning_engine_required' }, 409);
 });

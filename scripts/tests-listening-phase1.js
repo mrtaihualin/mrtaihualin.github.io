@@ -28,10 +28,10 @@ vm.runInNewContext(raceGuardMatch[1] + '\nthis.createGuard = createListeningSrsR
 });
 const createGuard = raceSandbox.createGuard;
 
-const reviewPolicyMatch = app.match(/\/\/ ===== LISTENING_REVIEW_POLICY_START =====\n([\s\S]*?)\/\/ ===== LISTENING_REVIEW_POLICY_END =====/);
-if (!reviewPolicyMatch) throw new Error('Listening Review Needed policy source not found');
+const reviewPolicyMatch = app.match(/\/\/ ===== LISTENING_SRS_DUE_POLICY_START =====\n([\s\S]*?)\/\/ ===== LISTENING_SRS_DUE_POLICY_END =====/);
+if (!reviewPolicyMatch) throw new Error('Listening SRS Due policy source not found');
 const reviewSandbox = {};
-vm.runInNewContext(reviewPolicyMatch[1] + '\nthis.createPolicy = createListeningReviewPolicy;', reviewSandbox, {
+vm.runInNewContext(reviewPolicyMatch[1] + '\nthis.createPolicy = createListeningSrsDuePolicy;', reviewSandbox, {
   filename: 'listening-review-policy.js'
 });
 const createReviewPolicy = reviewSandbox.createPolicy;
@@ -60,7 +60,7 @@ check('輸入 3+ คำ scoring = 10,10,10,7,4,1,0', values('type', 'ฉัน �
 check('Typing Bonus เรียกสูตร 無提示 ชุดเดียว', score.typingBonus({ th: 'กิน', readingTH: 'กิน' }, 4) === sandbox.window.TYPING_SCORE.score(1, 4));
 check('Typing Bonus 0 แล้วยังอยู่ branch ให้พิมพ์ต่อ', /if \(!isCorrect\) \{[\s\S]*state\.typingWrong\+\+[\s\S]*繼續輸入到正確為止/.test(app));
 check('Listening score 0 จบ attempt และ requeue เฉพาะ item ที่ไม่ใช่ Due',
-  /finishListeningAtZero\(w\)/.test(app) && /listeningReviewPolicy\.shouldRequeue\(w, detail\.requeue\)/.test(app));
+  /finishListeningAtZero\(w\)/.test(app) && /listeningSrsDuePolicy\.shouldRequeue\(w,\s*detail\.requeue\)/.test(app) && /LearningReview\.shouldRetry/.test(app));
 check('active Typed→Choice keeps the question and clears only typed interaction state',
   /if \(state\.mode === 'type' && mode === 'mc'\) \{[\s\S]*switchTypedQuestionToChoice\(\)/.test(app) &&
   /state\.typingWrong = 0;[\s\S]*state\.itemAttempts = \[\];[\s\S]*el\.typeInput\.value = '';[\s\S]*renderMC\(currentWord\(\)\)/.test(appFunction('switchTypedQuestionToChoice', 'setMode')) &&
@@ -115,53 +115,58 @@ check('Listening Score และ Typing Bonus เก็บแยกใน eviden
 check('Listening DTO เก็บเฉพาะค่าที่ Submit และ listen count', /itemAttempts\.push\(\{ answer: val, is_correct: isCorrect, mode: 'type' \}\)/.test(app) && /listen_count: state\.listenCount/.test(app) && !/rawKeystrokes|raw_keystrokes/.test(app));
 check('จบรอบบันทึก account session เป็น game=listening', /READING_AUTH\.saveScore\(state\.primaryTotal \+ state\.typingBonusTotal, 1, 'listening'/.test(app));
 check('reading-auth รองรับ route/game listening', /listening-game/.test(auth) && /'listening'/.test(auth) && /score-submit/.test(auth));
-check('Listening parks auth/server but keeps shared Guest score before app boot', !/reading-auth\.js/.test(html) && !/tone-server\.js/.test(html) && /typing-score\.js\?v=1/.test(html) && /listening-score\.js\?v=1/.test(html));
-check('Listening มี 玩法 ที่เปิดดูซ้ำได้และอธิบายกติกา 0 แยกสอง score', /id="lg-howto-modal"/.test(html) && /📖 玩法/.test(html) && /打字加分降到 0/.test(html) && /聽力分數降到 0/.test(html));
-check('Edge แยก SRS game=listening', /"reading", "listening", "typing"/.test(edge));
-check('item ใหม่ต่ำกว่า 10 ไม่สร้าง SRS', /below_entry_score/.test(edge));
+check('Listening keeps account reporting but loads neither SRS nor Review',
+  /reading-auth\.js\?v=35/.test(html) && /game-account\.js\?v=6/.test(html) && /practice-events\.js\?v=5/.test(html) &&
+  !/(?:tone-server|learning-review)\.js/.test(html) && /typing-score\.js\?v=1/.test(html) && /listening-score\.js\?v=1/.test(html));
+check('Listening เปิด runtime จริงและยังมีคำอธิบาย玩法ครบ',
+  /id="lg-howto-modal"/.test(html) && /打字加分降到 0/.test(html) && /聽力分數降到 0/.test(html) &&
+  !/data-listening-availability="coming-soon"/.test(html));
+check('Edge ปฏิเสธ SRS game=listening',
+  /\["tone", "reading", "typing", "wordorder"\]\.includes\(game\)/.test(edge) && !/"listening"/.test(edge));
+check('tone-round ปิดเส้นทาง Login Free เดิมและส่งไป Learning Engine ใหม่', /learning_engine_required/.test(edge));
 check('tone-round rate-limit fail-closed ก่อนเขียน SRS', /if \(rlErr\) return json\(\{ error: "rate_limit_unavailable" \}, 503\)/.test(edge));
 check('Listening อ่าน SRS ของ game=listening กลับจาก server', /from\('tone_srs_state'\)[\s\S]*\.eq\('game', 'listening'\)/.test(app));
 check('Listening SRS query ผูก captured owner เป็น defense-in-depth', /\.eq\('game', 'listening'\)\s*\.eq\('user_id', owner\.uid\)/.test(app) && /options\.load\(owner\)/.test(app));
-check('Listening แยก Due/mastered และจัดรอบ Free 20%', /isSrsDue/.test(app) && /!\(rec && rec\.mastered\)/.test(app) && /tier: 'free'/.test(app) && /GameFlow\.allocateSrs/.test(app));
+check('Listening แยก Due/mastered และจัดรอบ Free 20%', /isSrsDue/.test(app) && /!\(rec && rec\.mastered\)/.test(app) && /tier:\s*'free'/.test(app) && /GameFlow\.allocateSrs/.test(app) && /LearningReview\.allocateRuntime/.test(app));
 check('Listening SRS read ใช้ NetworkGuard แบบ bounded และไม่ retry blind', /NetworkGuard\.request\([\s\S]*'listening-srs', \{\}, 10000, null\)/.test(app));
-check('Listening เก็บ runtime v19 ไว้แต่ไม่ boot ระหว่างขึ้น 即將開幕', /options\.delay\(1500\)/.test(app) && /Preserved paused runtime: js\/games\/listening-game-app\.js\?v=19/.test(html) && !/GameContentLoader\.boot\(\['js\/games\/listening-game-app\.js/.test(html));
+check('Listening boot runtime v20 ผ่านคลังกลาง', /options\.delay\(1500\)/.test(app) && /GameContentLoader\.boot\(\['js\/games\/listening-game-app\.js\?v=21'\], \{game:'listening'\}\)/.test(html));
 check('Listening มี leaderboard ของตัวเองและ auth ชี้ถูกหน้า', /READING_BOARD_GAME = 'listening'/.test(board) && /listening-board\.html/.test(auth));
 check('Leaderboard client รองรับ game=listening', /READING_BOARD_GAME === 'listening'/.test(boardClient) && /listening-game\.html/.test(boardClient));
 check('Core 5 SQL contract รองรับ Listening และ weekly เริ่มวันจันทร์ Taipei', /'reading', 'listening', 'typing', 'word_order'/.test(boardSql) && /date_trunc\('week', timezone\('Asia\/Taipei'/.test(boardSql));
 
-function reviewWord(th) { return { th, level: '初' }; }
-function reviewKey(word) { return word.th + '@1'; }
+function dueWord(th) { return { th, level: '初' }; }
+function dueKey(word) { return word.th + '@1'; }
 
 {
-  const dueA = reviewWord('due-a');
-  const dueB = reviewWord('due-b');
-  const regular = reviewWord('regular');
-  const policy = createReviewPolicy({ keyOf: reviewKey });
-  policy.begin([dueA, dueB], 1);
+  const dueA = dueWord('due-a');
+  const dueB = dueWord('due-b');
+  const regular = dueWord('regular');
+  const policy = createReviewPolicy({ keyOf: dueKey });
+  policy.begin([dueA, dueB]);
 
-  check('Due item ได้ Review Needed attempt แรกเพียงครั้งเดียว', policy.claimAttempt(dueA) === true);
+  check('SRS Due item ทำได้หนึ่ง attempt ต่อรอบ', policy.claimAttempt(dueA) === true);
   check('Due item เดิมถูกปฏิเสธเมื่อพยายามทำ attempt ที่สองในรอบเดียว', policy.claimAttempt(dueA) === false);
   check('failed Due ไม่ถูก requeue แต่ failed regular ยังใช้ flow เดิม',
     policy.shouldRequeue(dueA, true) === false && policy.shouldRequeue(regular, true) === true);
   check('Due SRS submission เป็น idempotent หนึ่ง request ต่อ item ต่อรอบ',
     policy.claimSubmission(dueA) === true && policy.claimSubmission(dueA) === false);
 
-  const restored = createReviewPolicy({ keyOf: reviewKey });
-  check('Review/attempt/submission claims อยู่ครบหลัง resume restore',
+  const restored = createReviewPolicy({ keyOf: dueKey });
+  check('SRS Due attempt/submission claims อยู่ครบหลัง resume restore',
     restored.restore(policy.snapshot()) === true && restored.hasAttempted(dueA) === true &&
     restored.claimAttempt(dueA) === false && restored.claimSubmission(dueA) === false);
 
-  const capped = createReviewPolicy({ keyOf: reviewKey });
+  const capped = createReviewPolicy({ keyOf: dueKey });
   capped.begin([dueB], 4);
-  check('Listening Free fail-closed ที่ Review1 แม้ metadata ผิดเป็นค่ามากกว่า 1',
+  check('Listening SRS Due fail-closed ที่หนึ่ง attempt แม้มี legacy argument เกิน 1',
     capped.claimAttempt(dueB) === true && capped.claimAttempt(dueB) === false);
 }
 
 {
-  const due = [reviewWord('due-1'), reviewWord('due-2')];
-  const regular = Array.from({ length: 8 }, (_, i) => reviewWord('regular-' + i));
-  const policy = createReviewPolicy({ keyOf: reviewKey });
-  policy.begin(due, 1);
+  const due = [dueWord('due-1'), dueWord('due-2')];
+  const regular = Array.from({ length: 8 }, (_, i) => dueWord('regular-' + i));
+  const policy = createReviewPolicy({ keyOf: dueKey });
+  policy.begin(due);
   const attempts = due.concat(regular);
   attempts.slice().forEach((word) => {
     if (policy.claimAttempt(word) && policy.shouldRequeue(word, due.includes(word))) attempts.push(word);
@@ -170,12 +175,12 @@ function reviewKey(word) { return word.th + '@1'; }
     attempts.length === 10 && attempts.filter((word) => due.includes(word)).length === 2);
 }
 
-check('actual Listening flow consumes allocation selectedDue/reviewLimit and guards attempt/submission',
-  /listeningReviewPolicy\.begin\(allocation\.selectedDue, allocation\.reviewLimit\)/.test(app) &&
-  /if \(!listeningReviewPolicy\.claimAttempt\(w\)\) return/.test(app) &&
-  /if \(!listeningReviewPolicy\.claimSubmission\(word\)\) return/.test(app) &&
-  /!listeningReviewPolicy\.isReview\(word\) \|\| !listeningReviewPolicy\.hasAttempted\(word\)/.test(app) &&
-  /if \(!pend\.listeningReviewPolicy\) \{[\s\S]*GameResume\.clear\('listening-game'\)[\s\S]*startRound\(\)/.test(app));
+check('actual Listening flow keeps SRS Due attempt/submission separate from pre-SRS Review',
+  /listeningSrsDuePolicy\.begin\(allocation\.selectedSrs\|\|allocation\.selectedDue\|\|\[\]\)/.test(app) &&
+  /if \(!listeningSrsDuePolicy\.claimAttempt\(w\)\) return/.test(app) &&
+  /if \(!listeningSrsDuePolicy\.claimSubmission\(word\)\) return/.test(app) &&
+  /!listeningSrsDuePolicy\.isReview\(word\) \|\| !listeningSrsDuePolicy\.hasAttempted\(word\)/.test(app) &&
+  /if \(!pend\.listeningSrsDuePolicy\) \{[\s\S]*GameResume\.clear\('listening-game'\)[\s\S]*startRound\(\)/.test(app));
 
 function deferred() {
   let resolve;

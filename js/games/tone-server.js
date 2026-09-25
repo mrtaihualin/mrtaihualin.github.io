@@ -23,11 +23,25 @@
   function wait(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
   // ส่ง 1 รอบให้เซิร์ฟเวอร์ตัดสิน · คืน Promise { ok, correct, justMastered, stars, totalStars, reason }
   async function finishRound(args) {
+    var exactContentKey = args && typeof args.contentKey === 'string' ? args.contentKey.trim() : '';
+    if (!exactContentKey || exactContentKey !== args.contentKey) {
+      return { ok: false, reason: 'catalog_authority_incomplete' };
+    }
+    try {
+      if (window.LearningReview && LearningReview.runtimeEnabled && LearningReview.runtimeEnabled()) {
+        var gameKey = args.game === 'wordorder' ? 'word_order' : (args.game || 'tone');
+        var reviewSource = args.game === 'wordorder' || Number(args.level) === 3 ? 'game_sentences' : 'game_words';
+        if (LearningReview.ownsCurrent(gameKey, args.level, { source: reviewSource, key: exactContentKey })) {
+          return { ok: false, reason: 'learning_review_owner' };
+        }
+      }
+    } catch (e) {}
     var sb = client();
     if (!sb || !sb.functions) return { ok: false, reason: 'no_client' };
     var payload = {
       round_id: roundId(),
       word: args.word,
+      content_key: exactContentKey,
       level: args.level,
       game: args.game,                    // 'tone'(default)/'reading'/'typing'/'wordorder' — แยก SRS ต่อเกม
       clean: args.clean,                  // เกมสะกด/เรียงประโยค: รอบนี้เลื่อนขั้น(clean)ไหม
@@ -90,7 +104,7 @@
   function loggedIn() {
     try {
       if (window.TF_AUTH && window.TF_AUTH.loggedIn && window.TF_AUTH.loggedIn()) return true;
-      if (window.READING_AUTH && window.READING_AUTH.user) return true;
+      if (window.READING_AUTH && window.READING_AUTH.srsUser) return true;
     } catch (e) {}
     return false;
   }

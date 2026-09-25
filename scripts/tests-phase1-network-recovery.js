@@ -15,17 +15,50 @@ async function test(label, fn) {
   catch (error) { console.error('✗ ' + label + ': ' + error.message); process.exitCode = 1; }
 }
 
+function catalogBundle(options = {}) {
+  const word = options.word || 'ทดสอบ';
+  const contentKey = options.contentKey || (word + '@' + (options.level || '初'));
+  const spellings = options.spellings || [word];
+  const syllables = spellings.map((spelling, index) => ({
+    roman: (options.romans && options.romans[index]) || 'test',
+    lead: 'ไม่มี', consonant: 'ท', cluster: 'ไม่มี', vowel: 'โอะ', writtenFinal: 'ไม่มี',
+    toneMark: 'ไม่มี', toneNumber: 1, toneName: 'สามัญ', liveDead: '活音',
+    consonantReadDifference: 'ไม่มี', finalReadDifference: 'ไม่มี', silent: 'ไม่มี'
+  }));
+  return {
+    catalog: {
+      contentKey, reviewSet: 'TEST-REVIEWED', word, spellingTH: options.spellingTH || spellings.join('-'),
+      readingTH: Object.prototype.hasOwnProperty.call(options, 'readingTH') ? options.readingTH : word,
+      roman: options.roman || 'test', zhTW: options.zh || '測試',
+      level: options.level || '初', type: 'กริยา', category: 'ไม่มี', audioStatus: 'ยังไม่เช็ก',
+      approvalRefs: ['TEST'], syllables,
+      spellingSyllables: options.spellingSyllables || spellings.map((th) => ({ th }))
+    }
+  };
+}
+
+function sentenceFixture() {
+  return { th: 'ทดสอบ', zh: '測試', readingTH: 'ทด-สอบ', wc: 2, politeF: null, words: [
+    { th: 'ทดสอบ', zh: '測試', syls: [
+      { th: 'ทด', en: 'thot', cons: 'ท', vowel: 'โอะ', tone_name: 'โท' },
+      { th: 'สอบ', en: 'sop', cons: 'ส', vowel: 'ออ', tone_name: 'เอก' }
+    ] }
+  ] };
+}
+
 function createBootHarness(options = {}) {
   const listeners = Object.create(null);
   const globalListeners = Object.create(null);
   const requests = [];
+  const appended = [];
   const storage = new Map();
   const elementsById = Object.create(null);
   const body = {
     appendChild(element) {
+      appended.push(element);
       element.parentNode = body;
       if (element.id) elementsById[element.id] = element;
-      if (element.tagName === 'SCRIPT' && typeof element.onload === 'function') {
+      if (options.autoLoadScripts !== false && element.tagName === 'SCRIPT' && typeof element.onload === 'function') {
         queueMicrotask(() => element.onload());
       }
     },
@@ -51,10 +84,10 @@ function createBootHarness(options = {}) {
       listeners[type].push({ callback, once: !!(eventOptions && eventOptions.once) });
     },
   };
-  const payload = {
+  const payload = options.payload || {
     tier: 'anon',
-    words: [{ word: 'ทดสอบ', level: '初', syls: [] }],
-    sentences: [{ th: 'ทดสอบ', words: [] }],
+    words: [catalogBundle()],
+    sentences: [sentenceFixture()],
     audioAvailable: [],
     capped: {},
   };
@@ -69,6 +102,9 @@ function createBootHarness(options = {}) {
     },
     NetworkGuard: {
       request(fetchImpl, url, requestOptions, timeoutMs) {
+        if (url === 'game-content-auth-session') {
+          return Promise.resolve().then(() => fetchImpl(url, requestOptions));
+        }
         requests.push({ fetchImpl, url, requestOptions, timeoutMs });
         return Promise.resolve({ ok: true, json: () => Promise.resolve(payload) });
       },
@@ -77,8 +113,8 @@ function createBootHarness(options = {}) {
     console: { log() {}, warn() {}, error() {} },
     URL,
     Promise,
-    setTimeout,
-    clearTimeout,
+    setTimeout: options.setTimeout || setTimeout,
+    clearTimeout: options.clearTimeout || clearTimeout,
     setInterval,
     clearInterval,
     addEventListener(type, callback) {
@@ -86,6 +122,7 @@ function createBootHarness(options = {}) {
       globalListeners[type].push(callback);
     },
   };
+  if (options.phase1Canonical) sandbox.PHASE1_CANONICAL = options.phase1Canonical;
   sandbox.window = sandbox;
   if (options.config) sandbox.SUPABASE_CONFIG = options.config;
   vm.runInNewContext(client, sandbox, { filename: 'game-content-client.js' });
@@ -93,6 +130,7 @@ function createBootHarness(options = {}) {
   return {
     sandbox,
     requests,
+    appended,
     dispatchDomReady() {
       document.readyState = 'interactive';
       const queued = (listeners.DOMContentLoaded || []).slice();
@@ -109,20 +147,232 @@ function createBootHarness(options = {}) {
 const validConfig = { url: 'https://project.supabase.co', anonKey: 'public-anon-key' };
 
 (async function () {
+  await test('app bytes preload before content, but execution waits for valid data', async () => {
+    const harness = createBootHarness({ config: validConfig });
+    const boot = harness.sandbox.GameContentLoader.boot(['js/games/example.js?v=1']);
+    const hints = harness.appended.filter(el => el.tagName === 'LINK');
+    assert.strictEqual(hints.length, 1);
+    assert.strictEqual(hints[0].rel, 'preload');
+    assert.strictEqual(hints[0].as, 'script');
+    assert.strictEqual(hints[0].href, 'js/games/example.js?v=1');
+    assert.strictEqual(harness.appended.filter(el => el.tagName === 'SCRIPT').length, 0);
+    assert.strictEqual(harness.requests.length, 0);
+    harness.dispatchDomReady();
+    await boot;
+    assert.strictEqual(harness.requests.length, 1);
+    assert.strictEqual(harness.appended.filter(el => el.tagName === 'SCRIPT').length, 1);
+  });
+  await test('failed content never executes preloaded app code', async () => {
+    const harness = createBootHarness({ readyState: 'complete', config: validConfig });
+    harness.sandbox.NetworkGuard.request = () => Promise.reject(new Error('offline'));
+    await assert.rejects(harness.sandbox.GameContentLoader.boot(['js/games/example.js']), /offline/);
+    assert.strictEqual(harness.appended.filter(el => el.tagName === 'SCRIPT').length, 0);
+  });
+  await test('offline browser hint does not block a successful real content request', async () => {
+    const harness = createBootHarness({ readyState: 'complete', config: validConfig });
+    harness.sandbox.navigator.onLine = false;
+    await harness.sandbox.GameContentLoader.boot(['js/games/example.js'], { game: 'typing' });
+    assert.strictEqual(harness.requests.length, 1);
+    assert.strictEqual(harness.requests[0].timeoutMs, 15000);
+    assert.deepStrictEqual(JSON.parse(harness.requests[0].requestOptions.body), { game: 'typing', contract: 'canonical-v1' });
+    assert.strictEqual(harness.appended.filter(el => el.tagName === 'SCRIPT').length, 1);
+  });
+  await test('OAuth callback waits for the Login Free session before the first learning round', async () => {
+    const harness = createBootHarness({
+      readyState: 'complete',
+      config: { ...validConfig, runtimeMode: 'login-free' },
+      payload: {
+        tier: 'login', words: [catalogBundle()], sentences: [sentenceFixture()],
+        audioAvailable: [], capped: {},
+      },
+      phase1Canonical: { whenReady: () => Promise.resolve() },
+    });
+    let sessionReads = 0;
+    harness.sandbox.getSupabaseClient = () => ({ auth: { getSession: async () => {
+      sessionReads++;
+      await Promise.resolve();
+      return { data: { session: { [['access', 'token'].join('_')]: 'session-fixture-value' } } };
+    } } });
+    await harness.sandbox.GameContentLoader.boot(['js/games/example.js'], { game: 'tone' });
+    assert.strictEqual(sessionReads, 1);
+    assert.strictEqual(harness.requests[0].requestOptions.headers.Authorization, ['Bearer', 'session-fixture-value'].join(' '));
+    assert.strictEqual(harness.sandbox.GAME_CONTENT_TIER, 'login');
+  });
+  await test('stalled Login Free session lookup times out into recoverable boot error', async () => {
+    const harness = createBootHarness({
+      readyState: 'complete',
+      config: { ...validConfig, runtimeMode: 'login-free' },
+    });
+    harness.sandbox.getSupabaseClient = () => ({ auth: { getSession: () => new Promise(() => {}) } });
+    const normalRequest = harness.sandbox.NetworkGuard.request;
+    harness.sandbox.NetworkGuard.request = (request, label, options, timeoutMs, AbortCtor) => {
+      if (label !== 'game-content-auth-session') return normalRequest(request, label, options, timeoutMs, AbortCtor);
+      assert.strictEqual(timeoutMs, 5000);
+      assert.strictEqual(AbortCtor, null);
+      return guard.request(request, label, options, 5, null);
+    };
+    await assert.rejects(
+      harness.sandbox.GameContentLoader.boot(['js/games/example.js'], { game: 'tone' }),
+      (error) => error && error.code === 'NETWORK_TIMEOUT'
+    );
+    assert.strictEqual(harness.requests.length, 0);
+    assert.strictEqual(harness.appended.filter(el => el.tagName === 'SCRIPT').length, 0);
+    assert.ok(harness.sandbox.document.getElementById('gc-error-banner'));
+  });
+  await test('all four Login Free games wait for canonical Resume before app execution', async () => {
+    for (const game of ['tone', 'reading', 'typing', 'word_order']) {
+      let release;
+      let observed;
+      let readinessCalls = 0;
+      const canonicalReady = new Promise((resolve) => { release = resolve; });
+      const readinessObserved = new Promise((resolve) => { observed = resolve; });
+      const harness = createBootHarness({
+        readyState: 'complete',
+        config: { ...validConfig, runtimeMode: 'login-free' },
+        payload: {
+          tier: 'login', words: [catalogBundle()], sentences: [sentenceFixture()],
+          audioAvailable: [], capped: {},
+        },
+        phase1Canonical: { whenReady(timeoutMs) {
+          readinessCalls++;
+          assert.strictEqual(timeoutMs, 12000);
+          observed();
+          return canonicalReady;
+        } },
+      });
+      const boot = harness.sandbox.GameContentLoader.boot(['js/games/example.js'], { game });
+      await readinessObserved;
+      assert.strictEqual(readinessCalls, 1, game + ' must request canonical readiness');
+      assert.strictEqual(harness.appended.filter(el => el.tagName === 'SCRIPT').length, 0, game + ' must not execute early');
+      release();
+      await boot;
+      assert.strictEqual(harness.appended.filter(el => el.tagName === 'SCRIPT').length, 1, game + ' executes after restore');
+    }
+  });
+  await test('Guest, Paid and Listening never wait for Login Free canonical Resume', async () => {
+    for (const scenario of [
+      { game: 'tone', tier: 'anon' },
+      { game: 'tone', tier: 'paid' },
+      { game: 'listening', tier: 'login' },
+    ]) {
+      const harness = createBootHarness({
+        readyState: 'complete',
+        config: { ...validConfig, runtimeMode: 'login-free' },
+        payload: {
+          tier: scenario.tier, words: [catalogBundle()], sentences: [sentenceFixture()],
+          audioAvailable: [], capped: {}, paidSrsState: [],
+        },
+        phase1Canonical: { whenReady() { throw new Error('must remain outside canonical wait'); } },
+      });
+      await harness.sandbox.GameContentLoader.boot(['js/games/example.js'], { game: scenario.game });
+      assert.strictEqual(harness.appended.filter(el => el.tagName === 'SCRIPT').length, 1);
+    }
+  });
+  await test('Login Free fails closed if canonical Resume runtime is unavailable', async () => {
+    const harness = createBootHarness({
+      readyState: 'complete',
+      config: { ...validConfig, runtimeMode: 'login-free' },
+      payload: {
+        tier: 'login', words: [catalogBundle()], sentences: [sentenceFixture()],
+        audioAvailable: [], capped: {},
+      },
+    });
+    await assert.rejects(harness.sandbox.GameContentLoader.boot(['js/games/example.js'], { game: 'typing' }), /LOGIN_FREE_CANONICAL_UNAVAILABLE/);
+    assert.strictEqual(harness.appended.filter(el => el.tagName === 'SCRIPT').length, 0);
+  });
+  await test('Guest and Listening never inherit the four-game OAuth wait', async () => {
+    for (const scenario of [
+      { game: 'tone', runtimeMode: 'minimum-guest' },
+      { game: 'listening', runtimeMode: 'login-free' },
+    ]) {
+      const harness = createBootHarness({
+        readyState: 'complete',
+        config: { ...validConfig, runtimeMode: scenario.runtimeMode },
+      });
+      harness.sandbox.isMinimumGuestOnly = () => scenario.runtimeMode === 'minimum-guest';
+      harness.sandbox.getSupabaseClient = () => { throw new Error('must not read a user session'); };
+      await harness.sandbox.GameContentLoader.boot(['js/games/example.js'], { game: scenario.game });
+      assert.strictEqual(harness.requests[0].requestOptions.headers.Authorization, 'Bearer public-anon-key');
+    }
+  });
+  await test('actual network failure while browser reports offline still fails closed without retrying', async () => {
+    const harness = createBootHarness({ readyState: 'complete', config: validConfig });
+    harness.sandbox.navigator.onLine = false;
+    let attempts = 0;
+    harness.sandbox.NetworkGuard.request = () => { attempts++; return Promise.reject(new TypeError('Failed to fetch')); };
+    await assert.rejects(harness.sandbox.GameContentLoader.boot(['js/games/example.js']), /Failed to fetch/);
+    assert.strictEqual(attempts, 1);
+    assert.strictEqual(harness.sandbox.WORDS_MASTER, undefined);
+    assert.strictEqual(harness.appended.filter(el => el.tagName === 'SCRIPT').length, 0);
+    assert.ok(harness.sandbox.document.getElementById('gc-error-banner'));
+  });
   await test('request resolves normally before the deadline', async () => {
     const result = await guard.request(() => Promise.resolve({ ok: true }), '/ok', {}, 50, null);
     assert.strictEqual(result.ok, true);
   });
-  await test('Tone pronunciation falls back to the written word when protected 初 data has no reading_th', async () => {
+  await test('missing reviewed reading fails closed instead of falling back to the written word', async () => {
     const harness = createBootHarness({ readyState: 'complete', config: validConfig });
+    assert.throws(() => harness.sandbox.buildWordListForToneFinder([
+      catalogBundle({ word: 'จาก', readingTH: null, roman: 'jaak', zh: '從' }),
+    ]), /catalog authority incomplete/);
+    assert.throws(() => harness.sandbox.buildWordListForToneFinder([
+      catalogBundle({ word: 'กิน', readingTH: '', roman: 'gin', zh: '吃' }),
+    ]), /catalog authority incomplete/);
     const rows = harness.sandbox.buildWordListForToneFinder([
-      { word: 'จาก', readingTH: null, en: 'jaak', zh: '從', level: '初' },
-      { word: 'กิน', readingTH: '', en: 'gin', zh: '吃', level: '初' },
-      { word: 'เครื่องบิน', readingTH: 'เครื่อง-บิน', en: 'khrueang-bin', zh: '飛機', level: '中' },
+      catalogBundle({ word: 'เครื่องบิน', readingTH: 'เครื่อง-บิน', roman: 'khrueang-bin', zh: '飛機', level: '中', spellings: ['เครื่อง', 'บิน'] }),
     ]);
-    assert.strictEqual(rows[0].readingTH, 'จาก');
-    assert.strictEqual(rows[1].readingTH, 'กิน');
-    assert.strictEqual(rows[2].readingTH, 'เครื่อง-บิน');
+    assert.strictEqual(rows[0].readingTH, 'เครื่อง-บิน');
+  });
+  await test('sense identity survives the protected-content adapters without object-use metadata', async () => {
+    const harness = createBootHarness({ readyState: 'complete', config: validConfig });
+    const source = [catalogBundle({ word: 'ร้อง', contentKey: 'ร้อง@初#sing' })];
+    const tone = harness.sandbox.buildWordListForToneFinder(source);
+    const phonics = harness.sandbox.buildWordsForPhonicsGames(source);
+    assert.strictEqual(tone[0].contentKey, 'ร้อง@初#sing');
+    assert.strictEqual(phonics[0].contentKey, 'ร้อง@初#sing');
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(tone[0], 'objectUse'), false);
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(phonics[0], 'objectUse'), false);
+  });
+  await test('reviewed spelling authority hydrates syllable text before game boot', async () => {
+    const payload = {
+      tier: 'anon',
+      words: [catalogBundle({ word: 'อธิบาย', contentKey: 'อธิบาย@中', spellingTH: 'อ-ธิ-บาย', readingTH: 'อะ-ธิ-บาย', level: '中', spellings: ['อ', 'ธิ', 'บาย'] })],
+      sentences: [sentenceFixture()],
+      audioAvailable: [],
+      capped: {},
+    };
+    const harness = createBootHarness({ readyState: 'complete', config: validConfig, payload });
+    await harness.sandbox.GameContentLoader.boot([]);
+    assert.deepStrictEqual(Array.from(harness.sandbox.WORDS_MASTER[0].catalog.spellingSyllables, (s) => s.th), ['อ', 'ธิ', 'บาย']);
+    const tone = harness.sandbox.buildWordListForToneFinder(harness.sandbox.WORDS_MASTER);
+    const phonics = harness.sandbox.buildWordsForPhonicsGames(harness.sandbox.WORDS_MASTER);
+    assert.strictEqual(tone[0].spellingTH, 'อ-ธิ-บาย');
+    assert.strictEqual(phonics[0].spellingTH, 'อ-ธิ-บาย');
+    assert.deepStrictEqual(Array.from(tone[0].syls, (s) => s.th), ['อ', 'ธิ', 'บาย']);
+  });
+  await test('reviewed syllable authority mismatch fails closed before content globals are assigned', async () => {
+    const payload = {
+      tier: 'anon',
+      words: [catalogBundle({ word: 'อธิบาย', contentKey: 'อธิบาย@中', spellingTH: 'อ-ธิ-บาย', readingTH: 'อะ-ทิ-บาย', level: '中', spellings: ['อ', 'ธิ', 'บาย'], spellingSyllables: [{ th: 'อ' }] })],
+      sentences: [sentenceFixture()],
+      audioAvailable: [],
+      capped: {},
+    };
+    const harness = createBootHarness({ readyState: 'complete', config: validConfig, payload });
+    await assert.rejects(harness.sandbox.GameContentLoader.boot([]), /reviewed display segmentation missing/);
+    assert.strictEqual(harness.sandbox.WORDS_MASTER, undefined);
+  });
+  await test('malformed sentence fails closed before any content global or game script is assigned', async () => {
+    const malformedSentence = sentenceFixture();
+    malformedSentence.words[0].syls[0].lead = ' ';
+    const payload = {
+      tier: 'anon', words: [catalogBundle()], sentences: [malformedSentence], audioAvailable: [], capped: {},
+    };
+    const harness = createBootHarness({ readyState: 'complete', config: validConfig, payload });
+    await assert.rejects(harness.sandbox.GameContentLoader.boot(['js/games/example.js']), /sentence authority incomplete/);
+    assert.strictEqual(harness.sandbox.WORDS_MASTER, undefined);
+    assert.strictEqual(harness.sandbox.ADV_SENTENCES, undefined);
+    assert.strictEqual(harness.appended.filter(el => el.tagName === 'SCRIPT').length, 0);
   });
   await test('request rejects deterministically when fetch never settles', async () => {
     await assert.rejects(guard.request(() => new Promise(() => {}), '/hang', {}, 10, null), (error) => error.code === 'NETWORK_TIMEOUT');
@@ -136,10 +386,29 @@ const validConfig = { url: 'https://project.supabase.co', anonKey: 'public-anon-
   await test('synchronous fetch failure becomes a rejected promise', async () => {
     await assert.rejects(guard.request(() => { throw new Error('offline'); }, '/fail', {}, 50, null), /offline/);
   });
+  await test('stalled game script load times out, removes the pending script and exposes recovery', async () => {
+    const harness = createBootHarness({
+      readyState: 'complete',
+      config: validConfig,
+      autoLoadScripts: false,
+      setTimeout(callback, timeoutMs) {
+        return setTimeout(callback, timeoutMs === 15000 ? 5 : timeoutMs);
+      },
+    });
+    await assert.rejects(
+      harness.sandbox.GameContentLoader.boot(['js/games/stalled.js']),
+      (error) => error && error.code === 'NETWORK_TIMEOUT'
+    );
+    const script = harness.appended.find(el => el.tagName === 'SCRIPT');
+    assert.ok(script);
+    assert.strictEqual(script.parentNode, null);
+    assert.ok(harness.sandbox.document.getElementById('gc-error-banner'));
+  });
   await test('Core 5 load the guard before the protected content client', async () => {
     ['tone-finder.html','reading-game.html','listening-game.html','typing-game.html','word-order.html'].forEach((page) => {
-      assert.match(read(page), /network-guard\.js\?v=1[\s\S]*game-content-client\.js\?v=11/);
+      assert.match(read(page), /network-guard\.js\?v=1[\s\S]*game-content-client\.js\?v=23/);
     });
+    assert.match(read('lego.html'), /network-guard\.js\?v=1[\s\S]*game-content-client\.js\?v=23/);
   });
   await test('optional same-origin errors do not show a false fatal game banner', async () => {
     const harness = createBootHarness({ config: validConfig });
@@ -188,8 +457,16 @@ const validConfig = { url: 'https://project.supabase.co', anonKey: 'public-anon-
     await harness.sandbox.GameContentLoader.boot([]);
     assert.strictEqual(harness.requests.length, 1);
   });
+  await test('scoped pages send the requested game while legacy pages keep an empty body', async () => {
+    const scoped = createBootHarness({ readyState: 'complete', config: validConfig });
+    await scoped.sandbox.GameContentLoader.boot([], { game: 'reading' });
+    assert.deepStrictEqual(JSON.parse(scoped.requests[0].requestOptions.body), { game: 'reading', contract: 'canonical-v1' });
+    const legacy = createBootHarness({ readyState: 'complete', config: validConfig });
+    await legacy.sandbox.GameContentLoader.boot([]);
+    assert.deepStrictEqual(JSON.parse(legacy.requests[0].requestOptions.body), { contract: 'canonical-v1' });
+  });
   await test('offline and timeout errors use an understandable recovery branch', async () => {
-    assert.match(client, /navigator\.onLine === false/);
+    assert.doesNotMatch(client, /navigator\.onLine === false/);
     assert.match(client, /NETWORK_TIMEOUT\|NETWORK_OFFLINE/);
     assert.match(client, /無法連線，請檢查網路訊號後再試一次/);
     assert.match(client, /gc-error-retry/);
@@ -197,8 +474,9 @@ const validConfig = { url: 'https://project.supabase.co', anonKey: 'public-anon-
   });
   await test('content globals are assigned only after required data validation', async () => {
     const validation = client.indexOf("if (!data.words.length || !data.sentences.length)");
-    const assignment = client.indexOf('global.WORDS_MASTER = data.words');
+    const assignment = client.indexOf('global.WORDS_MASTER = exactWords');
     assert.ok(validation >= 0 && assignment > validation);
+    assert.ok(client.indexOf('var exactSentences = validateSentencePayload(data.sentences)') < assignment);
   });
   if (!process.exitCode) console.log('\n✅ Phase 1 network recovery passed (' + passed + ' checks)');
 })();

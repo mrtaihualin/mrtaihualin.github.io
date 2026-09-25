@@ -26,7 +26,8 @@ test('Phase 1 session and per-skill SRS tables are exported', () => {
   for (const table of ['tone_sessions', 'reading_sessions', 'tone_srs_state']) {
     assert.match(source, new RegExp(`from\\('${table}'\\)[\\s\\S]{0,220}eq\\('user_id', callerUid\\)`));
   }
-  assert.match(source, /select\('level,word,stage,due_date,ever_failed,mastered,game,updated_at'\)/);
+  assert.match(source, /select\('level,word,item_id,stage,due_date,ever_failed,mastered,game,updated_at'\)/);
+  assert.match(source, /history:[\s\S]+phase1_learning_review_states: learningReviewRes\.data/);
 });
 
 test('all personal saved-item vault keys are exported for the owner', () => {
@@ -43,9 +44,22 @@ test('personal deletion tombstones are transparent in the export', () => {
 });
 
 test('service-role-only queries remain explicitly owner-filtered', () => {
-  for (const table of ['line_identities', 'account_audit_log']) {
+  for (const table of ['line_identities', 'account_audit_log', 'phase1_learning_review_states']) {
     assert.match(source, new RegExp(`admin\\.from\\('${table}'\\)[\\s\\S]{0,220}eq\\('user_id', callerUid\\)`));
   }
+});
+
+test('protected Typing export is owner-bound and excludes future answers and internal receipts', () => {
+  assert.match(source, /admin\.rpc\('phase1_typing_account_export', \{ p_user_id: callerUid, p_limit: HISTORY_ROW_CAP \}\)/);
+  assert.match(source, /phase1_typing_rounds: typingRoundExportRes\.data\?\.rounds \|\| \[\]/);
+  const migration = fs.readFileSync(path.join(root,
+    'supabase/migrations/20260923223000_phase1_typing_atomic_learning_score.sql'), 'utf8');
+  const exportFn = migration.slice(migration.indexOf('create or replace function public.phase1_typing_account_export'),
+    migration.indexOf('revoke all on function public.phase1_typing_round_issue'));
+  assert.match(exportFn, /where user_id=p_user_id/);
+  assert.doesNotMatch(exportFn, /'answer',e\.answer/);
+  assert.doesNotMatch(exportFn, /request_hash/);
+  assert.doesNotMatch(exportFn, /learning_state_token/);
 });
 
 test('raw internal account audit states are not selected or returned', () => {

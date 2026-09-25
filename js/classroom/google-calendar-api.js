@@ -259,62 +259,6 @@ function setTimeDropdown(baseId, value) {
 // 搜尋「某天」Calendar 上「標題完全等於學生姓名」的事件（singleEvents 展開後每一次重複都有自己的 id，
 // 只動這一筆，不會影響其他週）。刻意用「完全相符」比對，不信任 Google 的模糊搜尋，找不到/找到超過 1 筆
 // 都直接回傳給呼叫端自己決定要不要動作（絕不用猜的自動選一筆）。
-async function findClassEventForRequest(studentName, dateStr) {
-  let token = await gdGetToken();
-  if (gdTokenScopes && gdTokenScopes.indexOf('calendar') === -1) token = await gdGetToken(true);
-  const dayStart = teacherTimeToDate(dateStr, '00:00').toISOString();
-  const dayEnd = new Date(teacherTimeToDate(dateStr, '00:00').getTime() + 24 * 3600 * 1000 - 1000).toISOString();
-  const url = 'https://www.googleapis.com/calendar/v3/calendars/primary/events'
-    + '?timeMin=' + encodeURIComponent(dayStart)
-    + '&timeMax=' + encodeURIComponent(dayEnd)
-    + '&singleEvents=true&orderBy=startTime&maxResults=50'
-    + '&q=' + encodeURIComponent(studentName);
-  let r = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
-  if (r.status === 403) {
-    const body = await r.text();
-    if (/insufficient|scope|PERMISSION_DENIED/i.test(body)) {
-      token = await gdGetToken(true);
-      r = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
-    }
-  }
-  if (!r.ok) throw new Error('Calendar API ' + r.status + '：' + (await r.text()).slice(0, 200));
-  const data = await r.json();
-  const name = (studentName || '').trim();
-  return (data.items || []).filter(function(ev) { return (ev.summary || '').trim() === name; });
-}
-
-// 2026-07-16 加：如果申請單上已經記了真正的 Calendar 事件 ID（見 requestCancelClass），
-// 直接用 ID 拿事件，不用再靠「姓名+日期」猜——比 findClassEventForRequest 準，優先用這個。
-// 事件被刪過/ID 是舊的 → 回傳 null，呼叫端要自己退回用 findClassEventForRequest 搜尋。
-async function getClassEventById(eventId) {
-  const token = await gdGetToken();
-  const r = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/' + encodeURIComponent(eventId), {
-    headers: { Authorization: 'Bearer ' + token },
-  });
-  if (r.status === 404 || r.status === 410) return null;
-  if (!r.ok) throw new Error('Calendar API ' + r.status + '：' + (await r.text()).slice(0, 200));
-  const ev = await r.json();
-  if (ev.status === 'cancelled') return null;
-  return ev;
-}
-
-// 把「某一次」課堂事件移到新時間（保留原本上課長度），只動這個 instance 的 id
-async function moveClassEventOnce(eventId, newDateStr, newTimeStr, durationMs) {
-  const token = await gdGetToken();
-  const newStart = teacherTimeToDate(newDateStr, newTimeStr);
-  const newEnd = new Date(newStart.getTime() + durationMs);
-  const body = {
-    start: { dateTime: newStart.toISOString(), timeZone: TEACHER_TZ },
-    end: { dateTime: newEnd.toISOString(), timeZone: TEACHER_TZ },
-  };
-  const r = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/' + encodeURIComponent(eventId), {
-    method: 'PATCH', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-  });
-  if (!r.ok) throw new Error('移動課堂失敗（' + r.status + '）：' + (await r.text()).slice(0, 200));
-  return await r.json();
-}
-
-// 刪除「某一次」課堂事件（只刪這個 instance，不影響其他週的固定課程）
 async function deleteClassEventOnce(eventId) {
   const token = await gdGetToken();
   const r = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/' + encodeURIComponent(eventId), {
@@ -362,43 +306,6 @@ async function verifyEventMoved(eventId, expectedStartIso) {
 //   ปลายทางต้องเขียนให้ครูเห็นตรงๆ ในกล่องยืนยันว่าเช็คไม่สำเร็จ (ไม่บล็อก เพราะครูตัดสินใจเองได้
 //   และมองเห็นปฏิทินจริงอยู่แล้ว — ต่างจากฝั่ง LINE ที่ไม่มีกล่องให้อ่าน จึงตั้งเป็น "ไม่ผ่าน = ไม่ย้าย")
 // ⚠️ maxResults เดิม 10 — วันที่ครูมีนัดเยอะ อาจถูกตัดจนมองไม่เห็นคาบที่ชนจริง ขยับเป็น 50
-async function findConflictingEvents(newStartIso, newEndIso, excludeEventId) {
-  try {
-    const token = await gdGetToken();
-    const url = 'https://www.googleapis.com/calendar/v3/calendars/primary/events'
-      + '?timeMin=' + encodeURIComponent(newStartIso)
-      + '&timeMax=' + encodeURIComponent(newEndIso)
-      + '&singleEvents=true&orderBy=startTime&maxResults=50';
-    const r = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
-    if (!r.ok) return { ok: false, items: [], reason: 'Calendar API ' + r.status };
-    const data = await r.json();
-    // 🟡 2026-08-02 แก้ตัวกรองให้ตรงกับฝั่ง LINE (ตรวจ 3 ระบบ ข้อ 4.16)
-    //   เดิมต่างจาก filterCandidateEvents ใน line-webhook 2 เรื่อง = ระบบเดียวกันตัดสินคนละแบบ:
-    //   (1) ไม่ตัด recurringEventId → ถ้าเลขที่จำไว้เป็น "เลขชุดคาบประจำ" ระบบจะเห็นตัวเองเป็นสิ่งกีดขวาง
-    //       แล้วเตือนครูว่า "ชนกับตัวเอง" ทุกครั้งที่ย้ายคาบในชุด
-    //   (2) ไม่ข้าม transparency==='transparent' → รายการที่ครูตั้งเองว่า "ว่าง/ไม่ติดธุระ"
-    //       (freeBusy ไม่นับ, ฝั่ง LINE ไม่นับ) แต่ที่นี่นับ = เตือนหลอก
-    //   ⚠️ ตรรกะต้องตรงกับ supabase/functions/line-webhook/index.ts → filterCandidateEvents เป๊ะ
-    return { ok: true, items: (data.items || []).filter(function(ev) {
-      if (!ev) return false;
-      if (ev.status === 'cancelled') return false;
-      if (ev.transparency === 'transparent') return false;
-      if (excludeEventId && (ev.id === excludeEventId || ev.recurringEventId === excludeEventId)) return false;
-      return true;
-    }), reason: null };
-  } catch (e) { return { ok: false, items: [], reason: (e && e.message) || String(e) }; }
-}
-
-// 🔴 2026-08-01 เพิ่ม (audit ระบบเลื่อนคาบ ข้อ A7)：ข้อความเตือนเรื่องคาบชน สำหรับใส่ในกล่องยืนยัน
-// รวมไว้ที่เดียวเพื่อให้ทุกเส้นทาง (ขอเลื่อนของนักเรียน / ยืนยันหลังนักเรียนตอบรับ) พูดเหมือนกันเป๊ะ
-
-// 🔴 2026-08-01 เพิ่ม (audit ระบบเลื่อนคาบ ข้อ A8 — ด่านกันอดีต "ระดับชั่วโมง")
-// ทำไมต้องมีตัวใหม่ ไม่ไปแก้ assertNotPastDate เดิม:
-//   assertNotPastDate ถูกใช้ร่วมทั่วทั้งแอป (เพิ่มคาบ / เปลี่ยนตารางถาวร / เสนอเวลา) และหลายจุด
-//   ตั้งใจให้ "วันนี้" ผ่านได้ — ถ้าไปเพิ่มเงื่อนไขเวลาเข้าไปในตัวเดิม จะกระทบเส้นทางอื่นที่ไม่เกี่ยวกัน
-//   ตัวนี้ใช้เฉพาะ "ตอนกำลังจะย้ายคาบจริงๆ" ซึ่งเป็นจังหวะเดียวที่รู้ทั้งวันและเวลาแน่นอน
-// รูที่อุด: 20:00 น. ครูยังกดย้ายคาบไป "วันนี้ 14:00" ได้ (ผ่าน min ของช่อง input, ผ่าน assertNotPastDate,
-//   และตัวเช็คคาบชนก็ไม่เจออะไรเพราะช่วงนั้นว่างจริง) → คาบไปโผล่ในอดีต ระบบเตือนก่อนเรียนไม่มีวันยิง
 function assertNotPastDateTime(dateStr, timeStr, label) {
   var name = label || '要改到的時間';
   if (!dateStr) { alert('⚠️ ' + name + '：還沒選日期'); return false; }

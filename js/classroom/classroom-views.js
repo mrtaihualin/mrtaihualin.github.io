@@ -93,7 +93,7 @@ async function loadActionNeededBanner() {
   var el = document.getElementById('actionNeededBanner');
   if (!el) return;
   try {
-    var res = await sb.from('classroom_requests').select('*').eq('status', 'pending').order('created_at', { ascending: true });
+    var res = await sb.from('classroom_requests').select('*').eq('status', 'pending').eq('request_type', 'add_class').order('created_at', { ascending: true });
     var data = res.data || [];
     if (res.error) { el.innerHTML = ''; return; }
     var now = Date.now();
@@ -101,13 +101,8 @@ async function loadActionNeededBanner() {
     data.forEach(function(r) {
       var s = studentsCache[r.token];
       var name = s ? s.name : (r.student_name || r.token || '-');
-      if (r.offer_status === 'proposed' && r.offer_created_at) {
-        var hrs = (now - new Date(r.offer_created_at).getTime()) / 3600000;
-        if (hrs >= SLA_HOURS) items.push(escHtml(name) + '：提議新時間超過 48 小時，學生還沒回覆');
-      } else if (!r.offer_status) {
-        var hrs2 = (now - new Date(r.created_at).getTime()) / 3600000;
-        if (hrs2 >= SLA_HOURS) items.push(escHtml(name) + '：申請已經超過 48 小時還沒處理');
-      }
+      var hrs = (now - new Date(r.created_at).getTime()) / 3600000;
+      if (hrs >= SLA_HOURS) items.push(escHtml(name) + '：加課申請已經超過 48 小時還沒處理');
       if (s && !s.line_user_id) items.push(escHtml(name) + '：還沒連結 LINE，通知可能收不到');
     });
     // 4) 有上課紀錄卻完全沒有 payment（不分狀態）
@@ -317,9 +312,6 @@ async function renderStudentView() {
     // ——課堂被取消是最重要的事，要第一眼就看到，不要埋在下面滑半天才看到。
     // 2026-07-16 加：老師剛發起、還沒被學生確認的取消通知放在最上面（要學生按確認的優先度更高），
     // 已經確認完成的舊版通知（純關閉用）放下面。
-    '<div id="teacherCancelAckBanner"></div>' +
-    /* 🗑️ 2026-07-31 ลบ <div id="teacherAddAckBanner"> ทิ้ง — ไม่มีโค้ดไหนเขียนลงกล่องนี้อีกแล้ว */
-    '<div id="teacherCancelNoticeBanner"></div>' +
     '<div class="student-hero">' +
       '<div class="student-hero-avatar">' + escHtml(sInitial) + '</div>' +
       '<div class="student-hero-name">' + escHtml(student.name) + ' 同學</div>' +
@@ -375,18 +367,14 @@ async function renderStudentView() {
       '<div style="display:flex;gap:10px;flex-wrap:wrap;">' +
         '<a href="../content.html" style="flex:1;min-width:140px;text-align:center;display:inline-block;background:var(--off-white);border:1px solid rgba(200,151,58,0.4);color:#8B6310;text-decoration:none;border-radius:999px;padding:10px 16px;font-weight:700;font-size:0.88rem;font-family:\'Noto Sans TC\',sans-serif;">📚 影片與文章</a>' +
         '<a href="../games.html" style="flex:1;min-width:140px;text-align:center;display:inline-block;background:var(--off-white);border:1px solid rgba(200,151,58,0.4);color:#8B6310;text-decoration:none;border-radius:999px;padding:10px 16px;font-weight:700;font-size:0.88rem;font-family:\'Noto Sans TC\',sans-serif;">🎮 泰語遊戲練習室</a>' +
-        '<a href="https://mrtaihualin.com/" target="_blank" rel="noopener" style="flex:1;min-width:140px;text-align:center;display:inline-block;background:var(--off-white);border:1px solid rgba(200,151,58,0.4);color:#8B6310;text-decoration:none;border-radius:999px;padding:10px 16px;font-weight:700;font-size:0.88rem;font-family:\'Noto Sans TC\',sans-serif;">🏠 回官網首頁</a>' +
+        '<a href="https://www.mrtaihualin.com/" target="_blank" rel="noopener" style="flex:1;min-width:140px;text-align:center;display:inline-block;background:var(--off-white);border:1px solid rgba(200,151,58,0.4);color:#8B6310;text-decoration:none;border-radius:999px;padding:10px 16px;font-weight:700;font-size:0.88rem;font-family:\'Noto Sans TC\',sans-serif;">🏠 回官網首頁</a>' +
       '</div>' +
     '</div>' +
     '<div style="text-align:center;padding:4px 0 8px;">' +
-      '<a href="https://mrtaihualin.com/faq.html#rules" target="_blank" rel="noopener" style="font-size:0.8rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;text-decoration:underline;">📜 上課規則 & 常見問題</a>' +
+      '<a href="https://www.mrtaihualin.com/faq.html#rules" target="_blank" rel="noopener" style="font-size:0.8rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;text-decoration:underline;">📜 上課規則 & 常見問題</a>' +
     '</div>';
   checkStudentSlipStatus(token);
   loadStudentNextClass(token);
-  loadTeacherCancelAckBanner(token);
-  // 🗑️ 2026-07-31 ลบ loadTeacherAddAckBanner(token) ทิ้ง — ระบบ "รอนักเรียนกดยอมรับก่อนเพิ่มคาบ"
-  //    เลิกใช้แล้วตั้งแต่ 2026-07-30 · เหตุผลเต็มดูที่บล็อกคอมเมนต์ 🗑️ ในไฟล์นี้ (ค้นคำว่า loadTeacherAddAckBanner)
-  loadTeacherCancelNoticeBanner(token);
   loadStudentPendingRequestStatus(token);
   loadStudentSchedule(token);
   loadStudentTextbookLinks(token);
@@ -424,7 +412,7 @@ function renderBeforeJoiningView(token, student, sInitial) {
       '<div id="payHistory" style="margin-top:14px;"></div>' +
     '</div>' +
     '<div style="text-align:center;padding:4px 0 8px;">' +
-      '<a href="https://mrtaihualin.com/faq.html#rules" target="_blank" rel="noopener" style="font-size:0.8rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;text-decoration:underline;">📜 上課規則 & 常見問題</a>' +
+      '<a href="https://www.mrtaihualin.com/faq.html#rules" target="_blank" rel="noopener" style="font-size:0.8rem;color:var(--ink-muted);font-family:\'Noto Sans TC\',sans-serif;text-decoration:underline;">📜 上課規則 & 常見問題</a>' +
     '</div>';
   checkStudentSlipStatus(token);
   loadStudentPayments(token);

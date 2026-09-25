@@ -9,10 +9,7 @@ import {
   legacyLegoRequestId,
   resolveLegoRequestId,
 } from '../supabase/functions/_shared/phase1-rollout-compatibility.mjs';
-import {
-  canonicalContentKey,
-  resolveContentRefItemIds,
-} from '../supabase/functions/practice-events/practice-events-engine.mjs';
+import { resolveContentRefItemIds } from '../supabase/functions/practice-events/practice-events-engine.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
@@ -122,16 +119,12 @@ await test('Lego bridge preserves server-derived Guest/account identity and atom
   assert.match(legoSql, /pg_advisory_xact_lock/);
 });
 
-await test('Played bridge maps numeric word levels to canonical learning-item labels only at lookup', () => {
-  assert.equal(canonicalContentKey('game_words', 'เขา@1'), 'เขา@初');
-  assert.equal(canonicalContentKey('game_words', 'กินข้าว@2'), 'กินข้าว@中');
-  assert.equal(canonicalContentKey('game_words', 'คำ@3'), 'คำ@高');
-  assert.equal(canonicalContentKey('game_words', 'เขา@初'), 'เขา@初');
-  assert.equal(canonicalContentKey('game_sentences', 'ฉันมีอีเมล@1'), 'ฉันมีอีเมล@1');
-  assert.match(practiceEdge, /canonicalContentKey\(item\.content_ref\.source, item\.content_ref\.key\)/);
+await test('Played bridge sends the exact game content identity without conversion', () => {
+  assert.match(practiceEdge, /key: item\.content_ref\.key/);
+  assert.doesNotMatch(practiceEdge, /canonicalContentKey/);
 });
 
-await test('Played stale-level fallback accepts only one unambiguous canonical word base', () => {
+await test('Played bridge resolves only an exact content identity and never a word-base substitute', () => {
   const exactRows = [{ item_id: 'item-initial', content_source: 'game_words', content_key: 'เขา@初' }];
   assert.deepEqual(
     resolveContentRefItemIds([{ source: 'game_words', key: 'เขา@初' }], exactRows),
@@ -139,7 +132,7 @@ await test('Played stale-level fallback accepts only one unambiguous canonical w
   );
   assert.deepEqual(
     resolveContentRefItemIds([{ source: 'game_words', key: 'เขา@高' }], exactRows),
-    ['item-initial']
+    [null]
   );
   const ambiguousRows = [
     { item_id: 'item-a', content_source: 'game_words', content_key: 'เขา@初' },
@@ -153,23 +146,24 @@ await test('Played stale-level fallback accepts only one unambiguous canonical w
     resolveContentRefItemIds([{ source: 'game_sentences', key: 'เขา@高' }], exactRows),
     [null]
   );
-  assert.match(practiceEdge, /learningItemRows\(admin, \['game_words'\]\)/);
+  assert.doesNotMatch(practiceEdge, /learningItemRows\(admin, \['game_words'\]\)/);
   assert.match(practiceEdge, /if \(resolved\.some\(\(item: any\) => !item\.item_id\)\) throw new Error\('unknown_content_ref'\)/);
 });
 
-await test('Tone accepts missing ids but rejects malformed explicit ids', () => {
+await test('Paid Tone accepts missing ids but rejects malformed explicit ids', () => {
   assert.match(toneEdge, /legacyCompatibility = !suppliedOperationId/);
   assert.match(toneEdge, /suppliedOperationId && !UUID_V4\.test\(suppliedOperationId\)/);
   assert.match(toneEdge, /operationId = suppliedOperationId \|\| crypto\.randomUUID\(\)/);
-  assert.match(toneEdge, /compatibility: legacyCompatibility \? "legacy-no-id" : "explicit-id"/);
+  assert.match(toneEdge, /compatibility: legacyCompatibility \? 'legacy-no-id' : 'explicit-id'/);
 });
 
-await test('Tone legacy duplicates remain transactional and cannot double-award', () => {
+await test('Tone legacy writer is parked for Free while Paid remains transactional', () => {
   assert.match(toneSql, /pg_advisory_xact_lock\(hashtextextended\('phase1-tone-account:'/);
   assert.match(toneSql, /return jsonb_build_object\('ok', false, 'reason', 'race_retry'\)/);
   assert.match(toneSql, /insert into public\.tone_round_operations/);
-  assert.match(toneEdge, /p_expected_stage: srsRow\?\.stage/);
-  assert.match(toneEdge, /p_expected_mastered: srsRow\?\.mastered/);
+  assert.match(toneEdge, /phase2_paid_srs_commit/);
+  assert.match(toneEdge, /learning_engine_required/);
+  assert.doesNotMatch(toneEdge, /phase1_tone_round_commit/);
 });
 
 await test('new Tone/Lego clients still send one stable id per retry payload', () => {
@@ -198,9 +192,11 @@ await test('server-only RPC least privilege closes browser execute without touch
   assert.doesNotMatch(serverRpcAclSql, /revoke all on function public\.leads_rate_ok/);
 });
 
-await test('rollout bridge remains preserved while Minimum Guest parks the personal Tone client', () => {
-  assert.doesNotMatch(read('tone-finder.html'), /tone-server\.js/);
-  assert.match(read('lego.html'), /lego-game-app\.js\?v=12/);
+await test('rollout bridge remains preserved while Login Free activates account clients', () => {
+  assert.match(read('tone-finder.html'), /tone-server\.js\?v=6/);
+  assert.match(read('tone-finder.html'), /game-account\.js\?v=6/);
+  assert.match(read('tone-finder.html'), /practice-events\.js\?v=5/);
+  assert.match(read('lego.html'), /lego-game-app\.js\?v=16/);
   assert.match(legoEdge, /compatibility: request\.legacyCompatibility \? 'legacy-no-id' : 'explicit-id'/);
 });
 

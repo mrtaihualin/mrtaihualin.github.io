@@ -52,8 +52,6 @@ const ALLOWED_ORIGINS = [
   'https://mrtaihualin.com',
   'https://www.mrtaihualin.com',
   'https://mrtaihualin.github.io',
-  // 2026-08-10 (P7-02 staging): หน้าทดสอบ staging บน Netlify
-  'https://gentle-moxie-bf64ad.netlify.app',
 ];
 
 async function pushLineMessages(channelToken, targetUserId, messages) {
@@ -276,9 +274,7 @@ serve(async (req) => {
         // เพิ่มปุ่มใหม่ฝั่งนักเรียนเมื่อไหร่ ต้องมาเติมชื่อ action ที่นี่ด้วย ไม่งั้นปุ่มจะถูกปฏิเสธ 400
         const ALLOWED_ACTIONS = new Set([
           'check_conflict', 'confirm_add_class', 'decline_add_class',
-          'ack_teacher_add', 'ack_teacher_cancel', 'confirm_cancel_delete',
-          'confirm_reschedule_pick', 'confirm_reschedule_move',
-          'accept_offer', 'decline_offer', 'start_contact_student',
+          'ack_teacher_add', 'start_contact_student',
         ]);
         const buttonAllowed = (b) => {
           if (!b || typeof b !== 'object') return false;

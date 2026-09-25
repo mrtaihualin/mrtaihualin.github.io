@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Typing Mobile Landscape review</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: #ece7de; color: #49350d; font-family: system-ui, sans-serif; }
+    body { display: grid; place-items: start center; width: 100%; padding: 18px; }
+    main { width: 100%; max-width: 844px; min-width: 0; }
+    h1 { margin: 0 0 10px; font-size: 17px; }
+    .screen { width: 100%; aspect-ratio: 844 / 390; border: 1px solid #c9b27e; border-radius: 14px; overflow: hidden; background: #f5f0e8; box-shadow: 0 10px 28px rgba(73,53,13,.16); }
+    iframe { display: block; width: 844px; height: 390px; border: 0; transform-origin: top left; }
+    output { display: block; margin-top: 8px; font-size: 12px; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Typing — คีย์บอร์ดกึ่งกลาง · ไม่มีแว่นขยาย · 844 × 390</h1>
+    <div class="screen"><iframe id="game" title="Typing Mobile Landscape"></iframe></div>
+    <output id="status">กำลังเปิดหน้า Typing…</output>
+  </main>
+  <script>
+    (function () {
+      'use strict';
+      var frame = document.getElementById('game');
+      var screen = frame.parentElement;
+      var status = document.getElementById('status');
+      function fitGame() {
+        frame.style.transform = 'scale(' + Math.min(1, screen.clientWidth / 844) + ')';
+      }
+      fitGame();
+      if (window.ResizeObserver) new ResizeObserver(fitGame).observe(screen);
+      else window.addEventListener('resize', fitGame);
+
+      function verticalCenterDelta(doc) {
+        var side = doc.querySelector('[data-gsh-ml-slot="left"]').getBoundingClientRect();
+        var rows = Array.prototype.slice.call(doc.querySelectorAll('#rg-kbd > .gsh-split-kbd-row')).map(function (row) {
+          return row.getBoundingClientRect();
+        });
+        var top = Math.min.apply(null, rows.map(function (rect) { return rect.top; }));
+        var bottom = Math.max.apply(null, rows.map(function (rect) { return rect.bottom; }));
+        return Math.abs((top + bottom) / 2 - (side.top + side.bottom) / 2);
+      }
+      function keyboardSideInsetsReady(doc) {
+        return ['left', 'right'].every(function (sideName) {
+          var side = doc.querySelector('[data-gsh-ml-slot="' + sideName + '"]').getBoundingClientRect();
+          var keys = Array.prototype.slice.call(doc.querySelectorAll(
+            '#rg-kbd .gsh-split-kbd-half[data-gsh-side="' + sideName + '"] .gsh-kbd-key'
+          )).map(function (key) { return key.getBoundingClientRect(); });
+          var left = Math.min.apply(null, keys.map(function (rect) { return rect.left; }));
+          var right = Math.max.apply(null, keys.map(function (rect) { return rect.right; }));
+          return left - side.left >= 2.5 && side.right - right >= 2.5;
+        });
+      }
+      function keyFacesRender(doc, win) {
+        var faces = Array.prototype.slice.call(doc.querySelectorAll('#rg-kbd .tk-key[data-code] .tk-base, #rg-kbd .tk-key[data-code] .tk-shift'));
+        var keys = Array.prototype.slice.call(doc.querySelectorAll('#rg-kbd .tk-key[data-code]'));
+        var sample = doc.querySelector('#rg-kbd .tk-key[data-code="KeyG"]');
+        var baseFace = sample && sample.querySelector('.tk-base');
+        var shiftFace = sample && sample.querySelector('.tk-shift');
+        var faceAudit = faces.map(function (face) {
+          var style = win.getComputedStyle(face);
+          var rect = face.getBoundingClientRect();
+          return {text: face.textContent, display: style.display, visibility: style.visibility,
+            opacity: style.opacity, fontSize: parseFloat(style.fontSize), width: rect.width, height: rect.height};
+        });
+        var inventory = keys.map(function (key) {
+          return [key.dataset.code, key.querySelector('.tk-base').textContent, key.querySelector('.tk-shift').textContent];
+        });
+        var expected = Object.keys(win.RG_BASE_MAP).map(function (code) {
+          return [code, win.RG_BASE_MAP[code], win.RG_SHIFT_MAP[code]];
+        });
+        var baseFont = parseFloat(win.getComputedStyle(baseFace).fontSize);
+        var shiftFont = parseFloat(win.getComputedStyle(shiftFace).fontSize);
+        win.__typingFaceAudit = {faces: faceAudit, inventory: inventory, baseFont: baseFont, shiftFont: shiftFont};
+        return faces.length === 94 && faceAudit.every(function (item) {
+          return item.text.trim().length > 0 && item.display !== 'none' && item.visibility !== 'hidden' &&
+            parseFloat(item.opacity) > 0 && item.fontSize > 0 && item.width > 0 && item.height > 0;
+        }) && faces.every(function (face) {
+          return face.childElementCount === 0 && face.childNodes.length === 1 && face.firstChild.nodeType === 3;
+        }) && JSON.stringify(inventory) === JSON.stringify(expected) && !doc.querySelector('#rg-kbd .comb-disp,#rg-kbd .comb-base');
+      }
+      // Local preview injects one exact record from data/approved-vocabulary-catalog.json; this fixture never authors an answer.
+      fetch('/__preview/typing-keys.html?review-cache=' + Date.now(), {cache: 'no-store'}).then(function (response) {
+        if (!response.ok) throw new Error('เปิดไฟล์ Typing ไม่สำเร็จ');
+        return response.text();
+      }).then(function (html) {
+        html = html.replace('<head>', '<head><script>try{localStorage.clear();sessionStorage.clear();}catch(e){}try{Object.defineProperty(navigator,"maxTouchPoints",{value:5,configurable:true});}catch(e){}try{Object.defineProperty(screen,"width",{value:844,configurable:true});Object.defineProperty(screen,"height",{value:390,configurable:true});}catch(e){}try{var realMatchMedia=window.matchMedia.bind(window);window.matchMedia=function(query){if(query==="(hover:hover) and (pointer:fine)")return{matches:false};if(query==="(orientation: landscape) and (max-width: 1024px) and (max-height: 600px)")return{matches:true,addEventListener:function(){},removeEventListener:function(){}};return realMatchMedia(query);};}catch(e){}<\/script>');
+        frame.onload = function () {
+          var doc = frame.contentDocument;
+          var win = frame.contentWindow;
+          var started = Date.now();
+          (async function ready() {
+            if (doc.body) doc.body.classList.add('tg-landscape-game-keyboard-only');
+            var tour = doc.querySelector('#gt-tour-card .gt-skip');
+            if (tour && getComputedStyle(tour).display !== 'none') tour.click();
+            var readyNow = doc.documentElement.classList.contains('gc-ready') &&
+              doc.body.classList.contains('gsh-ml-active') &&
+              doc.querySelectorAll('#rg-kbd .tk-key[data-code]').length === 47 &&
+              doc.querySelectorAll('#rg-kbd .rg-shift-key').length === 2;
+            if (readyNow) {
+              var centered = verticalCenterDelta(doc) <= 2;
+              var sideInsets = keyboardSideInsetsReady(doc);
+              var desktopFaces = keyFacesRender(doc, win);
+              var visibleShifts = Array.from(doc.querySelectorAll('#rg-kbd .rg-shift-key')).filter(function (key) {
+                return key.getClientRects().length > 0 && win.getComputedStyle(key).visibility !== 'hidden';
+              }).length;
+              var noMagnifier = !doc.querySelector('.tg-touch-magnifier') && !('TG_TOUCH_MAGNIFIER_HOLD_MS' in win);
+              var faceAudit = win.__typingFaceAudit || {baseFont: 0, shiftFont: 0};
+              status.textContent = centered && sideInsets && desktopFaces && visibleShifts === 2 && noMagnifier
+                ? 'พร้อมตรวจ Typing — 47 ปุ่มใช้ direct labels ครบ · Shift 2 ปุ่ม · ไม่มีแว่นขยาย · ไม่มี hidden-base workaround'
+                : 'ตรวจ Typing ไม่ผ่าน — กึ่งกลาง=' + centered + ' · ขอบข้าง=' + sideInsets +
+                  ' · หน้าปุ่ม=' + desktopFaces + ' · Shift=' + visibleShifts + ' · ไม่มีแว่นขยาย=' + noMagnifier +
+                  ' · ขนาดหลัก/Shift=' + faceAudit.baseFont + '/' + faceAudit.shiftFont;
+              return;
+            }
+            if (Date.now() - started > 15000) {
+              status.textContent = 'เปิดหน้า Typing ไม่สำเร็จ';
+              return;
+            }
+            setTimeout(ready, 80);
+          })();
+        };
+        frame.srcdoc = html;
+      }).catch(function (error) {
+        status.textContent = error.message;
+      });
+    })();
+  </script>
+</body>
+</html>

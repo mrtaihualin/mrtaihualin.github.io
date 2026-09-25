@@ -26,10 +26,8 @@
   'use strict';
 
   // ── ข้อมูลเมนู (แก้ตรงนี้ที่เดียว) ────────────────────────────────
-  // Latest Lin decision 2026-08-14: ทางเข้า Learning Center ใช้ชื่อ 學習.
-  // Account/Profile remains separate from this destination.
-  // ของเดิม 6 หมวด ถูกยุบเป็น dropdown ย่อยใต้ 學習資源 กับ 關於我ตามที่ Lin เลือก (option 3)
-  // ไม่มี URL ไหนถูกย้าย — แค่จัดกลุ่มใหม่ว่าอยู่ dropdown ไหน
+  // Lin 2026-09-03 Preview: คืนโครงสร้างเมนูคอมแบบแยกหมวดเหมือนช่วง ก.ค.
+  // โดยคงปุ่ม 🎮 遊戲 แบบปัจจุบัน และใช้ลิงก์ปลายทางเดิมทั้งหมด
   var CTA_LABEL = '免費試聽';
   var CTA_MODAL = 'modal-line-qr';
 
@@ -38,25 +36,48 @@
     //    (ปุ่มกรอบทอง คนละแบบกับ 免費試聽 ที่เป็นปุ่มทึบทอง primary CTA)
     { type: 'link', label: '🎮 遊戲', href: '/games.html', className: 'nav-cta-secondary' },
 
-    // Learning Center is parked during Minimum Guest Launch.
-    // 2) 學習資源 — public learning resources stay available.
-    //    URL เดิมของ blog/resources/content คงเดิมทั้งหมด
+    // 2) 課程與老師
     {
       type: 'dropdown',
-      label: '學習資源',
+      label: '課程與老師',
       groups: [
         {
-          label: '泰語學習資源',
+          items: [
+            { href: '/index.html#teacher', label: '關於老師' },
+            { href: '/pricing.html#testimonials', label: '學生回饋' },
+            { href: '/pricing.html#pricing', label: '費用方案' },
+            { href: '/pricing.html#how', label: '上課方式' }
+          ]
+        }
+      ]
+    },
+
+    // 3) 常見資訊
+    {
+      type: 'dropdown',
+      label: '常見資訊',
+      groups: [
+        {
+          items: [
+            { href: '/faq.html#faq', label: 'FAQ' },
+            { href: '/faq.html#rules', label: '上課須知' },
+            { href: '/faq.html#feedback-section', label: '分享經驗' }
+          ]
+        }
+      ]
+    },
+
+    // 4) 泰語學習資源
+    {
+      type: 'dropdown',
+      label: '泰語學習資源',
+      groups: [
+        {
           items: [
             { href: '/content.html', label: '📚 泰語學習資源' },
             { href: '/blog.html#articles', label: '📝 泰語學習文章' },
             { href: '/resources.html#video-learning', label: '🎬 影音學習' },
-            { href: '/blog.html#selfstudy', label: '📖 自學資源' }
-          ]
-        },
-        {
-          label: '其他學習入口',
-          items: [
+            { href: '/blog.html#selfstudy', label: '📖 自學資源' },
             { modal: 'modal-quiz', label: '程度測驗' },
             { href: '/index.html#problems', label: '學習困境' },
             { href: '/community.html', label: '🇹🇭 泰語學習心聲與提問' }
@@ -65,47 +86,22 @@
       ]
     },
 
-    // 4) 更多 ▾ — decision 2026-08-10: เดิมชื่อ 關於我 เปลี่ยนชื่อ+จัดกลุ่มใหม่ 3 กลุ่ม
-    //    (課程與老師 / 常見資訊 / 其他服務) + 聯絡我們 หลัง divider — ใช้ href เดิมที่มีอยู่จริงทั้งหมด
-    //    ไม่มี URL ไหนถูกย้าย แค่จัดกลุ่ม/ชื่อป้ายใหม่
+    // 5) 其他服務
     {
       type: 'dropdown',
-      label: '更多',
-      groups: [
-        {
-          label: '課程與老師',
-          items: [
-            { href: '/index.html#teacher', label: '關於老師' },
-            { href: '/pricing.html#testimonials', label: '學生回饋' },
-            { href: '/pricing.html#pricing', label: '費用方案' },
-            { href: '/pricing.html#how', label: '上課方式' }
-          ]
-        },
-        {
-          label: '常見資訊',
-          items: [
-            { href: '/faq.html#faq', label: 'FAQ' },
-            { href: '/faq.html#rules', label: '上課須知' },
-            { href: '/faq.html#feedback-section', label: '分享經驗' }
-          ]
-        },
-        {
-          label: '其他服務',
-          items: [
-            { href: '/page-services.html#tour-guide', label: '🗺️ 導遊' },
-            { href: '/page-services.html#drama', label: '🎬 字幕翻譯' },
-            { href: '/page-services.html#interpret', label: '🎙️ 口譯' },
-            { href: '/page-services.html#quote-form', label: '📋 報價' }
-          ],
-          dividerAfter: true
-        },
-        {
-          // ไม่มี label กลุ่ม เพราะเป็นรายการเดี่ยวหลัง divider (聯絡我們)
-          items: [],
-          standaloneModal: { modal: 'modal-contact', label: '聯絡我們' }
-        }
-      ]
-    }
+      label: '其他服務',
+      groups: [{
+        items: [
+          { href: '/page-services.html#tour-guide', label: '🗺️ 導遊' },
+          { href: '/page-services.html#drama', label: '🎬 字幕翻譯' },
+          { href: '/page-services.html#interpret', label: '🎙️ 口譯' },
+          { href: '/page-services.html#quote-form', label: '📋 報價' }
+        ]
+      }]
+    },
+
+    // 6) 聯絡我們 — ปุ่มตรง ไม่ซ่อนอยู่ใน dropdown
+    { type: 'modal', label: '聯絡我們', modal: 'modal-contact' }
   ];
 
   // ── 📢 แถบประกาศหมุนเวียนด้านบน (.avail-band) ────────────────────
@@ -129,7 +125,8 @@
   var BOTTOM_NAV_ITEMS = [
     { icon: '🏠', label: '首頁', href: '/index.html' },
     { icon: '📞', label: '試聽', modal: CTA_MODAL, cta: true },
-    { icon: '🎮', label: '遊戲', href: '/games.html' }
+    { icon: '🎮', label: '遊戲', href: '/games.html' },
+    { icon: '📚', label: '學習', href: '/my-progress.html' }
   ];
 
   // ── ของพิเศษเฉพาะบางหน้า (ไม่เปลี่ยนพฤติกรรมเดิม แค่ทำให้ generate ได้จากจุดเดียว) ──
@@ -204,7 +201,10 @@
     TOP_ITEMS.forEach(function (item) { html += renderTopItem(item); });
     html += '<li><a href="javascript:void(0)" onclick="openModal(\'' + CTA_MODAL + '\')" class="nav-cta">' + esc(CTA_LABEL) + '</a></li>';
     html += '</ul>';
-    html += '<button class="nav-mobile-cta" onclick="openModal(\'' + CTA_MODAL + '\')">' + esc(CTA_LABEL) + '</button>';
+    html += '<div class="nav-mobile-actions">' +
+              '<a class="nav-mobile-game" href="/games.html">🎮 遊戲</a>' +
+              '<button class="nav-mobile-cta" onclick="openModal(\'' + CTA_MODAL + '\')">' + esc(CTA_LABEL) + '</button>' +
+            '</div>';
     html += '<div class="hamburger" onclick="' + hamburgerOnclick + '"><span></span><span></span><span></span></div>';
     return html;
   }

@@ -175,42 +175,142 @@ var WORD_LIST = buildWordListForToneFinder(WORDS_MASTER); // 2026-07-11: ย้�
 //   ตอนนี้ทุกหน้าจอของเกมอ่าน "การแยกคำ" จากคลังกลางที่ Lin ตรวจ 100% ที่เดียว (กฎ 15/16)
 //   แต่ละพยางค์ในคลังกลาง: { cons, lead, cluster, vowel, tone, final, tone_name, th }
 //   หน้าจอโชว์ 起首子音 = lead + cons + cluster (เช่น หมา → หม · ปลา → ปล) ตามที่ใช้สอนอักษรนำ/อักษรควบ
-var WORD_SYLS = {};
-(function () {
-  for (var i = 0; i < WORD_LIST.length; i++) {
-    var w = WORD_LIST[i];
-    // 2026-07-30: เฉลยอิง "พยางค์อ่าน" — คำที่มี readSyls (เอกสาร/โทรศัพท์/คุณภาพ/สกปรก) ใช้ readSyls ก่อน
-    var syls = (w && w.readSyls && w.readSyls.length) ? w.readSyls : (w && w.syls);
-    if (w && w.word && syls && syls.length) WORD_SYLS[w.word] = syls;
-  }
-})();
-
-// 2026-07-30: หาพยางค์เฉลยปัจจุบันเป็น "syl object เต็ม" จากคลัง (ใช้กับ buildAnswerRows ตัวกลางใน tone-engine.js)
-// ลำดับหา: entry ของ session (มี syls/readSyls จากคลังแล้ว รวมคำในประโยค高級) → WORD_SYLS (โหมดวิเคราะห์อิสระ)
-// เทียบไม่ได้ = คืน null (ไม่เดา — กฎ 2026-07-30 ไม่มีข้อมูลก็ไม่โชว์ ดีกว่าโชว์ผิด)
+// Find the exact reviewed syllable used by the shared display helper.
+// ใช้ entry ปัจจุบันตาม contentKey เท่านั้น; ห้ามค้นสำรองด้วยตัวสะกดเพราะคำซ้ำอาจคนละความหมาย
 function currentAnswerSyl() {
   var entry = tfCurEntry();
-  var syls = entry && ((entry.readSyls && entry.readSyls.length) ? entry.readSyls : entry.syls);
-  if (!syls || !syls.length) {
-    var parent = S.parentWord || S.word;
-    syls = WORD_SYLS[parent];
-  }
-  if (!syls || !syls.length) return null;
+  var syls = entry && entry.syls;
+  if (!syls || !syls.length) throw new Error('CATALOG_AUTHORITY_INCOMPLETE:current entry syllables');
   if (syls.length === 1) return syls[0];
-  if (S.selectedSyl == null || !S.syllables) return null;
-  if (S.syllables.length !== syls.length) return null;
+  if (S.selectedSyl == null || !S.syllables || S.syllables.length !== syls.length) throw new Error('CATALOG_AUTHORITY_INCOMPLETE:current syllable identity');
   return syls[S.selectedSyl];
+}
+
+function currentCatalogWord() {
+  var entry = tfCurEntry();
+  if (!entry || typeof entry.word !== 'string' || !entry.word.trim()) {
+    throw new Error('CATALOG_AUTHORITY_INCOMPLETE:current word');
+  }
+  if (S.syllables && S.syllables.length > 1 && S.parentWord !== entry.word) {
+    throw new Error('CATALOG_AUTHORITY_INCOMPLETE:parent word identity');
+  }
+  return entry.word;
+}
+
+// Correct tone comes only from the current Lin-reviewed catalog syllable.
+// Missing or ambiguous authority stops the game; this function never analyzes Thai text.
+function catalogToneNumber() {
+  var syllable = currentAnswerSyl();
+  var tone = syllable && syllable.toneNumber;
+  if (!Number.isInteger(tone) || tone < 1 || tone > 5) {
+    var entry = tfCurEntry();
+    throw new Error('CATALOG_AUTHORITY_INCOMPLETE:' + ((entry && entry.contentKey) || 'unknown') + ':toneNumber');
+  }
+  return tone;
+}
+
+// 推導 is a deterministic teaching flow, not an answer engine. Every question
+// below starts from the current teacher-reviewed syllable. The final tone still
+// comes only from catalogToneNumber(); these helpers never inspect the raw word.
+function catalogPedagogySyllable() {
+  var projected = currentAnswerSyl();
+  var record = projected && projected.catalog;
+  if (!record || typeof record !== 'object' || Array.isArray(record)) {
+    throw new Error('CATALOG_AUTHORITY_INCOMPLETE:pedagogy syllable');
+  }
+  return record;
+}
+
+function catalogFieldPresent(value) {
+  return typeof value === 'string' && value !== '' && value !== 'ไม่มี';
+}
+
+function catalogPedagogyClass() {
+  var syllable = catalogPedagogySyllable();
+  if (catalogFieldPresent(syllable.lead)) return 'lead';
+  var consonant = syllable.consonant;
+  function inDef(key, value) {
+    return DEFS[key].chars.split(/\s+/).indexOf(value) !== -1;
+  }
+  if (inDef('low', consonant)) return 'low';
+  if (inDef('high', consonant)) return 'high';
+  if (inDef('mid', consonant)) return 'mid';
+
+  // Some reviewed syllables explicitly record a different spoken consonant
+  // (for example a written symbol read as ร). Use that reviewed field only;
+  // never derive a consonant from the Thai word itself.
+  var difference = syllable.consonantReadDifference;
+  if (catalogFieldPresent(difference) && /[>→]/.test(difference)) {
+    var spoken = difference.split(/[>→]/).pop().trim();
+    if (inDef('low', spoken)) return 'low';
+    if (inDef('high', spoken)) return 'high';
+    if (inDef('mid', spoken)) return 'mid';
+  }
+  throw new Error('CATALOG_AUTHORITY_INCOMPLETE:pedagogy consonant class');
+}
+
+function catalogPedagogyVowelLength() {
+  var vowel = catalogPedagogySyllable().vowel;
+  // This is the course's deterministic teaching table. It selects the next
+  // tutorial card only and is never used to calculate or correct toneNumber.
+  var shortVowels = ['อะ','อิ','อึ','อุ','เอะ','แอะ','โอะ','เอาะ'];
+  var longVowels = ['อา','อี','อื','อู','เอ','แอ','โอ','ออ','เออ','เอีย','เอือ','อัว','อำ','เอา','ไอ','ใอ'];
+  if (shortVowels.indexOf(vowel) !== -1) return 'short';
+  if (longVowels.indexOf(vowel) !== -1) return 'long';
+  throw new Error('CATALOG_AUTHORITY_INCOMPLETE:pedagogy vowel length');
+}
+
+function catalogPedagogyEndingType() {
+  var syllable = catalogPedagogySyllable();
+  if (!catalogFieldPresent(syllable.writtenFinal)) return null;
+  var written = syllable.writtenFinal;
+  function inDef(key, value) {
+    return DEFS[key].chars.split(/\s+/).indexOf(value) !== -1;
+  }
+  if (inDef('shortEnd', written)) return 'short';
+  if (inDef('longEnd', written)) return 'long';
+  var difference = syllable.finalReadDifference;
+  if (catalogFieldPresent(difference) && /[>→]/.test(difference)) {
+    var spoken = difference.split(/[>→]/).pop().trim();
+    if (inDef('shortEnd', spoken)) return 'short';
+    if (inDef('longEnd', spoken)) return 'long';
+  }
+  throw new Error('CATALOG_AUTHORITY_INCOMPLETE:pedagogy ending type');
+}
+
+function catalogExpectedTeachingChoice(step) {
+  var syllable = catalogPedagogySyllable();
+  var mark = syllable.toneMark;
+  var cls;
+  if (step === 's1') return catalogFieldPresent(mark) ? 'hasMark' : 'noMark';
+  if (step === 's2a') return catalogPedagogyClass() === 'low' ? 'low' : 'other';
+  if (step === 's2a_other') return catalogPedagogyClass();
+  if (step === 's2a_low' || step === 's2a_mid' || step === 's2a_hi') {
+    if (!catalogFieldPresent(mark)) throw new Error('CATALOG_AUTHORITY_INCOMPLETE:pedagogy tone mark');
+    return mark;
+  }
+  if (step === 's2b') {
+    if (syllable.liveDead === '活音') return 'live';
+    if (syllable.liveDead === '死音') return 'dead';
+    throw new Error('CATALOG_AUTHORITY_INCOMPLETE:pedagogy live/dead');
+  }
+  if (step === 's2b_live') {
+    cls = catalogPedagogyClass();
+    return (cls === 'high' || cls === 'lead') ? 'high_lead' : 'mid_low';
+  }
+  if (step === 's2b_dead') return catalogPedagogyClass() === 'low' ? 'low_dead' : 'high_lead_mid';
+  if (step === 's2b_dl') return catalogPedagogyVowelLength() === 'long' ? 'long_vowel' : 'short_vowel';
+  if (step === 'helper') return catalogFieldPresent(syllable.writtenFinal) ? 'has_tail' : 'no_tail';
+  if (step === 'h_with') return catalogPedagogyEndingType() === 'long' ? 'long_tail' : 'short_tail';
+  if (step === 'h_no') return catalogPedagogyVowelLength() === 'long' ? 'long_vowel_h' : 'short_vowel_h';
+  throw new Error('CATALOG_AUTHORITY_INCOMPLETE:unknown pedagogy step');
 }
 // Lin 2026-07-31: คำหลายพยางค์ — รวมเฉลยของ "ทุกพยางค์" ไว้ที่เดียว (ใช้โชว์ตอนหน้าพยางค์สุดท้ายเท่านั้น)
 //   เทียบไม่ได้ (จำนวนพยางค์ไม่ตรงคลัง) = คืน '' เหมือน currentAnswerSyl (ไม่เดา)
 function tfAllAnswerRowsHtml() {
   var entry = tfCurEntry();
-  var syls = entry && ((entry.readSyls && entry.readSyls.length) ? entry.readSyls : entry.syls);
-  if (!syls || !syls.length) {
-    var parent = S.parentWord || S.word;
-    syls = WORD_SYLS[parent];
-  }
-  if (!syls || !syls.length || !S.syllables || S.syllables.length !== syls.length) return '';
+  var syls = entry && entry.syls;
+  if (!syls || !syls.length || !S.syllables || S.syllables.length !== syls.length) throw new Error('CATALOG_AUTHORITY_INCOMPLETE:all answer syllables');
   var out = '';
   for (var i = 0; i < syls.length; i++) out += tfAnswerRowsHtml(syls[i]);
   return out;
@@ -226,54 +326,7 @@ function tfAnswerRowsHtml(sy) {
     }).join('');
 }
 
-// แปลงพยางค์ในคลังกลาง → รูปที่หน้าจอใช้ { c: พยัญชนะต้น, v: สระ, f: ตัวสะกด }
-function sylToPart(sy) {
-  if (!sy) return null;
-  return {
-    c: (sy.lead || '') + (sy.cons || '') + (sy.cluster || ''),
-    v: sy.vowel || '',
-    f: sy.final || ''
-  };
-}
-// หาพยางค์ที่กำลังเล่นอยู่จากคลังกลาง — คืน null ถ้าเทียบไม่ได้ (จะได้ไม่เดามั่ว)
-//   หมายเหตุ: S.syllables แตกมาจาก readingTH (คำอ่าน) จำนวนพยางค์อาจไม่เท่า syls ในคลัง
-//   เช่น สนามบิน อ่าน "สะ-หนาม-บิน" (3) แต่คลังเก็บ 2 พยางค์ → เทียบ index ตรงๆ ไม่ได้ ต้องยอมคืน null
-function currentDataPart() {
-  var parent = S.parentWord || S.word;
-  var syls = WORD_SYLS[parent];
-  if (!syls) return null;
-  if (syls.length === 1) return sylToPart(syls[0]);
-  if (S.selectedSyl == null || !S.syllables) return null;
-  if (S.syllables.length !== syls.length) return null;
-  return sylToPart(syls[S.selectedSyl]);
-}
-
-
-function bdChip(label, val) {
-  return '<div class="sg-bd-chip"><div class="sg-bd-label">' + label + '</div><div class="sg-bd-value">' + (val || '—') + '</div></div>';
-}
-function singlePartChips(p) {
-  return '<div class="sg-bd-wrap"><div class="sg-bd-group"><div class="sg-breakdown">' +
-    bdChip('子音', p.c) + bdChip('母音', p.v) + bdChip('尾音', p.f) +
-    '</div></div></div>';
-}
-// โชว์ครบทุกพยางค์ของคำ (ใช้ตอนเทียบไม่ได้ว่าอยู่พยางค์ไหน)
-function breakdownChipsHTML(word, sylLabels) {
-  var syls = WORD_SYLS[word];
-  if (!syls || !syls.length) return '';
-  var multi = syls.length > 1;
-  return '<div class="sg-bd-wrap">' + syls.map(function (sy, i) {
-    var p = sylToPart(sy);
-    var head = multi
-      ? '<div class="sg-syl-head">' + (sylLabels && sylLabels[i] ? sylLabels[i] : (sy.th || ('音節 ' + (i + 1)))) + '</div>'
-      : '';
-    return '<div class="sg-bd-group">' + head + '<div class="sg-breakdown">' +
-      bdChip('子音', p.c) + bdChip('母音', p.v) + bdChip('尾音', p.f) + '</div></div>';
-  }).join('') + '</div>';
-}
-
-// Lin 2026-07-15: TH object ย้ายไปรวมกับ TH_ENGINE (reading-game.html/typing-game.html เดิม) เป็นไฟล์เดียว
-// data/tone-engine.js แล้ว (แก้บั๊กอักษรนำ + ตัวการันต์ที่นั่น) — โหลดผ่าน <script src="data/tone-engine.js">
+// No Thai-language engine is loaded. All correctness comes from reviewed catalog fields.
 // ด้านบน ได้ตัวแปร TH ชื่อเดิมเป๊ะ ใช้ต่อได้โดยไม่ต้องแก้โค้ดข้างล่างนี้เลย
 
 // ════════════════════════════════════════════════════════════
@@ -300,34 +353,18 @@ var TF_SCORE_CFG = {
   SCORE_FIRST_TRY: 10,       // ถูกตั้งแต่ครั้งแรก = 10 (= WRONG_LADDER[0])
   // ── Lin 2026-07-04: คะแนนต่อคำ/พยางค์ "นับตามจำนวนครั้งที่กดผิด" เหมือนเกมอ่าน ──
   //   ทุกคนเริ่ม 10 เท่ากัน · ผิด 1=7 · 2=4 · 3=1 · 4=0(fail เฉลย+SRS รีเซ็ต day1)
-  //   "กดผิด" = เดาวรรณยุกต์ผิดตอนแรก + กดผิดในทุกขั้น推導 + กดปุ่มแอบดู(?) · กด "🤷 ไม่มั่นใจ" ไม่นับผิด
+  //   "กดผิด" = เลือกวรรณยุกต์ไม่ตรงกับค่าที่คลังกลางส่งมา
   WRONG_LADDER: [10, 7, 4, 1, 0],
   SRS_REVIEW_BONUS: [3, 2, 1],  // Phase 1: โบนัสรอบสะอาด — เริ่มเส้นทาง+3 · Day 1+2 · รอบตัดสิน Day 7+1
-  SCORE_DEDUCE_BASE: 5,      // (เลิกใช้แล้ว — เก็บไว้กันโค้ดเก่าอ้างถึง)
-  SCORE_MIN_PER_WORD: 1,     // (เลิกใช้แล้ว)
   SCORE_FAIL_ZERO: 0,        // ผิดครบเพดาน (fail) = 0 pt เสมอ
-  DEDUCE_WRONG_LIMIT: 4,     // Lin 2026-07-04: กดผิดครบ 4 ครั้งในคำเดียว → 0 แต้ม (fail) + เฉลย + คำใหม่ (เดิม 3)
   COMBO_TIERS: { 3: 1.5, 5: 2, 8: 3 },   // สตรีคตอบถูกครั้งแรกติดกัน → ตัวคูณ
   SET_COMPLETE_BONUS: 20,    // เล่นจบ 1 ชุด (เดิม 200)
   SET_PERFECT_BONUS: 50,     // จบชุดแบบ perfect (เดิม 500) → perfect = 20+50 = 70
-  LEVEL_WEIGHT: { 1: 1, 2: 1.5, 3: 2 },   // กฎ MASTER 2026-07-05: ตัวคูณระดับชุดเดียวทั้งระบบ (初1/中1.5/高2) = ตรงเกมอ่าน + ตรงตัวคูณดาวเงิน → ลีกยุติธรรมข้ามเกม
-  // จำนวนตัวเลือกในแต่ละขั้น推導 → ใช้คำนวณการหัก = round(BASE / optionsInStep)
-  OPTIONS_IN_STEP: {
-    s1: 2, s2a: 2, s2a_low: 2, s2a_other: 3, s2a_mid: 4, s2a_hi: 2,
-    s2b: 2, s2b_live: 2, s2b_dead: 2, s2b_dl: 2
-  },
-  // ขั้นเครื่องมือช่วย (ไม่มีในตารางสเปค) → ใช้ค่า default
-  DEFAULT_OPTIONS: 2
+  LEVEL_WEIGHT: { 1: 1, 2: 1.5, 3: 2 }   // กฎ MASTER 2026-07-05: ตัวคูณระดับชุดเดียวทั้งระบบ (初1/中1.5/高2) = ตรงเกมอ่าน + ตรงตัวคูณดาวเงิน → ลีกยุติธรรมข้ามเกม
 };
 
 var TF_SCORE = {
   cfg: TF_SCORE_CFG,
-
-  // หักต่อการกดผิด 1 ครั้งในขั้นนั้น = round(BASE / จำนวนตัวเลือก)
-  deductPerWrong: function (step) {
-    var opts = this.cfg.OPTIONS_IN_STEP[step] || this.cfg.DEFAULT_OPTIONS;
-    return Math.round(this.cfg.SCORE_DEDUCE_BASE / opts);
-  },
 
   // ตัวคูณคอมโบจากสตรีคตอบถูกครั้งแรกติดกัน (เลือก tier สูงสุดที่ถึง)
   comboMultiplier: function (streak) {
@@ -348,16 +385,6 @@ var TF_SCORE = {
     var L = this.cfg.WRONG_LADDER;
     return L[Math.min(wrongCount || 0, L.length - 1)];
   },
-  // (เลิกใช้แล้ว — แทนที่ด้วย ladderScore · เก็บไว้กันโค้ดเก่าอ้างถึง)
-  deduceScore: function (totalDeduction) {
-    return Math.max(this.cfg.SCORE_MIN_PER_WORD, this.cfg.SCORE_DEDUCE_BASE - totalDeduction);
-  },
-
-  // กดผิดถึงเพดานหรือยัง (ครบ 3 → 0 แต้ม)
-  reachedWrongLimit: function (mistakes) {
-    return mistakes >= this.cfg.DEDUCE_WRONG_LIMIT;
-  },
-
   // โบนัสจบชุด: จบ = +COMPLETE, ถ้า perfect (ถูกครั้งแรกทุกคำ) เพิ่ม +PERFECT
   sessionBonus: function (total, perfectCount) {
     var bonus = 0;
@@ -375,30 +402,30 @@ var TF_SCORE = {
 // ===== TF_SCORE ENGINE END =====
 
 // ===== TF_WORDSCORE (Lin 2026-07-04) — state คะแนนต่อคำ บันได [10,7,4,1,0] · pure logic ทดสอบได้จริง =====
-//  ทำงานบน object ที่มีฟิลด์: currentWordDeduct (ขั้นบันได), stepWrong, stepFreePeekUsed
+//  ทำงานบนคะแนน/สถานะ UI เท่านั้น; ไม่คำนวณคำตอบภาษา
 //  กติกา (ยืนยันกับ Lin ผ่านหลอดคะแนน 2026-07-04):
-//   • เดาวรรณยุกต์ผิดตอนแรก (ก่อน推導) = หัก 1 ขั้น; กด "ไม่มั่นใจ" ยังฟรีแต่ไม่ได้ first-try
-//   • กดผิดในขั้น推導 (onWrong) = หัก 1 ขั้น + ได้สิทธิ์ "แอบดูฟรี 1 ครั้ง" ในขั้นนั้น
-//   • แอบดู(?) หลังเพิ่งผิดในขั้นนี้ (ครั้งแรก) = ฟรี · แอบดูอื่นๆ = หัก 1 (ไม่นับ "กดผิดจริง")
-//   • หักครบ 4 (แต้มเหลือ 0) = ตาย → เฉลย + SRS รีเซ็ต day1
+//   • เดาเสียงปุ่ม 1–5 ผิดในหน้าหลัก = โอกาสเรียน ไม่หักคะแนน/คอมโบ/Clean แล้วเข้า推導
+//   • เลือกขั้น推導ผิด = เริ่มหัก 1 ขั้น
+//   • เปิดปุ่ม ? = คำนี้เป็น Free Practice ไม่หักบันไดและไม่เปลี่ยน Combo
+//   • หักครบ 4 (แต้มเหลือ 0) = เฉลยค่าจากคลัง + SRS รีเซ็ต day1
 var TF_WORDSCORE = {
   LADDER: [10, 7, 4, 1, 0],
   FAIL_AT: 4,
   score: function (s) { return this.LADDER[Math.min((s && s.currentWordDeduct) || 0, this.FAIL_AT)]; },
   isDead: function (s) { return ((s && s.currentWordDeduct) || 0) >= this.FAIL_AT; },
-  // กดผิดในขั้น推導 → หัก 1 ขั้น + เปิดสิทธิ์แอบดูฟรีของขั้นนี้ (การนับ "กดผิดจริง" อยู่ที่ recordMistake แยกกัน)
+  // เลือกไม่ตรงกับค่าจากคลัง → หักคะแนนหนึ่งขั้น
   onWrong: function (s) {
     s.currentWordDeduct = (s.currentWordDeduct || 0) + 1;
     s.stepWrong = true;
     return s;
   },
-  // แอบดู(?) → ฟรีถ้าเพิ่งผิดในขั้นนี้ + ยังไม่เคยใช้สิทธิ์ฟรี · ไม่งั้นหัก 1 · คืน true = ถูกหัก
   onPeek: function (s) {
+    // Compatibility only: active Hint uses tfLockCurrentWordForGuide() and does not call this ladder path.
     if (s.stepWrong && !s.stepFreePeekUsed) { s.stepFreePeekUsed = true; return false; }
     s.currentWordDeduct = (s.currentWordDeduct || 0) + 1;
     return true;
   },
-  // ไปขั้น推導ถัดไป → รีเซ็ตสิทธิ์รายขั้น
+  // หลังบันทึกการเลือกแล้ว ล้างสถานะหน้าจอ
   onNextStep: function (s) { s.stepWrong = false; s.stepFreePeekUsed = false; return s; }
 };
 
@@ -411,7 +438,7 @@ function tfScoreBarColor(sc, max) {
   return 'hsl(' + hue + ',78%,' + light + '%)';
 }
 
-// Lin 2026-07-04: หลอดคะแนนต่อคำ (โชว์ในขั้น推導) — 本題分數 10→0 · สีทอง→แดง (Lin 2026-07-06)
+// หลอดคะแนนต่อคำ — 本題分數 10→0 · สีทอง→แดง
 function tfWordScoreGaugeHtml() {
   if (!session) return '';
   var max = TF_WORDSCORE.LADDER[0] || 10;
@@ -428,7 +455,7 @@ function tfWordScoreGaugeHtml() {
     + '</div>';
 }
 
-// อัปเดตหลอดคะแนนต่อคำ "สด" ระหว่างขั้น推導 (กดผิด/แอบดู) โดยไม่ต้อง re-render — Lin 2026-07-04 (กันบั๊ก "กดผิดแล้วหลอดไม่ลด")
+// อัปเดตหลอดคะแนนต่อคำสดหลังเลือก โดยไม่ต้องวาดหน้าจอใหม่
 function tfUpdateWordScoreGauge() {
   if (!session) return;
   var max = TF_WORDSCORE.LADDER[0] || 10;
@@ -492,6 +519,7 @@ var TF_SRS = {
 
   // นี่คือรอบตัดสิน Day 7 ก่อน mastered ไหม — stage 2 คือรอบที่ 3 (0-based)
   isFinalCheck: function (rec) {
+    if (window.PAID_SRS_PRIVATE_BETA) return !!rec && !rec.mastered && rec.stage >= 3;
     return !!rec && rec.stage === (this.cfg.CLEAN_ROUNDS_TO_MASTER - 1);
   },
 
@@ -529,24 +557,43 @@ var TF_SRS = {
 
 // ── localStorage: state SRS ต่อคำ (แยกจาก game-account.js เพราะผูกกับเกมเสียงเท่านั้น) ──
 var TF_SRS_KEY = 'tf_srs_v1';
-function tfLoadSrs() { if(!tfSrsLoggedIn())return {};try { return JSON.parse(localStorage.getItem(TF_SRS_KEY) || '{}') || {}; } catch (e) { return {}; } }
-function tfSaveSrs(o) { if(!tfSrsLoggedIn())return;try { localStorage.setItem(TF_SRS_KEY, JSON.stringify(o)); } catch (e) {} }
-function tfGetSrsRecord(word, level) {
+function tfSrsStorageKey(){return window.PAID_SRS_PRIVATE_BETA?'tf_paid_srs_v1':TF_SRS_KEY;}
+function tfLoadSrs() { if(window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled())return {};if(!tfSrsLoggedIn())return {};try { return JSON.parse(localStorage.getItem(tfSrsStorageKey()) || '{}') || {}; } catch (e) { return {}; } }
+function tfSaveSrs(o) { if(window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled())return;if(!tfSrsLoggedIn())return;try { localStorage.setItem(tfSrsStorageKey(), JSON.stringify(o)); } catch (e) {} }
+function tfStateWord(entryOrWord) {
+  if (entryOrWord && typeof entryOrWord === 'object') {
+    return tfWordContentKey(entryOrWord);
+  }
+  return entryOrWord;
+}
+function tfWordContentKey(entry){if(!entry||typeof entry.contentKey!=='string'||!entry.contentKey.trim())throw new Error('CATALOG_AUTHORITY_INCOMPLETE:tone contentKey');return entry.contentKey;}
+function tfContentRefForEntry(entry){if(selectedLevel===3){var sentence=advSentenceCtx&&advSentenceCtx.th;if(!sentence)throw new Error('CATALOG_AUTHORITY_INCOMPLETE:sentence identity');return {source:'game_sentences',key:sentence};}return {source:'game_words',key:tfWordContentKey(entry)};}
+function tfReviewWordRef(entry){return {source:'game_words',key:tfWordContentKey(entry)};}
+function tfReviewSentenceRef(index){var sentence=ADV_SENTENCES[index];if(!sentence||!sentence.th)throw new Error('CATALOG_AUTHORITY_INCOMPLETE:sentence identity');return {source:'game_sentences',key:sentence.th};}
+function tfReviewOwns(entry){try{return !!(window.LearningReview&&LearningReview.owns(roundReport,tfContentRefForEntry(entry)));}catch(e){return false;}}
+function tfRegisterRestoredReview(){try{if(!window.LearningReview||!roundReport||!session)return;if(selectedLevel===3&&advSentIdx>=0){var all=ADV_SENTENCES.map(function(_,i){return i;}),selected=LearningReview.matchQueue({game:'tone',level:3,items:[advSentIdx],contentRefOf:tfReviewSentenceRef}),refKey=LearningReview.keyOfRef(tfReviewSentenceRef(advSentIdx)),group={},groupSize=advSentenceCtx&&advSentenceCtx.words?advSentenceCtx.words.length:session.words.length;group[refKey]=groupSize;LearningReview.registerRound({report:roundReport,game:'tone',level:3,allItems:all,srsOwned:all.filter(function(i){return !!tfGetSrsRecord(ADV_SENTENCES[i].th,3);}),selectedReview:selected,alreadyRetried:session.words.length>groupSize?[advSentIdx]:[],idOf:function(i){return LearningReview.keyOfRef(tfReviewSentenceRef(i));},contentRefOf:tfReviewSentenceRef,groupSizeByRef:group,checkpoint:function(completed){tfSaveResumeState(completed);},retry:function(){session.words=session.words.concat(session.words.slice(0,groupSize));}});}else{var pool=WORD_LIST.filter(function(w){return w.level===selectedLevel;}),selectedWords=LearningReview.matchQueue({game:'tone',level:selectedLevel,items:session.words,contentRefOf:tfReviewWordRef}),seen=Object.create(null),duplicates=[];session.words.forEach(function(w){var key=LearningReview.keyOfRef(tfReviewWordRef(w));if(seen[key])duplicates.push(w);seen[key]=true;});LearningReview.registerRound({report:roundReport,game:'tone',level:selectedLevel,allItems:pool,srsOwned:pool.filter(function(w){return !!tfGetSrsRecord(w,tfWordLevel(w));}),selectedReview:selectedWords,alreadyRetried:duplicates,idOf:function(w){return LearningReview.keyOfRef(tfReviewWordRef(w));},contentRefOf:tfReviewWordRef,checkpoint:function(completed){tfSaveResumeState(completed);},retry:function(w){session.words.push(w);}});}}catch(e){if(window.LearningReview&&LearningReview.blockRound)LearningReview.blockRound(roundReport,e);}}
+function tfGetSrsRecord(entryOrWord, level) {
+  if(window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()&&LearningReview.srsRecord){
+    var source=Number(level)===3?'game_sentences':'game_words';
+    var key=entryOrWord&&typeof entryOrWord==='object'?tfWordContentKey(entryOrWord):String(entryOrWord||'');
+    return LearningReview.srsRecord({game:'tone',level:level,contentRef:{source:source,key:key}});
+  }
   var all = tfLoadSrs();
-  var k = TF_SRS.keyFor(word, level);
+  var k = TF_SRS.keyFor(tfStateWord(entryOrWord), level);
   return all[k] || null;
 }
-function tfSetSrsRecord(word, level, rec) {
+function tfSetSrsRecord(entryOrWord, level, rec) {
+  if(window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled())return;
   var all = tfLoadSrs();
-  all[TF_SRS.keyFor(word, level)] = rec;
+  all[TF_SRS.keyFor(tfStateWord(entryOrWord), level)] = rec;
   tfSaveSrs(all);
 }
 // เช็กว่าล็อกอินอยู่ไหม (ระบบคะแนน/ดาวเงิน/SRS ทำงานเฉพาะตอนล็อกอินจริงตามสเปกข้อ 0)
 // Lin 2026-07-16: รวมระบบล็อกอินเข้ากับอีก 4 เกม (window.READING_AUTH) — เลิกใช้ window.TF_AUTH/supabase-auth.js
 // เดิมยอมรับ "ให้อีเมล (lead) แต่ไม่ได้ล็อกอินจริง" ด้วย (hasAccess) ตอนนี้ต้องล็อกอินจริงเท่านั้น เหมือน 4 เกมที่เหลือ (Lin ยืนยันแล้ว)
 function tfSrsLoggedIn() {
-  if(tfMinimumGuestOnly()) return false;
-  return !!(window.READING_AUTH && READING_AUTH.user);
+  if(tfMinimumGuestOnly() && window.LOGIN_FREE_SRS_PUBLIC_ENTRY !== true) return false;
+  return !!(window.READING_AUTH && READING_AUTH.srsUser);
 }
 // proxy-click ปุ่มล็อกอินกลาง (#rg-login-slot) — แพทเทิร์นเดียวกับ rgCtaLogin()/woCtaLogin()/legoCtaLogin() ในอีก 4 เกม
 function tfCtaLogin() {
@@ -554,28 +601,17 @@ function tfCtaLogin() {
 }
 
 // ════════════════════════════════════════════════════════════
-// ── Lin 2026-07-13: ซิงก์ SRS "ข้ามเครื่อง" — อ่านกลับจาก Supabase (tone_srs_state) → merge เข้า tf_srs_v1 ──
-//   • อ่านอย่างเดียว (SELECT) · เขียนขึ้นเซิร์ฟเวอร์ยังเป็นหน้าที่ Edge Function tone-round เหมือนเดิม (ดาว/กันโกงไม่แตะ)
-//   • คู่ขนาน ไม่บล็อกเกม · เน็ตล่ม/ไม่ล็อกอินจริง = ใช้เล่มในเครื่อง (localStorage) เดิมทุกอย่าง
-//   • กติกา merge: เลือก "อันก้าวหน้ากว่า" เสมอ (精通 > stage สูง > วันครบกำหนดใหม่กว่า) → ไม่มีทางถอยหลัง/ข้อมูลหาย
-//     (ยืนยันด้วยตัวทดสอบกดจริง 8/8 เคส ก่อนนำมาใช้ — กฎ 14)
+// ── Compatibility SRS hydration seam ──
+//   • Login Free อ่าน snapshot ผ่าน LearningReview เท่านั้น; tone-round เหลือเฉพาะ Paid private beta
+//   • localStorage เหลือเป็น recovery snapshot สำหรับ runtime เก่าที่อยู่นอก Login Free
 // ════════════════════════════════════════════════════════════
-function tfSrsRank(r) { if (!r) return -1; if (r.mastered) return 3; return (r.stage || 0); }
-function tfSrsPickAdvanced(a, b) {
-  if (!a) return b; if (!b) return a;
-  var ra = tfSrsRank(a), rb = tfSrsRank(b);
-  if (ra !== rb) return ra > rb ? a : b;
-  var da = a.dueDate || '', db = b.dueDate || '';
-  if (da !== db) return (da > db) ? a : b;
-  return a;
-}
 var __tfSrsSyncPromise = null;
 window.__tfSrsSyncedOnce = false;
 var __tfLearningOwnerEpoch = 0;
 var __tfSrsRequestSequence = 0;
 var __tfLatestSrsRequest = 0;
 function tfSrsOwnerCurrent(ownerId, ownerEpoch, requestId) {
-  var currentId = (window.READING_AUTH && READING_AUTH.user && String(READING_AUTH.user.id)) || '';
+  var currentId = (window.READING_AUTH && READING_AUTH.srsUser && String(READING_AUTH.srsUser.id)) || '';
   var currentEpoch = Number(window.SITE_AUTH && SITE_AUTH.learningOwnerEpoch) || 0;
   if (currentId !== ownerId || currentEpoch !== ownerEpoch) return false;
   if (requestId != null && requestId !== __tfLatestSrsRequest) return false;
@@ -593,46 +629,10 @@ function tfResetAccountStateAtBoundary() {
 }
 function tfSyncSrsFromServer() {
   if (__tfSrsSyncPromise) return __tfSrsSyncPromise;
-  __tfSrsSyncPromise = (function () {
-    try {
-      // ต้อง "ล็อกอินจริง" (มี JWT) เท่านั้น — แค่ให้อีเมล (lead) ไม่มีแถวบนเซิร์ฟเวอร์อยู่แล้ว
-      if (!(window.READING_AUTH && READING_AUTH.user)) return Promise.resolve(false);
-      var sb = window.getSupabaseClient ? window.getSupabaseClient() : null;
-      if (!sb || !sb.from) return Promise.resolve(false);
-      // dedupe fetch 2026-07-20: tfWireSrsSync รีเซ็ต __tfSrsSyncPromise แล้วเรียกฟังก์ชันนี้ใหม่ทุกครั้งที่ SITE_AUTH.onChange ยิง
-      //   (หลายรอบต่อโหลดหน้าเดียว) → ห่อ fetch ด้วย getCachedFetch กันยิง Supabase ซ้ำทั้งที่ user เดิม
-      var _uid = String(READING_AUTH.user.id);
-      var _ownerEpoch = Number(window.SITE_AUTH && SITE_AUTH.learningOwnerEpoch) || 0;
-      var _requestId = ++__tfSrsRequestSequence;
-      __tfLatestSrsRequest = _requestId;
-      var _fetchSrs = window.getCachedFetch
-        ? window.getCachedFetch('tone_srs_state:tone:' + _uid, function () {
-            return sb.from('tone_srs_state').select('level, word, stage, due_date, ever_failed, mastered').eq('user_id', _uid).eq('game', 'tone');
-          })
-        : sb.from('tone_srs_state').select('level, word, stage, due_date, ever_failed, mastered').eq('user_id', _uid).eq('game', 'tone');
-      return _fetchSrs
-        .then(function (res) {
-          if (!tfSrsOwnerCurrent(_uid, _ownerEpoch, _requestId)) return false;
-          if (res.error || !res.data) return false;
-          var local = tfLoadSrs(), changed = false;
-          res.data.forEach(function (row) {
-            var key = TF_SRS.keyFor(row.word, row.level);
-            var srv = { stage: row.stage || 0, dueDate: row.due_date || '', dueAt: 0,
-                        everFailed: !!row.ever_failed, mastered: !!row.mastered };
-            var cur = local[key];
-            var win = tfSrsPickAdvanced(cur, srv);
-            // เขียนกลับเฉพาะเมื่อผลต่างจากเดิมจริง (กันเขียน localStorage ฟุ่มเฟือย)
-            if (!cur || win.stage !== cur.stage || (win.dueDate || '') !== (cur.dueDate || '') || (!!win.mastered) !== (!!cur.mastered)) {
-              local[key] = win; changed = true;
-            }
-          });
-          if (changed) tfSaveSrs(local);
-          window.__tfSrsSyncedOnce = true;
-          return changed;
-        })
-        .catch(function () { if (!tfSrsOwnerCurrent(_uid, _ownerEpoch, _requestId)) return false; window.__tfSrsSyncedOnce = true; return false; });
-    } catch (e) { window.__tfSrsSyncedOnce = true; return Promise.resolve(false); }
-  })();
+  __tfSrsSyncPromise = Promise.resolve().then(function(){
+    window.__tfSrsSyncedOnce=true;
+    return !!(window.PAID_SRS_PRIVATE_BETA || (window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()));
+  });
   return __tfSrsSyncPromise;
 }
 // ทริกเกอร์: ซิงก์ตอนเปิดหน้าถ้าล็อกอินอยู่แล้ว + ทุกครั้งที่ล็อกอินใหม่ระหว่างเล่น
@@ -651,7 +651,7 @@ function tfWireSrsSync() {
     _tfT++;
     try {
       if (window.__tfSrsSyncedOnce) { clearInterval(_tfIv); return; }
-      if (window.READING_AUTH && READING_AUTH.user) tfSyncSrsFromServer();
+      if (window.READING_AUTH && READING_AUTH.srsUser) tfSyncSrsFromServer();
     } catch (e) {}
     if (_tfT >= 24) clearInterval(_tfIv);
   }, 500);
@@ -660,7 +660,7 @@ if (document.readyState === 'loading') document.addEventListener('DOMContentLoad
 // ===== TF_SRS ENGINE END =====
 
 // ── กดเลข 1–5 บนคีย์บอร์ด (คอม) แทนการคลิกปุ่มวรรณยุกต์ — Lin สั่ง 2026-07-20 ──
-// ใช้เฉพาะหน้าเดา (session-guess) เท่านั้น + ปิดเมื่อกำลังพิมพ์ในช่อง input/textarea หรือมี popup เปิดอยู่ (กันชนกับ 開始聲調推導/我有問題)
+// ใช้เฉพาะหน้าเดา (session-guess) เท่านั้น + ปิดเมื่อกำลังพิมพ์หรือมี popup เปิดอยู่
 function tfWireToneKeyboard() {
   document.addEventListener('keydown', function (e) {
     if (tfTouchMobileSurface()) return;
@@ -699,7 +699,7 @@ function tfTouchMobileSurface() {
 }
 
 function tfNeutralSkipSurface() {
-  return tfDesktopOrPortrait() || tfMobileLandscape();
+  return true;
 }
 
 // Desktop Enter starts an explicit guided question or uses the visible Next action.
@@ -902,14 +902,12 @@ var advSentIdx = -1;            // index ของประโยคปัจจ
 //   ครับ (ชาย) ใช้ได้เหมือนกันทุกประโยค (คำเดียวไม่เปลี่ยนตามชนิดประโยค) — ต่อได้เลยไม่ต้องมีข้อมูลเพิ่ม
 //   ค่ะ/คะ (หญิง) อ่านจาก s.politeF ที่ Lin ตรวจ+ยืนยันแล้วทีละประโยค (adv-sentences.js) — บอกเล่า→ค่ะ / คำถาม→คะ
 //   politeF: null = ประโยคที่ขึ้นด้วย "ผม" (สรรพนามผู้ชายเท่านั้น) → Lin สั่ง 2026-08-01 บังคับโชว์ครับเสมอ แม้เลือกโหมดหญิง (ไม่ใช่ "ยังไม่ได้กรอกข้อมูล" — ชุด 30 ประโยคนี้ Lin ตรวจครบ 100% แล้ว)
-var TF_PARTICLE_WORDS = ['ครับ', 'ค่ะ', 'คะ']; // เผื่อกันเหนียว: ถ้าประโยคไหนในอนาคตดันมีคำลงท้ายฝังอยู่ใน words[] อีก ให้ตัดออกก่อนคำนวณ ไม่ให้ถูกนับเป็นคำที่ต้องทายเสียง (ปกติไม่ควรมีแล้วหลัง 2026-08-01)
-function tfParticleMode() { try { return localStorage.getItem('games_particle_mode') || 'off'; } catch (e) { return 'off'; } }
-function tfSetParticleMode(m) { try { localStorage.setItem('games_particle_mode', m); } catch (e) {} }
+function tfParticleMode() { try { return localStorage.getItem('tf_particle_mode') || 'off'; } catch (e) { return 'off'; } }
+function tfSetParticleMode(m) { try { localStorage.setItem('tf_particle_mode', m); } catch (e) {} }
 // คืนคำลงท้ายสุภาพที่จะโชว์ (หรือ null) ตามโหมดปุ่มปัจจุบัน + ข้อมูล politeF ของประโยค s — ใช้ตอนเริ่มเล่นและตอนกดปุ่มระหว่างเล่น (ไม่รีเซ็ตรอบ)
 function tfShowParticleFor(s) {
   var mode = tfParticleMode();
-  if (mode === 'm') return 'ครับ'; // ชายใช้ครับได้ทุกประโยคเหมือนกันหมด ไม่ต้องมีข้อมูลเพิ่ม
-  if (mode === 'f') return (s && s.politeF) || 'ครับ'; // มี politeF ใช้ตามนั้น (ค่ะ/คะ) · ไม่มี (ประโยคขึ้นด้วยผม) → บังคับครับต่อตามที่ Lin สั่ง
+  if (mode === 'f' && s && s.politeF) return s.politeF;
   return null;
 }
 // ปุ่มจริงอยู่ในเมนู 🍚 (#tf-particle-toggle, tone-finder.html) — นอก banner.innerHTML → ต้องซิงค์ icon/data-mode/ซ่อน-โชว์ตรงนี้ทุกครั้งที่ render() (WordMenu.js อ่าน data-mode ผ่าน READERS.particle)
@@ -928,10 +926,10 @@ function tfSyncParticleBtn() {
 // ── คำอ่านใต้คำศัพท์: 讀音 (ไทย 🐣/🥚) + 英文讀音 (โรมัน 🔡/🔠) — Lin 2026-07-25
 // เดิมเกมเสียงไม่มี 2 ปุ่มนี้เลย เพราะ "คำอ่านเฉลยวรรณยุกต์ก่อนตอบ" (โน้ต 2026-07-16)
 // รอบนี้ Lin สั่งให้เพิ่ม แต่ล็อกไว้ว่า **โชว์เฉพาะหลังตอบแล้วเท่านั้น** → ขั้น 'session-guess' (หน้าเดาวรรณยุกต์) จะไม่โชว์เด็ดขาด
-// ค่าจำใช้คีย์เดียวกับเกมอ่าน/เกมพิมพ์ (rg_pron_mode / rg_en_mode) → ตั้งครั้งเดียวเหมือนกันทุกเกม
+// ค่าจำของ Tone แยกจากเกมอื่น แม้ใช้ปุ่มและรูปแบบการแสดงร่วมกัน
 // ════════════════════════════════════════════════════════════
-var tfPronMode = (function () { try { var v = localStorage.getItem('rg_pron_mode'); return v === null ? false : v === '1'; } catch (e) { return false; } })();
-var tfEnMode   = (function () { try { var v = localStorage.getItem('rg_en_mode');   return v === null ? false : v === '1'; } catch (e) { return false; } })();
+var tfPronMode = (function () { try { var v = localStorage.getItem('tf_pron_mode'); return v === null ? false : v === '1'; } catch (e) { return false; } })();
+var tfEnMode   = (function () { try { var v = localStorage.getItem('tf_en_mode');   return v === null ? false : v === '1'; } catch (e) { return false; } })();
 
 function tfSyncReadBtns() {
   var b1 = document.getElementById('rg-pron-toggle');
@@ -956,13 +954,7 @@ function tfCurEntry() {
   return (typeof randomEntry !== 'undefined') ? randomEntry : null;
 }
 
-// ด่านกันเฉลย — Lin 2026-07-25 (แก้รอบ 2 หลังตรวจเว็บจริง):
-//   เดิมกันแค่ขั้น 'session-guess' → ยังรั่ว เพราะกด 🤷我不太確定 แล้วเข้าขั้น推導 (s1/s2a/…) คำอ่านโชว์เลย
-//   ทั้งที่ขั้น推導 ยังถามต่อ (子音類/母音/尾音) และคำอ่านโรมันมีขีดวรรณยุกต์ = บอกคำตอบตรงๆ (nèung)
-//   แก้เป็น "ขาวลิสต์": โชว์ได้เฉพาะตอนวรรณยุกต์ถูกเฉลยจริงแล้ว = หน้าเฉลย (result) กับหน้าสรุปพยางค์ (overview)
-// Lin 2026-07-30: แก้อีกรอบตามคำสั่งใหม่ — ด่านนี้เหลือคุมแค่ 英文讀音 อย่างเดียว
-//   讀音 (ไทย) ปลดล็อก โชว์ได้ตั้งแต่ก่อนตอบ เต็มทั้งคำ คิดคะแนนปกติ (Lin ยืนยันเลือกแบบนี้เอง รับทราบแล้วว่าคำอ่านใบ้เสียงได้)
-//   英文讀音 ยังล็อกเหมือนเดิม เพราะขีดวรรณยุกต์บนสระ (nèung) = บอกคำตอบตรงเกินไป
+// คำอ่านโรมันมีเครื่องหมายเสียง จึงแสดงหลังเฉลยเท่านั้น
 function tfReadingUnlocked() { return S.step === 'result' || S.step === 'overview'; }
 
 function tfReadingLineHtml() {
@@ -987,7 +979,8 @@ function tfReadingLineHtml() {
   // 讀音 ไทย: โชว์ทุกขั้น เต็มทั้งคำ ไม่ clip + โชว์ทุกคำแม้อ่านตรงกับตัวเขียน (Lin 2026-07-30 — กติกาเดียวกับเกมเรียงคำที่แก้รอบนี้ กันเข้าใจผิดว่าปุ่มเสีย)
   // Lin 2026-08-01: โหมดประโยค高級 ไม่โชว์คำอ่านรายคำ (tf-read-th) ตรงนี้แล้ว — ซ้อนกับคำอ่านยาวทั้งประโยค (sentReadingHtml/tf-adv-sent-reading) ที่โชว์อยู่ด้านล่างอยู่แล้ว (ซึ่งมีคำอ่านของคำนี้รวมอยู่ในนั้นแล้ว)
   if (tfPronMode && !advSentenceCtx) {
-    var _th = e.readingTH || (tfMobileLandscape() ? e.word : '') || '';
+    if (!e.readingTH) throw new Error('CATALOG_AUTHORITY_INCOMPLETE:readingTH');
+    var _th = e.readingTH;
     if (_th) html += '<div class="tf-read-th">' + _th + '</div>';
   }
   if (showEn)     { var _en = e.readingEN || '';           if (_en) html += '<div class="tf-read-en">' + _clip(_en) + '</div>'; }
@@ -1015,12 +1008,11 @@ function tfRepaintReading() {
 }
 
 // ════════════════════════════════════════════════════════════
-// ── โหมด 提示 (คำใบ้) ในเกมเสียง — Lin 2026-07-25
-// กติกาที่ Lin สั่ง: ใบ้ "เฉพาะขั้น推導" (บอกว่าให้เลือกตัวเลือกไหน) · หน้าเดาวรรณยุกต์แรกไม่ใบ้
-//   และ **เปิดโหมดนี้ = ไม่ได้อะไรเลย** ไม่มีคะแนน ไม่มีดาว ไม่มีความคืบหน้าทบทวน (SRS) ไม่มีสตรีค/แบดจ์/ชาเลนจ์
-// ค่าจำใช้คีย์เดียวกับเกมอ่าน/เกมพิมพ์ (rg_guide_mode) → ตั้งครั้งเดียวเหมือนกันทุกเกม
+// ── โหมด 提示: เปิดดูค่าที่ตรวจแล้วโดยตรง
+//   คำที่เปิด提示เป็น Free Practice: ไม่คิดคะแนน/โบนัส ไม่เปลี่ยน Combo และไม่อัปเดต SRS/Retry/Review
+//   ค่าที่ผู้เล่นเลือกคงอยู่ข้ามคำ รอบ และการโหลดหน้าใหม่; คะแนนยังล็อกแยกต่อคำ
 // ════════════════════════════════════════════════════════════
-var tfGuideMode = (function () { try { return localStorage.getItem('rg_guide_mode') === '1'; } catch (e) { return false; } })();
+var tfGuideMode = (function () { try { return localStorage.getItem('tf_guide_mode') === '1'; } catch (e) { return false; } })();
 
 function tfSyncGuideBtn() {
   var b = document.getElementById('tf-guide-toggle');
@@ -1030,27 +1022,28 @@ function tfSyncGuideBtn() {
   b.setAttribute('aria-label', b.title);
 }
 
-// ไฮไลต์ตัวเลือกที่ถูกในขั้น推導 — ใช้ validate() ตัวเดียวกับที่เกมใช้ตรวจคำตอบจริง (ไม่ได้เดาเอง)
-// กันพลาด: ถ้าเช็กแล้ว "ถูกมากกว่า 1 ตัว" (บางคำระบบแยกไม่ออก) → ไม่ใบ้เลย ดีกว่าใบ้ผิด
+// Highlight the one reviewed teaching choice for the current 推導 step.
+// This is navigation/pedagogy only; catalogToneNumber() remains the sole judge.
 function tfApplyGuideHints() {
   var body = document.getElementById('tf-body');
   if (!body) return;
   var old = body.querySelectorAll('.tf-opt-hint');
   for (var j = 0; j < old.length; j++) old[j].classList.remove('tf-opt-hint');
-  if (!tfGuideMode) return;
-  if (S.step === 'session-guess') return;   // หน้าเดาวรรณยุกต์แรก: ไม่ใบ้ (ตามที่ Lin สั่ง)
+  if (!tfGuideMode || S.step === 'session-guess') return;
   var btns = body.querySelectorAll('[data-hintkey]');
-  if (btns.length < 2) return;              // มีตัวเลือกเดียว ไม่ต้องใบ้
+  if (btns.length < 2) return;
+  var expected = catalogExpectedTeachingChoice(S.step);
   var correct = [];
   for (var i = 0; i < btns.length; i++) {
-    if (!validate(btns[i].getAttribute('data-hintkey'), '')) correct.push(btns[i]);
+    if (btns[i].getAttribute('data-hintkey') === expected) correct.push(btns[i]);
   }
   if (correct.length === 1) correct[0].classList.add('tf-opt-hint');
 }
 
 // ป้ายบอกโหมด (เหมือนเกมอ่าน) — ให้ผู้เล่นรู้ตัวว่ากำลังเล่นแบบไม่คิดคะแนนอยู่
 function tfGuideNoteHtml() {
-  if (!tfGuideMode) return '';
+  if (tfCurWordNoTools() && !(session && session.currentWordGuideUsed)) return '';
+  if (!tfGuideMode && !(session && session.currentWordGuideUsed)) return '';
   return '<div class="tf-guide-note">💡 <b>練習模式</b>・純練習不計分（沒有分數、星星與複習進度）</div>';
 }
 
@@ -1111,7 +1104,7 @@ function tfChallengeBump(session) {
   var pack = tfChallengeState(), ch = pack.ch, st = pack.st;
   if (st.done) { tfSaveChallenge(st); return; }
   var add = 0;
-  if (ch.type === 'correct') add = session.results.filter(function (r) { return !r.skipped && (r.mistakes || 0) === 0 && !r.forced; }).length;
+  if (ch.type === 'correct') add = session.results.filter(function (r) { return !tfResultIsNeutral(r) && r.firstTry && (r.mistakes || 0) === 0 && !r.forced; }).length;
   else if (ch.type === 'sets') add = 1;
   else if (ch.type === 'perfect') add = session.isPerfect ? 1 : 0;
   else if (ch.type === 'combo') add = (session.maxCombo || 0) >= ch.target ? ch.target : 0;
@@ -1160,15 +1153,15 @@ function tfResetWordScoring() {
   session.currentWordMistakes = 0;
   session.currentWordMistakesTotal = 0; // รวมทุกพยางค์เพื่อให้ Result/SRS ตรงกับการตอบจริง
   session.currentWordDeduction = 0;
-  session.currentWordDeduct = 0;      // Lin 2026-07-04: ขั้นบันไดคะแนน (กดผิด+แอบดูที่โดนหัก)
-  session.stepWrong = false;          // เพิ่งผิดในขั้น推導ปัจจุบันไหม (คุมสิทธิ์ free peek)
+  session.currentWordDeduct = 0;      // ขั้นบันไดคะแนนจากการเลือกผิดใน推導เท่านั้น
+  session.stepWrong = false;
   session.stepFreePeekUsed = false;
   session.currentWordScored = false;
   session.currentWordFirstTry = false;
   session.currentWordScore = 0;
-  // P12-A-03: the hint state carries into the next question, but once a
-  // question has exposed Choice-style guidance it can never score again.
-  session.currentWordGuideUsed = !!tfGuideMode;
+  // The next word's no-tools SRS flags are not known until tfSetupNextWord.
+  // Snapshot its Hint state only after those flags have been set.
+  session.currentWordGuideUsed = false;
   // ── คำหลายพยางค์: คิดคะแนนรายพยางค์ ──
   session.curWordAllFirstTry = true;   // จริงตราบที่ทุกพยางค์ยังถูกครั้งแรก
   session.scoredSyls = {};             // กันให้คะแนนซ้ำเมื่อกด "วิเคราะห์ใหม่"
@@ -1176,15 +1169,18 @@ function tfResetWordScoring() {
   //   สะสม "คะแนนฐานต่อพยางค์ (ยังไม่คูณทอง/คอมโบ)" ไว้ก่อน แล้วไปเฉลี่ย + คูณทอง/คอมโบ "ครั้งเดียวตอนจบคำ" ที่ tfCommitWordAndAdvance
     session.curWordSylRawSum = 0;        // ผลรวมคะแนนฐานทุกพยางค์ (ก่อนเฉลี่ย, ก่อนคูณ)
   session.curWordSylScoredCount = 0;   // จำนวนพยางค์ที่คิดคะแนนแล้ว (ตัวหารเฉลี่ย)
+  session.learningComponentWrongCounts = []; // หลักฐานดิบสำหรับตัวตรวจคะแนนฝั่ง server; ไม่ใช่คะแนนจาก client
   session.curWordWrongGuess = false;   // เคยเดาผิด/🤷 ในคำ/พยางค์นี้ไหม (กันโกง first-try)
   // ── Lin 2026-07-04: สถานะปุ่ม "?" (= ปุ่มแอบดู ตัวเดียวกัน) ต่อคำ/ประโยคนี้ ──
-  session.hintUsed = false;      // กด ? ไปแล้วหรือยังในคำนี้ (ครั้งแรกนับผิด 1 ครั้ง, ครั้งถัดไปฟรี — ดู tfUseHint)
+  session.hintUsed = false;
   session.curWordGuesses = {};   // Phase 4: เก็บ "คำเดาวรรณยุกต์" รายพยางค์ (index → 1-5/0) ส่งให้เซิร์ฟเวอร์ตรวจ
   session.currentWordToneAttempts = [];
 }
 
 function tfLockCurrentWordForGuide() {
-  if (!session || session.currentWordGuideUsed) return;
+  if (!session) return;
+  session.currentWordGolden = false;
+  if (session.currentWordGuideUsed) return;
   // A multi-syllable item can enter the next active syllable with guidance
   // enabled from the preceding reveal. Lock the whole current item before
   // that guidance is exposed, including any earlier provisional points.
@@ -1195,7 +1191,6 @@ function tfLockCurrentWordForGuide() {
   session.currentWordFirstTry = false;
   session.curWordAllFirstTry = false;
   session.currentWordGuideUsed = true;
-  session.combo = 0;
   try { tfUpdateScoreHud(); } catch (e) {}
 }
 
@@ -1204,10 +1199,14 @@ function tfCurWordIsMulti() {
   var e = session && session.words && session.words[session.index];
   return !!(e && e.readingTH && e.readingTH.indexOf('-') !== -1);
 }
+function tfCurWordIsParticle() {
+  var entry = session && session.words && session.words[session.index];
+  return !!(entry && entry.isParticle);
+}
 
 // ── Lin 2026-07-04: คำปัจจุบัน "ห้ามใช้เครื่องมือช่วย + ห้ามให้แต้ม" ไหม ──
 // จริงเมื่อ: (ก) รอบตัดสิน Day 7 หรือ (ข) กดปุ่ม "✓ 已記得" แล้วเข้าโหมดพิสูจน์ 1 ครั้ง
-// ทั้งสองกรณีใช้ UI/กติกาเดียวกัน (ไม่มี推導 ไม่มีใบ้ ไม่มีแต้ม ผิดปุ๊บ fail) ต่างกันแค่ตอน commit SRS
+// ทั้งสองกรณีใช้ UI/กติกาเดียวกัน (ไม่มีใบ้ ไม่มีแต้ม ผิดปุ๊บ fail) ต่างกันแค่ตอน commit SRS
 function tfCurWordNoTools() {
   return !!(session && (session.curWordIsFinalSrsCheck || session.curWordIsKnownCheck));
 }
@@ -1272,7 +1271,7 @@ function tfSessionCounterState() {
 // ════════════════════════════════════════════════════════════
 function tfBarsHtml() {
   if (!session || !session.words || !session.words.length) return '';
-  // Lin 2026-07-11: หลอด本題分數 ย้ายเข้ามาไว้ในการ์ดทอง (#tf-banner) เหมือนอีก 3 เกม — โชว์เฉพาะช่วงขั้น推導 (s1/s2) เหมือนของเดิม
+  // แสดงหลอดเฉพาะขั้นคำถามที่ใช้งานอยู่
   var wsHtml = '';
   if (/^s[12]/.test(S.step)) wsHtml = tfWordScoreBarRowHtml();
   return wsHtml ? '<div class="bars-wrap gsh-progress" id="tf-bars-wrap">' + wsHtml + '</div>' : '';
@@ -1318,9 +1317,10 @@ function tfComboFlash(combo, mult) {
 // คำที่ mastered แล้ว (ตัดออกจาก SRS ถาวร) ไม่ควรโผล่ให้เล่นซ้ำอีก แต่เผื่อกรณีคำอยู่ในชุด/ห้องพิเศษอื่นที่ไม่ผ่าน SRS
 // (เช่น 全部/ห้องพิเศษ) → กันไว้อีกชั้น: ถ้าคำนี้ mastered แล้วในบัญชีผู้เล่น ไม่ให้แต้มเกมซ้ำอีก
 function tfSoftPointsAllowed(entry) {
-  if (tfGuideMode || (session && session.currentWordGuideUsed)) return false;
+  if (entry && entry.isParticle) return false;
+  if (session && session.currentWordGuideUsed) return false;
   if (!tfSrsLoggedIn()) return true; // ไม่ล็อกอิน = ไม่มี SRS อยู่แล้ว ให้แต้มปกติตามเดิม
-  var rec = tfGetSrsRecord(entry && entry.word, selectedLevel);
+  var rec = tfGetSrsRecord(entry, selectedLevel);
   return !(rec && rec.mastered); // mastered แล้ว → ห้ามแจกแต้มเกมซ้ำอีก (กันฟาร์ม)
 }
 
@@ -1328,8 +1328,9 @@ function tfSoftPointsAllowed(entry) {
 // เดิมคะแนน/ดาวเงินกันไว้แล้วที่ tfSoftPointsAllowed (ได้ 0 เพิ่มถูกต้อง) แต่ยังเสียเวลาผู้เล่นเจอคำที่จำได้แล้วซ้ำ
 // จุดนี้กรองออกตั้งแต่ตอนสร้างพูลคำเลย (ไม่ใช่แค่กันคะแนนตอนเล่น) — ทำงานเฉพาะล็อกอิน (ไม่งั้นไม่มี SRS record ให้เช็ก)
 // กันพูลว่าง: ถ้ากรองแล้วเหลือน้อยกว่า minKeep (เช่น mastered ไปเกือบหมดแล้ว) → คืนของเดิมไม่กรอง ดีกว่าเจอ "หาไม่พบ"
-function tfWordLevel(word) {
-  for (var i = 0; i < WORD_LIST.length; i++) if (WORD_LIST[i].word === word) return WORD_LIST[i].level;
+function tfWordLevel(entryOrWord) {
+  if (entryOrWord && typeof entryOrWord === 'object' && entryOrWord.level) return entryOrWord.level;
+  for (var i = 0; i < WORD_LIST.length; i++) if (WORD_LIST[i].word === entryOrWord) return WORD_LIST[i].level;
   return selectedLevel || 1;
 }
 function tfExcludeMasteredWords(words, minKeep) {
@@ -1359,6 +1360,7 @@ function tfScoreFirstTry() {
     session.scoredSyls[k] = true;
     // ── Lin 2026-07-04: สะสมคะแนน "ฐาน" ต่อพยางค์ (ยังไม่คูณทอง/คอมโบ) — ไปเฉลี่ย+คูณครั้งเดียวตอนจบคำ ──
     var sylBase = TF_SCORE.cfg.SCORE_FIRST_TRY;
+    session.learningComponentWrongCounts[k] = 0;
     session.curWordSylRawSum = (session.curWordSylRawSum || 0) + sylBase;
     session.curWordSylScoredCount = (session.curWordSylScoredCount || 0) + 1;
     // เด้งฟีดแบ็กรายพยางค์ (คะแนนฐาน) แต่ "ยังไม่บวกเข้า session.score" — คะแนนจริงบวกทีเดียวตอนจบคำ
@@ -1387,16 +1389,27 @@ function tfScoreFirstTry() {
   }, 520);
 }
 
-// ให้คะแนน "ผ่าน推導สำเร็จ" (เรียกตอน navigate ไปถึง step 'result')
+// Score a completed learner-facing 推導 path. The path teaches reviewed
+// properties; it does not calculate the correct tone.
 function tfScoreDeduce() {
   if (!session) return;
-  // รอบตัดสิน Day 7 แยกจาก known-check และไม่มี推導
-  var noSoftPoints = !!(session.curWordIsKnownCheck) || !tfSoftPointsAllowed(session.words[session.index]);
+  var noSoftPoints = !!session.curWordIsKnownCheck || !tfSoftPointsAllowed(session.words[session.index]);
   if (noSoftPoints) {
-    if (tfCurWordIsMulti()) { if (session.scoredSyls) session.scoredSyls[S.selectedSyl] = true; session.curWordAllFirstTry = false; }
-    else { session.currentWordScored = true; }
+    var freePractice = !!session.currentWordGuideUsed;
+    if (tfCurWordIsMulti()) {
+      if (session.scoredSyls) session.scoredSyls[S.selectedSyl] = true;
+      session.curWordAllFirstTry = false;
+    } else {
+      session.currentWordScored = true;
+    }
     session.currentWordFirstTry = false;
-    session.combo = 0;
+    if (!freePractice && !tfCurWordIsParticle()) session.combo = 0;
+    return;
+  }
+  // เดาเสียงครั้งแรกผิด/ไม่มั่นใจเป็นโอกาสเรียน ไม่ใช่ความผิดในการ推導
+  // ถ้าผ่านเส้นทางสอนโดยไม่ตอบผิดเลย ให้คะแนน Clean เหมือนตอบถูกตรงๆ
+  if ((session.currentWordDeduct || 0) === 0 && !session.currentWordGuideUsed) {
+    tfScoreFirstTry();
     return;
   }
   var gold = tfGoldenMult();
@@ -1404,8 +1417,8 @@ function tfScoreDeduce() {
     var k = S.selectedSyl;
     if (session.scoredSyls && session.scoredSyls[k]) return;
     session.scoredSyls[k] = true;
-    // ── Lin 2026-07-04: คะแนนฐานต่อพยางค์ = บันได [10,7,4,1,0] ตาม "หักรวม" (กดผิด+แอบดูที่โดนหัก) — เฉลี่ย+คูณทอง/คอมโบครั้งเดียวตอนจบคำ ──
     var sylBase = TF_WORDSCORE.score(session);
+    session.learningComponentWrongCounts[k] = Math.min(session.currentWordDeduct || 0, 4);
     session.curWordSylRawSum = (session.curWordSylRawSum || 0) + sylBase;
     session.curWordSylScoredCount = (session.curWordSylScoredCount || 0) + 1;
     session.curWordAllFirstTry = false;
@@ -1414,61 +1427,49 @@ function tfScoreDeduce() {
     return;
   }
   if (session.currentWordScored) return;
-  // Lin 2026-07-04: คะแนน = บันได [10,7,4,1,0] ตาม "หักรวม" ในคำนี้ (กดผิด + แอบดูที่โดนหัก) × ทอง
   var pts = Math.round(TF_WORDSCORE.score(session) * gold);
   session.score += pts;
   session.currentWordScore = pts;
   session.currentWordFirstTry = false;
   session.currentWordScored = true;
-  session.combo = 0; // สตรีคขาด (ไม่ใช่ถูกครั้งแรก) — ไม่ริบของเก่า
+  session.combo = 0;
   setTimeout(function () { tfScorePop(pts, { gold: gold > 1 }); }, 60);
 }
 
-// ── Lin 2026-07-04 (แก้ไขล่าสุด): ปุ่ม "?" (คำใบ้ตาราง DEFS — อยู่ทุกหน้า推導/helper ผ่าน optRow) ──
-// = "ปุ่มแอบดู" ตัวเดียวกันตามที่ Lin ยืนยัน (ไม่มีปุ่มแยกต่างหากอีกต่อไป — เดิมมี tfPeekWord แยก ตอนนี้ตัดออกแล้ว)
-// กติกา: "เปิดดูหนึ่งครั้งถือว่าตอบผิดหนึ่งครั้ง ใช้หลักตอบผิดเลย" — เหมือน tfHandleDeduceMistake ทุกประการ
-//   - เปิดดูครั้งแรกในคำ/ประโยคนี้ (นับครั้งเดียวรวมทุกขั้น) → หักแต้มแบบเดียวกับกดผิดในขั้นนั้น (deductPerWrong)
-//     + นับเข้าโควตา currentWordMistakes (ผิดครบ 3 = 0 แต้ม+เฉลย+SRS เหมือนกดผิดจริง — ไม่ใช่ล็อก 0 แต้มทันทีแบบเดิม)
-//     + log สถิติผ่าน recordMistake เหมือนตอบผิดจริงทุกอย่าง
-//   - เปิดซ้ำในคำเดียวกัน (ครั้งที่ 2 ขึ้นไป) → ฟรี ไม่หักซ้ำ ไม่นับผิดเพิ่ม (เช็ก session.hintUsed กันไว้)
-//   - โหมดค้นหาอิสระ (ไม่มี session) → ฟรีเสมอ ไม่มีคะแนน/ดาวเงินให้ป้องกันอยู่แล้ว
 function tfUseHint(keys) {
-  // Lin 2026-07-04: แอบดู(?) = ฟรีถ้าเพิ่งผิดในขั้นนี้ (free peek 1 ครั้ง/ขั้น) · ไม่งั้นหัก 1 ขั้นบันได (ไม่นับ "กดผิดจริง")
+  if (tfCurWordNoTools()) return;
+  if (tfCurWordIsParticle()) { showTip(keys); return; }
   if (session) {
-    var charged = TF_WORDSCORE.onPeek(session);
-    if (charged) {
-      session.combo = 0;
-      session.hintUsed = true;
-      if (tfCurWordIsMulti()) session.curWordAllFirstTry = false;
-      tfUpdateWordScoreGauge();   // หลอดลดสดทันที
-      if (TF_WORDSCORE.isDead(session)) {
-        showTip(keys);       // โชว์ตารางที่กดขอดูก่อน แล้วค่อยเฉลย+จบคำ (แต้มเหลือ 0)
-        tfForceRevealZero();
-        return;
-      }
-    }
+    tfLockCurrentWordForGuide();
+    session.hintUsed = true;
+    render();
   }
   showTip(keys);
 }
 
-// จัดการกดผิดในขั้น推導: หักแต้ม + นับครั้ง + ถ้าครบเพดาน → เฉลย
-function tfHandleDeduceMistake(step, choiceLabel, errMsg) {
-  if (!session) { showError(errMsg); return; }   // โหมดค้นหาอิสระ: ไม่คิดคะแนน (พฤติกรรมเดิม)
-  recordMistake(choiceLabel, errMsg);             // นับ "กดผิดจริง" (currentWordMistakes) + log สถิติรายวัน
-  TF_WORDSCORE.onWrong(session);                  // Lin 2026-07-04: หัก 1 ขั้นบันได + เปิดสิทธิ์ free peek ของขั้นนี้
-  session.combo = 0;                              // คอมโบขาดทันทีที่กดผิด
+function tfHandleDeduceMistake(choiceLabel, errMsg) {
+  if (!session || tfCurWordIsParticle()) { showError(errMsg); return; }
+  recordMistake(choiceLabel, errMsg);
+  if (session.currentWordGuideUsed) {
+    tfUpdateWordScoreGauge();
+    showError(errMsg);
+    tfMinaToast('wrong', { throttle: true, chance: 0.5 });
+    return;
+  }
+  TF_WORDSCORE.onWrong(session);
+  session.combo = 0;
   if (tfCurWordIsMulti()) session.curWordAllFirstTry = false;
-  tfUpdateWordScoreGauge();                        // หลอดลดสดทันทีที่กดผิด (กันบั๊ก "ไม่ลด")
+  tfUpdateWordScoreGauge();
   if (TF_WORDSCORE.isDead(session)) {
-    tfForceRevealZero();                          // หักครบ 4 → 0 แต้ม + เฉลย
-    tfMinaToast('wrong');                         // มีนาปลอบ (ไม่ดุ) — Lin 2026-07-10
+    tfForceRevealZero();
+    tfMinaToast('wrong');
   } else {
-    showError(errMsg);                            // ยังเล่นต่อได้
-    tfMinaToast('wrong', { throttle: true, chance: 0.5 });  // ปลอบเป็นบางครั้ง กันรกจอ
+    showError(errMsg);
+    tfMinaToast('wrong', { throttle: true, chance: 0.5 });
   }
 }
 
-// ครบ 3 ครั้ง: 0 แต้ม + เฉลย · พยางค์เดียว→คำใหม่ · หลายพยางค์→กลับจอรวมพยางค์
+// เผยคำตอบจาก canonical catalog โดยตรงเมื่อครบเพดาน 4 ครั้งหรืออยู่ในรอบห้ามใช้เครื่องมือ
 function tfForceRevealZero() {
   var entry = session.words[session.index];
   if (tfCurWordIsMulti()) {
@@ -1478,17 +1479,18 @@ function tfForceRevealZero() {
     // ── Lin 2026-07-04: พยางค์ fail = 0 คะแนน แต่ยังนับเป็น 1 พยางค์ในตัวหารเฉลี่ย (บวก 0 เข้า rawSum) ──
     session.curWordSylRawSum = (session.curWordSylRawSum || 0) + 0;
     session.curWordSylScoredCount = (session.curWordSylScoredCount || 0) + 1;
+    session.learningComponentWrongCounts[k] = 4;
     session.curWordAllFirstTry = false;
     session.combo = 0;
-    var sct = computeTone(syl);
+    var sct = catalogToneNumber();
     tfShowRevealOverlay({ word: syl, zh: entry.zh, readingTH: syl }, sct, { sylIdx: k, sylTone: sct });
     return;
   }
-  session.currentWordScore = TF_SCORE_CFG.SCORE_FAIL_ZERO; // ผิดครบ 3 ครั้ง (fail) = 0 pt
+  session.currentWordScore = TF_SCORE_CFG.SCORE_FAIL_ZERO; // ผิดครบ 4 ครั้ง (fail) = 0 pt
   session.currentWordFirstTry = false;
   session.currentWordScored = true;
-  session.combo = 0;
-  var ct = computeTone(entry.word);
+  if (!entry.isParticle) session.combo = 0;
+  var ct = catalogToneNumber();
   tfShowRevealOverlay(entry, ct, {});
 }
 
@@ -1531,17 +1533,16 @@ function tfAfterForcedRevealSyl(idx, tone) {
   var results = S.sylResults || {};
   results[idx] = { tone: tone };
   var syls = S.syllables;
-  // Lin 2026-08-02: ใช้ fallback แบบเดียวกับ nextSyllable() — ถ้า parentWord หาย ลองต่อตัวสะกดจริงจาก tfCurEntry() ก่อน ไม่ใช่ต่อคำอ่านดิบๆ
-  var _curEntryForParent2 = tfCurEntry();
-  var parentWord = S.parentWord || ((syls && _curEntryForParent2 && _curEntryForParent2.syls && _curEntryForParent2.syls.length === syls.length) ? _curEntryForParent2.syls.map(function(sy){ return sy.th; }).join('') : (syls ? syls.join('') : S.word));
+  var parentWord = currentCatalogWord();
   if (idx + 1 < syls.length) {
     if (session) { session.currentWordMistakes = 0; session.currentWordDeduction = 0; session.currentWordDeduct = 0; session.stepWrong = false; session.stepFreePeekUsed = false; session.curWordWrongGuess = false; session.hintUsed = false; }
-    var sylStep = session ? 'session-guess' : 's1';
+    if (!session) throw new Error('CATALOG_AUTHORITY_UNAVAILABLE:no active session');
+    var sylStep = 'session-guess';
     var ns = { word: syls[idx + 1], step: sylStep, path: [syls[idx + 1]], tone: null, syllables: syls, selectedSyl: idx + 1, sylResults: results, parentWord: parentWord };
     hist = hist.slice(0, histPos + 1);
     hist.push(ns); histPos++;
     S = ns;
-    if (tfGuideMode) tfLockCurrentWordForGuide();
+    if (tfGuideMode && !tfCurWordNoTools()) tfLockCurrentWordForGuide();
     render();
   } else {
     tfCommitWordAndAdvance({ forced: true });
@@ -1552,7 +1553,7 @@ function tfAfterForcedRevealSyl(idx, tone) {
 function tfCommitWordAndAdvance(opts) {
   opts = opts || {};
   var entry = session.words[session.index];
-  var tone = (S && S.tone != null) ? S.tone : computeTone(entry.word);
+  var tone = catalogToneNumber();
   var mistakes = session.currentWordMistakesTotal != null
     ? session.currentWordMistakesTotal
     : (session.currentWordMistakes || 0);
@@ -1564,7 +1565,9 @@ function tfCommitWordAndAdvance(opts) {
   var firstTry = (isMulti ? (!!session.curWordAllFirstTry && allScored) : !!session.currentWordFirstTry) && !session.currentWordGuideUsed;
   // คอมโบสำหรับคำหลายพยางค์: คิดตอนจบคำ (พยางค์เดียวคิดไปแล้วใน tfScoreFirstTry)
   if (isMulti && !opts.forced) {
-    if (firstTry) {
+    if (session.currentWordGuideUsed) {
+      // Free Practice ไม่เพิ่มและไม่ตัด Combo
+    } else if (firstTry) {
       session.combo = (session.combo || 0) + 1;
       if (session.combo > (session.maxCombo || 0)) session.maxCombo = session.combo;
       if (session.combo === 3 || session.combo === 5 || session.combo === 8) {
@@ -1599,28 +1602,48 @@ function tfCommitWordAndAdvance(opts) {
     firstTry: firstTry,
     golden: !!session.currentWordGolden,
     forced: !!opts.forced,
-    needReview: !!opts.forced || mistakes > 0 || !firstTry
+    learningEvidence: { componentWrongCounts: (session.learningComponentWrongCounts && session.learningComponentWrongCounts.length) ? session.learningComponentWrongCounts.slice() : [Math.min(session.currentWordDeduct || mistakes || 0, 4)] },
+    needReview: !session.currentWordGuideUsed && (!!opts.forced || mistakes > 0 || !firstTry)
   });
   if (roundReport && window.RoundReport) {
     var _tfResult = session.results[session.results.length - 1];
     var _tfSentence = selectedLevel === 3 && advSentenceCtx && advSentenceCtx.th;
-    var _tfRec = tfSrsLoggedIn() ? tfGetSrsRecord(entry.word, selectedLevel) : null;
-    RoundReport.addItem(roundReport, {
-      content_ref: { source: _tfSentence ? 'game_sentences' : 'game_words', key: _tfSentence || (entry.word + '@' + (selectedLevel || 1)) },
-      question: entry.word, meaning: entry.zh || '', attempts: _tfResult.attempts,
-      user_answer: _tfResult.attempts.length ? _tfResult.attempts[_tfResult.attempts.length - 1].answer : '',
-      correct_answer: TONES[tone] ? TONES[tone].zh : String(tone || ''),
-      is_correct: mistakes === 0 && firstTry && !opts.forced,
-      wrong_count: mistakes, item_score: _tfResult.score, hint_used: _tfResult.hintUsed,
-      linguistic: { reading_th: entry.readingTH || '', syls: entry.syls || null, read_syls: entry.readSyls || null, correct_tone: tone },
-      words: (_tfSentence && advSentenceCtx.words) ? advSentenceCtx.words.map(function(w){return {th:w.th||'',zh:w.zh||''};}) : [],
-      srs_state: _tfRec && (_tfRec.dueDate || _tfRec.stage) || null,
-      mastered_state: !!(_tfRec && _tfRec.mastered)
-    });
+    var _tfRec = tfSrsLoggedIn() ? tfGetSrsRecord(entry, selectedLevel) : null;
+    // LearningReview ฟัง event ของ RoundReport ทันที จึงยกเว้นเฉพาะคำ Free Practice
+    // แล้วคืนสถานะรอบเดิมทันที เพื่อไม่ให้คำ Challenge อื่นในรอบถูกยกเว้นตามไปด้วย
+    var _tfRoundWasLearningExempt = roundReport.learning_exempt === true;
+    if (_tfResult.hintUsed) roundReport.learning_exempt = true;
+    try {
+      RoundReport.addItem(roundReport, {
+        content_ref: _tfSentence ? { source: 'game_sentences', key: _tfSentence } : { source: 'game_words', key: tfWordContentKey(entry) },
+        question: entry.word, meaning: entry.zh || '', attempts: _tfResult.attempts,
+        user_answer: _tfResult.attempts.length ? _tfResult.attempts[_tfResult.attempts.length - 1].answer : '',
+        correct_answer: TONES[tone] ? TONES[tone].zh : String(tone || ''),
+        is_correct: mistakes === 0 && firstTry && !opts.forced,
+        is_practice: _tfResult.hintUsed,
+        wrong_count: mistakes, item_score: _tfResult.score, hint_used: _tfResult.hintUsed,
+        learning_evidence: _tfResult.learningEvidence,
+        linguistic: { reading_th: entry.readingTH || '', syls: entry.syls || null, correct_tone: tone },
+        words: (_tfSentence && advSentenceCtx.words) ? advSentenceCtx.words.map(function(w){return {th:w.th||'',zh:w.zh||''};}) : [],
+        learning_action: session.curWordIsKnownCheck ? 'known_check' : 'answer',
+        srs_state: _tfRec && (_tfRec.dueDate || _tfRec.stage) || null,
+        mastered_state: !!(_tfRec && _tfRec.mastered)
+      });
+    } finally {
+      roundReport.learning_exempt = _tfRoundWasLearningExempt;
+    }
   }
   // ── สเปก 2026-07-03 ข้อ 3+4: อัปเดต SRS ต่อคำ/ประโยค + แจกดาวเงินตอน mastered ──
   // ทำงานเฉพาะตอนล็อกอิน (ข้อ 0) · หน่วย SRS = ทั้งคำ/ประโยค ไม่ใช่รายพยางค์ → ใช้ entry.word ทั้งก้อน
-  try { if (tfSrsLoggedIn()) tfProcessSrsOnWordCommit(entry, mistakes, firstTry, !!opts.forced); } catch (e) {}
+  try { if (!entry.isParticle && !session.currentWordGuideUsed && tfSrsLoggedIn()) tfProcessSrsOnWordCommit(entry, mistakes, firstTry, !!opts.forced); } catch (e) {}
+  if(window.LearningReview&&LearningReview.advance&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()){
+    LearningReview.advance(roundReport,tfAdvanceCommittedWord);
+    return;
+  }
+  tfAdvanceCommittedWord();
+}
+
+function tfAdvanceCommittedWord() {
   session.index++;
   tfResetWordScoring();
   session.initialGuess = undefined;
@@ -1650,24 +1673,24 @@ function tfLevelWordCount(level) {
 }
 
 // ── สเปก 2026-07-03 ข้อ 3+4+5: อัปเดต SRS ของคำ/ประโยคนี้ตอนจบ (เรียกจาก tfCommitWordAndAdvance) ──
-// "สะอาด" ต้องถูกครั้งแรกทั้งหน่วย (ทุกพยางค์/ทุกคำในประโยค) + ไม่แอบดู + ไม่นับ forced (เฉลยเพราะผิดครบ 3)
+// "สะอาด" ต้องถูกครั้งแรกทั้งหน่วย (ทุกพยางค์/ทุกคำในประโยค) และไม่นับ forced (เฉลยเพราะผิดครบ 3)
 // clean round → New → Day 1 → Day 7 → Mastered ตาม Phase 1
-// ไม่ clean (ผิด/แอบดู/forced) → รีเซ็ตกลับ day 1 เข้าคิวใหม่ (กันโกงข้อ 5: ห้ามเร่งขั้นเร็วกว่ากำหนด)
+// Free Practice ไม่เรียกฟังก์ชันนี้; ไม่ clean จากการตอบผิด/forced จึงค่อยรีเซ็ตกลับ day 1
 function tfProcessSrsOnWordCommit(entry, mistakes, firstTry, forced) {
   if (!entry || !entry.word) return;
   if (!tfSrsLoggedIn()) return; // Guest Free ไม่มี SRS และห้ามนำรอบก่อน Login ไปนับย้อนหลัง
-  if (tfGuideMode || (session && session.currentWordGuideUsed)) return;
+  if (tfReviewOwns(entry)) return; // Login Free is committed only by LearningReview.
+  if (!window.PAID_SRS_PRIVATE_BETA) return; // tone-round is retained for the gated Paid beta only.
+  if (session && session.currentWordGuideUsed) return;
   var wasFinalCheck = !!(session && session.curWordIsFinalSrsCheck);
   var wasKnownCheck = !!(session && session.curWordIsKnownCheck);
-  // หมายเหตุ: ปุ่ม "?" (= แอบดู) ไม่มี flag แยกแล้ว (Lin 2026-07-04 แก้ให้ใช้หลักตอบผิดตรงๆ) — mistakes>0 จาก tfUseHint ครอบคลุมอยู่แล้ว
+  // คำตอบที่ไม่สะอาดไม่เลื่อน SRS
   var cleanThisRound = !!firstTry && !forced && (mistakes || 0) === 0;
 
-  // ── Phase 4 (กันโกงดาว): ให้ "เซิร์ฟเวอร์" เป็นคนตัดสิน+แจกดาวจริง (ล็อกอินเท่านั้น) ──
-  //   เพิ่มเข้ามาคู่ขนาน ไม่รื้อ logic local ด้านล่าง (เน็ตล่ม/ไม่ล็อกอิน → เกมทำงานเหมือนเดิมทุกอย่าง)
-  //   ดาวที่ "แลกเงินได้" = ที่เซิร์ฟเวอร์เขียนเท่านั้น · ดาว local = ตัวโชว์เฉยๆ (หลังล็อก RLS จะ sync ขึ้นไม่ได้)
+  // Paid private beta keeps its separate server-authoritative SRS transport.
   try {
-    if (window.TONE_SERVER && TONE_SERVER.available()) {
-      var _sv = { word: entry.word, level: selectedLevel || 1, knownCheck: wasKnownCheck };
+    if (window.PAID_SRS_PRIVATE_BETA && window.TONE_SERVER && TONE_SERVER.available()) {
+      var _sv = { word: entry.word, contentKey: entry.contentKey, level: selectedLevel || 1, knownCheck: wasKnownCheck };
       var _syls = (entry.readingTH && entry.readingTH.indexOf('-') > -1) ? entry.readingTH.split('-') : null;
       if (_syls && _syls.length > 1) {
         _sv.syllables = _syls;
@@ -1675,30 +1698,42 @@ function tfProcessSrsOnWordCommit(entry, mistakes, firstTry, forced) {
       } else {
         _sv.initialGuess = (session.curWordGuesses && session.curWordGuesses[0] != null) ? session.curWordGuesses[0] : session.initialGuess;
       }
-      TONE_SERVER.finishRound(_sv).then(function (r) {
+      var _serverRound = TONE_SERVER.finishRound(_sv);
+      _serverRound.then(function (r) {
         try {
+          if (window.PAID_SRS_PRIVATE_BETA && r && r.newSrsRecord) {
+            var _paidRecord = Object.assign({}, r.newSrsRecord);
+            // The reschedule interval after a failed Challenge is still a pending
+            // Product decision. Freeze that item locally as well as on the server.
+            if (_paidRecord.reschedulePending) _paidRecord.mastered = true;
+            tfSetSrsRecord(entry, _sv.level, _paidRecord);
+          }
           if (r && r.ok) {
             // เซิร์ฟเวอร์ยืนยัน → ตัวเลขดาว "จริง" = r.totalStars (ซิงก์ลงมาโชว์ตอน sync ถัดไป)
             if (r.justMastered && r.stars > 0 && window.console) console.log('[P4] ⭐ server award', r.stars, '→ total', r.totalStars);
           } else if (r && window.console) { console.log('[P4] server not-ok:', r.reason); }
         } catch (e) {}
       });
+      // Paid progress is server-authoritative. Do not run the optimistic Free
+      // cadence or write the Free local key while the private beta is active.
+      if (session) { session.curWordIsKnownCheck = false; session.curWordIsFinalSrsCheck = false; }
+      return;
     }
   } catch (e) {}
 
-  var rec = tfGetSrsRecord(entry.word, selectedLevel);
+  var rec = tfGetSrsRecord(entry, selectedLevel);
   if (!rec) rec = TF_SRS.blank();
 
   // known-check (กดปุ่ม "✓ 已記得") = พิสูจน์ 1 ครั้งแบบรอบตัดสิน (กฎเดิม ไม่ใช่ SRS checkpoint ปกติ)
   //   ตอบถูกสะอาดครั้งเดียว → ตัดคำออกถาวร (mastered) แต่ "ห้ามแจกดาวเงิน/แต้ม/bump เพดาน" (ต่างจาก mastered จริงที่ผ่านครบ 3 รอบ)
-  //   ตอบผิด/แอบดู/forced → resetOnFail กลับ day1 เข้าคิว SRS ปกติ (ไม่ตัดคำ)
+  //   ตอบผิด/forced → resetOnFail กลับ day1 เข้าคิว SRS ปกติ (ไม่ตัดคำ)
   if (wasKnownCheck) {
     if (cleanThisRound) {
       rec.mastered = true;   // ตัดออกจาก SRS ถาวร — ไม่เรียก advanceOnClean/addHardStars จึงไม่ได้ดาว ไม่ bump เพดาน
     } else {
       rec = TF_SRS.resetOnFail(rec);
     }
-    tfSetSrsRecord(entry.word, selectedLevel, rec);
+    tfSetSrsRecord(entry, selectedLevel, rec);
     if (session) { session.curWordIsKnownCheck = false; session.curWordIsFinalSrsCheck = false; }
     return;
   }
@@ -1729,10 +1764,10 @@ function tfProcessSrsOnWordCommit(entry, mistakes, firstTry, forced) {
       } catch (e) {}
     }
   } else {
-    // ผิด/แอบดู/forced (รวมถึงรอบตัดสิน Day 7) → กลับจุดเริ่ม SRS เข้าคิวใหม่
+    // ผิด/forced (รวมถึงรอบตัดสิน Day 7) → กลับจุดเริ่ม SRS เข้าคิวใหม่
     rec = TF_SRS.resetOnFail(rec);
   }
-  tfSetSrsRecord(entry.word, selectedLevel, rec);
+  tfSetSrsRecord(entry, selectedLevel, rec);
   // เคลียร์ flag เช็ก final ของ "รอบนี้" ไว้ตรงนี้ (รอบถัดไปจะเช็กใหม่ตอน setup คำถัดไป)
   if (session) { session.curWordIsFinalSrsCheck = false; }
 }
@@ -1745,7 +1780,8 @@ function tfSetupSrsFlagsForCurrentWord() {
   if (!session || !tfSrsLoggedIn()) return;
   var entry = session.words[session.index];
   if (!entry) return;
-  var rec = tfGetSrsRecord(entry.word, selectedLevel);
+  if (entry.isParticle) return;
+  var rec = tfGetSrsRecord(entry, selectedLevel);
   session.curWordIsFinalSrsCheck = !!(rec && TF_SRS.isFinalCheck(rec));
 }
 
@@ -1756,6 +1792,7 @@ function tfSetupNextWord() {
   var w = nx.word;
   session.currentWordGolden = tfRollGolden();
   tfSetupSrsFlagsForCurrentWord();   // เช็กรอบตัดสิน Day 7 ก่อนตั้งคำถัดไป
+  session.currentWordGuideUsed = !!tfGuideMode && !tfCurWordNoTools();
   session.currentWordGuideIntroPending = !!tfGuideMode && !tfCurWordNoTools();
   // Lin 2026-07-14: คำหลายพยางค์ ไม่มีหน้าเลือกพยางค์เองแล้ว → เริ่มพยางค์ที่ 1 ตรงเลย ไล่ตามลำดับอัตโนมัติ
   if (nx.readingTH && nx.readingTH.indexOf('-') !== -1) {
@@ -1773,7 +1810,7 @@ function tfSetupNextWord() {
 
 // เข้าหน้าสรุป + คิดโบนัสจบชุด/perfect (ครั้งเดียว)
 function tfGoToSummary() {
-  tfClearResumeState(); // E3: จบรอบปกติแล้ว ไม่ต้องเสนอ resume อีก (F5/F1 ก็เรียก session ใหม่ต่อซึ่งจะ save ทับเองอยู่แล้ว)
+  if(!window.LearningReview||!LearningReview.runtimeEnabled())tfClearResumeState(); // E3: จบรอบปกติแล้ว ไม่ต้องเสนอ resume อีก (F5/F1 ก็เรียก session ใหม่ต่อซึ่งจะ save ทับเองอยู่แล้ว)
   tfApplySessionBonus();
   S = { word: '', step: 'session-summary', path: [], tone: null };
   hist.push({ step: 'session-summary' }); histPos++;
@@ -1781,29 +1818,26 @@ function tfGoToSummary() {
   render();
 }
 
+function tfResultIsNeutral(result) {
+  return !!(result && (result.is_practice || result.is_skipped || result.hintUsed || result.hint_used || result.skipped));
+}
+
 // คิดโบนัสจบชุด + perfect + อัปเดต Daily Streak (กันคิดซ้ำด้วย sessionScored)
 function tfApplySessionBonus() {
   if (!session || session.sessionScored) return;
-  var total = session.results.length;
+  var scoredResults = session.results.filter(function (r) { return !(r.entry && r.entry.isParticle); });
+  var total = scoredResults.length;
   // ── สถิติคำผิดรายคำ (ทุกโหมด) ──
-  if (total > 0) tfRecordWordWrong(session.results);
-  var perfectCount = session.results.filter(function (r) { return r.firstTry; }).length;
-  var bonus = TF_SCORE.sessionBonus(total, perfectCount);
-  var isPerfect = (total > 0 && perfectCount === total && !session.hadSkip);
-  // Lin 2026-07-25: โหมด 提示 = ไม่ได้อะไรเลย → ข้ามโบนัสจบชุด/สตรีค/ดาว/แบดจ์/ชาเลนจ์ทั้งหมด (สถิติคำผิดยังเก็บปกติ ไม่ใช่รางวัล)
-  if (tfGuideMode) {
-    session.bonusAwarded = 0; session.isPerfect = isPerfect;
-    session.starsEarned = 0;
-    try { session.totalStars = (window.GAME_ACCOUNT) ? GAME_ACCOUNT.getStars() : 0; } catch (e) { session.totalStars = 0; }
-    session.newBadges = []; session.streakResult = null;
-    session.sessionScored = true;
-    try { tfRenderExtBar(); } catch (e) {}
-    return;
-  }
+  if (total > 0) tfRecordWordWrong(scoredResults);
+  var perfectCount = scoredResults.filter(function (r) { return r.firstTry && !tfResultIsNeutral(r); }).length;
+  var hadNeutralResult = scoredResults.some(tfResultIsNeutral);
+  var bonus = hadNeutralResult ? 0 : TF_SCORE.sessionBonus(total, perfectCount);
+  var isPerfect = (total > 0 && perfectCount === total && !session.hadSkip && !hadNeutralResult);
+  session.bonusAwarded = 0;
+  session.isPerfect = isPerfect;
   if (bonus > 0) {
     session.score += bonus;
     session.bonusAwarded = bonus;
-    session.isPerfect = isPerfect;
     setTimeout(function () {
       tfScorePop(bonus, { big: true, confetti: true });
     }, 200);
@@ -1851,36 +1885,35 @@ function act(fn) {
   return "TF._run('"+id+"')";
 }
 
-function navigate(nextStep, label, toneNum) {
-  // ── ถามวรรณยุกต์ "ครั้งเดียว" (LIN 2026-06-18) ──
-  // เดิม: พอ推導จบจะ redirect 'result' → 'pre-result-confirm' = ถามเสียงซ้ำอีกรอบ (คำถามที่ 2)
-  // ตอนนี้: ถามแค่ตอนเริ่ม (stepSessionGuess) ที่เดียว — ตอบผิดก็推導สอนแล้วเฉลยเลย ไม่ถามซ้ำ
-  // Lin 2026-07-25: หน้า pre-result-confirm ถูกลบทิ้งทั้งหน้าแล้ว (โค้ดตาย ไม่มีทางเข้าถึง)
-  // Truncate forward history
-  hist = hist.slice(0, histPos+1);
-  // Apply new state
+function navigate(nextStep, label) {
+  hist = hist.slice(0, histPos + 1);
   var newPath = label ? S.path.concat([label]) : S.path.slice();
-  var newTone = (toneNum !== undefined) ? toneNum : null;
-  // Lin 2026-08-02 (บั๊กจริงที่ Lin เจอ — จุดที่ 2 ของบั๊กเดียวกับ goToResult()): จุดนี้ก็ลืมใส่ parentWord ต่อเหมือนกัน
-  //   navigate() คือทางที่ใช้จริงบ่อยกว่า goToResult() อีก (ทุกครั้งที่ตอบผิด/กด推導 ก็ผ่านจุดนี้) — ไม่ใส่ไว้ = คำเต็มด้านบนพัง (โชว์คำอ่านผิด) ได้ง่ายกว่าที่คิด
-  S = { word:S.word, step:nextStep, path:newPath, tone:newTone, syllables:S.syllables, selectedSyl:S.selectedSyl, sylResults:S.sylResults, parentWord:S.parentWord };
-  // Lin 2026-07-04: เข้าขั้น推導ใหม่ (s1/s2*) = รีเซ็ตสิทธิ์ free peek รายขั้น (กดผิด/แอบดูในขั้นก่อนไม่ติดมา)
+  // Only the reviewed catalog tone may populate result state. 推導 never
+  // computes or supplies a competing tone value.
+  var newTone = nextStep === 'result' ? catalogToneNumber() : null;
+  S = {
+    word: S.word, step: nextStep, path: newPath, tone: newTone,
+    syllables: S.syllables, selectedSyl: S.selectedSyl,
+    sylResults: S.sylResults, parentWord: S.parentWord
+  };
   if (session && /^s[12]/.test(nextStep)) TF_WORDSCORE.onNextStep(session);
-  // Save to history
-  hist.push({ step:S.step, path:S.path.slice(), tone:S.tone, syllables:S.syllables, selectedSyl:S.selectedSyl, sylResults:S.sylResults, parentWord:S.parentWord });
-  histPos = hist.length-1;
-  // สเตจ 1: ผ่าน推導มาถึงผลลัพธ์ → ให้คะแนนฐาน 50 หักตามที่กดผิด (กันให้คะแนนซ้ำด้วย currentWordScored)
-  if (nextStep === 'result' && session && !session.currentWordScored) {
-    tfScoreDeduce();
-  }
+  hist.push({
+    step: S.step, path: S.path.slice(), tone: S.tone,
+    syllables: S.syllables, selectedSyl: S.selectedSyl,
+    sylResults: S.sylResults, parentWord: S.parentWord
+  });
+  histPos = hist.length - 1;
+  if (nextStep === 'result' && session && !session.currentWordScored) tfScoreDeduce();
   render();
 }
 
 function restoreState(pos) {
   histPos = pos;
   var snap = hist[pos];
-  // Lin 2026-08-02: เติม parentWord ให้ด้วย (จุดเดียวกับที่แก้ goToResult()) กันเผื่อในอนาคตแถบ back/forward กลับมาใช้งานอีก
-  S = { word:S.word, step:snap.step, path:snap.path.slice(), tone:snap.tone, syllables:snap.syllables, selectedSyl:snap.selectedSyl, sylResults:snap.sylResults, parentWord: snap.parentWord || S.parentWord };
+  if (snap.syllables && snap.syllables.length > 1 && (!snap.parentWord || snap.parentWord !== currentCatalogWord())) {
+    throw new Error('CATALOG_AUTHORITY_INCOMPLETE:history parent word');
+  }
+  S = { word:S.word, step:snap.step, path:snap.path.slice(), tone:snap.tone, syllables:snap.syllables, selectedSyl:snap.selectedSyl, sylResults:snap.sylResults, parentWord: snap.parentWord };
   render();
 }
 
@@ -1891,13 +1924,14 @@ var STATS_KEY = 'tf_wrong_stats_v1';
 var STATS_KEEP_DAYS = 30;
 
 var STEP_LABELS = {
+  'session-guess': '聲調選擇',
   s1: '步驟一：聲調符號判斷',
   s2a: '步驟二：子音分類（低子音／其他）',
   s2a_other: '步驟二：子音細分類',
-  s2a_low: '步驟二：聲調符號選擇',
-  s2a_mid: '步驟二：聲調符號選擇',
-  s2a_hi: '步驟二：聲調符號選擇',
-  s2b: '步驟三：活音／死音判斷',
+  s2a_low: '步驟三：聲調符號選擇',
+  s2a_mid: '步驟四：聲調符號選擇',
+  s2a_hi: '步驟四：聲調符號選擇',
+  s2b: '步驟二：活音／死音判斷',
   s2b_live: '步驟三：起首子音分類（活音）',
   s2b_dead: '步驟三：起首子音分類（死音）',
   s2b_dl: '步驟四：母音類型',
@@ -1960,151 +1994,68 @@ function recordMistake(choiceLabel, errMsg) {
   }
 }
 
-// ════════════════════════════════════════════════════════════
-// ERROR DETECTION
-// ════════════════════════════════════════════════════════════
-function validate(choiceKey, choiceLabel) {
-  var w = S.word;
-  if (!w) return null;
-
-  // Step 1: tone mark check
+function validateReviewedTeachingChoice(choiceKey) {
+  var expected = catalogExpectedTeachingChoice(S.step);
+  if (choiceKey === expected) return null;
+  var w = currentCatalogWord();
+  var syllable = catalogPedagogySyllable();
+  var cls = catalogPedagogyClass;
+  var classLabel = { low:'低子音', high:'高子音', mid:'中子音', lead:'前引字' };
+  var initial = catalogFieldPresent(syllable.lead) ? syllable.lead : syllable.consonant;
   if (S.step === 's1') {
-    var hasMark = TH.hasToneMark(w);
-    if (choiceKey === 'hasMark' && !hasMark) {
-      return '「'+w+'」好像沒有聲調符號耶～\n再確認一下輸入的字，或改選「無聲調符號」吧！';
-    }
-    if (choiceKey === 'noMark' && hasMark) {
-      var mk = TH.getToneMark(w);
-      return '「'+w+'」有聲調符號「'+mk+'」喔～\n請選「有聲調符號」再繼續吧！';
-    }
+    return expected === 'hasMark'
+      ? '「' + w + '」有聲調符號「' + syllable.toneMark + '」喔～\n請選「有聲調符號」再繼續吧！'
+      : '「' + w + '」好像沒有聲調符號耶～\n再確認一下輸入的字，或改選「無聲調符號」吧！';
   }
-
-  // Step 2a: consonant class (when has tone mark)
   if (S.step === 's2a') {
-    var actual = TH.getInitClass(w);
-    if (actual) {
-      if (choiceKey === 'low' && actual !== 'low') {
-        return '「'+TH.getInitChar(w)+'」是'+TH.classLabel(actual)+'呢，不是低子音～\n再看一下選哪個比較合適吧！';
-      }
-      if (choiceKey === 'other' && actual === 'low') {
-        return '「'+TH.getInitChar(w)+'」是低子音喔～\n選「低子音」就對了！';
-      }
-    }
+    var c1 = cls();
+    return expected === 'low'
+      ? '「' + initial + '」是低子音喔～\n選「低子音」就對了！'
+      : '「' + initial + '」是' + classLabel[c1] + '呢，不是低子音～\n再看一下選哪個比較合適吧！';
   }
-
-  // Step 2a_other: sub-class
   if (S.step === 's2a_other') {
-    var ac2 = TH.getInitClass(w);
-    if (ac2 && choiceKey !== ac2) {
-      return '「'+TH.getInitChar(w)+'」應該是'+TH.classLabel(ac2)+'喔～\n再確認一下子音的種類吧！';
-    }
+    var c2 = cls();
+    return '「' + initial + '」應該是' + classLabel[c2] + '喔～\n再確認一下子音的種類吧！';
   }
-
-  // Step 2b: live/dead
-  if (S.step === 's2b') {
-    var isLive = TH.isLiveWord(w);
-    if (isLive !== null) {
-      if (choiceKey === 'live' && !isLive) {
-        return '「'+w+'」看起來是死音喔～\n試試選「死音」，或用判斷工具確認一下吧！';
-      }
-      if (choiceKey === 'dead' && isLive) {
-        return '「'+w+'」看起來是活音喔～\n試試選「活音」，或用判斷工具確認一下吧！';
-      }
-    }
-  }
-
-  // Mark selection: validate the mark actually exists in the word
   if (S.step === 's2a_low' || S.step === 's2a_mid' || S.step === 's2a_hi') {
-    var actualMark = TH.getToneMark(w);
-    if (actualMark && choiceKey !== actualMark) {
-      return '「'+w+'」上面的聲調符號是「'+actualMark+'」喔～\n我們再看一下字上面的符號是哪個吧！';
-    }
+    return '「' + w + '」上面的聲調符號是「' + syllable.toneMark + '」喔～\n我們再看一下字上面的符號是哪個吧！';
   }
-
-  // s2b_live: validate consonant class
+  if (S.step === 's2b') {
+    return expected === 'live'
+      ? '「' + w + '」看起來是活音喔～\n試試選「活音」，或用判斷工具確認一下吧！'
+      : '「' + w + '」看起來是死音喔～\n試試選「死音」，或用判斷工具確認一下吧！';
+  }
   if (S.step === 's2b_live') {
-    var cls3 = TH.getInitClass(w);
-    if (cls3) {
-      if (choiceKey === 'mid_low' && (cls3 === 'high' || cls3 === 'lead')) {
-        return '「'+TH.getInitChar(w)+'」是'+TH.classLabel(cls3)+'喔～\n試試選「高子音／前引字」吧！';
-      }
-      if (choiceKey === 'high_lead' && (cls3 === 'mid' || cls3 === 'low')) {
-        return '「'+TH.getInitChar(w)+'」是'+TH.classLabel(cls3)+'喔～\n試試選「中子音／低子音」吧！';
-      }
-    }
+    var c3 = cls();
+    return '「' + initial + '」是' + classLabel[c3] + '喔～\n試試選「' + (expected === 'high_lead' ? '高子音／前引字' : '中子音／低子音') + '」吧！';
   }
-
-  // s2b_dead: validate consonant class
   if (S.step === 's2b_dead') {
-    var cls4 = TH.getInitClass(w);
-    if (cls4) {
-      if (choiceKey === 'high_lead_mid' && cls4 === 'low') {
-        return '「'+TH.getInitChar(w)+'」是低子音喔～\n試試選「低子音」吧！';
-      }
-      if (choiceKey === 'low_dead' && cls4 !== 'low') {
-        return '「'+TH.getInitChar(w)+'」是'+TH.classLabel(cls4)+'，不是低子音喔～\n試試選「高子音／前引字／中子音」吧！';
-      }
-    }
+    var c4 = cls();
+    return expected === 'low_dead'
+      ? '「' + initial + '」是低子音喔～\n試試選「低子音」吧！'
+      : '「' + initial + '」是' + classLabel[c4] + '，不是低子音喔～\n試試選「高子音／前引字／中子音」吧！';
   }
-
-  // s2b_dl: validate vowel type
   if (S.step === 's2b_dl') {
-    var vowelType = TH.getVowelType(w);
-    if (vowelType) {
-      if (choiceKey === 'long_vowel' && vowelType === 'short') {
-        return '「'+w+'」看起來是短母音喔～\n試試選「短母音」吧！';
-      }
-      if (choiceKey === 'short_vowel' && vowelType === 'long') {
-        return '「'+w+'」看起來是長母音喔～\n試試選「長母音」吧！';
-      }
-    }
+    return '「' + w + '」看起來是' + (expected === 'long_vowel' ? '長母音' : '短母音') + '喔～\n試試選「' + (expected === 'long_vowel' ? '長母音' : '短母音') + '」吧！';
   }
-
-  // helper step 1: has ending consonant?
   if (S.step === 'helper') {
-    var hasTail = TH.hasTailCons(w);
-    if (choiceKey === 'has_tail' && !hasTail) {
-      return '「'+w+'」沒有尾音喔～\n試試選「無尾音」吧！';
-    }
-    if (choiceKey === 'no_tail' && hasTail) {
-      return '「'+w+'」有尾音呢～\n試試選「有尾音」吧！';
-    }
+    return expected === 'has_tail'
+      ? '「' + w + '」有尾音呢～\n試試選「有尾音」吧！'
+      : '「' + w + '」沒有尾音喔～\n試試選「無尾音」吧！';
   }
-
-  // helper h_with: ending consonant type (短尾音 or 長尾音)
   if (S.step === 'h_with') {
-    var endType = TH.getEndConsType(w);
-    if (endType) {
-      if (endType === 'short' && choiceKey === 'long_tail') {
-        return '「'+w+'」的尾音是短尾音喔～\n試試選「短尾音→死音」吧！';
-      }
-      if (endType === 'long' && choiceKey === 'short_tail') {
-        return '「'+w+'」的尾音是長尾音喔～\n試試選「長尾音→活音」吧！';
-      }
-    }
+    return '「' + w + '」的尾音是' + (expected === 'long_tail' ? '長尾音' : '短尾音') + '喔～\n試試選「' + (expected === 'long_tail' ? '長尾音→活音' : '短尾音→死音') + '」吧！';
   }
-
-  // helper h_no: vowel type (短母音 or 長母音)
   if (S.step === 'h_no') {
-    var vowelH = TH.getVowelType(w);
-    if (vowelH) {
-      if (vowelH === 'short' && choiceKey === 'long_vowel_h') {
-        return '「'+w+'」是短母音喔～\n試試選「短母音→死音」吧！';
-      }
-      if (vowelH === 'long' && choiceKey === 'short_vowel_h') {
-        return '「'+w+'」是長母音喔～\n試試選「長母音→活音」吧！';
-      }
-    }
+    return '「' + w + '」是' + (expected === 'long_vowel_h' ? '長母音' : '短母音') + '喔～\n試試選「' + (expected === 'long_vowel_h' ? '長母音→活音' : '短母音→死音') + '」吧！';
   }
-
-  return null; // no error
+  return '再看一次這一步吧！';
 }
 
-function tryNavigate(choiceKey, choiceLabel, nextStep, toneNum) {
-  var err = validate(choiceKey, choiceLabel);
-  if (err) { tfHandleDeduceMistake(S.step, choiceLabel, err); return; }
-  if (toneNum !== undefined) navigate(nextStep, choiceLabel, toneNum);
-  else navigate(nextStep, choiceLabel);
+function tryNavigate(choiceKey, choiceLabel, nextStep) {
+  var err = validateReviewedTeachingChoice(choiceKey);
+  if (err) { tfHandleDeduceMistake(choiceLabel, err); return; }
+  navigate(nextStep, choiceLabel);
 }
 
 // ════════════════════════════════════════════════════════════
@@ -2179,11 +2130,11 @@ function render() {
           var cls = 'syl-chip' + (i === S.selectedSyl ? ' cur' : (i < S.selectedSyl ? ' done' : ''));
           return '<div class="' + cls + '"><span class="syl-th">' + sy.th + '</span><span class="syl-n">' + (i + 1) + '/' + entrySyls.length + '</span></div>';
         }).join('');
-        var fullWordPlain = S.parentWord || entrySyls.map(function (sy) { return sy.th; }).join('');
+        var fullWordPlain = currentCatalogWord();
         mainBoxHtml = '<div class="tf-banner-word' + goldWord + '">' + fullWordPlain + '</div>';
         sylStripHtml = wordChips;
       } else {
-        mainBoxHtml = '<div class="tf-adv-sent-main">' + (S.parentWord || S.syllables.join('')) + '</div>';
+        throw new Error('CATALOG_AUTHORITY_INCOMPLETE:display syllables');
       }
     } else {
       mainBoxHtml = '<div class="tf-banner-word' + goldWord + '">' + S.word + '</div>';
@@ -2214,7 +2165,7 @@ function render() {
       var slot = document.getElementById('tf-vault-btn-slot');
       if (slot) {
         slot.innerHTML = '';
-        var meta = { zh: S.zh || '', en: S.readingEN || '', source: 'tone-finder' };
+        var meta = { zh: S.zh || '', en: S.readingEN || '', contentKey:(_vaEntry&&_vaEntry.word===_vaultAudioWord&&_vaEntry.contentKey)?tfWordContentKey(_vaEntry):undefined, source: 'tone-finder' };
         slot.appendChild(WordVault.createSaveBtn(_vaultAudioWord, meta));
       }
     }
@@ -2248,6 +2199,7 @@ function render() {
   // Main body
   var body = document.getElementById('tf-body');
   body.innerHTML = buildStep();
+  tfApplyGuideHints();
   if (window.GameFlow) {
     GameFlow.cancel('tone-finder');
     if (S.step === 'result' && session) {
@@ -2257,7 +2209,7 @@ function render() {
       GameFlow.markResult(body);
       setTimeout(function(){
         var actions=body.querySelector('.gsh-end-actions');
-        var correct=session&&session.results?session.results.filter(function(r){return !r.skipped&&(r.mistakes||0)===0;}).length:0;
+        var correct=session&&session.results?session.results.filter(function(r){return !tfResultIsNeutral(r)&&r.firstTry&&!r.forced;}).length:0;
         var total=session&&session.results?session.results.length:0;
         var hl=[];
         if(tfSrsLoggedIn()&&window.GAME_ACCOUNT){var gs=GAME_ACCOUNT.getStreak();if(gs)hl.push('🔥 連續 '+gs+' 天');if(session&&session.newBadges&&session.newBadges.length)hl.push('🎖️ '+session.newBadges[session.newBadges.length-1].zh);}
@@ -2266,7 +2218,6 @@ function render() {
       },0);
     }
   }
-  tfApplyGuideHints();   // Lin 2026-07-25: โหมด 提示 เปิดอยู่ → ไฮไลต์ตัวเลือกที่ถูกในขั้น推導
   // Lin 2026-07-11: หลอด本題分數 ย้ายไปโชว์ในการ์ดทอง (#tf-banner) แล้ว — เลิก prepend ซ้ำเข้า body ตรงนี้ (กันโชว์ซ้อน 2 หลอด)
   var practiceSteps = ['session-guess','overview'];
   if (session && practiceSteps.indexOf(S.step) !== -1) {
@@ -2279,9 +2230,7 @@ function render() {
     // Lin 2026-07-04: อยู่ในโหมดพิสูจน์ (known-check) แล้ว → ซ่อนปุ่ม "已記得" (กันกดวน + ต้องพิสูจน์ให้จบก่อน)
     if (session.curWordIsKnownCheck) _hideKnown = true;
     if (!_hideKnown) {
-      body.innerHTML += tfNeutralSkipSurface()
-        ? '<div class="tf-known-bar"><button type="button" class="tf-known-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_skip_click\',{category:\'game\'});}catch(e){}TF.skipCurrentWord()">跳過</button></div>'
-        : '<div class="tf-known-bar"><button class="tf-known-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_mark_known_click\',{category:\'game\'});}catch(e){}TF.markKnown()">\u2713 \u5df2\u8a18\u5f97\u9019\u500b\u5b57</button></div>';
+      body.innerHTML += '<div class="tf-known-bar"><button type="button" class="tf-known-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_skip_click\',{category:\'game\'});}catch(e){}TF.skipCurrentWord()">跳過</button></div>';
     }
   }
 
@@ -2325,21 +2274,21 @@ function buildStep() {
     case 'alpha-flashcard': return stepAlphaFlashcard();
     case 'session-summary': return stepSessionSummary();
     case 'mistake-review': return stepMistakeReview(); // F2 (2026-08-10)
-    case 's1':        return step1();
-    case 's2a':       return step2a();
-    case 's2a_low':   return step2aLow();
-    case 's2a_other': return step2aOther();
-    case 's2a_mid':   return step2aMid();
-    case 's2a_hi':    return step2aHi();
-    case 's2b':       return step2b();
-    case 'helper':    return helperStep1();
-    case 'h_with':    return helperWith();
-    case 'h_no':      return helperNo();
-    case 'h_done':    return helperDone();
-    case 's2b_live':  return s2bLive();
-    case 's2b_dead':  return s2bDead();
-    case 's2b_dl':          return s2bDeadLow();
     case 'session-guess':   return stepSessionGuess();
+    case 's1':              return step1();
+    case 's2a':             return step2a();
+    case 's2a_low':         return step2aLow();
+    case 's2a_other':       return step2aOther();
+    case 's2a_mid':         return step2aMid();
+    case 's2a_hi':          return step2aHi();
+    case 's2b':             return step2b();
+    case 'helper':          return helperStep1();
+    case 'h_with':          return helperWith();
+    case 'h_no':            return helperNo();
+    case 'h_done':          return helperDone();
+    case 's2b_live':        return s2bLive();
+    case 's2b_dead':        return s2bDead();
+    case 's2b_dl':          return s2bDeadLow();
     case 'result':          return stepResult();
     default: return '';
   }
@@ -2348,62 +2297,7 @@ function buildStep() {
 // ════════════════════════════════════════════════════════════
 // STEP BUILDERS
 // ════════════════════════════════════════════════════════════
-// ════════════════════════════════════════════════════════════
-// SESSION: TONE COMPUTATION + TTS + PHONEME BREAKDOWN
-// ════════════════════════════════════════════════════════════
-// TONE OVERRIDES — คำทับศัพท์/คำเพี้ยนเสียงที่ไม่ตามกฎมาตรฐาน ระบุเสียงตรงๆ (Lin ยืนยันแล้วทุกตัว 2026-07-31)
-// ── 2026-07-31 (Lin ตรวจสอบ): ลบ 'คีย์'(สามัญ) และ 'ญาติ'(โท) ออก — เช็คด้วยเครื่องคิดกฎมาตรฐาน (tone-engine.js)
-//    แล้วพบว่ากฎมาตรฐานคำนวณได้ตรงกับ Lin กำหนดอยู่แล้ว ไม่ใช่คำพิเศษจริง ปล่อยให้เดิน推導ปกติได้
-//    เพิ่ม 'กี้'/'ก็'/'แชท' เข้ามาแทน — Lin ยืนยันว่าเป็นคำพิเศษจริง (เดิมไม่มีอยู่ในนี้ = บั๊ก เกมตัดสินคำตอบถูกว่าผิด)
-var TONE_OVERRIDE = {
-  'เอาท์': 4,  // เช็คเอาท์ → พยางค์ 2 เสียงตรี
-  'การ์ด': 4,  // คีย์การ์ด → พยางค์ 2 เสียงตรี (รอ Lin เพิ่มคำนี้เข้าคลังคำศัพท์จริง)
-  'ออฟ':  4,  // ออฟฟิศ   → พยางค์ 1 เสียงตรี
-  'ออบ':  4,  // ออฟฟิศ (คำอ่าน ออบ) → พยางค์ 1 เสียงตรี (Lin 2026-07-04)
-  'กี้':  4,  // เมื่อกี้ → พยางค์ 2 เสียงตรี (คนไทยพูดเพี้ยนเป็นตรีทั่วไป)
-  'ก็':   3,  // เสียงโท (คนไทยพูดเพี้ยนเป็นโททั่วไป)
-  'แชท':  4   // คำยืมอังกฤษ (chat) เสียงตรี (แช็ท เสียงสั้น) ไม่ใช่โทตามกฎเขียนปกติ
-};
-
-// คำในนี้ = ไม่มีกฎมาตรฐานอธิบายได้จริง → ข้ามขั้นตอน推導 (เหมือน final-check/known-check)
-// แต่ตอบถูกครั้งแรกยังได้คะแนนเต็มปกติ (ไม่ใช่ noSoftPoints แบบ known-check)
-function tfCurWordIsToneSpecial() {
-  if (!session) return false;
-  var w = (typeof S !== 'undefined' && S.word) || (session.words[session.index] && session.words[session.index].word);
-  return !!(w && TONE_OVERRIDE[w] !== undefined);
-}
-
-function computeTone(word) {
-  if (TONE_OVERRIDE[word] !== undefined) return TONE_OVERRIDE[word];
-  var cls  = TH.getInitClass(word);
-  var mark = TH.getToneMark(word);
-  var live = TH.isLiveWord(word);
-  var vowel = TH.getVowelType(word);
-  if (!cls) return null;
-  var e = (cls === 'lead') ? 'high' : cls;
-  if (mark) {
-    if (e === 'low') {
-      if (mark === '่') return 3;
-      if (mark === '้') return 4;
-    } else if (e === 'mid') {
-      if (mark === '่') return 2;
-      if (mark === '้') return 3;
-      if (mark === '๊') return 4;
-      if (mark === '๋') return 5;
-    } else {
-      if (mark === '่') return 2;
-      if (mark === '้') return 3;
-    }
-  } else {
-    if (live) return (e === 'high') ? 5 : 1;
-    if (e === 'high' || e === 'mid') return 2;
-    // คำตาย+อักษรต่ำ: สระสั้น→ตรี(4) / สระยาว→โท(3)
-    // ไม่มีรูปสระ = สระแฝงสั้น (โอะ/อะ เช่น รถ นก) → นับเป็นสระสั้น
-    var isShort = (vowel === 'short') || (vowel == null);
-    return isShort ? 4 : 3;
-  }
-  return null;
-}
+// Correct answers are read from catalogToneNumber(); no client-side tone engine or override exists.
 
 // Lin 2026-07-25: ลบระบบเสียงสังเคราะห์ (Web Speech API) ออกถาวรตามที่ Lin สั่ง
 //   เดิมมี TF_MUTED/speakThai/speakThaiForce + ปุ่ม 🔊 聽發音 / 🔊 點擊聽發音 — ทั้งหมดถูกปิดเสียง+ซ่อนด้วย CSS มาตั้งแต่ 2026-06-18 อยู่แล้ว (ไม่มีใครเห็น/ใช้ได้)
@@ -2420,33 +2314,9 @@ function showComingSoon() {
   setTimeout(function(){ if (d) d.remove(); }, 1800);
 }
 
-function getBreakdown(word) {
-  var CONS_STR = 'กขฃคฅฆงจฉชซฌญฎฏฐฑฒณดตถทธนบปผฝพฟภมยรลวศษสหฬอฮ';
-  var init = TH.getInitChar(word);
-  var consList = [];
-  for (var i = 0; i < word.length; i++) {
-    if (CONS_STR.indexOf(word[i]) >= 0) consList.push(word[i]);
-  }
-  var finalCons = (consList.length >= 2) ? consList[consList.length - 1] : null;
-  var vowelType = TH.getVowelType(word);
-  return { init: init, finalCons: finalCons, vowelType: vowelType };
-}
-
 // ════════════════════════════════════════════════════════════
 // SESSION STEP BUILDERS
 // ════════════════════════════════════════════════════════════
-function deriveText(word) {
-  var cls = TH.getInitClass(word);
-  var clsL = TH.classLabel(cls);
-  var mark = TH.getToneMark(word);
-  var live = TH.isLiveWord(word);
-  var tone = computeTone(word);
-  var parts = [clsL];
-  parts.push(mark ? ('有聲調符號 ' + mark) : '無聲調符號');
-  if (!mark) parts.push(live ? '活音' : '死音');
-  return parts.join(' + ') + ' → ' + (TONES[tone] ? TONES[tone].zh : '—');
-}
-
 // Lin 2026-07-25: ปิดโหมด 自行搜尋 ถาวรตามที่ Lin สั่ง (ไม่ใช้แล้ว) — ลบทั้งระบบออก  [recordSearch + buildSearchReportInner]
 // ── Popup โปรโมทคอร์ส (เด้งวันละครั้ง จังหวะเล่นจบรอบที่ 2+) ──
 function maybeShowCoursePromo() {
@@ -2478,7 +2348,6 @@ function showCoursePromoPopup() {
 // （深色頂欄+金邊卡片、同一份表格欄位）ทำให้เหมือน เกมพิม/เกมอ่าน ตามที่ Lin สั่ง
 // เดิมใช้ CSS var(--gold-bright) แต่หน้าต่างรายงานนี้เป็นเอกสารแยก ไม่ได้โหลด :root ของเว็บหลัก → ตัวแปรใช้ไม่ได้จริง (ไม่มี fallback)
 // เปลี่ยนมาใช้เลขสี hex ตรงๆ เหมือน 3 เกมที่เหลือ; รายงานใช้ข้อเท็จจริงของรอบนี้ และเพิ่ม SRS เดิมเฉพาะผู้ใช้ที่ล็อกอิน
-// getBreakdown/generateAnalysis/deriveText ไม่ได้ใช้ในรายงานนี้
 function buildReportInner() {
   var SERIF="'Noto Serif TC','PingFang TC',serif";
   var SANS="'Noto Sans TC','PingFang TC',sans-serif";
@@ -2488,12 +2357,13 @@ function buildReportInner() {
   var levelChar = ({1:'初',2:'中',3:'高'})[selectedLevel] || '—';
   var loggedIn = tfSrsLoggedIn();
   var total = reportItems.length;
-  var perfectCount = reportItems.filter(function(r){ return r.is_correct; }).length;
+  var perfectCount = reportItems.filter(function(r){ return !tfResultIsNeutral(r) && r.is_correct; }).length;
   var weightedScore = roundReport ? roundReport.score : TF_SCORE.weightedScore(session.score || 0, selectedLevel);
 
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function statusLabel(r){
-    if (r.is_skipped) return '<span style="color:#8B6310;">跳過</span>';
+    if (r.is_skipped || r.skipped) return '<span style="color:#8B6310;">跳過</span>';
+    if (tfResultIsNeutral(r)) return '<span style="color:#8B6310;">純練習</span>';
     if (loggedIn && r.mastered_state) return '<span style="color:#8B6310;">✓ 已精通</span>';
     if (!r.is_correct) return '<span style="color:#c62828;">✗ 答錯</span>';
     return '<span style="color:#2e7d32;">✓ 答對</span>';
@@ -2586,14 +2456,14 @@ function tfFinalizeAlignedResultPresentation(root) {
 function stepSessionSummary() {
   if (!session) return '';
   var results = session.results;
-  var total = results.length;
+  var scoreResults = results.filter(function (r) { return !(r.entry && r.entry.isParticle); });
+  var total = scoreResults.length;
   var reportResults = roundReport && roundReport.items ? roundReport.items : [];
-  // The visible Result table treats a wrong first guess as not first-time correct,
-  // even when the later derivation has no additional mistakes. Keep the headline
-  // count on that same evidence instead of counting only derivation mistakes.
+  // Result uses the same Clean evidence as scoring: an initial miss followed by
+  // a mistake-free teaching path remains correct; Free Practice does not.
   var perfectCount = reportResults.length === total
-    ? reportResults.filter(function(r){ return !r.is_skipped && r.is_correct; }).length
-    : results.filter(function(r){ return !r.skipped && r.firstTry; }).length;
+    ? reportResults.filter(function(r){ return !tfResultIsNeutral(r) && r.is_correct; }).length
+    : scoreResults.filter(function(r){ return !tfResultIsNeutral(r) && r.firstTry; }).length;
   // ส่งคะแนนจริง (ถ่วงน้ำหนักระดับ) เข้า Supabase/leaderboard — ไม่ใช่ perfectCount เดิม
   var weightedScore = TF_SCORE.weightedScore(session.score || 0, selectedLevel);
   gtag('event','tone_finder_complete',{category:'game',score: weightedScore, total: total, perfect: perfectCount, raw_score: session.score || 0, level: selectedLevel});
@@ -2601,13 +2471,13 @@ function stepSessionSummary() {
   if(!session.submissionLinked){
     var _tfSubmissionId=null;
     try{
-      if(window.READING_AUTH && READING_AUTH.saveScore) _tfSubmissionId=READING_AUTH.saveScore(weightedScore,1,'tone',results.filter(function(r){return r.mistakes>0;}).map(function(r){return {word:r.entry.word,wrong:r.mistakes||0};}),{
-        difficulty:({1:'初',2:'中',3:'高'})[selectedLevel]||'初',
-        items:results.map(function(r){return {key:r.entry.word,points:Number(r.score)||0,wrong:Number(r.mistakes)||0,guide:false,failed:!!r.forced,skipped:!!r.skipped,mastered:false};}),
+      if(window.READING_AUTH && READING_AUTH.saveScore) _tfSubmissionId=READING_AUTH.saveScore(weightedScore,1,'tone',scoreResults.filter(function(r){return r.mistakes>0;}).map(function(r){return {word:r.entry.word,wrong:r.mistakes||0};}),{
+        report:roundReport,difficulty:({1:'初',2:'中',3:'高'})[selectedLevel]||'初',
+        items:scoreResults.map(function(r){var ref=tfContentRefForEntry(r.entry);return {key:ref.key,contentRef:ref,points:Number(r.score)||0,wrong:Number(r.mistakes)||0,guide:!!r.hintUsed,failed:!!r.forced,skipped:!!r.skipped,mastered:false,learningEvidence:r.learningEvidence||null};}),
         roundBonus:Number(session.bonusAwarded)||0,
         srsBonus:Number(session.srsReviewBonus)||0
       });
-    }catch(e){} // S29: ยกเลิก GA interception/direct tone_sessions insert
+    }catch(e){if(window.LearningReview&&LearningReview.blockRound)LearningReview.blockRound(roundReport,e);} // S29: ยกเลิก GA interception/direct tone_sessions insert
     session.submissionLinked=true;
     if(roundReport&&window.RoundReport)RoundReport.finish(roundReport,{score:weightedScore,submission_id:_tfSubmissionId});
     tfAttachLoginSummary();
@@ -2616,11 +2486,13 @@ function stepSessionSummary() {
     var tone = r.linguistic && r.linguistic.correct_tone;
     var tl = TONES[tone] || {};
     var ok = r.is_correct;
-    var resultTxt = r.is_skipped ? '跳過' : (ok ? '✓' : '✗ ×'+r.wrong_count);
-    if (tfDesktopOrPortrait() && !r.is_skipped && !ok) {
+    var isSkip = !!r.is_skipped || !!r.skipped;
+    var isNeutral = tfResultIsNeutral(r);
+    var resultTxt = isSkip ? '跳過' : (isNeutral ? '純練習' : (ok ? '✓' : '✗ ×'+r.wrong_count));
+    if (tfDesktopOrPortrait() && !isNeutral && !ok) {
       resultTxt = '✗ ' + (r.user_answer || '—') + ' → ' + (r.correct_answer || '—');
     }
-    var resultColor = r.is_skipped ? '#8B6310' : (ok ? '#7ec87e' : '#ff7c7c');
+    var resultColor = isNeutral ? '#8B6310' : (ok ? '#7ec87e' : '#ff7c7c');
     return '<tr>' +
       '<td style="color:#bbb;font-size:12px;width:24px;">'+(i+1)+'</td>' +
       '<td class="tf-sum-th">'+r.question+'<div style="font-size:10px;font-weight:400;color:#999;">作答：'+(r.user_answer||'—')+'<br>正解：'+(r.correct_answer||'—')+'</div></td>' +
@@ -2708,12 +2580,15 @@ function stepMistakeReview() {
   if (!roundReport || !roundReport.items) return '';
   var listSource = roundReport.items;
   var itemsHtml = listSource.map(function (r) {
-    var isWrong = !r.is_correct;
+    var isSkip = !!r.is_skipped || !!r.skipped;
+    var isNeutral = tfResultIsNeutral(r);
+    var isWrong = !r.is_correct && !isNeutral;
+    var statusText = isSkip ? '跳過' : (isNeutral ? '純練習' : (r.is_correct ? '✓ 答對' : '✗ 答錯'));
     return '<div class="gsh-mistake-item' + (isWrong ? ' gsh-mistake-wrong' : '') + '">' +
       '<div class="gsh-mistake-q">' + (r.question || '—') + (r.meaning ? '　<span style="font-weight:400;color:#999;font-size:13px;">' + r.meaning + '</span>' : '') + '</div>' +
       '<div class="gsh-mistake-row">正確聲調：<b>' + (r.correct_answer || '—') + '</b></div>' +
       '<div class="gsh-mistake-row">你的答案：<b>' + (r.user_answer || '（未作答）') + '</b></div>' +
-      '<div class="gsh-mistake-row">狀態：<b>' + (r.is_correct?'✓ 答對':'✗ 答錯') + '</b>・答錯 <b>' + (r.wrong_count || 0) + '</b> 次・得分 <b>' + (r.item_score || 0) + '</b>' + (r.hint_used ? '　💡 使用提示' : '') + '</div>' +
+      '<div class="gsh-mistake-row">狀態：<b>' + statusText + '</b>・答錯 <b>' + (r.wrong_count || 0) + '</b> 次・得分 <b>' + (r.item_score || 0) + '</b>' + (r.hint_used ? '　💡 使用提示' : '') + '</div>' +
       (r.linguistic&&r.linguistic.reading_th?'<div class="gsh-mistake-row">讀音：<b>'+r.linguistic.reading_th+'</b></div>':'')+
       (r.attempts&&r.attempts.length>1?'<div class="gsh-mistake-row">送出紀錄：'+r.attempts.map(function(a){return a.answer;}).join(' → ')+'</div>':'')+
       (r.words&&r.words.length?'<div class="gsh-mistake-row">逐字：'+r.words.map(function(w){return w.th+'＝'+w.zh;}).join('・')+'</div>':'')+
@@ -2875,7 +2750,12 @@ function tfRenderTopBanners() {
 function tfSyncLevelTabs() {
   ['1','2','3'].forEach(function(n){
     var b = document.getElementById('tf-ltab-'+n);
-    if (b) b.classList.toggle('active', String(selectedLevel) === n);
+    if (!b) return;
+    var paidUnavailable = n === '3' && !!window.PAID_SRS_PRIVATE_BETA;
+    b.hidden = paidUnavailable;
+    b.disabled = paidUnavailable;
+    b.setAttribute('aria-hidden', paidUnavailable ? 'true' : 'false');
+    b.classList.toggle('active', !paidUnavailable && String(selectedLevel) === n);
   });
 }
 
@@ -2892,19 +2772,48 @@ function tfFireStartOnce() {
   }
 }
 
-// ── E3 (2026-08-10): Guest-only local resume (window.GameResume ใน shared.js) ──
-// เก็บ "level + รายชื่อคำ/ประโยคที่กำลังเล่นอยู่ + ทำไปถึงข้อไหน" ไว้ให้ guest กลับมาเล่นต่อได้หลัง refresh/ปิดแท็บ
+// ── E3 (2026-08-10) + Login Free canonical Resume (window.GameResume ใน shared.js) ──
+// Guest เก็บในเครื่อง; Login Free restore รอบบัญชีจาก canonical state ก่อนเกมเริ่ม
 // ระดับความละเอียด: "เล่นชุดคำ/ประโยคเดิมซ้ำตั้งแต่ต้น" (ไม่ replay กลางพยางค์/คะแนนสะสมกลางรอบ — ดูรายละเอียดในรายงานที่ส่งให้ orchestrator)
-// ไม่เกี่ยวกับ SRS/ดาว/แบดจ์/Free-account resume ฝั่งเซิร์ฟเวอร์ใดๆ ทั้งสิ้น
-function tfSaveResumeState() {
+// Snapshot รวม RoundReport/round_id เพื่อให้ Retry กลับเข้ารอบเดิมโดยไม่สร้าง identity ใหม่
+function tfResumeWordId(entry) { if(selectedLevel===3){if(!entry||!entry.word)throw new Error('CATALOG_AUTHORITY_INCOMPLETE:sentence word');return entry.word;}return tfWordContentKey(entry); }
+function tfFindEntryByResumeId(id) {
+  if (typeof id !== 'string' || !id || id.trim() !== id) return null;
+  for (var i = 0; i < WORD_LIST.length; i++) {
+    if (WORD_LIST[i].contentKey === id) return WORD_LIST[i];
+  }
+  return null;
+}
+function tfResolveResumeEntries(ids, level) {
+  if (!Array.isArray(ids) || !ids.length) return null;
+  var entries = ids.map(tfFindEntryByResumeId);
+  if (entries.some(function(entry){ return !entry || tfWordLevel(entry) !== level; })) return null;
+  return entries;
+}
+function tfResumeSentenceIndex(data) {
+  if (!data || data.level !== 3 || typeof data.sentenceId !== 'string' || !data.sentenceId || data.sentenceId.trim() !== data.sentenceId) return null;
+  if (!Array.isArray(data.wordIds) || !data.wordIds.length || !window.ADV_SENTENCES) return null;
+  var matches=[];
+  for(var i=0;i<ADV_SENTENCES.length;i++)if(ADV_SENTENCES[i]&&ADV_SENTENCES[i].th===data.sentenceId)matches.push(i);
+  if(matches.length!==1)return null;
+  var sentence=ADV_SENTENCES[matches[0]];
+  if(!Array.isArray(sentence.words)||!sentence.words.length||
+      (data.wordIds.length!==sentence.words.length&&data.wordIds.length!==sentence.words.length*2))return null;
+  for(var j=0;j<data.wordIds.length;j++){
+    var word=sentence.words[j%sentence.words.length];
+    if(!word||word.th!==data.wordIds[j])return null;
+  }
+  return matches[0];
+}
+function tfSaveResumeState(completedCurrent) {
   try {
     if (!window.GameResume || !session || !session.words || !session.words.length) return;
     GameResume.save('tone-finder', {
       level: selectedLevel,
-      wordIds: session.words.map(function (w) { return w.word; }),
-      index: session.index,
+      wordIds: session.words.map(tfResumeWordId),
+      index: session.index + (completedCurrent ? 1 : 0),
       total: session.words.length,
-      advSentIdx: (selectedLevel === 3) ? advSentIdx : null,
+      sentenceId: (selectedLevel === 3 && advSentIdx >= 0 && ADV_SENTENCES[advSentIdx]) ? ADV_SENTENCES[advSentIdx].th : null,
       results: session.results || [],
       score: session.score || 0,
       combo: session.combo || 0,
@@ -2958,7 +2867,8 @@ function tfShowResumeBannerIfAny(data) {
 
 function tfRestoreSavedProgress(data) {
   if (!session || !data) return;
-  var idx = Math.min(Math.max(0, Number(data.index) || 0), Math.max(0, session.words.length - 1));
+  if(selectedLevel===3&&data.wordIds&&data.wordIds.length===session.words.length*2)session.words=session.words.concat(session.words.slice());
+  var idx = Math.min(Math.max(0, Number(data.index) || 0), Math.max(0, session.words.length));
   session.index = idx;
   session.results = Array.isArray(data.results) ? data.results : [];
   session.score = Number(data.score) || 0;
@@ -2966,9 +2876,9 @@ function tfRestoreSavedProgress(data) {
   session.maxCombo = Number(data.maxCombo) || 0;
   session.hardStarsEarned = Number(data.hardStarsEarned) || 0;
   roundReport = window.RoundReport ? RoundReport.restore(data.report,{game_type:'tone',difficulty:({1:'初',2:'中',3:'高'})[selectedLevel]||'初',mode:selectedCategory||'全部'}) : null;
+  if(window.LearningReview)tfRegisterRestoredReview();
   hist = []; histPos = -1;
-  tfSetupNextWord();
-  tfSaveResumeState();
+  LearningReview.advance(roundReport,function(){if(session.index>=session.words.length){tfGoToSummary();return;}tfSetupNextWord();tfSaveResumeState();});
 }
 
 function startSetSession(words, opts) {
@@ -2993,12 +2903,12 @@ function startSetSession(words, opts) {
     score: 0, combo: 0,
     currentWordDeduction: 0, currentWordScored: false,
     currentWordFirstTry: false, currentWordScore: 0,
-    currentWordGuideUsed: !!tfGuideMode,
+    currentWordGuideUsed: false,
     currentWordGuideIntroPending: false,
     sessionScored: false,
     submissionLinked: false,
     // ── สเตจ 2 + หลายพยางค์ ──
-    curWordAllFirstTry: true, scoredSyls: {},
+    curWordAllFirstTry: true, scoredSyls: {}, learningComponentWrongCounts: [],
     currentWordGolden: tfRollGolden(),
     // ── สเปก 2026-07-03: ดาวเงินที่ได้จริงรอบนี้ (สะสมจากคำที่ mastered ระหว่างเล่น) ──
     hardStarsEarned: 0,
@@ -3006,8 +2916,10 @@ function startSetSession(words, opts) {
     startFired: false
   };
   roundReport = window.RoundReport ? RoundReport.create({game_type:'tone',difficulty:({1:'初',2:'中',3:'高'})[selectedLevel]||'初',mode:selectedCategory||'全部'}) : null;
+  if(window.LearningReview&&LearningReview.runtimeEnabled())tfRegisterRestoredReview();
   hist = []; histPos = -1;
   tfSetupSrsFlagsForCurrentWord();   // เช็กรอบตัดสิน Day 7 สำหรับคำแรกของ session
+  session.currentWordGuideUsed = !!tfGuideMode && !tfCurWordNoTools();
   session.currentWordGuideIntroPending = !!tfGuideMode && !tfCurWordNoTools();
   var entry = entries[0]; randomEntry = entry; var w = entry.word;
   // Lin 2026-07-14: คำหลายพยางค์ ไม่มีหน้าเลือกพยางค์เองแล้ว → เริ่มพยางค์ที่ 1 ตรงเลย
@@ -3033,7 +2945,7 @@ function tfPrioritizeDueSrs(entries) {
   var now = Date.now();
   var due = [], notDue = [];
   entries.forEach(function (e) {
-    var rec = tfGetSrsRecord(e.word, selectedLevel);
+    var rec = tfGetSrsRecord(e, selectedLevel);
     if (rec && !rec.mastered && TF_SRS.isDue(rec, now)) due.push(e);
     else notDue.push(e);
   });
@@ -3042,6 +2954,9 @@ function tfPrioritizeDueSrs(entries) {
 
 // Lin 2026-07-04: ตัด stepNounSubcat/stepSetSelect/stepCatSelect ทิ้งแล้ว — หน้าเลือกหมวด/ชุดไม่มีทางเข้าถึงอีก
 // Lin 2026-07-25: ปิดโหมด 自行搜尋 ถาวรตามที่ Lin สั่ง (ไม่ใช้แล้ว) — ลบทั้งระบบออก  [stepInput()]
+// ════════════════════════════════════════════════════════════
+// NEW PAGE 1: SESSION GUESS  (before tone-inflection)
+// ════════════════════════════════════════════════════════════
 function qbox(stepNum, text) {
   return '<div class="tf-qbox">' +
     (stepNum ? '<div class="tf-step-badge">步驟 ' + stepNum + '</div>' : '') +
@@ -3049,43 +2964,27 @@ function qbox(stepNum, text) {
   '</div>';
 }
 
-// Lin 2026-07-25: เพิ่มพารามิเตอร์ที่ 4 = hintKey (คีย์ตัวเลือกเดียวกับที่ส่งให้ tryNavigate)
-//   ใช้แปะ data-hintkey ไว้บนปุ่ม → โหมด 提示 เอาไปเช็คกับ validate() ว่าตัวไหนถูก แล้วไฮไลต์ให้ (ดู tfApplyGuideHints)
 function optRow(label, onclickStr, defKeys, hintKey) {
-  // ── Lin 2026-07-04: ปุ่ม "?" เปลี่ยนไปเรียก TF.hint() แทน TF.tip() ตรงๆ ──
-  // TF.hint() = โชว์ตารางเหมือนเดิม + ล็อกคำนี้ "ไม่สะอาด/ไม่ได้คะแนน" ครั้งแรกที่กด (ดู tfUseHint บนสุด)
   var tipBtn = defKeys && defKeys.length
     ? '<button class="tf-tip-btn" onclick="event.stopPropagation();try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_hint_click\',{category:\'game\'});}catch(e){}TF.hint(' + JSON.stringify(defKeys).replace(/"/g, '&quot;') + ')">?</button>'
     : '';
-  var hintAttr = hintKey ? ' data-hintkey="'+hintKey+'"' : '';
-  return '<div class="tf-opt-wrap"><button class="tf-opt"'+hintAttr+' onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_opt_select\',{category:\'game\'});}catch(e){}'+onclickStr+'">'+label+'</button>'+tipBtn+'</div>';
+  var hintAttr = hintKey ? ' data-hintkey="' + hintKey + '"' : '';
+  return '<div class="tf-opt-wrap"><button class="tf-opt"' + hintAttr + ' onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_opt_select\',{category:\'game\'});}catch(e){}' + onclickStr + '">' + label + '</button>' + tipBtn + '</div>';
 }
 
 function markSymbol(mark) {
-  // Display mark alone using a transparent base character
   return '<span style="font-family:\'Sarabun\',sans-serif;">' +
     '<span style="visibility:hidden;font-size:44px;">ก</span>' +
-    '<span class="tf-mark-symbol" style="margin-left:-0.6em;">'+mark+'</span>' +
+    '<span class="tf-mark-symbol" style="margin-left:-0.6em;">' + mark + '</span>' +
   '</span>';
 }
 
 function markRow(mark, onclickStr) {
-  // Lin 2026-07-25: ตัววรรณยุกต์เองคือคีย์ตัวเลือก (ตรงกับที่ส่งให้ tryNavigate) → ใช้เป็น data-hintkey ได้เลย
-  return '<button class="tf-mark-btn" data-hintkey="'+mark+'" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_mark_select\',{category:\'game\'});}catch(e){}'+onclickStr+'">' +
-    markSymbol(mark) +
-  '</button>';
+  return '<button class="tf-mark-btn" data-hintkey="' + mark + '" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_mark_select\',{category:\'game\'});}catch(e){}' + onclickStr + '">' + markSymbol(mark) + '</button>';
 }
 
-function footer() {
-  // Lin 2026-07-12: เอาปุ่ม "🎲 再來 5 字" ออกจากหน้าระหว่างเล่น (ทุกขั้นคำถาม) — ให้เหลือแค่หน้าผลสรุปจบรอบเท่านั้น
-  return '<div class="tf-footer"></div>';
-}
+function footer() { return '<div class="tf-footer"></div>'; }
 
-// ── Lin 2026-07-04: "ปุ่มแอบดูก็คือปุ่ม '?'" — Lin ยืนยันว่าเป็นปุ่มเดียวกัน ไม่ต้องมี 2 ปุ่มซ้ำซ้อนในทุกขั้น推導 ──
-// เดิมเคยเพิ่มปุ่ม "👀 แอบดูคำตอบ" แยกต่างหาก (peekBtnHtml/tfPeekWord) — ตอนนี้ตัดออก เหลือแค่ปุ่ม "?" (TF.hint → tfUseHint)
-// เป็นกลไกเดียวที่ทำหน้าที่นี้ (นับผิด 1 ครั้งตอนเปิดครั้งแรก + เลือกต่อได้ + ปิดเองอัตโนมัติเพราะ推導ไม่โผล่ในวันที่ 16 อยู่แล้ว)
-
-// ── Steps ──
 function step1() {
   return qbox('1','這個字有<strong style="color:var(--gold-bright);">聲調符號</strong>嗎？') +
     '<div class="tf-options">' +
@@ -3105,8 +3004,8 @@ function step2a() {
 function step2aLow() {
   return qbox('3','聲調符號是哪一個？') +
     '<div class="tf-mark-opts">' +
-      markRow('่', act(function(){ tryNavigate('่','่ 第二聲符號','result',3); })) +
-      markRow('้', act(function(){ tryNavigate('้','้ 第三聲符號','result',4); })) +
+      markRow('่', act(function(){ tryNavigate('่','่ 第二聲符號','result'); })) +
+      markRow('้', act(function(){ tryNavigate('้','้ 第三聲符號','result'); })) +
     '</div>' + footer();
 }
 
@@ -3122,33 +3021,31 @@ function step2aOther() {
 function step2aMid() {
   return qbox('4','聲調符號是哪一個？') +
     '<div class="tf-mark-opts">' +
-      markRow('่', act(function(){ tryNavigate('่','่ 第二聲符號','result',2); })) +
-      markRow('้', act(function(){ tryNavigate('้','้ 第三聲符號','result',3); })) +
-      markRow('๊', act(function(){ tryNavigate('๊','๊ 第四聲符號','result',4); })) +
-      markRow('๋', act(function(){ tryNavigate('๋','๋ 第五聲符號','result',5); })) +
+      markRow('่', act(function(){ tryNavigate('่','่ 第二聲符號','result'); })) +
+      markRow('้', act(function(){ tryNavigate('้','้ 第三聲符號','result'); })) +
+      markRow('๊', act(function(){ tryNavigate('๊','๊ 第四聲符號','result'); })) +
+      markRow('๋', act(function(){ tryNavigate('๋','๋ 第五聲符號','result'); })) +
     '</div>' + footer();
 }
 
 function step2aHi() {
   return qbox('4','聲調符號是哪一個？') +
     '<div class="tf-mark-opts">' +
-      markRow('่', act(function(){ tryNavigate('่','่ 第二聲符號','result',2); })) +
-      markRow('้', act(function(){ tryNavigate('้','้ 第三聲符號','result',3); })) +
+      markRow('่', act(function(){ tryNavigate('่','่ 第二聲符號','result'); })) +
+      markRow('้', act(function(){ tryNavigate('้','้ 第三聲符號','result'); })) +
     '</div>' + footer();
 }
 
 function step2b() {
   return qbox('2','這個字是<strong style="color:#7ec87e;">活音</strong>還是<strong style="color:#ff7c7c;">死音</strong>？') +
-    '<button class="tf-helper-trigger" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_helper_open\',{category:\'game\'});}catch(e){}'+act(function(){ navigate('helper','開啟判斷工具'); })+'">🔎 還不確定？ 檢查活音／死音</button>' +
+    '<button class="tf-helper-trigger" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_helper_open\',{category:\'game\'});}catch(e){}' + act(function(){ navigate('helper','開啟判斷工具'); }) + '">🔎 還不確定？ 檢查活音／死音</button>' +
     '<div class="tf-options">' +
       optRow('活音', act(function(){ tryNavigate('live','活音','s2b_live'); }), ['live'], 'live') +
       optRow('死音', act(function(){ tryNavigate('dead','死音','s2b_dead'); }), ['dead'], 'dead') +
     '</div>' + footer();
 }
 
-function helperBannerHTML() {
-  return '<div class="tf-helper-banner">🔎 活音／死音 判斷工具</div>';
-}
+function helperBannerHTML() { return '<div class="tf-helper-banner">🔎 活音／死音 判斷工具</div>'; }
 
 function helperStep1() {
   return helperBannerHTML() + qbox('','這個字有「尾音」嗎？') +
@@ -3175,33 +3072,33 @@ function helperNo() {
 }
 
 function helperDone() {
-  var last = S.path[S.path.length-1];
-  var isDead = (last === '短尾音' || last === '短母音');
+  var last = S.path[S.path.length - 1];
+  var isDead = last === '短尾音' || last === '短母音';
   var col = isDead ? '#ff7c7c' : '#7ec87e';
   var label = isDead ? '死音' : '活音';
   var nextStep = isDead ? 's2b_dead' : 's2b_live';
   var continueAct = act(function(){ navigate(nextStep, label); });
   return helperBannerHTML() +
-    '<div class="tf-helper-result" style="border-color:'+col+';">' +
+    '<div class="tf-helper-result" style="border-color:' + col + ';">' +
       '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:12px;color:rgba(255,255,255,0.4);letter-spacing:3px;margin-bottom:10px;">判斷結果</div>' +
-      '<div class="tf-helper-result-label" style="color:'+col+';">'+label+'</div>' +
-      '<div class="tf-helper-result-desc">這個字是「'+label+'」</div>' +
+      '<div class="tf-helper-result-label" style="color:' + col + ';">' + label + '</div>' +
+      '<div class="tf-helper-result-desc">這個字是「' + label + '」</div>' +
     '</div>' +
-    '<div style="text-align:center;"><button class="tf-search-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_helper_continue\',{category:\'game\'});}catch(e){}'+continueAct+'">繼續分析 →</button></div>';
+    '<div style="text-align:center;"><button class="tf-search-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_helper_continue\',{category:\'game\'});}catch(e){}' + continueAct + '">繼續分析 →</button></div>';
 }
 
 function s2bLive() {
   return qbox('3','起首子音屬於哪一組？') +
     '<div class="tf-options">' +
-      optRow('中子音 ／ 低子音', act(function(){ tryNavigate('mid_low','中子音/低子音','result',1); }), ['mid','low'], 'mid_low') +
-      optRow('高子音 ／ 前引字', act(function(){ tryNavigate('high_lead','高子音/前引字','result',5); }), ['high','lead'], 'high_lead') +
+      optRow('中子音 ／ 低子音', act(function(){ tryNavigate('mid_low','中子音/低子音','result'); }), ['mid','low'], 'mid_low') +
+      optRow('高子音 ／ 前引字', act(function(){ tryNavigate('high_lead','高子音/前引字','result'); }), ['high','lead'], 'high_lead') +
     '</div>' + footer();
 }
 
 function s2bDead() {
   return qbox('3','起首子音屬於哪一組？') +
     '<div class="tf-options">' +
-      optRow('高子音 ／ 前引字 ／ 中子音', act(function(){ tryNavigate('high_lead_mid','高子音/前引字/中子音','result',2); }), ['high','lead','mid'], 'high_lead_mid') +
+      optRow('高子音 ／ 前引字 ／ 中子音', act(function(){ tryNavigate('high_lead_mid','高子音/前引字/中子音','result'); }), ['high','lead','mid'], 'high_lead_mid') +
       optRow('低子音', act(function(){ tryNavigate('low_dead','低子音','s2b_dl'); }), ['low'], 'low_dead') +
     '</div>' + footer();
 }
@@ -3209,56 +3106,27 @@ function s2bDead() {
 function s2bDeadLow() {
   return qbox('4','母音是哪種類型？') +
     '<div class="tf-options">' +
-      optRow('長母音', act(function(){ tryNavigate('long_vowel','長母音','result',3); }), ['longVowel'], 'long_vowel') +
-      optRow('短母音', act(function(){ tryNavigate('short_vowel','短母音','result',4); }), ['shortVowel'], 'short_vowel') +
+      optRow('長母音', act(function(){ tryNavigate('long_vowel','長母音','result'); }), ['longVowel'], 'long_vowel') +
+      optRow('短母音', act(function(){ tryNavigate('short_vowel','短母音','result'); }), ['shortVowel'], 'short_vowel') +
     '</div>' + footer();
 }
 
-// ════════════════════════════════════════════════════════════
-// NEW PAGE 1: SESSION GUESS  (before tone-inflection)
-// ════════════════════════════════════════════════════════════
+// เดาเสียง 1–5 ผิดก่อนเข้า推導เป็นโอกาสเรียน: ไม่หักคะแนน/คอมโบ/Clean
+// คะแนนเริ่มลดเมื่อตอบผิดภายใน推導เท่านั้น
+function tfHandleInitialToneMistake(entry) {
+  if (!session) return;
+  session.curWordWrongGuess = true;
+  tfUpdateWordScoreGauge();
+}
+
 function stepSessionGuess() {
-  if (!session) return step1(); // กันเหนียว: ถ้าหลุดมาที่ step นี้โดยไม่มี session ให้ใช้ flow วิเคราะห์อิสระแทนหน้าว่าง
+  if (!session) throw new Error('CATALOG_AUTHORITY_UNAVAILABLE:no active session');
   var entry = session.words[session.index];
-  var word = S.word || entry.word;
   if (tfGuideMode && session.currentWordGuideIntroPending && !tfCurWordNoTools()) {
     return '<div style="text-align:center;padding:18px 0 14px;">' +
       '<button type="button" id="tf-guide-start-btn" class="sg-dontknow-btn" onclick="TF.startGuidedQuestion()">'+(tfMobilePortrait() ? '開始推導' : '開始練習')+'</button>' +
     '</div>';
   }
-  var bd = getBreakdown(word);
-  var cls = TH.getInitClass(word);
-  var clsLabel = TH.classLabel(cls);
-  var initChar = TH.getInitChar(word);
-  var isLive = TH.isLiveWord(word);
-  var vType = bd.vowelType;
-
-  // Large word display
-  var wordHtml = '';  // word now shown by top banner (counter + big word)
-
-  // Breakdown chips
-  var chips = [];
-  if (initChar) {
-    chips.push('<div class="sg-bd-chip">'+
-      '<div class="sg-bd-label">'+(cls === 'lead' ? '前引字' : '起首子音')+'</div>'+
-      '<div class="sg-bd-value">'+initChar+'</div>'+
-      '<div style="font-family:\'Noto Sans TC\',sans-serif;font-size:10px;color:#bbb;margin-top:3px;">'+clsLabel+'</div>'+
-    '</div>');
-  }
-  chips.push('<div class="sg-bd-chip">'+
-    '<div class="sg-bd-label">สระ</div>'+
-    '<div class="sg-bd-value zh">'+(vType === 'short' ? '短母音' : vType === 'long' ? '長母音' : '—')+'</div>'+
-  '</div>');
-  if (bd.finalCons) {
-    chips.push('<div class="sg-bd-chip">'+
-      '<div class="sg-bd-label">尾音</div>'+
-      '<div class="sg-bd-value">'+bd.finalCons+'</div>'+
-    '</div>');
-  }
-  var sylPart = currentDataPart();
-  var customBd = sylPart ? singlePartChips(sylPart) : breakdownChipsHTML(S.parentWord || word, null);
-  var breakdownHtml = customBd || '<div class="sg-breakdown">'+chips.join('')+'</div>';
-
   // Lin 2026-07-25: ลบแถบปุ่ม 泰文讀音/英文讀音 ในหน้าเดาวรรณยุกต์ทิ้ง — ย้ายไปใช้สวิตช์ในเมนู 🍚 (ปุ่มขวา) ที่เดียว
 
   // Tone guess buttons
@@ -3270,33 +3138,21 @@ function stepSessionGuess() {
       tfFireStartOnce();  // Analytics 2026-07-23: ตอบข้อแรก = เริ่มเล่นจริง
       session.initialGuess = captureN;
       session.currentWordToneAttempts = session.currentWordToneAttempts || [];
-      session.currentWordToneAttempts.push({answer:TONES[captureN]?TONES[captureN].zh:String(captureN),is_correct:captureN===computeTone(word),syllable:tfCurWordIsMulti()?(S.selectedSyl+1):1});
+      session.currentWordToneAttempts.push({answer:TONES[captureN]?TONES[captureN].zh:String(captureN),is_correct:captureN===catalogToneNumber(),syllable:tfCurWordIsMulti()?(S.selectedSyl+1):1});
       try { session.curWordGuesses = session.curWordGuesses || {}; session.curWordGuesses[tfCurWordIsMulti() ? S.selectedSyl : 0] = captureN; } catch(e){}  // Phase 4: จำคำเดารายพยางค์
-      // ── โหมดเร็ว (Approach A): ตอบถูกตั้งแต่แรก → ข้าม推導ไป result เลย; ผิด/คำนวณไม่ได้ → 推導สอนเหมือนเดิม ──
-      var correctTone = computeTone(word);              // computeTone คืน 1–5 (null ถ้าคำนวณไม่ได้)
+      // เทียบกับ toneNumber ที่คัดลอกจาก canonical record โดยตรง
+      var correctTone = catalogToneNumber();
       if (correctTone && captureN === correctTone) {
-        S.tone = correctTone;                            // ⚠️ ต้องตั้งก่อน! goToResult ใช้ S.tone
-        // กันโกง: ถ้าเคยเดาผิดในคำ/พยางค์นี้แล้ว (เช่นปิด popup แล้วเดาใหม่) → ไม่นับ "ถูกครั้งแรก" คิดแบบ推導
+        S.tone = correctTone;                            // สำเนาค่าตรงจากคลังสำหรับสถานะหน้าจอเท่านั้น
         if (session && session.curWordWrongGuess) tfScoreDeduce();
-        else tfScoreFirstTry();                          // สเตจ 1: ถูกครั้งแรก +100 (×คอมโบ)
+        else tfScoreFirstTry();
         goToResult(captureN);
       } else {
-        // Lin 2026-08-26: เดาเสียงผิดต้องนับผิด 1 ครั้งและลดบันไดคะแนนทันที
-        // (ปุ่ม 不確定 ยังเป็นทางเข้า推導แบบไม่เดาคำตอบ จึงไม่ใช้กฎนี้)
-        if (session) {
-          session.curWordWrongGuess = true;
-          session.combo = 0;
-          if (tfCurWordIsMulti()) session.curWordAllFirstTry = false;
-          recordMistake(TONES[captureN] ? TONES[captureN].zh : String(captureN), '聲調選擇錯誤');
-          TF_WORDSCORE.onWrong(session);
-          TF_WORDSCORE.onNextStep(session);
-          tfUpdateWordScoreGauge();
-        }
-        // รอบตัดสิน Day 7 หรือ known-check ไม่มี推導; ผิดแล้วรีเซ็ต SRS ทันที
-        // รอบปกติยังเข้า推導ทีละขั้นได้ แต่ final-check/known-check ต้องนึกเองโดยไม่มีเครื่องมือช่วย
-        // 2026-07-31: คำพิเศษ (TONE_OVERRIDE) ก็เฉลยทันทีเหมือนกัน — ไม่มีกฎมาตรฐานให้推導จริง เดินขั้นไปก็สอนผิด
-        if (tfCurWordNoTools() || tfCurWordIsToneSpecial()) tfForceRevealZero();
-        else navigateToInflection();  // Lin 2026-07-16: เดาผิด → เข้าหน้าตรวจ推導เลย ไม่มี popup 開始聲調推導
+        tfHandleInitialToneMistake(entry);
+        // Memory-only checks reveal immediately. Normal practice enters the
+        // deterministic teaching flow; it is not a second answer judge.
+        if (tfCurWordNoTools()) tfForceRevealZero();
+        else navigateToInflection();
       }
     });
     return '<button class="sg-tone-btn" style="border-color:'+c+';color:'+c+';" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_tone_choice_click\',{category:\'game\',tone:'+n+'});}catch(e){}'+clickAct+'">'+n+'</button>';
@@ -3308,30 +3164,22 @@ function stepSessionGuess() {
     session.currentWordToneAttempts = session.currentWordToneAttempts || [];
     session.currentWordToneAttempts.push({answer:'不確定',is_correct:false,syllable:tfCurWordIsMulti()?(S.selectedSyl+1):1});
     try { session.curWordGuesses = session.curWordGuesses || {}; session.curWordGuesses[tfCurWordIsMulti() ? S.selectedSyl : 0] = 0; } catch(e){}  // Phase 4: จำ "ไม่มั่นใจ" รายพยางค์
-    if (session) { session.curWordWrongGuess = true; session.combo = 0; }  // 🤷 = เข้า推導 ไม่นับ first-try
-    navigateToInflection();  // Lin 2026-07-16: กด "ไม่แน่ใจ" → เข้าหน้าตรวจเลย ไม่มี popup
+    if (session) session.curWordWrongGuess = true;
+    navigateToInflection();
   });
 
-  // ── Lin 2026-07-04: หน้านี้ไม่มีปุ่ม "?" /แอบดูเลย (ยังไม่เข้า推導) — เดามั่ว/ท้าทายตรงๆ เท่านั้น ──
-  // ปุ่ม "?" (= ปุ่มแอบดู ตามที่ Lin ยืนยันว่าเป็นตัวเดียวกัน) อยู่ใน 10 ขั้นย่อยของ推導 ผ่าน optRow()/TF.hint() เท่านั้น
-
   // รอบตัดสิน Day 7 ไม่มีตัวเลือก "ไม่มั่นใจ/ท้าทาย" — มีเพียงคำตอบเสียงวรรณยุกต์ 5 ปุ่ม
-  // ผิด/ไม่รู้ = ต้องเดา แล้วถ้าผิดก็ fail ทันที (ดูตัน clickAct ข้างบน) ไม่ใช่มีทางลัดไปเข้า推導 อีกทาง
+  // ผิด/ไม่รู้ในรอบปกติ = เข้า 推導 เพื่อเรียนทีละขั้น; รอบห้ามใช้เครื่องมือเฉลยทันที
   var dontKnowHtml;
   if (session.curWordIsKnownCheck) {
     dontKnowHtml = '<div style="margin-top:8px;font-size:12px;color:#B07D00;">✓ 記憶確認 — 答對一次即可移除這個字（不給獎勵）· 禁止使用任何輔助工具，只能憑記憶作答一次</div>';
   } else if (session.curWordIsFinalSrsCheck) {
     dontKnowHtml = '<div style="margin-top:8px;font-size:12px;color:#B07D00;">🔒 最終確認 (Day 7) — 禁止使用任何輔助工具，完全憑記憶作答</div>';
-  } else if (tfCurWordIsToneSpecial()) {
-    // 2026-07-31: คำพิเศษ (TONE_OVERRIDE) ไม่มีปุ่ม "ไม่มั่นใจ/ท้าทาย" ให้กด — ไม่มีกฎมาตรฐานให้推導 ต้องจำเสียงไว้ตรงๆ
-    dontKnowHtml = '<div style="margin-top:8px;font-size:12px;color:#B07D00;">✨ 特殊詞（不按規則）— 答對得全部分數，答錯直接看答案，用背的就好</div>';
   } else {
     dontKnowHtml = '<button class="sg-dontknow-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_dontknow_click\',{category:\'game\'});}catch(e){}'+dontKnowAct+'">'+(tfMobileLandscape() ? '不確定' : '🤷 我不太確定 / 我想挑戰')+'</button>';
   }
 
   return '<div style="text-align:center;padding:4px 0 8px;">'+
-    wordHtml+
-    // Lin 2026-07-29: ลบแถบเฉลย 子音/母音/尾音 (breakdownHtml) ออกจากหน้าเดาวรรณยุกต์ทุกระดับ — โชว์คำตอบให้ก่อนเดาเลย
     '<div class="sg-divider"></div>'+
     (tfMobileLandscape() ? '' : '<div class="sg-question">你覺得這個字是第幾聲？</div>')+
     '<div class="sg-tone-grid">'+toneBtns+'</div>'+
@@ -3342,9 +3190,18 @@ function stepSessionGuess() {
 
 function navigateToInflection() {
   var w = S.word;
-  // Lin 2026-07-16: เข้าหน้าตรวจ推導 = รีเซ็ตประวัติให้ s1 เป็นฐาน → กดย้อนกลับไปหน้าเดาวรรณยุกต์ไม่ได้ (กันย้อนไปเดาใหม่จนถูก)
-  S = { word: w, step: 's1', path: [w], tone: null, syllables: S.syllables, selectedSyl: S.selectedSyl, sylResults: S.sylResults, parentWord: S.parentWord };
-  hist = [{ step: 's1', path: [w], tone: null, syllables: S.syllables, selectedSyl: S.selectedSyl, sylResults: S.sylResults }];
+  // Start 推導 from a fresh history base so a learner cannot go back and
+  // repeat the initial guess until it becomes correct.
+  S = {
+    word: w, step: 's1', path: [w], tone: null,
+    syllables: S.syllables, selectedSyl: S.selectedSyl,
+    sylResults: S.sylResults, parentWord: S.parentWord
+  };
+  hist = [{
+    step: 's1', path: [w], tone: null,
+    syllables: S.syllables, selectedSyl: S.selectedSyl,
+    sylResults: S.sylResults, parentWord: S.parentWord
+  }];
   histPos = 0;
   render();
 }
@@ -3355,8 +3212,8 @@ function navigateToInflection() {
 function goToResult(finalAnswer) {
   if (session) session.finalAnswer = finalAnswer;
   hist = hist.slice(0, histPos+1);
-  var tone = S.tone;
-  // Lin 2026-08-02 (บั๊กจริงที่ Lin เจอ): จุดนี้ลืมใส่ parentWord ต่อ (จุดพี่น้องกัน navigateToInflection() ด้านบนใส่ไว้ถูกอยู่แล้ว)
+  var tone = catalogToneNumber();
+  // รักษา parentWord เพื่อให้คำหลายพยางค์อ้างระเบียนเดิมครบ
   //   ผลคือพอตอบพยางค์ 1 ถูก → เข้าหน้าเฉลย → กด "ต่อ" ไปพยางค์ 2 (TF.nextSyllable()) → S.parentWord หายไปแล้ว
   //   nextSyllable() เลย fallback ไปต่อคำจาก S.syllables (คำอ่านจาก readingTH) แทน = แบนเนอร์คำเต็มด้านบนโชว์ "ขอบคุน" ผิด แทน "ขอบคุณ"
   S = { word: S.word, step: 'result', path: S.path.slice(), tone: tone, syllables: S.syllables, selectedSyl: S.selectedSyl, sylResults: S.sylResults, parentWord: S.parentWord };
@@ -3367,7 +3224,8 @@ function goToResult(finalAnswer) {
 
 // ── RESULT ──
 function stepResult() {
-  var t = TONES[S.tone];
+  var reviewedTone = catalogToneNumber();
+  var t = TONES[reviewedTone];
   if (!t) return '';
 
   // Analysis path
@@ -3376,31 +3234,23 @@ function stepResult() {
       '<span class="tf-result-path-item">'+p+'</span>';
   }).join('');
 
-  // Re-analyze action
-  var againAct = act(function(){
-    var w = S.word;
-    hist=[]; histPos=-1;
-    hist.push({step:'s1',path:[w],tone:null});
-    histPos=0;
-    S={word:w,step:'s1',path:[w],tone:null,parentWord:S.parentWord};
-    render();
-  });
-
   // Lin 2026-07-14: คำหลายพยางค์ ไหลอัตโนมัติทีละพยางค์ตามลำดับ (ไม่มีหน้าเลือกพยางค์เอง/ไม่มี回到音節總覽 อีกแล้ว)
   //   ยังไม่ใช่พยางค์สุดท้าย → 下一個音節 (ไปพยางค์ถัดไปของคำเดิม) · พยางค์สุดท้าย → 太棒了 (โชว์สรุปทุกพยางค์ก่อนไปคำใหม่จริง)
   var isMultiSyl = S.syllables && S.syllables.length > 1 && S.selectedSyl != null;
   var isLastSyl = !isMultiSyl || (S.selectedSyl + 1 >= S.syllables.length);
 
-  // Lin 2026-08-02 (บั๊กจริงที่ Lin เจอ): S.syllables/S.word ถูกแตกมาจาก readingTH (เช่น "ขอ-โทด") เพื่อใช้คำนวณวรรณยุกต์ภายในเท่านั้น
-  //   ไม่ใช่ตัวสะกดจริงสำหรับโชว์ — คำหลายพยางค์ พยางค์ที่ 2 ขึ้นไป เลยโชว์ "คำอ่าน" (โทด) แทน "ตัวสะกดจริง" (โทษ) ทั้งหัวข้อผลลัพธ์และการ์ดสรุปพยางค์
-  //   แก้: ถ้ามีข้อมูลตัวสะกดจริงจาก entry.syls (จำนวนพยางค์ตรงกัน) ให้โชว์อันนั้นแทนเสมอ
+  // S.syllables/S.word เป็นสถานะการนำทางของหน้าจอเท่านั้น ไม่ใช่แหล่งคำตอบภาษา
+  // ตัวสะกดและคำตอบทุกช่องต้องอ่านตรงจาก entry.syls ที่ฉายมาจากคลังกลาง
   var _curEntryForDisp = tfCurEntry();
   var _entrySylsForDisp = (_curEntryForDisp && _curEntryForDisp.syls && S.syllables && _curEntryForDisp.syls.length === S.syllables.length) ? _curEntryForDisp.syls : null;
-  function tfDispSyl(i, fallback) { return (_entrySylsForDisp && _entrySylsForDisp[i] && _entrySylsForDisp[i].th) ? _entrySylsForDisp[i].th : fallback; }
-  var dispWord = isMultiSyl ? tfDispSyl(S.selectedSyl, S.word) : S.word;
+  function tfDispSyl(i) {
+    if (!_entrySylsForDisp || !_entrySylsForDisp[i] || !_entrySylsForDisp[i].th) throw new Error('CATALOG_AUTHORITY_INCOMPLETE:display syllable');
+    return _entrySylsForDisp[i].th;
+  }
+  var dispWord = isMultiSyl ? tfDispSyl(S.selectedSyl) : S.word;
 
   // ── Session block ──
-  // Lin 2026-07-31: ตัด badge 🎉一次就推導成功/終於找到答案了 + ช่อง "結果" ออกทั้งคู่ — สีกรอบ/ป้ายวรรณยุกต์ในการ์ดผลลัพธ์บอกถูก-ผิดอยู่แล้ว ไม่ต้องพูดซ้ำ เหลือแค่ "你的選擇" บรรทัดเดียว
+  // สีกรอบ/ป้ายวรรณยุกต์ในการ์ดผลลัพธ์บอกถูก-ผิดอยู่แล้ว
   var sessionBlock = '';
   if (session) {
     var initialGuess = session.initialGuess;
@@ -3422,7 +3272,7 @@ function stepResult() {
     var ansHtml = isMultiSyl ? '' : tfAnswerRowsHtml(currentAnswerSyl());
 
     // D2 (2026-08-10): เดิมโชว์ 音節拆解 อัตโนมัติทุกครั้ง → เปลี่ยนเป็นปุ่ม [ 查看詳細解說 ] แบบ opt-in (.gsh-detail-toggle/.gsh-detail-box ใน shared.css)
-    //   เนื้อหา/การคำนวณ ansHtml เหมือนเดิมทุกประการ แค่ซ่อนไว้ก่อนจนกว่าจะกดดู
+    //   ansHtml แสดงค่าจากคลังกลางเท่านั้น แค่ซ่อนไว้ก่อนจนกว่าจะกดดู
     sessionBlock =
       guessRow+
       (ansHtml ? '<div class="result-v2-bd">'+
@@ -3449,7 +3299,7 @@ function stepResult() {
   if (isMultiSyl && isLastSyl) {
     var summaryResults = {};
     for (var _k in (S.sylResults || {})) summaryResults[_k] = S.sylResults[_k];
-    summaryResults[S.selectedSyl] = { tone: S.tone };
+    summaryResults[S.selectedSyl] = { tone: reviewedTone };
     var sylCardsHtml = S.syllables.map(function(syl, i) {
       var rt = summaryResults[i] ? TONES[summaryResults[i].tone] : null;
       return '<div style="flex:1;background:#fff;border:1.5px solid '+(rt?rt.color:'#ccc')+';border-radius:10px;padding:10px;text-align:center;">'+
@@ -3492,7 +3342,6 @@ function stepResult() {
   var nextBtnHtml = '<div class="result-v2-actions" style="margin-bottom:10px;">'+
       '<button class="tf-session-next-btn" id="tf-session-next-btn" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_result_next_click\',{category:\'game\'});}catch(e){}'+nextBtnOnclick+'">'+nextBtnLabel+'</button>'+
       hintOffBtnHtml+
-      (session ? '' : '<button class="tf-result-secondary" onclick="try{if(typeof gtag===\'function\')gtag(\'event\',\'tone_finder_reanalyze_click\',{category:\'game\'});}catch(e){}'+againAct+'">↺ 重新分析</button>')+
     '</div>';
 
   // Lin 2026-07-25: คำแปล/คำอ่าน ใต้คำศัพท์ในหน้าเฉลย — คุมด้วยสวิตช์ในเมนู 🍚 (翻譯 🍙 / 讀音 🐣 / 英文讀音 🔡)
@@ -3967,6 +3816,11 @@ var TF = {
     });
   },
   selectLevel: function(level) {
+    if (window.PAID_SRS_PRIVATE_BETA && Number(level) === 3) {
+      selectedLevel = 1;
+      tfToast('付費測試目前先開放初級與中級');
+      level = 1;
+    }
     selectedLevel = level;
     selectedCategory = 'ทั้งหมด';
     randomEntry = null; session = null;
@@ -3982,14 +3836,23 @@ var TF = {
     }
   },
   // สุ่ม 5 คำจาก level ที่เลือก แล้ว loop ต่อเนื่อง
-  _startRandom5: function() {
+  _startRandom5: function(reviewReady) {
+    if(!reviewReady&&window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()){
+      LearningReview.prime({game:'tone',level:selectedLevel||1,playSetSize:selectedLevel===3?1:5}).then(function(){TF._startRandom5(true);});
+      return;
+    }
     if (selectedLevel === 3) { // 高級 ไม่มีคำใน WORD_LIST → สุ่มประโยคใหม่แทน (Lin 2026-07-03)
-      TF.startAdvSentence(Math.floor(Math.random() * ADV_SENTENCES.length));
+      var _allSentences=ADV_SENTENCES.map(function(_,i){return i;});
+      var _reviewSentences=window.LearningReview&&LearningReview.matchQueue?LearningReview.matchQueue({game:'tone',level:3,items:_allSentences,contentRefOf:tfReviewSentenceRef}):[];
+      var _sentenceAllocation=window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()?LearningReview.allocateRuntime({game:'tone',level:3,total:1,reviewDue:_reviewSentences,srsDue:[],regular:_allSentences,idOf:function(i){return LearningReview.keyOfRef(tfReviewSentenceRef(i));},scope:'tone-3'}):{items:[Math.floor(Math.random()*ADV_SENTENCES.length)],selectedReview:[]};
+      var _sentenceIndex=_sentenceAllocation.items.length?_sentenceAllocation.items[0]:Math.floor(Math.random()*ADV_SENTENCES.length);
+      TF.startAdvSentence(_sentenceIndex);
+      if(window.LearningReview&&LearningReview.registerRound){var _sentenceRefKey=LearningReview.keyOfRef(tfReviewSentenceRef(_sentenceIndex)),_group={};_group[_sentenceRefKey]=session&&session.words?session.words.length:1;LearningReview.registerRound({report:roundReport,game:'tone',level:3,allItems:_allSentences,srsOwned:_allSentences.filter(function(i){return !!tfGetSrsRecord(ADV_SENTENCES[i].th,3);}),selectedReview:_sentenceAllocation.selectedReview,idOf:function(i){return LearningReview.keyOfRef(tfReviewSentenceRef(i));},contentRefOf:tfReviewSentenceRef,groupSizeByRef:_group,checkpoint:function(completed){tfSaveResumeState(completed);},retry:function(){if(session&&session.words&&session.words.length){session.words=session.words.concat(session.words.slice());}}});}
       return;
     }
     // F5 (2026-08-10): จำ "คำสุดท้ายของชุดก่อนหน้า" ไว้ก่อนที่ session ตัวแปรจะถูกทับด้วยชุดใหม่ (ใช้กันคำแรกของชุดใหม่ซ้ำกับคำสุดท้ายของชุดก่อน)
-    var _prevLastWord = (session && session.words && session.words.length) ? session.words[session.words.length - 1].word : null;
-    var pool = WORD_LIST.filter(function(w){ return !selectedLevel || w.level === selectedLevel; }).map(function(w){ return w.word; });
+    var _prevLastWord = (session && session.words && session.words.length) ? tfStateWord(session.words[session.words.length - 1]) : null;
+    var pool = WORD_LIST.filter(function(w){ return !selectedLevel || w.level === selectedLevel; });
     if (!pool.length) { tfToast('找不到單字，請試試其他等級'); return; }
     // Lin 2026-07-04: ถ้าจำได้ครบทุกคำในระดับนี้ (全部精通) → เด้งหน้าฉลองก่อน (ไม่เริ่มชุดอัตโนมัติให้เล่นวนเปล่าๆ)
     if (tfSrsLoggedIn()) {
@@ -4002,20 +3865,29 @@ var TF = {
     }
     pool = tfExcludeMasteredWords(pool, 5); // Lin 2026-07-04: กันคำที่จำได้แล้ว (mastered) โผล่ซ้ำในสุ่ม 5 คำ
     var words;
-    if (tfSrsLoggedIn() && window.GameFlow && GameFlow.allocateSrs) {
+    var _reviewSelected=[],_srsOwned=pool.filter(function(w){return !!tfGetSrsRecord(w,tfWordLevel(w));});
+    var _reviewDue=window.LearningReview&&LearningReview.matchQueue?LearningReview.matchQueue({game:'tone',level:selectedLevel,items:pool,contentRefOf:tfReviewWordRef}):[];
+    if (tfSrsLoggedIn() && window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()&&window.GameFlow&&GameFlow.allocateSrs) {
       var _now=Date.now();
       var _due=pool.filter(function(w){var r=tfGetSrsRecord(w,tfWordLevel(w));return !!(r&&!r.mastered&&TF_SRS.isDue(r,_now));});
       var _regular=pool.filter(function(w){return _due.indexOf(w)===-1;});
-      words=GameFlow.allocateSrs({tier:'free',total:Math.min(5,pool.length),due:_due.slice().sort(function(){return Math.random()-0.5;}),regular:_regular.slice().sort(function(){return Math.random()-0.5;}),idOf:function(w){return w;},scope:'tone-'+selectedLevel}).items;
+      var _allocation=LearningReview.allocateRuntime({game:'tone',level:selectedLevel,total:Math.min(5,pool.length),reviewDue:_reviewDue,srsDue:_due.slice().sort(function(){return Math.random()-0.5;}),regular:_regular.slice().sort(function(){return Math.random()-0.5;}),idOf:function(w){return LearningReview.keyOfRef(tfReviewWordRef(w));},scope:'tone-'+selectedLevel,srsScope:'tone-'+selectedLevel,allocateSrs:GameFlow.allocateSrs});
+      words=_allocation.items;_reviewSelected=_allocation.selectedReview;
+    } else if (tfSrsLoggedIn() && window.GameFlow && GameFlow.allocateSrs) {
+      var _now=Date.now();
+      var _due=pool.filter(function(w){var r=tfGetSrsRecord(w,tfWordLevel(w));return !!(r&&!r.mastered&&TF_SRS.isDue(r,_now));});
+      var _regular=pool.filter(function(w){return _due.indexOf(w)===-1;});
+      words=GameFlow.allocateSrs({tier:'free',total:Math.min(5,pool.length),due:_due.slice().sort(function(){return Math.random()-0.5;}),regular:_regular.slice().sort(function(){return Math.random()-0.5;}),idOf:function(w){return tfStateWord(w);},scope:'tone-'+selectedLevel}).items;
     } else {
       words = pool.slice().sort(function(){ return Math.random()-0.5; }).slice(0, 5);
     }
     // F5 (2026-08-10): พยายามไม่ให้คำแรกของชุดใหม่ซ้ำกับคำสุดท้ายของชุดก่อนหน้า — สลับที่กับคำถัดไปในชุด (แค่ลองครั้งเดียว)
     //   pool เล็กจนเลี่ยงไม่ได้ (เหลือคำเดียว/ทุกคำในชุดใหม่คือคำเดิม) ก็ปล่อยให้ซ้ำได้ตามที่ Lin ยืนยัน ไม่ใช่ด่านบังคับ
-    if (_prevLastWord && words.length > 1 && words[0] === _prevLastWord) {
+    if (_prevLastWord && words.length > 1 && tfStateWord(words[0]) === _prevLastWord) {
       var _tmp = words[0]; words[0] = words[1]; words[1] = _tmp;
     }
     startSetSession(words,{keepOrder:true});
+    if(window.LearningReview&&LearningReview.registerRound)LearningReview.registerRound({report:roundReport,game:'tone',level:selectedLevel,allItems:pool,srsOwned:_srsOwned,selectedReview:_reviewSelected,idOf:function(w){return LearningReview.keyOfRef(tfReviewWordRef(w));},contentRefOf:tfReviewWordRef,checkpoint:function(completed){tfSaveResumeState(completed);},retry:function(w){if(session&&session.words)session.words.push(w);}});
   },
   // Lin 2026-07-04: ตัด selectCategory/selectSet/openSpecial ทิ้งแล้ว — หน้าเลือกหมวด/ชุด + 特訓區 ไม่ใช้แล้ว
   // ⭐ Lin 2026-07-25: ปุ่มดาว แยกออกจากปุ่ม勳章(showBadges) — โชว์แค่จำนวนดาวสะสม ไม่มีตารางแบดจ์
@@ -4069,38 +3941,39 @@ var TF = {
     '</div>';
     document.body.appendChild(div);
   },
-  // ── Lin 2026-07-04: "✓ 已記得這個字" แบบเข้ม (กันปั๊ม) ──
-  //   เดิม: กดแล้วข้ามคำเฉยๆ (ไม่ตัดคำ ไม่ได้ดาว)
-  // กดแล้วไม่ตัดคำทันที → เข้าโหมดพิสูจน์ 1 ครั้งแบบ final-check (ไม่มี推導/ใบ้)
-  //     ถูกสะอาด → ตัดคำออกถาวร (mastered) แต่ "ไม่แจกดาว/แต้ม/bump เพดาน" (ดู tfProcessSrsOnWordCommit)
-  //     ผิด → resetOnFail กลับ day1 เข้าคิว SRS ปกติ แล้วไปคำถัดไป
+  // Compatibility guard: stale callers must never let the player mark a word
+  // mastered. Memory status belongs to SRS; this legacy entry is neutral skip.
   markKnown: function() {
-    if (!session) return;
-    session.hadSkip = true;                     // มีการ "อ้างว่ารู้แล้ว" ในรอบนี้ → ไม่นับ perfect (กันได้ perfect ฟรีจากการข้าม)
-    tfResetWordScoring();                        // ล้างคะแนน/สถานะคำนี้ให้เริ่มพิสูจน์ใหม่หมด
-    session.initialGuess = undefined;
-    session.finalAnswer = undefined;
-    session.currentWordGolden = false;           // ปิดคำทอง — โหมดพิสูจน์ไม่มีแต้ม/ตัวคูณอยู่แล้ว
-    session.curWordIsKnownCheck = true;          // ⚑ เข้าโหมดพิสูจน์ (ไม่มี推導/ใบ้/แต้ม ผิดปุ๊บ fail — ผ่าน tfCurWordNoTools)
-    // ตั้งจอคำ "เดิม" (ไม่ index++) ให้ทายใหม่ — ห้ามเรียก tfSetupSrsFlagsForCurrentWord (จะล้าง flag known ทิ้ง)
-    var nx = session.words[session.index];
-    randomEntry = nx;
-    var w = nx.word;
-    // Lin 2026-07-14: คำหลายพยางค์ ไม่มีหน้าเลือกพยางค์เองแล้ว → เริ่มพยางค์ที่ 1 ตรงเลย
-    if (nx.readingTH && nx.readingTH.indexOf('-') !== -1) {
-      var _syls2 = nx.readingTH.split('-');
-      S = { word: _syls2[0], step: 'session-guess', path: [_syls2[0]], tone: null, syllables: _syls2, selectedSyl: 0, sylResults: {}, parentWord: w };
-    } else {
-      S = { word: w, step: 'session-guess', path: [w], tone: null };
-    }
-    hist.push(S); histPos++;
-    render();
+    return this.skipCurrentWord();
   },
   // Neutral skip on all supported layouts: no answer, score, Combo, SRS, or countdown.
   skipCurrentWord: function() {
     if (!session || !tfNeutralSkipSurface()) return;
+    var _skipNow = Date.now();
+    // A physical double-click can land on the freshly rendered Skip button for
+    // the next word. Keep the commit locked while LearningReview saves, then
+    // retain a short cross-render cooldown so one gesture advances once only.
+    if (session.skipCommitPending || _skipNow < (Number(session.skipCommitCooldownUntil) || 0)) return;
     var entry = session.words[session.index];
     if (!entry) return;
+    var _skipSession = session;
+    var _skipIndex = session.index;
+    var _skipAdvanced = false;
+    _skipSession.skipCommitPending = true;
+    _skipSession.skipCommitCooldownUntil = _skipNow + 500;
+    function _advanceSkippedWordOnce() {
+      if (_skipAdvanced) return;
+      _skipAdvanced = true;
+      try {
+        // A late save callback belongs only to the exact session/question that
+        // created it. Level changes, replay, restore, or exit must not advance
+        // whatever session happens to be global when the callback returns.
+        if (session !== _skipSession || session.index !== _skipIndex || session.words[_skipIndex] !== entry) return;
+        tfAdvanceCommittedWord();
+      }
+      finally { _skipSession.skipCommitPending = false; }
+    }
+    var usedGuide = !!session.hintUsed || !!session.currentWordGuideUsed;
     var awarded = Math.max(0, Number(session.currentWordScore) || 0);
     if (awarded) session.score = Math.max(0, (Number(session.score) || 0) - awarded);
     session.currentWordScore = 0;
@@ -4108,12 +3981,12 @@ var TF = {
     session.hadSkip = true;
     session.results.push({
       entry: entry,
-      tone: computeTone(entry.word),
+      tone: catalogToneNumber(),
       mistakes: 0,
       initialGuess: undefined,
       finalAnswer: undefined,
       attempts: [],
-      hintUsed: false,
+      hintUsed: usedGuide,
       score: 0,
       firstTry: false,
       golden: false,
@@ -4125,63 +3998,49 @@ var TF = {
     if (roundReport && window.RoundReport) {
       var _skipSentence = selectedLevel === 3 && advSentenceCtx && advSentenceCtx.th;
       RoundReport.addItem(roundReport, {
-        content_ref: { source: _skipSentence ? 'game_sentences' : 'game_words', key: _skipSentence || (entry.word + '@' + (selectedLevel || 1)) },
+        content_ref: _skipSentence ? { source: 'game_sentences', key: _skipSentence } : { source: 'game_words', key: tfWordContentKey(entry) },
         question: entry.word,
         meaning: entry.zh || '',
         attempts: [],
         user_answer: '',
         correct_answer: '',
         is_correct: false,
+        is_practice: usedGuide,
         is_skipped: true,
         skip_reason: 'user_skip',
         wrong_count: 0,
         item_score: 0,
-        hint_used: false,
-        linguistic: { reading_th: entry.readingTH || '', syls: entry.syls || null, read_syls: entry.readSyls || null },
+        hint_used: usedGuide,
+        linguistic: { reading_th: entry.readingTH || '', syls: entry.syls || null },
         words: (_skipSentence && advSentenceCtx.words) ? advSentenceCtx.words.map(function(w){return {th:w.th||'',zh:w.zh||''};}) : []
       });
     }
-    session.index++;
-    tfResetWordScoring();
-    session.initialGuess = undefined;
-    session.finalAnswer = undefined;
-    session.currentWordGolden = false;
-    tfSaveResumeState();
-    if (session.index >= session.words.length) tfGoToSummary();
-    else tfSetupNextWord();
+    if(window.LearningReview&&LearningReview.advance&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()){
+      LearningReview.advance(roundReport,_advanceSkippedWordOnce);
+      return;
+    }
+    _advanceSkippedWordOnce();
   },
   // 高級：เริ่มเล่นประโยคเต็ม 1 ประโยค — words[] ของประโยคกลายเป็น session เดียว (Lin 2026-07-03)
   // ใช้ startSetSession เดิมทุกอย่าง (คำทอง/คอมโบ/โบนัสจบชุด) แค่ส่ง entry object ตรงๆ ไม่ query WORD_LIST + ห้ามสลับลำดับคำ
   startAdvSentence: function(idx) {
     var s = ADV_SENTENCES[idx];
     if (!s) return;
-    // Lin 2026-07-31: ตัดคำลงท้ายสุภาพ (ครับ/ค่ะ/คะ) ออกจาก words[] ก่อนคำนวณเสมอ — คำนี้ไม่เกี่ยวกับการทายเสียง/คะแนนเลย
-    //   (3 ประโยคเก่ามีครับฝังอยู่เป็นคำสุดท้ายใน words[] อยู่แล้ว → ตัดออกตรงนี้ ไม่ให้กลายเป็นคำที่ต้องทายเสียง)
-    var _lastW = s.words[s.words.length - 1];
-    var _hasParticle = _lastW && TF_PARTICLE_WORDS.indexOf(_lastW.th) !== -1;
-    var coreWords = _hasParticle ? s.words.slice(0, -1) : s.words;
-    // Lin 2026-07-16: ช่อง syl รายคำถูกถอดออกจาก adv-sentences.js แล้ว — คำอ่านรวมอยู่ที่ s.readingTH (ทั้งประโยค คั่น '-')
-    // ตัดกลับเป็นรายคำด้วยจำนวนพยางค์ของแต่ละคำ (w.syls.length) ซึ่งตรงกันเสมอ (มีด่านเช็คใน check-data-health.js)
-    // — coreWords ไม่รวมพยางค์ของคำลงท้ายสุภาพแล้ว ตัดพยางค์ท้าย s.readingTH เกินมาไม่กระทบ เพราะ loop นี้หยุดแค่จำนวนคำใน coreWords
-    var _parts = (s.readingTH || '').split('-'), _p = 0;
-    var entries = coreWords.map(function(w){
-      var _n = w.syls.length;
-      var _read = _parts.slice(_p, _p + _n).join('-') || w.th; _p += _n;
-      // Lin 2026-07-25: ใส่ readingEN ด้วย (ต่อ en ของทุกพยางค์) — เดิมลืมใส่ ทำให้ปุ่ม 英文讀音 ในโหมด高級 โชว์ว่างเปล่า
-      //   (กฎ CLAUDE.md: ตัวประกอบต้อง copy ทุกฟิลด์ที่เกมใช้จริง)
-      var _readEn = w.syls.map(function(sy){ return sy.en || ''; }).filter(Boolean).join('-');
-      return { word: w.th, readingTH: _read, readingEN: _readEn, zh: w.zh, level: 3, category: '高級句子', syls: w.syls }; // 2026-07-30: แนบ syls จากคลัง — หน้าเฉลย高級ต้องแตกตัวอักษรจากข้อมูลที่ Lin ตรวจแล้ว ไม่ใช่สูตรคำนวณ
-    });
+    if (!s.readingTH || !Array.isArray(s.words) || !s.words.length) throw new Error('CATALOG_AUTHORITY_INCOMPLETE:sentence');
+    var coreWords = s.words;
+    var entries = buildSentenceWordsForToneFinder(s);
     selectedLevel = 3;
     selectedCategory = '高級句子';
     advSentIdx = idx;
+    var exactSentenceText=coreWords.map(function(w){return w.th;}).join('');
+    if(typeof s.th!=='string'||!s.th||s.th.trim()!==s.th||exactSentenceText!==s.th)throw new Error('CATALOG_AUTHORITY_INCOMPLETE:sentence identity mismatch');
     // Lin 2026-07-30: ย้ายมาตั้ง advSentenceCtx "ก่อน" เรียก startSetSession (เดิมตั้งทีหลัง ทำให้ render() รอบแรกในนั้นเห็นค่าเป็น null → คำแรกของประโยค高級ไม่โชว์ประโยคเต็ม)
     // Lin 2026-07-31: th ตอนนี้คือประโยคไม่รวมคำลงท้ายสุภาพแล้ว (ตัด _hasParticle ออกแล้วด้านบน) — particle คำนวณแยกตามปุ่มเปิด/ปิด ใช้โชว์ต่อท้ายบนแบนเนอร์เท่านั้น ไม่ใช่ส่วนที่ต้องทายเสียง
     // Lin 2026-08-01: เพิ่ม readingTH (คำอ่านยาวทั้งประโยค) เก็บไว้โชว์แทนคำแปลจีนรายคำ ตามที่ Lin สั่ง — s.readingTH คือคำอ่านเต็มประโยคจากคลัง (ไม่ตัดคำลงท้ายสุภาพ แต่ไม่กระทบเพราะ core words เท่านั้นที่ถูกถาม)
-    advSentenceCtx = { th: coreWords.map(function(w){ return w.th; }).join(''), zh: s.zh, readingTH: s.readingTH || '', particle: tfShowParticleFor(s) };
+    advSentenceCtx = { th: s.th, zh: s.zh, readingTH: s.readingTH, particle: tfShowParticleFor(s) };
     startSetSession(entries, { keepOrder: true, isAdvSentence: true });
   },
-  // Lin 2026-07-31: กดวนปิด → ครับ(ชาย) → ค่ะ/คะ(หญิง) → ปิด — ไม่กระทบคะแนน/รอบทายเลย แค่เปลี่ยนข้อความโชว์ต่อท้ายประโยคเต็ม (ไม่รีเซ็ตรอบเล่น ไม่เรียก startAdvSentence ซ้ำ)
+  // 禮貌詞เป็นข้อความประกอบที่อ่านจากประโยคที่ตรวจแล้ว ไม่ใช่โจทย์หรือคำตอบเสียง
   toggleParticleMode: function() {
     var cur = tfParticleMode();
     var next = cur === 'off' ? 'm' : (cur === 'm' ? 'f' : 'off');
@@ -4358,35 +4217,33 @@ var TF = {
     if (!S.syllables || S.selectedSyl == null) { TF.nextWord(); return; }
     var results = {};
     for (var k in (S.sylResults || {})) results[k] = S.sylResults[k];
-    results[S.selectedSyl] = { tone: S.tone };
+    results[S.selectedSyl] = { tone: catalogToneNumber() };
     var nextIdx = S.selectedSyl + 1;
     var syls = S.syllables;
-    // Lin 2026-08-02: กันกันไว้อีกชั้น เผื่อ S.parentWord หายไปจากจุดอื่นในอนาคต (เจอจริงจาก goToResult() ที่แก้ไปแล้ว)
-    //   — เดิม fallback ไปต่อ syls.join('') คือต่อ "คำอ่าน" (จาก readingTH) ผิด ควรใช้ตัวสะกดจริงจากฐานข้อมูลแทน
-    var _curEntryForParent = tfCurEntry();
-    var parentWord = S.parentWord || ((_curEntryForParent && _curEntryForParent.syls && _curEntryForParent.syls.length === syls.length) ? _curEntryForParent.syls.map(function(sy){ return sy.th; }).join('') : syls.join(''));
+    var parentWord = currentCatalogWord();
     if (session) { session.currentWordMistakes = 0; session.currentWordDeduction = 0; session.currentWordDeduct = 0; session.stepWrong = false; session.stepFreePeekUsed = false; session.curWordWrongGuess = false; session.hintUsed = false; }
-    var sylStep = session ? 'session-guess' : 's1';
+    if (!session) throw new Error('CATALOG_AUTHORITY_UNAVAILABLE:no active session');
+    var sylStep = 'session-guess';
     var ns = { word: syls[nextIdx], step: sylStep, path: [syls[nextIdx]], tone: null, syllables: syls, selectedSyl: nextIdx, sylResults: results, parentWord: parentWord };
     hist = hist.slice(0, histPos+1);
     hist.push(ns); histPos++;
     S = ns;
-    if (tfGuideMode) tfLockCurrentWordForGuide();
+    if (tfGuideMode && !tfCurWordNoTools()) tfLockCurrentWordForGuide();
     render();
   },
   nextWord: function() {
     if (session) {
       var _gaEntry = session.words[session.index];
-      var _gaTone = S.tone != null ? S.tone : computeTone(_gaEntry.word);
+      var _gaTone = catalogToneNumber();
       var _gaMistakes = session.currentWordMistakes || 0;
       var _gaToneName = (TONES[_gaTone] && TONES[_gaTone].zh) || String(_gaTone);
       if (_gaMistakes === 0) {
-        gtag('event','tone_answer_correct',{category:'game',word: _gaEntry.word, tone: _gaToneName});
+        try{ if(typeof gtag==='function') gtag('event','tone_answer_correct',{category:'game',word: _gaEntry.word, tone: _gaToneName}); }catch(e){}
         try{ if(window.gtag) gtag('event','game_correct',{category:'game',game:'tone_finder'}); }catch(e){}
       } else {
         var _gaFinal = session.finalAnswer != null ? session.finalAnswer : session.initialGuess;
         var _gaSelectedName = (TONES[_gaFinal] && TONES[_gaFinal].zh) || String(_gaFinal);
-        gtag('event','tone_answer_wrong',{category:'game',word: _gaEntry.word, selected: _gaSelectedName, correct: _gaToneName});
+        try{ if(typeof gtag==='function') gtag('event','tone_answer_wrong',{category:'game',word: _gaEntry.word, selected: _gaSelectedName, correct: _gaToneName}); }catch(e){}
         try{ if(window.gtag) gtag('event','game_wrong',{category:'game',game:'tone_finder'}); }catch(e){}
       }
       // สเตจ 1: บันทึกผล (พร้อมคะแนน) + ไปคำถัดไป/สรุป + คิดโบนัสจบชุด
@@ -4409,7 +4266,8 @@ var TF = {
       '', '練習記錄：', '----------'
     ];
     items.forEach(function(r,i){
-      lines.push((i+1)+'. '+(r.is_correct?'✓':'✗')+' '+r.question+' ('+r.meaning+') — 作答：'+(r.user_answer||'—')+' ／正解：'+(r.correct_answer||'—')+(r.wrong_count?' ／選錯'+r.wrong_count+'次':''));
+      var status = r.is_skipped ? '跳過' : (r.is_practice ? '純練習' : (r.is_correct ? '✓' : '✗'));
+      lines.push((i+1)+'. '+status+' '+r.question+' ('+r.meaning+') — 作答：'+(r.user_answer||'—')+' ／正解：'+(r.correct_answer||'—')+(r.wrong_count?' ／選錯'+r.wrong_count+'次':''));
     });
     var blob = new Blob([lines.join('\n')], {type:'text/plain;charset=utf-8'});
     var url = URL.createObjectURL(blob);
@@ -4430,27 +4288,27 @@ var TF = {
   //   แก้: ถ้าไม่มีกล่อง #tf-read-line (= อยู่หน้าเฉลย) ให้ render() ใหม่แทน — วิธีเดียวกับปุ่ม 提示 ที่ทำอยู่แล้ว
   togglePron: function() {
     tfPronMode = !tfPronMode;
-    try { localStorage.setItem('rg_pron_mode', tfPronMode ? '1' : '0'); } catch(e){}
+    try { localStorage.setItem('tf_pron_mode', tfPronMode ? '1' : '0'); } catch(e){}
     tfSyncReadBtns();
     tfRepaintReading();
     if (window.WordMenu && window.WordMenu.refresh) window.WordMenu.refresh();
   },
   toggleEn: function() {
     tfEnMode = !tfEnMode;
-    try { localStorage.setItem('rg_en_mode', tfEnMode ? '1' : '0'); } catch(e){}
+    try { localStorage.setItem('tf_en_mode', tfEnMode ? '1' : '0'); } catch(e){}
     tfSyncReadBtns();
     tfRepaintReading();
     if (window.WordMenu && window.WordMenu.refresh) window.WordMenu.refresh();
   },
   // ── ปุ่ม 提示 (คำใบ้) — Lin 2026-07-25 ──
-  // เปิด = ไฮไลต์ตัวเลือกที่ถูกในขั้น推導 แต่ทั้งรอบ "ไม่ได้คะแนน/ดาว/ความคืบหน้า" อะไรเลย
+  // เปิด = ดูคำตอบที่ตรวจแล้วโดยตรง ทั้งรอบไม่ได้คะแนน/ดาว/ความคืบหน้า
   toggleGuide: function() {
     var wasGuideIntroPending = !!(session && session.currentWordGuideIntroPending);
     tfGuideMode = !tfGuideMode;
-    try { localStorage.setItem('rg_guide_mode', tfGuideMode ? '1' : '0'); } catch(e){}
-    if (tfGuideMode && session && session.words && session.index < session.words.length && S && S.word && S.step !== 'result') {
+    try { localStorage.setItem('tf_guide_mode', tfGuideMode ? '1' : '0'); } catch(e){}
+    if (tfGuideMode && session && session.words && session.index < session.words.length && S && S.word && S.step !== 'result' && !tfCurWordNoTools()) {
       tfLockCurrentWordForGuide();
-      if (S.step === 'session-guess' && !tfCurWordNoTools()) {
+      if (S.step === 'session-guess') {
         session.currentWordGuideIntroPending = true;
       }
     }
@@ -4467,14 +4325,10 @@ var TF = {
   startGuidedQuestion: function() {
     if (!session || !session.currentWordGuideIntroPending || !S || S.step !== 'session-guess') return;
     session.currentWordGuideIntroPending = false;
-    if (tfDesktopOrPortrait()) {
-      tfFireStartOnce();
-      session.initialGuess = undefined;
-      session.currentWordToneAttempts = [];
-      navigateToInflection();
-    } else {
-      render();
-    }
+    tfFireStartOnce();
+    session.initialGuess = undefined;
+    session.currentWordToneAttempts = [];
+    navigateToInflection();
     try { window.dispatchEvent(new CustomEvent('gsh:question-start')); } catch (e) {}
   },
   // ── D2 (2026-08-10): ปุ่ม [ 查看詳細解說 ] opt-in ในหน้าเฉลย — สลับเปิด/ปิดกล่อง .gsh-detail-box ที่อยู่ถัดจากปุ่มนี้ ──
@@ -4488,36 +4342,46 @@ var TF = {
     btn.textContent = isOpen ? '查看詳細解說' : '收起詳細解說';
   },
   // Resume saved safe point: restore completed evidence and continue at the saved word.
-  resumeSavedSession: function() {
+  resumeSavedSession: function(reviewReady) {
     var data = __tfResumeSnapshot;
-    tfHideResumeBanner();
     if (!data) return;
+    if (!reviewReady && window.LearningReview && LearningReview.runtimeEnabled && LearningReview.runtimeEnabled()) {
+      LearningReview.prime({game:'tone',level:data.level||1,playSetSize:data.level===3?1:5})
+        .then(function(){ TF.resumeSavedSession(true); });
+      return;
+    }
+    tfHideResumeBanner();
     try { if (typeof gtag === 'function') gtag('event','tone_finder_resume_continue',{category:'game'}); } catch (e) {}
     if (data.level === 3) {
-      if (data.advSentIdx != null && data.advSentIdx >= 0 && window.ADV_SENTENCES && ADV_SENTENCES[data.advSentIdx]) {
-        TF.startAdvSentence(data.advSentIdx);
+      var sentenceIdx=tfResumeSentenceIndex(data);
+      if (sentenceIdx != null) {
+        TF.startAdvSentence(sentenceIdx);
         tfRestoreSavedProgress(data);
       } else {
-        TF._startRandom5(); // หาประโยคเดิมไม่เจอ (ข้อมูลเปลี่ยน/เพี้ยน) — สุ่มประโยค高級ใหม่แทน ดีกว่าค้าง
+        tfClearResumeState();
+        TF._startRandom5();
       }
       return;
     }
-    var entries = (data.wordIds || []).map(function (wid) {
-      for (var i = 0; i < WORD_LIST.length; i++) if (WORD_LIST[i].word === wid) return WORD_LIST[i];
-      return null;
-    }).filter(Boolean);
-    if (!entries.length) { TF._startRandom5(); return; } // คำในชุดเดิมหาไม่เจอสักคำ (ข้อมูลเปลี่ยน) — สุ่มชุดใหม่แทน ดีกว่าค้าง
+    var entries = tfResolveResumeEntries(data.wordIds,data.level);
+    if (!entries) { tfClearResumeState(); TF._startRandom5(); return; }
     selectedLevel = data.level || 1;
     selectedCategory = 'ทั้งหมด';
     startSetSession(entries, { keepOrder: true });
     tfRestoreSavedProgress(data);
   },
-  restartSavedSession: function() {
-    var data=__tfResumeSnapshot;tfHideResumeBanner();if(!data)return;
+  restartSavedSession: function(reviewReady) {
+    var data=__tfResumeSnapshot;if(!data)return;
+    if(!reviewReady&&window.LearningReview&&LearningReview.runtimeEnabled&&LearningReview.runtimeEnabled()){
+      LearningReview.prime({game:'tone',level:data.level||1,playSetSize:data.level===3?1:5})
+        .then(function(){TF.restartSavedSession(true);});
+      return;
+    }
+    tfHideResumeBanner();
     selectedLevel=data.level||1;
-    if(data.level===3&&data.advSentIdx!=null&&window.ADV_SENTENCES&&ADV_SENTENCES[data.advSentIdx]){TF.startAdvSentence(data.advSentIdx);return;}
-    var entries=(data.wordIds||[]).map(function(wid){for(var i=0;i<WORD_LIST.length;i++)if(WORD_LIST[i].word===wid)return WORD_LIST[i];return null;}).filter(Boolean);
-    if(entries.length)startSetSession(entries,{keepOrder:true});else TF._startRandom5();
+    if(data.level===3){var sentenceIdx=tfResumeSentenceIndex(data);if(sentenceIdx!=null){TF.startAdvSentence(sentenceIdx);return;}tfClearResumeState();TF._startRandom5();return;}
+    var entries=tfResolveResumeEntries(data.wordIds,data.level);
+    if(entries)startSetSession(entries,{keepOrder:true});else{tfClearResumeState();TF._startRandom5();}
   },
   startNewFromResume: function() {
     var data=__tfResumeSnapshot;tfHideResumeBanner();tfClearResumeState();selectedLevel=(data&&data.level)||selectedLevel||1;TF._startRandom5();
@@ -4614,7 +4478,7 @@ var TF = {
   },
   // Lin 2026-07-25: ลบ TF.sgToggle ทิ้ง — แถบปุ่ม 泰文讀音/英文讀音 ในหน้าเดาถูกเอาออกแล้ว
   tip: function(keys) { showTip(keys); },
-  hint: function(keys) { tfUseHint(keys); }, // Lin 2026-07-04: ปุ่ม "?" ในทุกขั้น推導/helper — โชว์ตาราง + ล็อกคำนี้ไม่สะอาด/ไม่ได้คะแนน (ดู tfUseHint)
+  hint: function(keys) { tfUseHint(keys); },
   _run: function(id) { if(_acts[id]) _acts[id](); }
 };
 
@@ -4664,17 +4528,20 @@ function tfRenderExtBar() {
 }
 
 // Lin 2026-07-10: เข้าเกมมาให้เริ่มเล่น 初級 คำแรกทันทีเหมือนเกมอื่น (ไม่ต้องกดเลือกระดับก่อน)
-// Time Auto Plan: ระดับที่ยืนยันจาก proposal ชนะเฉพาะ active matching plan และไม่เปิด resume เก่ามาทับ
+// Time Auto Plan เลือกระดับเมื่อไม่มีรอบ Login Free ค้างอยู่; รอบบัญชีเดิมต้องจบก่อนเปลี่ยนเกม/ระดับ
 var __tfAutoPlanLevel = (window.StudyPlan && StudyPlan.preferredLevel) ? StudyPlan.preferredLevel('tone') : null;
 if (__tfAutoPlanLevel !== 1 && __tfAutoPlanLevel !== 2 && __tfAutoPlanLevel !== 3) __tfAutoPlanLevel = null;
 // E3 (2026-08-10): อ่าน resume ที่ค้างไว้ "ก่อน" TF.selectLevel(1) เสมอ — เพราะ selectLevel(1) จะเรียก
 // startSetSession() ซึ่ง save resume ของ session ใหม่ทับ localStorage ทันที ถ้าไปอ่านทีหลังจะเจอแต่ของใหม่ ไม่เจอของเก่า
-if (!__tfAutoPlanLevel) {
-  try { __tfResumeSnapshot = (window.GameResume && GameResume.load('tone-finder')) || null; } catch (e) { __tfResumeSnapshot = null; }
+var __tfLoginFreeRuntime = window.LearningReview && LearningReview.runtimeEnabled && LearningReview.runtimeEnabled();
+if (!__tfAutoPlanLevel || __tfLoginFreeRuntime) {
+  try { __tfResumeSnapshot = window.PAID_SRS_PRIVATE_BETA ? null : ((window.GameResume && GameResume.load('tone-finder')) || null); } catch (e) { __tfResumeSnapshot = null; }
 }
-TF.selectLevel(__tfAutoPlanLevel || 1);
+var __tfLoginFreeResume = __tfResumeSnapshot && __tfLoginFreeRuntime;
+if (__tfLoginFreeResume) TF.resumeSavedSession();
+else TF.selectLevel(__tfAutoPlanLevel || 1);
 setTimeout(tfRenderExtBar, 0);
-if (!__tfAutoPlanLevel && __tfResumeSnapshot) { var __tfResumeCaptured = __tfResumeSnapshot; setTimeout(function () { tfShowResumeBannerIfAny(__tfResumeCaptured); }, 0); }
+if (!__tfLoginFreeResume && !__tfAutoPlanLevel && __tfResumeSnapshot) { var __tfResumeCaptured = __tfResumeSnapshot; setTimeout(function () { tfShowResumeBannerIfAny(__tfResumeCaptured); }, 0); }
 
 // Lin 2026-07-10: ซ่อนแถบ page-strip ล่างจอเฉพาะตอนเบราว์เซอร์เข้าโหมดเต็มจอจริง (Fullscreen API)
 (function () {

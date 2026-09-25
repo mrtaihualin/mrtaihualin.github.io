@@ -1,6 +1,6 @@
-// progress.js — Phase 1 `學習中心` (Guest Free + Login Free)
+// progress.js — Phase 1 `學習進度` (Guest Free + Login Free)
 // Guest: account introduction only; never shows fake zero learning history.
-// Login Free: one 學習進度 section (Progress/SRS/Review/Mastered) + 我的內容.
+// Login Free: Progress/SRS/Review/Mastered only; personal content stays in 泰語單字庫.
 // No 下一步, overall %, readiness formula, or paid runtime in Phase 1.
 (function () {
   'use strict';
@@ -46,18 +46,17 @@
     style.id = 'pg-phase1-styles';
     style.textContent = [
       '.pg-panel{background:#fff;border-radius:18px;padding:22px;box-shadow:0 6px 22px rgba(80,55,12,.07);}',
-      '.pg-message{text-align:center;max-width:560px;margin:0 auto;padding:34px 26px;}',
+      '.pg-message{text-align:center;width:100%;max-width:none;margin:0;padding:34px 26px;box-sizing:border-box;}',
       '.pg-message-icon{font-size:44px;margin-bottom:10px}.pg-message h2{margin:0 0 9px;color:#5C4410;font-size:21px}.pg-message p{margin:0;color:#765f32;line-height:1.8;font-size:14px}',
       '.pg-btn{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;padding:10px 20px;font-weight:800;font-size:14px;text-decoration:none;border:1px solid rgba(139,99,16,.35);cursor:pointer;font-family:inherit}',
-      '.pg-btn-primary{background:#8B6310;color:#fff;border-color:#8B6310}.pg-btn-secondary{background:#fff;color:#8B6310}',
+      '.pg-btn-primary,.pg-btn-primary:visited{background:#8B6310;color:#fff;border-color:#8B6310}.pg-btn-secondary,.pg-btn-secondary:visited{background:#fff;color:#8B6310}',
       '.pg-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:20px}',
       '.pg-benefits{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;text-align:left;margin:20px 0 0;padding:0;list-style:none}',
       '.pg-benefits li{background:#FBF5E7;border-radius:10px;padding:10px 12px;font-size:13px;color:#5C4410}',
-      '.pg-section{margin-top:26px}.pg-section-title{font-size:17px;font-weight:900;color:#5C4410;margin:0 0 12px}',
+      '.pg-section{margin-top:26px}.pg-section-title{font-size:17px;font-weight:900;color:#5C4410;margin:0 0 12px}.pg-section-help{font-size:12px;line-height:1.7;color:#9a895e;margin:-4px 2px 12px}.pg-section-help-line+.pg-section-help-line{margin-top:2px}',
       '.pg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}',
       '.pg-skill{border:1px solid rgba(200,151,58,.28)}.pg-skill-head{display:flex;gap:9px;align-items:center;font-weight:900;color:#5C4410}.pg-skill-icon{font-size:22px}',
-      '.pg-status{font-size:13px;color:#765f32;line-height:1.7;margin-top:12px}.pg-muted{color:#9a895e}.pg-srs{margin-top:8px;padding-top:8px;border-top:1px solid #F0E6CE;font-size:12px;color:#765f32}',
-      '.pg-content-card{display:flex;flex-direction:column;min-height:138px}.pg-content-card h3{margin:0 0 8px;color:#5C4410;font-size:16px}.pg-content-card p{margin:0;color:#765f32;line-height:1.7;font-size:13px;flex:1}.pg-content-card .pg-btn{align-self:flex-start;margin-top:14px}',
+      '.pg-status{font-size:13px;color:#765f32;line-height:1.7;margin-top:12px}.pg-muted{color:#9a895e}.pg-srs{margin-top:8px;padding-top:8px;border-top:1px solid #F0E6CE;font-size:12px;color:#765f32}.pg-srs-line+.pg-srs-line{margin-top:4px}',
       '.pg-warning{background:#FFF6E5;border:1px solid #EAC36B;color:#765113;border-radius:12px;padding:11px 14px;font-size:12.5px;line-height:1.6;margin:0 0 14px}',
       '.pg-chart{margin-top:12px}.pg-chart canvas{max-height:230px}',
       '@media(max-width:560px){.pg-benefits{grid-template-columns:1fr}.pg-panel{padding:18px}.pg-grid{grid-template-columns:1fr}.pg-actions .pg-btn{width:100%;box-sizing:border-box}}'
@@ -106,13 +105,11 @@
     root.innerHTML = '<div class="pg-panel pg-message">' +
       '<div class="pg-message-icon">👋</div>' +
       '<div style="font-size:12px;font-weight:900;color:#8B6310;letter-spacing:1px;margin-bottom:6px">訪客 Guest</div>' +
-      '<h2>登入後使用「學習中心」</h2>' +
+      '<h2>登入後使用「學習進度」</h2>' +
       '<p>你現在仍可免費玩遊戲。登入前的練習不會被當成帳號學習紀錄；成功登入後才開始記錄。</p>' +
       '<ul class="pg-benefits">' +
         '<li><b>學習進度</b> — 清楚掌握每項技能進度</li>' +
         '<li><b>SRS 複習</b> — 自動提醒該複習的內容</li>' +
-        '<li><b>我的單詞</b> — 收藏想記住的單詞</li>' +
-        '<li><b>我的句子</b> — 保存實用泰語句子</li>' +
         '<li><b>跨裝置同步</b> — 手機、電腦接著學</li>' +
       '</ul>' +
       '<div id="pg-email-turnstile" style="max-width:320px;margin:14px auto 0"></div>' +
@@ -186,8 +183,13 @@
     });
     return result;
   }
-  function srsSummary(rows) {
-    if (!rows.length) return '<span class="pg-muted">尚無 SRS 紀錄</span>';
+  function srsReviewSummary(rows) {
+    if (!rows.length) {
+      return {
+        srs: '<span class="pg-muted">尚無 SRS 紀錄</span>',
+        review: '<span class="pg-muted">尚無待複習項目</span>'
+      };
+    }
     var today = taipeiDate();
     var counts = { newState: 0, day1: 0, day7: 0, mastered: 0, due: 0 };
     rows.forEach(function (row) {
@@ -198,21 +200,25 @@
       if (!row.mastered && row.due_date && row.due_date <= today) counts.due++;
     });
     var parts = [];
-    if (counts.newState) parts.push('New ' + counts.newState);
-    if (counts.day1) parts.push('Day 1 ' + counts.day1);
-    if (counts.day7) parts.push('Day 7 ' + counts.day7);
-    if (counts.mastered) parts.push('Mastered ' + counts.mastered);
-    if (counts.due) parts.push('待複習 ' + counts.due);
-    return esc(parts.join(' · '));
+    if (counts.newState) parts.push('New：' + counts.newState + ' 項');
+    if (counts.day1) parts.push('Day 1：' + counts.day1 + ' 項');
+    if (counts.day7) parts.push('Day 7：' + counts.day7 + ' 項');
+    if (counts.mastered) parts.push('Mastered：' + counts.mastered + ' 項');
+    return {
+      srs: esc(parts.join(' · ')),
+      review: counts.due ? '待複習：' + counts.due + ' 項' : '<span class="pg-muted">目前無待複習項目</span>'
+    };
   }
   function skillCard(skill, data) {
     var sessionText = data.sessions.length
       ? '帳號紀錄：' + data.sessions.length + ' 次' + (data.lastAt ? '<br>最近練習：' + esc(fmtDate(data.lastAt)) : '')
       : '<span class="pg-muted">尚無此帳號的練習紀錄</span>';
+    var learning = srsReviewSummary(data.srs);
     return '<article class="pg-panel pg-skill" data-skill="' + skill.code + '">' +
       '<div class="pg-skill-head"><span class="pg-skill-icon">' + skill.icon + '</span><span>' + skill.label + '</span></div>' +
       '<div class="pg-status">' + sessionText + '</div>' +
-      '<div class="pg-srs"><b>SRS / Review：</b>' + srsSummary(data.srs) + '</div>' +
+      '<div class="pg-srs"><div class="pg-srs-line"><b>SRS：</b>' + learning.srs + '</div>' +
+      '<div class="pg-srs-line"><b>Review：</b>' + learning.review + '</div></div>' +
       '<a class="pg-btn pg-btn-secondary" style="margin-top:12px" href="' + skill.href + '">繼續練習</a></article>';
   }
   function drawToneChart(rows) {
@@ -251,15 +257,13 @@
       : '';
     var skills = SKILLS.map(function (skill) { return skillCard(skill, grouped[skill.code]); }).join('');
     root.innerHTML = warning +
-      '<section><h3 class="pg-section-title">學習進度</h3><div class="pg-grid">' + skills + '</div>' +
-        '<p class="pg-muted" style="font-size:12px;line-height:1.7;margin:10px 2px 0">SRS 僅顯示帳號狀態，不會從此頁改動。每項技能分開計算；一項 Mastered 不代表其他技能也 Mastered。</p></section>' +
-      '<section class="pg-section"><h3 class="pg-section-title">我的內容</h3><div class="pg-grid">' +
-        '<article class="pg-panel pg-content-card"><h3>🔖 我的單詞</h3><p>查看此帳號儲存的單詞，並回到支援的遊戲練習。</p><a class="pg-btn pg-btn-secondary" href="vault.html#words">查看我的單詞</a></article>' +
-        '<article class="pg-panel pg-content-card"><h3>📝 我的句子</h3><p>查看此帳號儲存的句子，並回到語序遊戲練習。</p><a class="pg-btn pg-btn-secondary" href="vault.html#sentences">查看我的句子</a></article>' +
-      '</div></section>' +
+      '<section><h3 class="pg-section-title">學習進度</h3>' +
+        '<div class="pg-section-help"><div class="pg-section-help-line"><b>SRS</b>：間隔重複學習系統，依照你的練習結果顯示目前階段</div>' +
+        '<div class="pg-section-help-line"><b>Review</b>：已到複習日期、現在需要複習的項目。</div></div>' +
+        '<div class="pg-grid">' + skills + '</div></section>' +
       '<section class="pg-section pg-panel"><p style="margin:0;color:#765f32;line-height:1.7">想知道自己的泰語實戰準備度？升級方案即可查看。</p>' +
         '<button class="pg-btn pg-btn-secondary" style="margin-top:12px" type="button" disabled title="付費方案尚未在 Phase 1 開放">查看升級方案</button></section>' +
-      '<div class="pg-actions" style="margin-top:28px"><a class="pg-btn pg-btn-primary" href="games.html">繼續免費練習</a><a class="pg-btn pg-btn-secondary" href="vault.html">我的內容</a></div>';
+      '<div class="pg-actions" style="margin-top:28px"><a class="pg-btn pg-btn-primary" href="games.html">繼續免費練習</a></div>';
     renderHeaderUser();
   }
   function renderLogin() {

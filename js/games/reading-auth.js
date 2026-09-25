@@ -12,11 +12,14 @@
 //   มี fallback: ถ้า SITE_AUTH โหลดไม่ทัน ยังมี client+listener สำรองของตัวเอง เกมไม่พัง)
 // ============================================================
 (function () {
-  var publicLoginOnly = window.MRT_MINIMUM_GUEST_LAUNCH === true && window.LOGIN_CORE_PUBLIC_ENTRY === true;
-  if (window.MRT_MINIMUM_GUEST_LAUNCH === true && !publicLoginOnly) {
+  var publicAccount = window.MRT_MINIMUM_GUEST_LAUNCH === true && window.LOGIN_FREE_ACCOUNT_PUBLIC_ENTRY === true;
+  var publicLoginOnly = window.MRT_MINIMUM_GUEST_LAUNCH === true && window.LOGIN_CORE_PUBLIC_ENTRY === true && !publicAccount;
+  var publicLoginSrs = window.MRT_MINIMUM_GUEST_LAUNCH === true && window.LOGIN_FREE_SRS_PUBLIC_ENTRY === true;
+  if (window.MRT_MINIMUM_GUEST_LAUNCH === true && !publicLoginOnly && !publicAccount) {
     window.READING_AUTH = {
       ready: true,
       user: null,
+      srsUser: null,
       saveScore: function () { return null; },
       render: function () {
         var host = document.getElementById('rg-login-slot');
@@ -40,7 +43,7 @@
   // v18 (LIN 2026-08-10, P7-02 C.5): openLoginGate ให้หน้าอื่น (game-content-client.js แถบแจ้ง
   //   "เนื้อหาฟรีหมดแล้ว") เปิด modal ล็อกอินเดียวกันนี้ได้ตรงๆ โดยไม่ต้องหาปุ่ม #rg-login-btn เอง
   var loginUser = null;
-  var API = { ready: true, user: null, saveScore: saveScore, render: render, startLineLink: function () { startLineLogin(true); }, openLoginGate: openGate };
+  var API = { ready: true, user: null, srsUser: null, saveScore: saveScore, settleScore: settleScore, render: render, startLineLink: function () { startLineLogin(true); }, openLoginGate: openGate };
   window.READING_AUTH = API;
 
   function slot() { return document.getElementById('rg-login-slot'); }
@@ -142,16 +145,15 @@
         window.SITE_AUTH.renderBadge('rg-login-slot', {
           leaderboardHref: boardHref(),
           progressHref: 'my-progress.html',
-          showParkedAccountLinks: false
+          showParkedAccountLinks: !publicLoginOnly
         });
       }
     } else {
-      // v2 (Lin 2026-07-10): หน้าเกม (reading/typing/word-order/lego/tone-finder) มีแบนเนอร์เหลือง "先玩玩看...登入解鎖"
-      // อยู่เหนือแถบนี้แล้ว ซึ่งกดแล้ว proxy-click ปุ่มนี้อยู่ดี (ดู rgCtaLogin/woCtaLogin/legoCtaLogin/tfCtaLogin)
-      // → โชว์ปุ่มนี้ซ้ำสองอันดูรก จึงซ่อนด้วย display:none แต่ยังคงอยู่ใน DOM ให้ปุ่มแบนเนอร์กดผ่านได้เหมือนเดิม
-      var hideDup = !publicLoginOnly && !!document.getElementById('rg-cta-login');
+      // The shared Account Bar is the stable Login entry on every scoped surface.
+      // Optional game CTAs may appear later, so their placeholder must never hide
+      // this button during async boot, error recovery, or an empty CTA state.
       el.innerHTML =
-        '<button id="rg-login-btn" class="mrt-login-button" style="display:' + (hideDup ? 'none' : 'flex') + ';align-items:center;gap:6px;' +
+        '<button id="rg-login-btn" class="mrt-login-button" style="display:flex;align-items:center;gap:6px;' +
         'background:linear-gradient(135deg,#8B6310,#C8973A);color:#fff;border:none;border-radius:20px;' +
         'padding:6px 16px;cursor:pointer;font-size:12.5px;font-weight:700;font-family:\'Noto Sans TC\',sans-serif;' +
         'box-shadow:0 2px 8px rgba(139,99,16,0.28);letter-spacing:0.3px;transition:filter .15s;"' +
@@ -418,9 +420,10 @@
     el.textContent = msg;
   }
   function startOtp(email, isResend) {
-    if (otpRequestPending) return;
+    if (otpRequestPending || otpCooldown > 0) return;
     email = (email || '').trim();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { setMsg('Email 格式不正確', true); return; }
+    var requestStartedAt = Date.now();
     otpEmail = email;
     var flowEpoch = ++otpFlowEpoch;
     otpRequestPending = true;
@@ -436,7 +439,8 @@
       if (flowEpoch !== otpFlowEpoch) return;
       finishRequest();
       // Keep the public response generic. Account existence and provider details must not leak here.
-      setMsg('暫時無法寄送驗證碼，請稍後再試', true);
+      var remaining = Math.max(1, Math.ceil((60000 - (Date.now() - requestStartedAt)) / 1000));
+      startCooldown(remaining, requestBtn, true);
       trackLogin('login_fail', 'email', { step: isResend ? 'resend' : 'send', reason: String(error && error.message || error || '').slice(0, 90) });
     }
     var challengePromise = otpBrokerEnabled()
@@ -467,7 +471,7 @@
         var sBtn = rgGate.querySelector('#rg-send'); if (sBtn) sBtn.style.display = 'none';
         setMsg('驗證碼已寄到 ' + esc(email) + '，請查看信箱（含垃圾信匣）', false);
         var ci = rgGate.querySelector('#rg-code'); if (ci) ci.focus();
-        startCooldown();
+        startCooldown(60, null, false);
       }, failRequest).catch(failRequest);
   }
   function verifyCode(code) {
@@ -533,19 +537,26 @@
         // สำเร็จ → onAuthStateChange → setUser → closeGate ปิดให้เอง
       }, failVerify).catch(failVerify);
   }
-  function startCooldown() {
-    otpCooldown = otpBrokerEnabled() ? 15 * 60 : 60;
+  function startCooldown(seconds, targetButton, showFailureMessage) {
+    otpCooldown = Math.max(1, Math.floor(Number(seconds) || 60));
     if (otpTimer) clearInterval(otpTimer);
+    var defaultLabel = targetButton && targetButton.id === 'rg-send' ? '寄送驗證碼 →' : '重新寄送驗證碼';
     function tick() {
-      var b = rgGate && rgGate.querySelector('#rg-resend');
+      var b = targetButton || (rgGate && rgGate.querySelector('#rg-resend'));
       if (!b) { clearInterval(otpTimer); return; }
       if (otpCooldown > 0) {
         var mins = Math.floor(otpCooldown / 60);
         var secs = String(otpCooldown % 60); if (secs.length < 2) secs = '0' + secs;
         b.disabled = true; b.style.opacity = '0.5'; b.style.cursor = 'default';
-        b.textContent = '重新寄送 (' + mins + ':' + secs + ')'; otpCooldown--;
+        b.textContent = '請稍候再試 (' + mins + ':' + secs + ')';
+        if (showFailureMessage) setMsg('暫時無法寄送驗證碼，請稍後再試（剩餘 ' + mins + ':' + secs + '）', true);
+        otpCooldown--;
       }
-      else { clearInterval(otpTimer); otpTimer = null; b.disabled = false; b.style.opacity = '1'; b.style.cursor = 'pointer'; b.textContent = '重新寄送驗證碼'; }
+      else {
+        clearInterval(otpTimer); otpTimer = null;
+        b.disabled = false; b.style.opacity = '1'; b.style.cursor = 'pointer'; b.textContent = defaultLabel;
+        if (showFailureMessage) setMsg('現在可以重新寄送驗證碼', false);
+      }
     }
     tick();
     otpTimer = setInterval(tick, 1000);
@@ -559,18 +570,19 @@
   var lastAdaptiveUserId = null;
   function setUser(u) {
     loginUser = u || null;
-    // Public Login is deliberately presentation/session-only while Minimum
-    // Guest owns the game runtime. Game clients continue to observe Guest.
+    // Public Login keeps the general game/account runtime parked. The dedicated
+    // srsUser channel exposes only the authenticated owner to the approved SRS
+    // clients, so score, streak, adaptive history, Paid and Challenge stay off.
     API.user = publicLoginOnly ? null : loginUser;
+    API.srsUser = publicLoginSrs ? loginUser : API.user;
     if (loginUser) closeGate();   // เพิ่งล็อกอินสำเร็จ → ปิด modal
     render();
     // Lin 2026-07-12: auth เพิ่งเสร็จ/เปลี่ยน (getSession เป็น async) → สั่งเกม re-render แถบชวนล็อกอิน "登入解鎖"
     // แก้บั๊ก: ตอนโหลดหน้า auth ยังไม่เสร็จ การ์ดเลยโชว์ค้าง ทั้งที่จริงล็อกอินอยู่ (ผู้เล่นนึกว่าต้องล็อกอินใหม่ทุกครั้ง)
     // 🆕 2026-08-10: เพิ่ม 'tfRenderTopBanners' (เกมเสียง/tone-finder.html) — ตอนรวมระบบล็อกอิน
     // เข้ามาใช้ไฟล์นี้ (v6, 2026-07-16) ลืมเติมชื่อฟังก์ชันรีเฟรชแบนเนอร์ของเกมเสียงเข้าลิสต์นี้
-    // ผลที่เจอจริง: กด 登出 แล้ว #rg-login-slot ถูกซ่อนด้วย hideDup (เพราะมี #rg-cta-login ค้างอยู่ในหน้า)
-    // แต่ #rg-cta-login เองก็ไม่ถูกรีเฟรชให้โชว์ปุ่ม 登入解鎖 กลับมา (เพราะ tfRenderTopBanners ไม่ถูกเรียก)
-    // → ทั้งสองจุดที่ควรมีปุ่มล็อกอินกลายเป็นว่างเปล่าพร้อมกัน = "แถบล็อคอินหายไปทั้งแถบ" หลังกด 登出
+    // ผลที่เจอจริงใน runtime เดิม: กด 登出 แล้ว Account Bar และ CTA ของเกมไม่ได้รีเฟรชพร้อมกัน
+    // ตอนนี้ Account Bar เป็น stable Login entry เสมอ แต่ยังเรียก tfRenderTopBanners เพื่อให้ CTA เสริมสะท้อนสถานะใหม่ด้วย
     ['rgRenderGameBar','legoRenderGameBar','woRerenderBar','mxRenderGameBar','tfRenderTopBanners'].forEach(function(fn){ if(typeof window[fn]==='function'){ try{ window[fn](); }catch(e){} } });
     var uid = (loginUser && loginUser.id) || null;
     if (uid === lastAdaptiveUserId) return; // user เดิม (หรือยังไม่ล็อกอินเหมือนเดิม) — ไม่ต้องยิงซ้ำ
@@ -764,32 +776,84 @@
       saveToast('⚠️ 分數儲存失敗：' + msg, false);
       try { if (window.gtag) gtag('event','score_save_fail',{category:'game', reason: String(msg).slice(0, 90), game: gm }); } catch (e) {}
     }
-    function requestScoreSubmit() {
-      if (!window.NetworkGuard || !NetworkGuard.request) {
-        return Promise.reject(new Error('網路保護尚未就緒'));
-      }
-      return NetworkGuard.request(function () {
-        return sb.functions.invoke('score-submit', { body: payload });
-      }, 'score-submit', {}, 12000, null);
+    if (proof.report) {
+      var report = proof.report;
+      if (report.score_save && report.score_save.payload) payload = report.score_save.payload;
+      else report.score_save = { payload: JSON.parse(JSON.stringify(payload)), status: 'pending' };
+      if (!persistScore(report)) throw new Error('SCORE_RECOVERY_STORAGE_UNAVAILABLE');
+      settleScore(report).catch(function () {});
+    } else {
+      // Preserve the parked/non-learning caller contract, with an owner-bound request.
+      sendScore(payload, API.user.id, Number(window.SITE_AUTH && SITE_AUTH.learningOwnerEpoch) || 0).catch(function (e) { onFail(e.code || 'score_save_failed'); });
     }
-    function submit(attempt) {
-      try {
-        requestScoreSubmit().then(function (res) {
-          if (!res.error && res.data && res.data.ok) {
-            saveToast('✅ 分數已驗證並儲存 +' + res.data.score + ' 分', true);
-            return;
-          }
-          if (attempt === 0) { setTimeout(function () { submit(1); }, 800); return; }
-          onFail((res.error && res.error.message) || (res.data && res.data.error) || '伺服器驗證失敗');
-        }, function (e) {
-          if (attempt === 0) { setTimeout(function () { submit(1); }, 800); return; }
-          onFail(e && e.message || '網路錯誤');
-        });
-      } catch (e) { onFail(e && e.message || String(e)); }
-    }
-    submit(0);
-    if (window.GAME_ACCOUNT && GAME_ACCOUNT.sync) { try { GAME_ACCOUNT.sync(sb, API.user.id); } catch (e) {} }
     return payload.submission_id;
+  }
+  var scoreSaveJobs = Object.create(null);
+  var scoreSaveOwners = new WeakMap();
+  function persistScore(report) {
+    var gameId = { tone: 'tone-finder', reading: 'reading-game', typing: 'typing-game', word_order: 'word-order', wordorder: 'word-order' }[String(report.game_type || '')];
+    if (!gameId || !window.GameResume) return false;
+    var saved = GameResume.load(gameId);
+    if (saved && saved.report && saved.report.round_id === report.round_id) {
+      saved.report.score_save = JSON.parse(JSON.stringify(report.score_save));
+      GameResume.save(gameId, saved);
+      var stored = GameResume.load(gameId);
+      return !!(stored && stored.report && stored.report.round_id === report.round_id && JSON.stringify(stored.report.score_save) === JSON.stringify(report.score_save));
+    }
+    return false;
+  }
+  function scoreOwnerCurrent(id, epoch) {
+    return !!(API.user && API.user.id === id && (!window.SITE_AUTH || (SITE_AUTH.user && SITE_AUTH.user.id === id && (Number(SITE_AUTH.learningOwnerEpoch) || 0) === epoch)));
+  }
+  function sendScore(payload, id, epoch) {
+    function attempt(remaining) {
+      if (!scoreOwnerCurrent(id, epoch)) return Promise.reject(new Error('SCORE_OWNER_CHANGED'));
+      if (!window.NetworkGuard || !NetworkGuard.request) return Promise.reject(new Error('SCORE_TRANSPORT_UNAVAILABLE'));
+      return NetworkGuard.request(function (_, options) {
+        if (!scoreOwnerCurrent(id, epoch)) throw new Error('SCORE_OWNER_CHANGED');
+        return sb.functions.invoke('score-submit', { body: payload, signal: options && options.signal });
+      }, 'score-submit', {}, 12000).then(function (res) {
+        if (!scoreOwnerCurrent(id, epoch)) throw new Error('SCORE_OWNER_CHANGED');
+        if (!res || res.error || !res.data || res.data.ok !== true || Number(res.data.score) !== payload.client_score) {
+          var error = new Error('SCORE_SAVE_UNAVAILABLE');
+          error.status = res && res.error && res.error.context && res.error.context.status;
+          throw error;
+        }
+        if (window.GAME_ACCOUNT && GAME_ACCOUNT.sync) { try { GAME_ACCOUNT.sync(sb, id); } catch (_) {} }
+        return res.data;
+      }).catch(function (error) {
+        var terminal = error.message === 'SCORE_OWNER_CHANGED' || (error.status >= 400 && error.status < 500 && error.status !== 408 && error.status !== 429);
+        if (remaining && !terminal) return new Promise(function (resolve) { setTimeout(resolve, 800); }).then(function () { return attempt(remaining - 1); });
+        throw error;
+      });
+    }
+    return attempt(1);
+  }
+  function settleScore(report) {
+    var record = report && report.score_save;
+    if (!record) return Promise.resolve(true); // Guest, admin and practice remain outside score writes.
+    var id = API.user && API.user.id, epoch = Number(window.SITE_AUTH && SITE_AUTH.learningOwnerEpoch) || 0;
+    if (!id) return Promise.reject(new Error('SCORE_OWNER_CHANGED'));
+    var bound = scoreSaveOwners.get(record);
+    if (bound && (bound.id !== id || bound.epoch !== epoch)) return Promise.reject(new Error('SCORE_OWNER_CHANGED'));
+    scoreSaveOwners.set(record, { id: id, epoch: epoch });
+    if (record.status === 'committed') return Promise.resolve(true);
+    var key = id + ':' + epoch + ':' + record.payload.submission_id;
+    if (scoreSaveJobs[key]) return scoreSaveJobs[key];
+    record.status = 'pending';
+    if (!persistScore(report)) return Promise.reject(new Error('SCORE_RECOVERY_STORAGE_UNAVAILABLE'));
+    var pending = sendScore(record.payload, id, epoch).then(function (result) {
+      record.status = 'committed'; persistScore(report);
+      saveToast('✅ 分數已驗證並儲存 +' + result.score + ' 分', true);
+      return true;
+    }, function (error) {
+      if (scoreOwnerCurrent(id, epoch)) { record.status = 'failed'; persistScore(report); }
+      throw error;
+    });
+    scoreSaveJobs[key] = pending;
+    function clear() { if (scoreSaveJobs[key] === pending) delete scoreSaveJobs[key]; }
+    pending.then(clear, clear);
+    return pending;
   }
 
   // ── session กลาง: ใช้ window.SITE_AUTH (auth-widget.js) ถ้ามี — client เดียวกับทุกหน้า ──

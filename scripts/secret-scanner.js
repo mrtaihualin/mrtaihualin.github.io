@@ -33,6 +33,17 @@ const SECRET_SCAN_SKIP_DIRECTORY_NAMES = new Set([
   'node_modules'
 ]);
 
+// Historical vocabulary payloads are protected by the project-wide AI read deny.
+// Keep this exact-file list narrow: path metadata may be checked, but file bytes must
+// never be opened by either the secret scan or the site validation pass.
+const AI_READ_DENY_EXACT_FILES = new Set([
+  'data/approved-vocabulary-catalog.lock.json',
+  'data/history/vocabulary/2026-09-03-pre-free-200/approved-surplus-189.json',
+  'data/history/vocabulary/2026-09-03-pre-free-200/unreviewed-surplus-64.json',
+  'data/words-data.js',
+  'supabase/migrations/20260903072554_canonical_free_200_catalog.sql'
+]);
+
 const PUBLIC_CONTEXTS = Object.freeze({
   supabaseAnon: new Set([
     'classroom/index.html',
@@ -110,6 +121,10 @@ function normalizeRelative(file) {
   return file.split(path.sep).join('/').replace(/^\.\//, '');
 }
 
+function isAiReadDeniedFile(relative) {
+  return AI_READ_DENY_EXACT_FILES.has(normalizeRelative(relative));
+}
+
 function shouldSkipDirectory(name, relative, skipNames) {
   if (skipNames.has(name)) return true;
   if (name.startsWith('_backup_')) return true;
@@ -154,7 +169,8 @@ function walkFiles(scanRoot, skipNames) {
 }
 
 function listRepositoryFiles(scanRoot) {
-  return walkFiles(scanRoot, SITE_VALIDATION_SKIP_DIRECTORY_NAMES).filter((file) => !isIgnoredProjectFile(file));
+  return walkFiles(scanRoot, SITE_VALIDATION_SKIP_DIRECTORY_NAMES)
+    .filter((file) => !isAiReadDeniedFile(file) && !isIgnoredProjectFile(file));
 }
 
 function safeEnvironmentExample(relative) {
@@ -358,13 +374,14 @@ function scanText(relative, text, findings, seen) {
 
 function scanProject(scanRoot) {
   const root = path.resolve(scanRoot);
-  const allFiles = walkFiles(root, SECRET_SCAN_SKIP_DIRECTORY_NAMES);
+  const allFiles = walkFiles(root, SECRET_SCAN_SKIP_DIRECTORY_NAMES)
+    .filter((file) => !isAiReadDeniedFile(file));
   const findings = [];
   const seen = new Set();
   const skippedLargeFiles = [];
   // fail-closed (2026-08-11): ไฟล์ "ข้อความ" (.js/.ts/.sql/…) ที่มีไบต์ NUL ปนอยู่จะถูกข้ามที่บรรทัด
   // `if (buffer.includes(0)) continue;` ข้างล่าง = ไม่เคยถูกสแกนหาค่าลับเลย แต่เดิมข้ามแบบเงียบสนิท
-  // เจอจริง 2026-08-11: scripts/migrate-game-content.js มีไบต์ NUL 1 ตัวใน join('')
+  // เคยเจอไบต์ NUL ในสคริปต์ข้อมูลที่ปลดระวางแล้ว จึงคงด่านนี้ไว้
   //   → เป็นไฟล์เดียวในโปรเจกต์ที่รับ SUPABASE_SERVICE_ROLE_KEY และเป็นไฟล์เดียวที่ไม่เคยถูกสแกน
   //   (แก้ต้นเหตุแล้วโดยเปลี่ยนไบต์ดิบเป็น escape  — ผลตอนรันเหมือนเดิมเป๊ะ)
   // ไฟล์ binary จริง (.png/.mp3/…) ยังข้ามเหมือนเดิม ไม่นับเป็นปัญหา เพราะไม่ใช่ไฟล์ข้อความ
@@ -439,8 +456,10 @@ function runCli() {
 if (require.main === module) runCli();
 
 module.exports = {
+  AI_READ_DENY_EXACT_FILES,
   PUBLIC_CONTEXTS,
   formatFinding,
+  isAiReadDeniedFile,
   listRepositoryFiles,
   scanProject
 };

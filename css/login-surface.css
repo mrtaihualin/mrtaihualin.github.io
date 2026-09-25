@@ -47,8 +47,7 @@ html body [data-reading-login-component="host"] {
   align-items: center;
   margin-bottom: 12px;
   flex-wrap: nowrap;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+  overflow: visible;
   width: 100%;
   max-width: 640px;
   padding-bottom: 2px;
@@ -59,16 +58,17 @@ html body [data-reading-login-component="row"] > #rg-profile-wrap {
   flex-wrap: wrap !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 8px !important;
+  gap: 9px !important;
   width: 100% !important;
   max-width: 640px !important;
   min-height: 0 !important;
   margin: 0 auto !important;
-  padding: 10px 12px !important;
+  padding: 11px 14px !important;
   box-sizing: border-box !important;
   background: #FAF4E8 !important;
-  border: 1.5px solid #C8973A !important;
-  border-radius: 16px !important;
+  border: 2px solid #C8973A !important;
+  border-radius: 26px !important;
+  box-shadow: 0 4px 14px rgba(139, 99, 16, 0.10) !important;
   font-family: 'Noto Sans TC', sans-serif !important;
   font-size: 12.5px !important;
 }
@@ -77,28 +77,298 @@ html body [data-reading-login-component="row"] > #rg-profile-wrap {
   align-items: center !important;
   justify-content: center !important;
   margin: 0 !important;
-  flex: 0 0 auto !important;
+  flex: 0 1 auto !important;
+  min-width: 0 !important;
 }
 [data-reading-login-component="row"] .tf-streak-chip {
   display: inline-flex !important;
   align-items: center !important;
   gap: 4px !important;
+  min-height: 31px !important;
   padding: 5px 12px !important;
-  border: 0 !important;
+  border: 1px solid rgba(200, 151, 58, 0.48) !important;
   border-radius: 999px !important;
-  background: rgba(139, 99, 16, 0.10) !important;
+  background: rgba(255, 255, 255, 0.72) !important;
   color: #7a5510 !important;
   box-shadow: none !important;
   font-family: 'Noto Sans TC', sans-serif !important;
   font-size: 12px !important;
   font-weight: 700 !important;
-  line-height: 1 !important;
+  line-height: 1.15 !important;
+  box-sizing: border-box !important;
 }
 
-/* These are part of Reading's exact Account Bar DOM, but remain parked in the
-   public Login-only surface exactly as they did in PR #98. */
-[data-reading-login-component="row"] .rg-stat-row,
-[data-reading-login-component="row"] #rg-cta-login {
+/* Desktop Account Bar labels follow the input device as well as viewport width,
+   so a narrow desktop panel still shows words. Touch/mobile stays icon-only. */
+@media (min-width: 769px), (hover: hover) and (pointer: fine) {
+  [data-reading-login-component="row"] .sa-edit,
+  [data-reading-login-component="row"] a[title="排行榜"],
+  [data-reading-login-component="row"] a[title="進度"],
+  [data-reading-login-component="row"] a[title="字庫"] {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 3px;
+    white-space: nowrap;
+  }
+  [data-reading-login-component="row"] .sa-edit::after { content: '編輯'; }
+  [data-reading-login-component="row"] a[title="排行榜"]::after { content: '排行'; }
+  [data-reading-login-component="row"] a[title="進度"]::after { content: '進度'; }
+  [data-reading-login-component="row"] a[title="字庫"]::after { content: '字庫'; }
+}
+
+@media (orientation: landscape) and (max-width: 1024px) and (max-height: 600px) {
+  [data-reading-login-component="row"] .sa-edit::after,
+  [data-reading-login-component="row"] a[title="排行榜"]::after,
+  [data-reading-login-component="row"] a[title="進度"]::after,
+  [data-reading-login-component="row"] a[title="字庫"]::after {
+    content: none;
+  }
+}
+
+[data-reading-login-component="row"] .sa-account-bar {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 100%;
+  min-width: 0;
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+[data-reading-login-component="row"] .sa-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  box-sizing: border-box;
+  border: 1px solid rgba(200, 151, 58, 0.48);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  color: #5C4410;
+  font-size: 17px;
+  line-height: 1;
+}
+[data-reading-login-component="row"] .sa-badge-pin {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+[data-reading-login-component="row"] .sa-nick {
+  display: inline-block;
+  max-width: 180px !important;
+  min-width: 0;
+  margin: 0;
+  padding: 4px 3px;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  color: #5C4410 !important;
+  font: 800 13.5px/1.25 'Noto Sans TC', sans-serif !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+[data-reading-login-component="row"] .sa-edit,
+[data-reading-login-component="row"] a[title="排行榜"],
+[data-reading-login-component="row"] a[title="進度"],
+[data-reading-login-component="row"] a[title="字庫"],
+[data-reading-login-component="row"] .sa-account-streak,
+[data-reading-login-component="row"] .sa-logout {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 31px;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 5px 10px !important;
+  border: 1px solid rgba(200, 151, 58, 0.48) !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, 0.72) !important;
+  color: #6A531E !important;
+  font-family: 'Noto Sans TC', sans-serif !important;
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+  line-height: 1.15 !important;
+  text-decoration: none !important;
+  white-space: nowrap;
+  cursor: pointer;
+}
+[data-reading-login-component="row"] .sa-global-search-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(200, 151, 58, 0.58);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  color: #8B6310;
+  padding: 0;
+  font: 700 14px/1 'Noto Sans TC', sans-serif;
+  cursor: pointer;
+}
+[data-reading-login-component="row"] .sa-account-streak { cursor: default; }
+[data-reading-login-component="row"] .sa-nick:hover,
+[data-reading-login-component="row"] .sa-edit:hover,
+[data-reading-login-component="row"] a[title="排行榜"]:hover,
+[data-reading-login-component="row"] a[title="進度"]:hover,
+[data-reading-login-component="row"] a[title="字庫"]:hover,
+[data-reading-login-component="row"] .sa-global-search-toggle:hover,
+[data-reading-login-component="row"] .sa-logout:hover,
+[data-reading-login-component="row"] .tf-streak-chip:hover {
+  background: #F7E8C6 !important;
+  color: #5C4410 !important;
+}
+[data-reading-login-component="row"] .sa-nick:focus-visible,
+[data-reading-login-component="row"] .sa-edit:focus-visible,
+[data-reading-login-component="row"] a[title="排行榜"]:focus-visible,
+[data-reading-login-component="row"] a[title="進度"]:focus-visible,
+[data-reading-login-component="row"] a[title="字庫"]:focus-visible,
+[data-reading-login-component="row"] .sa-global-search-toggle:focus-visible,
+[data-reading-login-component="row"] .sa-global-search-submit:focus-visible,
+[data-reading-login-component="row"] .sa-logout:focus-visible,
+[data-reading-login-component="row"] .tf-streak-chip:focus-visible {
+  outline: 2px solid #C8973A;
+  outline-offset: 2px;
+}
+[data-reading-login-component="row"] .sa-global-search-form {
+  order: 20;
+  flex: 0 1 320px;
+  width: min(320px, calc(100vw - 64px));
+  max-width: 100%;
+  min-width: 0;
+  margin: 4px auto 0;
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+[data-reading-login-component="row"] .sa-global-search-form[hidden] {
+  display: none !important;
+}
+[data-reading-login-component="row"] .sa-global-search-input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid rgba(200, 151, 58, 0.48);
+  border-radius: 9px;
+  padding: 7px 9px;
+  color: #5C4410;
+  background: rgba(255, 255, 255, 0.88);
+  font: 500 12px/1.3 'Noto Sans TC', sans-serif;
+}
+[data-reading-login-component="row"] .sa-global-search-input:focus-visible {
+  outline: 0;
+  background: #fff;
+}
+[data-reading-login-component="row"] .sa-global-search-submit {
+  border: 1px solid #C8973A;
+  border-radius: 9px;
+  padding: 7px 12px;
+  background: #C8973A;
+  color: #fff;
+  font: 700 12px/1.3 'Noto Sans TC', sans-serif;
+  cursor: pointer;
+}
+[data-reading-login-component="row"] .sa-global-search-submit:disabled {
+  opacity: .6;
+  cursor: wait;
+}
+[data-reading-login-component="row"] .sa-global-search-results {
+  order: 21;
+  flex: 1 0 100%;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  margin-top: 2px;
+  padding: 12px 14px;
+  border: 1px solid rgba(200, 151, 58, 0.48);
+  border-radius: 12px;
+  background: #fff;
+  text-align: left;
+}
+[data-reading-login-component="row"] .sa-global-search-results[hidden] { display: none !important; }
+[data-reading-login-component="row"] .sa-global-search-results .hs-section-label { margin-bottom: 8px;color:#8B6310;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase; }
+[data-reading-login-component="row"] .sa-global-search-results .hs-card { display:block;margin-bottom:6px;padding:9px 10px;border-radius:8px;text-decoration:none; }
+[data-reading-login-component="row"] .sa-global-search-results .hs-card:hover { background:#F7E8C6; }
+[data-reading-login-component="row"] .sa-global-search-results .hs-card-title { display:block;color:#2d2a22;font:900 14px/1.4 'Noto Serif TC',serif; }
+[data-reading-login-component="row"] .sa-global-search-results .hs-card-desc,
+[data-reading-login-component="row"] .sa-global-search-results .hs-search-note,
+[data-reading-login-component="row"] .sa-global-search-results .hs-empty { color:#6f644c;font:500 12px/1.65 'Noto Sans TC',sans-serif; }
+[data-reading-login-component="row"] .sa-global-search-results .hs-search-note { margin-bottom:8px;padding:7px 9px;border-radius:7px;background:#FAF4E8; }
+[data-reading-login-component="row"] .sa-global-search-results .hs-empty-links { display:flex;flex-wrap:wrap;gap:7px;margin-top:8px; }
+[data-reading-login-component="row"] .sa-global-search-results .hs-empty-links a { padding:6px 10px;border-radius:999px;background:#F7E8C6;color:#6A531E;font-weight:700;text-decoration:none; }
+
+@media (max-width: 700px) {
+  [data-reading-login-component="row"] #rg-login-slot:has(.sa-global-search-form:not([hidden])) {
+    flex: 1 1 100% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+  [data-reading-login-component="row"] .sa-account-bar:has(.sa-global-search-form:not([hidden])) {
+    width: 100%;
+  }
+}
+
+@media (max-width: 600px) and (hover: none),
+       (max-width: 600px) and (pointer: coarse) {
+  html body [data-reading-login-component="row"] > #rg-profile-wrap {
+    gap: 6px !important;
+    padding: 9px !important;
+    border-radius: 22px !important;
+  }
+  [data-reading-login-component="row"] #rg-login-slot {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+  [data-reading-login-component="row"] .sa-account-bar {
+    width: 100%;
+    gap: 6px !important;
+  }
+  [data-reading-login-component="row"] .sa-nick {
+    max-width: min(38vw, 150px) !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  [data-reading-login-component="row"] .sa-edit,
+  [data-reading-login-component="row"] a[title="排行榜"],
+  [data-reading-login-component="row"] a[title="進度"],
+  [data-reading-login-component="row"] a[title="字庫"],
+  [data-reading-login-component="row"] .sa-account-streak,
+  [data-reading-login-component="row"] .sa-logout {
+    min-height: 32px;
+    padding: 5px 9px !important;
+  }
+  [data-reading-login-component="row"] .sa-global-search-form {
+    flex: 1 0 100%;
+    width: 100%;
+    max-width: 100%;
+    margin-top: 2px;
+    gap: 5px;
+  }
+  [data-reading-login-component="row"] .sa-global-search-input {
+    padding: 8px;
+    font-size: 16px;
+  }
+  [data-reading-login-component="row"] .sa-global-search-submit {
+    flex: 0 0 auto;
+    padding: 8px 11px;
+  }
+}
+
+/* The legacy reward CTA stays parked. Account stats remain hidden only while
+   the reversible Login Free account entry is disabled. */
+[data-reading-login-component="row"] #rg-cta-login,
+.minimum-guest-launch:not(.login-free-account-entry) [data-reading-login-component="row"] .rg-stat-row {
   display: none !important;
 }
 

@@ -175,11 +175,48 @@ async function runEvent(eventFile) {
   console.log(`✓ Write-Set check: ${result.taskId} ครอบ ${result.files} ไฟล์`);
 }
 
+function normalizeCommitSha(value, label) {
+  const sha = String(value || '').trim();
+  if (!/^[0-9a-f]{40}$/i.test(sha)) throw new Error(`${label} ขาดหายหรือไม่ใช่ commit SHA แบบเต็ม`);
+  return sha;
+}
+
+function gitlabMergeRequestFiles(baseSha, headSha = 'HEAD') {
+  const base = normalizeCommitSha(baseSha, 'CI_MERGE_REQUEST_DIFF_BASE_SHA');
+  const head = headSha === 'HEAD' ? 'HEAD' : normalizeCommitSha(headSha, 'CI_COMMIT_SHA');
+  const result = cp.spawnSync('git', [
+    'diff', '--name-status', '--diff-filter=ACMRDTUXB', '-z', `${base}...${head}`,
+  ], {
+    cwd: root,
+    encoding: 'utf8',
+  });
+  if (result.status !== 0) {
+    throw new Error(`อ่าน GitLab Merge Request diff ไม่สำเร็จ: ${result.stderr.trim()}`);
+  }
+  return pathsFromNameStatus(result.stdout);
+}
+
+function runGitlabMergeRequest(env = process.env) {
+  if (env.CI_PIPELINE_SOURCE !== 'merge_request_event') {
+    console.log('✓ Write-Set check: pipeline นี้ไม่มี Merge Request จึงไม่มี Task contract ให้ตรวจ');
+    return;
+  }
+  const contract = parsePullRequestBody(env.CI_MERGE_REQUEST_DESCRIPTION);
+  const files = gitlabMergeRequestFiles(env.CI_MERGE_REQUEST_DIFF_BASE_SHA, env.CI_COMMIT_SHA || 'HEAD');
+  const result = validateTaskContract(contract.taskId, contract.writeSet, files);
+  console.log(`✓ Write-Set check: ${result.taskId} ครอบ ${result.files} ไฟล์`);
+}
+
 async function main() {
   const eventIndex = process.argv.indexOf('--event');
   if (eventIndex !== -1) {
     if (!process.argv[eventIndex + 1]) throw new Error('--event ต้องตามด้วย path');
     await runEvent(process.argv[eventIndex + 1]);
+    return;
+  }
+
+  if (process.argv.includes('--gitlab')) {
+    runGitlabMergeRequest();
     return;
   }
 
@@ -194,7 +231,7 @@ async function main() {
     return;
   }
 
-  throw new Error('ใช้ --staged หรือ --event <github-event.json>');
+  throw new Error('ใช้ --staged, --event <github-event.json> หรือ --gitlab');
 }
 
 if (require.main === module) {
@@ -204,4 +241,14 @@ if (require.main === module) {
   });
 }
 
-module.exports = { isAllowed, normalizePattern, parsePullRequestBody, pathsFromNameStatus, pathsFromPullRequestBatch, validateTaskContract };
+module.exports = {
+  gitlabMergeRequestFiles,
+  isAllowed,
+  normalizeCommitSha,
+  normalizePattern,
+  parsePullRequestBody,
+  pathsFromNameStatus,
+  pathsFromPullRequestBatch,
+  runGitlabMergeRequest,
+  validateTaskContract,
+};

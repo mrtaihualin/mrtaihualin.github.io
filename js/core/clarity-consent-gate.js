@@ -12,14 +12,53 @@
   'use strict';
 
   var STORAGE_KEY = 'cookieConsent';
+  var COOKIE_KEY = 'mrtCookieConsent';
+  var SHARED_COOKIE_KEY = 'mrtCookieConsentSharedV1';
   var SCRIPT_ID = 'clarity-consent-script';
 
   function createController(win, doc, siteId) {
-    function state() {
+    function isSiteHost() {
+      var hostname = win.location && String(win.location.hostname || '').toLowerCase();
+      return hostname === 'mrtaihualin.com' || hostname === 'www.mrtaihualin.com';
+    }
+
+    function cookieValue(name) {
       try {
-        var value = win.localStorage.getItem(STORAGE_KEY);
-        return value === 'granted' || value === 'denied' ? value : 'unset';
-      } catch (_) { return 'unset'; }
+        var match = String(doc.cookie || '').match(new RegExp('(?:^|;\\s*)' + name + '=(granted|denied)(?:;|$)'));
+        return match ? match[1] : null;
+      } catch (_) { return null; }
+    }
+
+    function state() {
+      var value = isSiteHost() ? cookieValue(SHARED_COOKIE_KEY) : null;
+      if (value === 'granted' || value === 'denied') {
+        try { win.localStorage.setItem(STORAGE_KEY, value); } catch (_) {}
+        return value;
+      }
+      try {
+        value = win.localStorage.getItem(STORAGE_KEY);
+        if (value === 'granted' || value === 'denied') {
+          persist(value);
+          return value;
+        }
+      } catch (_) {}
+      value = cookieValue(COOKIE_KEY);
+      if (value === 'granted' || value === 'denied') {
+        persist(value);
+        return value;
+      }
+      return 'unset';
+    }
+
+    function persist(value) {
+      try { win.localStorage.setItem(STORAGE_KEY, value); } catch (_) {}
+      try {
+        var secure = win.location && win.location.protocol === 'https:' ? ';Secure' : '';
+        doc.cookie = COOKIE_KEY + '=' + value + ';Max-Age=31536000;path=/;SameSite=Lax' + secure;
+        if (isSiteHost()) {
+          doc.cookie = SHARED_COOKIE_KEY + '=' + value + ';Max-Age=31536000;path=/;domain=.mrtaihualin.com;SameSite=Lax' + secure;
+        }
+      } catch (_) {}
     }
 
     function loadIfGranted() {
@@ -40,7 +79,7 @@
 
     function decide(granted) {
       var value = granted ? 'granted' : 'denied';
-      try { win.localStorage.setItem(STORAGE_KEY, value); } catch (_) {}
+      persist(value);
       if (granted) return loadIfGranted();
       if (typeof win.clarity === 'function') {
         try {
@@ -54,5 +93,5 @@
     return { state: state, loadIfGranted: loadIfGranted, decide: decide };
   }
 
-  return { STORAGE_KEY: STORAGE_KEY, SCRIPT_ID: SCRIPT_ID, createController: createController };
+  return { STORAGE_KEY: STORAGE_KEY, COOKIE_KEY: COOKIE_KEY, SHARED_COOKIE_KEY: SHARED_COOKIE_KEY, SCRIPT_ID: SCRIPT_ID, createController: createController };
 });

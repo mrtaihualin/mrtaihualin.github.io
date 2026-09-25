@@ -8,8 +8,10 @@ const vm = require('vm');
 
 const root = path.resolve(__dirname, '..');
 const source = fs.readFileSync(path.join(root, 'js/games/reading-game-app.js'), 'utf8');
+const minified = fs.readFileSync(path.join(root, 'js/games/reading-game-app.min.js'), 'utf8');
 const gameContentClient = fs.readFileSync(path.join(root, 'js/games/game-content-client.js'), 'utf8');
 const html = fs.readFileSync(path.join(root, 'reading-game.html'), 'utf8');
+const reviewedDisplay = require(path.join(root, 'js/games/reviewed-vocabulary-display.js'));
 let passed = 0;
 
 function test(name, fn) {
@@ -25,9 +27,69 @@ function block(startText, endText) {
   return source.slice(start, end);
 }
 
+test('High sentence syllables expose exact reviewed fields to the shared answer display', () => {
+  const browser = {
+    location: { href: 'https://example.test/reading-game.html', origin: 'https://example.test' },
+    addEventListener() {},
+  };
+  const context = { window: browser, URL, console };
+  vm.createContext(context);
+  vm.runInContext(gameContentClient, context, { filename: 'game-content-client.js' });
+  const sentence = {
+    th: 'กา', zh: 'fixture', readingTH: 'กา', wc: 1, politeF: '',
+    words: [{
+      th: 'กา', zh: 'fixture',
+      syls: [{
+        th: 'กา', en: 'gaa', cons: 'ก', vowel: 'อา', tone_name: 'สามัญ',
+        lead: '', cluster: '', final: '', tone: '', liveDead: 'เป็น',
+        consRead: '', finalRead: '', silent: ''
+      }]
+    }]
+  };
+  const projected = browser.buildSentencesForPhonicsGames([sentence])[0];
+  const syllable = projected.syls[0];
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(syllable.catalog)), {
+    roman: 'gaa', lead: '', consonant: 'ก', cluster: '', vowel: 'อา',
+    writtenFinal: '', toneMark: '', toneName: 'สามัญ', toneNumber: 1, liveDead: 'เป็น',
+    consonantReadDifference: '', finalReadDifference: '', silent: ''
+  });
+  assert.match(reviewedDisplay.buildAnswerHeader(syllable), /^กา/);
+  assert.ok(reviewedDisplay.buildAnswerRows(syllable).some((row) => row.tag === '母音' && row.text === 'อา'));
+});
+
+test('Reading Advanced male politeness displays ครับ without changing other game preferences', () => {
+  const particle = block('var rgParticleMode=', 'var rgPronMode=');
+  const values = new Map([
+    ['rg_particle_mode', 'm'], ['tf_particle_mode', 'f'],
+    ['tg_particle_mode', 'off'], ['wo_particle_mode', 'm']
+  ]);
+  const title = { textContent: '' };
+  const button = { style: {}, setAttribute() {}, title: '' };
+  const context = {
+    localStorage: { getItem: (key) => values.get(key) ?? null, setItem: (key, value) => values.set(key, value) },
+    document: { getElementById: (id) => ({ wth: title, 'rg-particle-toggle': button })[id] || null },
+    WORD: { th: 'ทดสอบ', level: '高', politeF: 'ค่ะ' }
+  };
+  vm.createContext(context);
+  vm.runInContext(particle, context);
+  vm.runInContext('rgApplyParticleToTitle();rgSyncParticleBtn()', context);
+  assert.strictEqual(title.textContent, 'ทดสอบครับ');
+  assert.strictEqual(button.title.includes('ครับ'), true);
+  vm.runInContext("rgParticleMode='f';rgApplyParticleToTitle()", context);
+  assert.strictEqual(title.textContent, 'ทดสอบค่ะ');
+  vm.runInContext("rgParticleMode='off';rgApplyParticleToTitle()", context);
+  assert.strictEqual(title.textContent, 'ทดสอบ');
+  vm.runInContext("rgParticleMode='m';WORD.level='初';rgApplyParticleToTitle()", context);
+  assert.strictEqual(title.textContent, 'ทดสอบ');
+  assert.strictEqual(values.get('rg_particle_mode'), 'm');
+  assert.deepStrictEqual([...values].filter(([key]) => key !== 'rg_particle_mode'), [
+    ['tf_particle_mode', 'f'], ['tg_particle_mode', 'off'], ['wo_particle_mode', 'm']
+  ]);
+});
+
 test('attempt score and correction evidence reset for every new word', () => {
   const loadWord = block('function loadWord()', 'function loadSyl()');
-  assert.match(loadWord, /readingAttemptScore=null;readingCorrectionAttempts=0;readingFirstCheckDone=false/);
+  assert.match(loadWord, /readingAttemptScore=null;readingFirstCheckWrongCounts=null;readingCorrectionAttempts=0;readingFirstCheckDone=false/);
 });
 
 test('report captures only snapshots submitted by Check', () => {
@@ -79,8 +141,44 @@ test('Reading counter follows active syllables without changing the round queue'
   assert.doesNotMatch(helper, /roundQueue|roundScore|okC|badC/);
 });
 
+test('Reading keeps reviewed syllable authority through the live answer object', () => {
+  const loadSyl = block('function loadSyl()', '// ─── Render options ───');
+  assert.match(loadSyl, /catalog:SY\.catalog/);
+  assert.match(source, /renderBonusReason\(W\)/);
+});
+
 test('Reading loads the rebuilt crash-safe bundle with a fresh cache key', () => {
-  assert.match(html, /reading-game-app\.min\.js\?v=45/);
+  assert.match(html, /reading-game-app\.min\.js\?v=65/);
+  assert.match(minified, /READING_FINAL_EXCEPTIONS=\{"อีเมล@中#noun-b-11":"ล"\}/);
+  assert.match(minified, /function reviewedReadingVowel\(/);
+  assert.match(minified, /function reviewedReadingFinal\(/);
+  assert.match(minified, /function readingOptionCounts\(/);
+  assert.match(minified, /\.match\(\/\^\(\.\+\) \(\?:>\|\\u2192\) \(\.\+\)\$\//);
+});
+
+test('Reading keeps scattered choices collision-safe and tone boxes proportional', () => {
+  assert.match(html, /\.opts\{display:flex;flex-wrap:wrap;gap:20px;/);
+  assert.match(html, /--opt-safe-jx:clamp\(-4px,var\(--jx,0px\),4px\)/);
+  assert.match(html, /--opt-safe-jy:clamp\(-3px,var\(--jy,0px\),3px\)/);
+  assert.match(html, /--opt-safe-jr:clamp\(-4deg,var\(--jr,0deg\),4deg\)/);
+  assert.match(html, /\.tone-drawn\{[\s\S]{0,100}overflow:visible;[\s\S]{0,80}vertical-align:middle;/);
+  assert.match(source, /'่':'<svg class="tone-drawn" width="\.18em" height="\.34em" viewBox="-18\.6 -90\.3 11\.8 21\.9"/);
+  assert.doesNotMatch(html, /\.opt\[data-type="tone"\][^{]*\{[^}]*(?:min-width|padding|font-size):/);
+});
+
+test('every standalone Reading mark has a browser-independent vector', () => {
+  const toneSvgStart = source.indexOf('var TONE_SVG=');
+  const toneSvgEnd = source.indexOf('function isCombining(', toneSvgStart);
+  const tonePoolMatch = source.match(/var TONE_POOL=(\[[^;]+\]);/);
+  assert.ok(toneSvgStart >= 0 && toneSvgEnd > toneSvgStart && tonePoolMatch);
+  const context = {};
+  vm.createContext(context);
+  vm.runInContext(source.slice(toneSvgStart, toneSvgEnd), context);
+  vm.runInContext(`var TONE_POOL=${tonePoolMatch[1]};`, context);
+  for (const mark of context.TONE_POOL) {
+    assert.match(context.TONE_SVG[mark] || '', /^<svg[\s\S]*<path[\s\S]*<\/svg>$/, `${mark} must have a visible SVG`);
+  }
+  assert.strictEqual(Object.keys(context.TONE_SVG).length, context.TONE_POOL.length);
 });
 
 test('every Reading syllable uses the locked consonant-vowel-final-tone slot order', () => {
@@ -89,6 +187,45 @@ test('every Reading syllable uses the locked consonant-vowel-final-tone slot ord
   vm.createContext(context);
   vm.runInContext(slotOrder, context);
   assert.deepStrictEqual(Array.from(context.getSlotOrder()), ['cons', 'vowel', 'final', 'tone']);
+});
+
+test('Reading correct answers use Lin-reviewed pronunciation differences only where present', () => {
+  const helper = block('function reviewedPresent(value)', '// ════════════════════════════════════════════\n// PHONETIC MAPS');
+  const context = {
+    VP: ['อื'],
+    FP: ['ก','ง','น','ม','ย','ว','ด','บ'],
+    READING_FINAL_EXCEPTIONS: { 'อีเมล@中#noun-b-11': 'ล' }
+  };
+  vm.createContext(context);
+  vm.runInContext(helper, context);
+
+  assert.strictEqual(context.reviewedReadingAnswer('ภ', 'ภ > พ', 'consonant'), 'พ');
+  assert.strictEqual(context.reviewedReadingAnswer('ศ', 'ศ > ส', 'consonant'), 'ส');
+  assert.strictEqual(context.reviewedReadingAnswer('ธ', 'ธ → ท', 'consonant'), 'ท');
+  assert.strictEqual(context.reviewedReadingAnswer('พ', 'พ → บ', 'final'), 'บ');
+  assert.strictEqual(context.reviewedReadingAnswer('ก', 'ไม่มี', 'consonant'), 'ก');
+  assert.strictEqual(context.reviewedReadingAnswer('ม', 'ไม่มี', 'final'), 'ม');
+  assert.strictEqual(context.reviewedReadingVowel('อื'), 'อื');
+  assert.strictEqual(context.reviewedReadingFinal('พ', 'พ > บ', 'ทดสอบ@中'), 'บ');
+  assert.strictEqual(context.reviewedReadingFinal('ล', 'ไม่มี', 'อีเมล@中#noun-b-11'), 'ล');
+  assert.throws(() => context.reviewedReadingVowel('อือ'), /CATALOG_AUTHORITY_INCOMPLETE:reading vowel answer/);
+  assert.throws(() => context.reviewedReadingFinal('ต', 'ไม่มี'), /CATALOG_AUTHORITY_INCOMPLETE:reading final answer/);
+  assert.throws(() => context.reviewedReadingFinal('ล', 'ไม่มี', 'คำอื่น@中'), /CATALOG_AUTHORITY_INCOMPLETE:reading final answer/);
+  assert.throws(
+    () => context.reviewedReadingAnswer('ภ', 'ศ > ส', 'consonant'),
+    /CATALOG_AUTHORITY_INCOMPLETE:reading consonant pronunciation answer/
+  );
+
+  const answerSelection = block('// รอบ 1: หาคำตอบจริงของแต่ละหัวข้อ', '// รอบ 2: สร้างตัวเลือกแยกภายในแต่ละหัวข้อ');
+  assert.match(answerSelection, /comp==='cons'[\s\S]*reviewedReadingAnswer\(W\.cons,W\.consRead,'consonant'\)/);
+  assert.match(answerSelection, /comp==='final'[\s\S]*reviewedReadingFinal\(W\.final,W\.finalRead,WORD\.contentKey\)/);
+  assert.match(answerSelection, /comp==='vowel'\)\{ans=reviewedReadingVowel\(W\.vowel\);/, 'vowel answer must remain exact and validated');
+
+  assert.deepStrictEqual(Array.from(context.readingComponentsFor({ final: 'ไม่มี', tone: 'ไม่มี' })), ['cons', 'vowel']);
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(context.readingOptionCounts(['cons', 'vowel']))), { cons: 4, vowel: 4 });
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(context.readingOptionCounts(['cons', 'vowel', 'tone']))), { cons: 3, vowel: 3, tone: 2 });
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(context.readingOptionCounts(['cons', 'vowel', 'final']))), { cons: 3, vowel: 3, final: 3 });
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(context.readingOptionCounts(['cons', 'vowel', 'final', 'tone']))), { cons: 3, vowel: 3, final: 2, tone: 2 });
 });
 
 test('Hint immediately refreshes the permanently zero word-score HUD', () => {
@@ -102,8 +239,9 @@ test('direct word boot binds the protected level before Reading starts and resto
   assert.ok(start >= 0 && end > start, 'direct-word protected-level bridge missing');
   const bridge = gameContentClient.slice(start, end);
   assert.match(bridge, /reading-game\\\.html/);
-  assert.match(bridge, /row\.word === wanted/);
-  assert.match(bridge, /row\.level === '初' \|\| row\.level === '中'/);
+  assert.match(bridge, /record\.contentKey === wanted/);
+  assert.doesNotMatch(bridge, /record\.word === wanted/);
+  assert.match(bridge, /record\.level === '初' \|\| record\.level === '中'/);
   assert.match(bridge, /if \(rows\.length !== 1\) return null/);
   assert.match(bridge, /localStorage\.setItem\('rg_reading_level', level\)/);
   assert.match(bridge, /studyPlan\.preferredLevel = function \(game\)/);
@@ -116,27 +254,26 @@ test('direct word boot binds the protected level before Reading starts and resto
   const bootEnd = gameContentClient.indexOf('// ════════════════════════════════════════════════════════════\n  // GLOBAL CRASH HANDLER', bootStart);
   assert.ok(bootStart >= 0 && bootEnd > bootStart, 'game-content boot block missing');
   const boot = gameContentClient.slice(bootStart, bootEnd);
-  assert.ok(boot.indexOf('applyDirectReadingWordLevel(data);') < boot.indexOf('global.WORDS_MASTER = data.words;'));
+  assert.ok(boot.indexOf('applyDirectReadingWordLevel(data);') < boot.indexOf('var exactWords = validateCatalogPayload(data.words);'));
   assert.ok(boot.indexOf('applyDirectReadingWordLevel(data);') < boot.indexOf('injectScript(src)'));
   assert.strictEqual((boot.match(/restoreDirectReadingWordLevelOverride\(\)/g) || []).length, 2);
 });
 
 test('Reading option generator keeps displayed vowel choices complete and unique', () => {
-  const dataStart = source.indexOf('var VOWEL_SYMBOL=');
+  const dataStart = source.indexOf('var CONS_GROUPS=');
   const dataEnd = source.indexOf('// ════════════════════════════════════════════\n// PHONETIC MAPS', dataStart);
-  const readStart = source.indexOf('var VOWEL_READ=');
-  const readEnd = source.indexOf('// ════════════════════════════════════════════\n// WORDS', readStart);
   const utilStart = source.indexOf('function shuffle(');
   const utilEnd = source.indexOf('// ════════════════════════════════════════════\n// LEVEL SWITCH', utilStart);
-  assert.ok(dataStart >= 0 && dataEnd > dataStart && readStart >= 0 && readEnd > readStart && utilStart >= 0 && utilEnd > utilStart);
+  assert.ok(dataStart >= 0 && dataEnd > dataStart && utilStart >= 0 && utilEnd > utilStart);
   const math = Object.create(Math);
   math.random = () => 0;
   const context = { Math: math, W: { cluster: '' } };
   vm.createContext(context);
   vm.runInContext(source.slice(dataStart, dataEnd), context);
-  vm.runInContext(source.slice(readStart, readEnd), context);
   vm.runInContext(source.slice(utilStart, utilEnd), context);
-  const raw = context.buildOpts('อา', 'vowel', [['อา']], ['อา', 'อั', 'อะ', 'เออ', 'เอิ', 'โอ'], 4, null, []);
+  assert.strictEqual(context.dispOpt('vowel', 'ใอ'), 'ใอ', 'reviewed vowel must not be rewritten');
+  assert.strictEqual(context.dispOpt('cons', 'ญ'), 'ญ', 'reviewed consonant must not be prefixed or rewritten');
+  const raw = context.buildOpts('อา', 'vowel', [['อา']], ['อา', 'อิ', 'อะ', 'เออ', 'อี', 'โอ'], 4, null);
   const shown = raw.map((value) => context.dispOpt('vowel', value));
   assert.strictEqual(raw.length, 4);
   assert.strictEqual(new Set(shown).size, 4);
@@ -150,7 +287,7 @@ test('Reading option generator keeps displayed vowel choices complete and unique
   for (const [comp, groups, pool] of cases) {
     for (const answer of pool) {
       for (const count of [2, 3, 4]) {
-        const options = context.buildOpts(answer, comp, groups, pool, count, null, []);
+        const options = context.buildOpts(answer, comp, groups, pool, count, null);
         const visible = options.map((value) => context.dispOpt(comp, value));
         assert.strictEqual(options.length, count, `${comp}/${answer} should have ${count} options`);
         assert.strictEqual(new Set(visible).size, count, `${comp}/${answer} should be visually unique`);
@@ -178,6 +315,38 @@ test('final scoring and reveal retain the locked first-check score', () => {
   const finalize = block('function finalizeWord()', 'function check()');
   assert.match(finalize, /failedLockedScore=readingAttemptScore==null\?0:readingAttemptScore/);
   assert.match(finalize, /var pts=readingAttemptScore==null\?.*:readingAttemptScore/);
+});
+
+test('multi-syllable bonus is included in authoritative score evidence', () => {
+  const helper = block('function rgFinalizeAllBonuses()', 'function rgJumpForCheck(');
+  const correctState = {
+    comps: ['cons'],
+    slotFills: { cons: 1 },
+    optTiles: [{ id: 1, val: 'ก' }],
+    correctVal: { cons: 'ก' },
+  };
+  const context = {
+    sylCache: [correctState, correctState],
+    sylIdx: 1,
+    sylList: [{}, {}],
+    rgCaptureSylState: () => correctState,
+    wordUsedGuide: false,
+    curWordIsKnownCheck: false,
+    readingSyllableBonusAwarded: 0,
+    roundScore: 10,
+    pop() {},
+    refreshUI() {},
+    Number,
+  };
+  vm.createContext(context);
+  vm.runInContext(helper, context);
+  vm.runInContext('rgFinalizeAllBonuses()', context);
+  assert.strictEqual(context.readingSyllableBonusAwarded, 2);
+  assert.strictEqual(context.roundScore, 12);
+  assert.strictEqual(context.rgItemEvidencePoints(10, 3), 15);
+  const finalize = block('function finalizeWord()', 'function check()');
+  assert.match(finalize, /pts:rgItemEvidencePoints\(failedLockedScore,0\)/);
+  assert.match(finalize, /pts:rgItemEvidencePoints\(basePtsAwarded,srsBonusAwarded\)/);
 });
 
 test('account evidence carries attempt score and separate correction count', () => {
@@ -217,13 +386,13 @@ test('resume report restore fails safe and cannot strand the question UI', () =>
   const restored = context.rgRestoreRoundReport('malformed');
   assert.strictEqual(restored.fallback, true);
   assert.strictEqual(restored.defaults.game_type, 'reading');
-  const resume = block('function rgResumeContinue()', 'function rgResumeRestartSame()');
+  const resume = block('function rgResumeContinue(', 'function rgResumeRestartSame(');
   assert.match(resume, /roundReport=rgRestoreRoundReport\(st\.report\)/);
-  assert.match(resume, /refreshUI\(\);\s*loadWord\(\)/);
+  assert.match(resume, /refreshUI\(\);\s*LearningReview\.advance\(roundReport,function\(\)\{if\(cur>=roundQueue\.length\)\{endRound\(\);return;\}loadWord\(\);\}\)/);
 });
 
 test('direct word practice bypasses a saved Resume without deleting it', () => {
-  const resumeGate = block('function rgHasDirectWordQuery()', 'function rgResumeContinue()');
+  const resumeGate = block('function rgHasDirectWordQuery(', 'function rgResumeContinue(');
   const banner = { style: { display: 'stale' } };
   const detail = { textContent: '' };
   const saved = { level: '中', wordIds: ['เขา'], cur: 0 };

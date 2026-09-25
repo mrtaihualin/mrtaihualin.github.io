@@ -55,9 +55,9 @@ window.GameUiCopy = window.GameUiCopy || (function () {
   var messages = {
     resume: {
       prefix: '上次進度：',
-      continueAction: '▶ 繼續上次',
-      restartAction: '↺ 重新開始',
-      newAction: '＋ 開始新一輪'
+      continueAction: '繼續上次練習',
+      restartAction: '重新開始本次練習',
+      newAction: '開始新一輪'
     },
     result: {
       completed: '完成',
@@ -130,19 +130,26 @@ window.registerGameModal = window.registerGameModal || function (opts) {
 };
 
 // ═══════════════════════════════════════════════════════════
-// GameResume — shared local-device resume helper
-// เก็บ "active session ล่าสุด 1 session ต่อเกม" ไว้ใน localStorage ให้กลับมาเล่นต่อบนเครื่องเดิม
-// ⚠️ ไม่ใช่ Free-account cross-device resume; server adapter/schema ยัง BLOCKED จนได้รับอนุมัติ
-// key แยกตามเกม (gameId) กัน state ปนกัน — save ซ้ำ = แทนที่ของเก่าเสมอ (ไม่เก็บหลายรอบ ไม่ sync ข้ามเครื่อง)
+// GameResume — Guest local Resume + Login Free canonical account Resume
+// เก็บ active session ล่าสุดหนึ่ง session ต่อเกม: Guest แยก key ในเครื่อง ส่วนบัญชี Login Free
+// เก็บรวมใน phase1_account_resume_v1 และให้ PHASE1_CANONICAL sync แบบ owner-bound CAS
 // ═══════════════════════════════════════════════════════════
 window.GameResume = window.GameResume || (function () {
   function key(gameId) { return 'gsh_resume_' + gameId; }
   var accountKey = 'phase1_account_resume_v1';
+  function accountUser() {
+    try { return window.SITE_AUTH && window.SITE_AUTH.user || null; } catch (e) { return null; }
+  }
   function accountReady() {
     try {
-      var user = window.SITE_AUTH && window.SITE_AUTH.user;
+      var user = accountUser();
       var boundary = window.PHASE1_ACCOUNT_BOUNDARY;
-      return !!(user && boundary && localStorage.getItem(boundary.ownerKey) === String(user.id));
+      if (!user || !boundary) return false;
+      // Auth may resolve immediately before the game saves its first safe point.
+      // Bind synchronously so an authenticated round can never fall through into
+      // Guest storage while the account boundary listener is still settling.
+      if (typeof boundary.bind === 'function') boundary.bind(user);
+      return localStorage.getItem(boundary.ownerKey) === String(user.id);
     } catch (e) { return false; }
   }
   function accountRows() {
@@ -151,7 +158,14 @@ window.GameResume = window.GameResume || (function () {
   function saveAccountRows(rows) {
     try {
       localStorage.setItem(accountKey, JSON.stringify(rows));
-      if (window.PHASE1_CANONICAL) window.PHASE1_CANONICAL.schedule();
+      // Resume is a navigation-critical safe point. flush() records the pending
+      // account slice synchronously before starting its async CAS request, so an
+      // immediate page exit cannot let a later pull overwrite the newer round.
+      if (window.PHASE1_CANONICAL && typeof window.PHASE1_CANONICAL.flush === 'function') {
+        window.PHASE1_CANONICAL.flush();
+      } else if (window.PHASE1_CANONICAL && typeof window.PHASE1_CANONICAL.schedule === 'function') {
+        window.PHASE1_CANONICAL.schedule();
+      }
     } catch (e) {}
   }
   return {
@@ -164,7 +178,7 @@ window.GameResume = window.GameResume || (function () {
           var rows = accountRows();
           rows[gameId] = payload;
           saveAccountRows(rows);
-        } else {
+        } else if (!accountUser()) {
           localStorage.setItem(key(gameId), JSON.stringify(payload));
         }
       } catch (e) {}
@@ -172,6 +186,9 @@ window.GameResume = window.GameResume || (function () {
     load: function (gameId) {
       try {
         if (accountReady()) return accountRows()[gameId] || null;
+        // Fail closed while an authenticated owner boundary is unavailable;
+        // Guest progress must never be adopted by a Login Free account.
+        if (accountUser()) return null;
         var raw = localStorage.getItem(key(gameId));
         if (!raw) return null;
         return JSON.parse(raw);
@@ -183,7 +200,7 @@ window.GameResume = window.GameResume || (function () {
           var rows = accountRows();
           delete rows[gameId];
           saveAccountRows(rows);
-        } else {
+        } else if (!accountUser()) {
           localStorage.removeItem(key(gameId));
         }
       } catch (e) {}
@@ -214,7 +231,7 @@ var LOGIN_UI_SCOPE = /\/(?:games|games-practice|games-challenge|tone-finder|read
   }
   if (!document.querySelector('script[src*="login-surface.js"]')) {
     var controller = document.createElement('script');
-    controller.src = 'js/core/login-surface.js?v=3';
+    controller.src = 'js/core/login-surface.js?v=8';
     document.head.appendChild(controller);
   }
 })();
@@ -1243,7 +1260,7 @@ if (typeof openYTVideoModal === 'undefined') {
 // ----- [03.3] 🚀 FB Posts Modal -----
 if (typeof openFBPostModal === 'undefined') {
   var _fbDetailPostId = null;
-  var SITE_URL = 'https://mrtaihualin.com';
+  var SITE_URL = 'https://www.mrtaihualin.com';
 
   window.openFBPostModal = function() { openModal('modal-fbposts'); showFBList(); };
 
@@ -1442,11 +1459,11 @@ if (typeof openSSModal === 'undefined') {
 if (typeof openSharePopup === 'undefined') {
   // 2026-08-08: openSharePopup 新增第 3 個參數 url（選填）— 沒有傳就跟以前一樣用 SITE_URL 首頁
   //   讓文章分享用得到「這篇文章自己的網址」，同時舊的呼叫方式（只傳 title/preview）完全不受影響
-  window._shareCurrentUrl = window.SITE_URL || 'https://mrtaihualin.com';
+  window._shareCurrentUrl = window.SITE_URL || 'https://www.mrtaihualin.com';
   window._shareCurrentTitle = '';
 
   window.openSharePopup = function(title, preview, url) {
-    var articleUrl = url || window.SITE_URL || 'https://mrtaihualin.com';
+    var articleUrl = url || window.SITE_URL || 'https://www.mrtaihualin.com';
     window._shareCurrentUrl = articleUrl;
     window._shareCurrentTitle = title || '';
     var text = '我在「泰華眼裡的泰語教學」發現了一個很實用的泰語學習資源！\n\n'
@@ -1480,11 +1497,11 @@ if (typeof openSharePopup === 'undefined') {
 
   // 分享 popup 裡的 Facebook / LINE 快捷鍵 — 直接開該平台官方分享網址，帶目前分享的文章連結
   window.shareToFB = function() {
-    var u = encodeURIComponent(window._shareCurrentUrl || window.SITE_URL || 'https://mrtaihualin.com');
+    var u = encodeURIComponent(window._shareCurrentUrl || window.SITE_URL || 'https://www.mrtaihualin.com');
     window.open('https://www.facebook.com/sharer/sharer.php?u=' + u, '_blank', 'noopener');
   };
   window.shareToLine = function() {
-    var u = encodeURIComponent(window._shareCurrentUrl || window.SITE_URL || 'https://mrtaihualin.com');
+    var u = encodeURIComponent(window._shareCurrentUrl || window.SITE_URL || 'https://www.mrtaihualin.com');
     var t = encodeURIComponent(window._shareCurrentTitle || '');
     window.open('https://social-plugins.line.me/lineit/share?url=' + u + '&text=' + t, '_blank', 'noopener');
   };
@@ -1882,7 +1899,7 @@ window.deleteFBComment = function(postId, idx) {
 
 // ===================================================================
 // [05.2] 🍙 GAME TRANSLATION + FONT CONTROLS
-// ค่า default: จำไว้ด้วย localStorage (คีย์ games_hide_zh — แยกจาก textbook/controls-ui.js โดยตั้งใจ ตามที่ Lin เลือก)
+// ค่า default: จำไว้ด้วย localStorage คีย์เฉพาะเกม แยกจาก textbook/controls-ui.js
 // ระหว่างเล่น: คลิกที่กล่องคำแปลแต่ละกล่อง เปิด/ปิดเฉพาะจุดนั้นได้ (ไม่กระทบค่า default)
 // ทำงานเฉพาะหน้าเกม (มี #game-switcher) เหมือนปุ่มเต็มจอด้านบน — หน้าอื่นในเว็บไม่กระทบ
 // ⚠️ กล่องที่ "ซ้อนอยู่ในปุ่ม/เมนูที่มี onclick อื่นของเกม" (เช่น .ozh/.szh ในเกมเลโก้, .tf-level-sub ในเมนูเลือกประโยค高級)
@@ -1903,7 +1920,14 @@ window.deleteFBComment = function(postId, idx) {
       var gs = document.getElementById('game-switcher');
       if (!gs) return; // เอาแค่หน้าเกมจริงๆ
       var controlPage = String(location.pathname || '').split('/').pop().toLowerCase();
-      if (controlPage === 'vault.html') return; // Vault has no game translation tool; keep only 🎮 and focus controls.
+      var gamePage = controlPage.replace(/\.html$/, '');
+      if (gamePage === 'vault') return; // Vault has no game translation tool; keep only 🎮 and focus controls.
+      var gameStoragePrefix = {
+        'tone-finder': 'tf', 'reading-game': 'rg', 'listening-game': 'lg',
+        'typing-game': 'tg', 'word-order': 'wo', 'lego': 'lego'
+      }[gamePage] || gamePage.replace(/[^a-z0-9_-]/g, '');
+      if (!gameStoragePrefix) return;
+      var fontStorageKey = gameStoragePrefix + '_modern_font';
 
       function callFontToggle() {
         if (typeof window.rgToggleFont === 'function') { window.rgToggleFont(); return true; }
@@ -1943,14 +1967,13 @@ window.deleteFBComment = function(postId, idx) {
           }
         };
         fontSlot.appendChild(fontBtn);
-        // Keep the control truthful when the shared preference is restored or changed
-        // outside this exact button (for example another game/tab).
+        // Keep the control truthful when this game's preference changes in another tab.
         try {
           var fontClassObserver = new MutationObserver(renderFontBtn);
           fontClassObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
         } catch (e) {}
         window.addEventListener('storage', function (e) {
-          if (e.key !== 'rg_modern_font') return;
+          if (e.key !== fontStorageKey) return;
           var modern = e.newValue === '1';
           var usesToneFontClass = window.TF && typeof window.TF.toggleFont === 'function';
           document.body.classList.toggle('rg-modern-font', modern && !usesToneFontClass);
@@ -1973,7 +1996,7 @@ window.deleteFBComment = function(postId, idx) {
       // ปุ่มสลับฟอนต์ของหน้านี้อยู่ในแถวเครื่องมือใต้คำแล้ว → จบงานของบล็อกนี้แค่นี้พอ ไม่ต้องสร้างอะไรเพิ่ม
       if (isWordOrder) return;
 
-      var KEY = 'games_hide_zh';
+      var KEY = gameStoragePrefix + '_hide_zh';
       var hideOn = false;
       try { hideOn = localStorage.getItem(KEY) === '1'; } catch (e) {}
 
@@ -2027,7 +2050,11 @@ window.deleteFBComment = function(postId, idx) {
 
       // Lin 2026-07-16: ถ้าหน้านั้นมี #zh-toggle-slot (แถวปุ่มใต้คำศัพท์ ในเกมเสียง/เกมอ่าน/เกมพิมพ์) → ย้ายปุ่มไปอยู่ในแถวแทนมุมขวาล่าง
       var inlineSlot = document.getElementById('zh-toggle-slot');
-      if (inlineSlot) {
+      var gameOwnsTranslationControl = !!document.getElementById('wo-zh-toggle');
+      if (gameOwnsTranslationControl) {
+        // Word Order already owns the translation button below its revealed
+        // sentence. Do not duplicate it in the shared floating control row.
+      } else if (inlineSlot) {
         fab.classList.add('zh-fab-inline');
         inlineSlot.appendChild(fab);
       } else {
@@ -2086,6 +2113,7 @@ window.deleteFBComment = function(postId, idx) {
       }
 
       var path = (location.pathname || '').toLowerCase();
+      var gameMarker = (document.body.getAttribute('data-gsh-game') || '').toLowerCase();
       var GAME_ID = null;
       if (path.indexOf('typing-game') > -1) GAME_ID = 'typing';
       else if (path.indexOf('reading-game') > -1) GAME_ID = 'reading';
@@ -2094,6 +2122,12 @@ window.deleteFBComment = function(postId, idx) {
       else if (path.indexOf('word-order') > -1) GAME_ID = 'word_order';
       else if (path.indexOf('tone-finder') > -1) GAME_ID = 'tone_finder';
       else if (path.indexOf('games-challenge.html') > -1) GAME_ID = 'challenge'; // 2026-08-01: เกมรวม (เดิม mix.html/'mix' เปลี่ยนชื่อเป็น games-challenge.html/'challenge') — ⚠️ ต้อง deploy game-reward Edge Function
+      else if (gameMarker === 'typing') GAME_ID = 'typing';
+      else if (gameMarker === 'reading') GAME_ID = 'reading';
+      else if (gameMarker === 'listening') GAME_ID = 'listening';
+      else if (gameMarker === 'lego') GAME_ID = 'lego';
+      else if (gameMarker === 'word-order') GAME_ID = 'word_order';
+      else if (gameMarker === 'tone') GAME_ID = 'tone_finder';
       //   ใหม่ (เพิ่ม "challenge" เข้า VALID_GAMES) + รัน SQL เพิ่ม 'challenge' เข้า CHECK constraint ของ game_reward_events ก่อน
       //   ไม่งั้นปุ่มขึ้นแต่กดแล้วเซิร์ฟเวอร์ตีกลับ (Lin ต้องทำ 2 อย่างนี้เอง ดูคำสั่งที่แนบให้แยกต่างหาก)
       if (!GAME_ID) return; // หน้าเกมที่ยังไม่รู้จัก ไม่ต้องขึ้นปุ่มนี้

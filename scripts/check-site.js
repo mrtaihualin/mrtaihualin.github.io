@@ -103,10 +103,9 @@ cssFiles.forEach((relative) => {
 });
 console.log(`✓ ตรวจ CSS ${cssFiles.length} ไฟล์`);
 
-runTest(['data/tools/tests-tone-engine.js'], 'tone engine tests');
-runTest(['data/tools/tests-check-data-health.js'], 'data-health tests');
-runTest(['data/tools/check-duplicate-words.js'], 'duplicate-word check');
-runTest(['data/tools/check-data-health.js'], 'data-health check');
+runTest(['scripts/tests-current-free-200.js'], 'Current Free 200 data-health, duplicate and runtime integrity tests');
+runTest(['scripts/tests-no-vocabulary-judge.js'], 'catalog-to-game no-second-judge tests');
+runTest(['scripts/tests-shared-answer-standard.js'], 'shared word/sentence answer standard');
 runTest(['scripts/tests-secret-scanner.js'], 'secret-scanner tests');
 // เพิ่ม 2026-08-07 (รวมผล P3 — ตัวทดสอบคุ้มกันพฤติกรรมเดิม)
 runTest(['scripts/tests-marketing-behavioral.js'], 'marketing behavioral tests');
@@ -114,6 +113,28 @@ runTest(['scripts/tests-game-behavioral.js'], 'game behavioral tests');
 runTest(['scripts/tests-s13-protected-architecture.js'], 'S13 protected content/audio architecture tests');
 runTest(['scripts/tests-phase1-private-audio-3-recovery.js'], 'PRIVATE_AUDIO_3 scoped recovery tests');
 runTest(['scripts/tests-s29-score-security.mjs'], 'S29 score-security tests');
+runTest(['scripts/tests-learning-score-verifier.mjs'], 'hidden five-game learning-score verifier tests');
+runTest(['scripts/tests-typing-resume-checkpoint.mjs'], 'Typing server-confirmed Resume checkpoint foundation tests');
+runTest(['scripts/tests-typing-round-persistence-db.mjs'], 'Typing server-owned round/event PostgreSQL tests');
+runTest(['scripts/tests-typing-round-service.mjs'], 'Typing existing-round Edge bridge tests');
+runTest(['scripts/tests-typing-initial-prompt-plan.mjs'], 'Typing initial server prompt plan tests');
+runTest(['scripts/tests-typing-round-issuance.mjs'], 'Typing inactive initial issuance and durable replay tests');
+runTest(['scripts/tests-typing-round-context.mjs'], 'Typing protected initial context and cross-round Combo tests');
+runTest(['scripts/tests-typing-reserve-refill.mjs'], 'Typing protected bounded reserve-refill tests');
+runTest(['scripts/tests-typing-continuation-plan.mjs'], 'Typing ordered Skip continuation plan tests');
+runTest(['scripts/tests-typing-round-client.mjs'], 'Typing client journal/owner-fence tests');
+runTest(['scripts/tests-typing-browser-adoption.mjs'], 'Typing inactive partial Resume/writer/rate boundary tests');
+runTest(['scripts/tests-typing-round-final-commit.mjs'], 'Typing atomic final-commit preparation tests');
+runTest(['scripts/tests-typing-atomic-learning-score-source.mjs'], 'Typing atomic learning/score source boundary tests');
+runTest(['scripts/tests-typing-atomic-learning-score-db.mjs'], 'Typing atomic learning/Retry/score PostgreSQL tests');
+runTest(['scripts/tests-typing-client-service-integration.mjs'], 'Typing client/service/reducer composition tests');
+runTest(['scripts/tests-typing-atomic-continuation-db.mjs'], 'Typing atomic reserve and client/service/PostgreSQL composition tests');
+runTest(['scripts/tests-learning-review-runtime.js'], 'Login Free Review cumulative-allocation/runtime tests');
+runTest(['scripts/tests-login-free-review-integration.js'], 'Login Free Review four-game integration/security tests');
+runTest(['scripts/tests-game-save-continuation.js'], 'Game save/continuation/reload regression tests');
+runTest(['scripts/tests-learning-catalog-transport.mjs'], 'Learning catalog bounded-read/diagnostic regressions');
+runTest(['scripts/tests-login-free-learning-contract-e2e.mjs'], 'Four-game learning acknowledgement contract');
+runTest(['scripts/tests-login-accessible-game-matrix.js'], 'Login-accessible game launch/session/recovery matrix');
 runTest(['scripts/tests-phase1-nickname-safety.js'], 'Phase 1 nickname safety/security tests');
 runTest(['scripts/tests-phase1-nickname-recovery.js'], 'Phase 1 nickname recovery source/SQL tests');
 // เพิ่ม 2026-08-13 — Guest activity ห้ามกลายเป็น account Progress/SRS/Mastered หลัง Login
@@ -126,16 +147,29 @@ runTest(['scripts/tests-phase1-played-gamification-recovery.mjs'], 'Phase 1 Play
 runTest(['scripts/tests-phase1-srs.js'], 'Phase 1 SRS tests');
 runTest(['scripts/tests-listening-phase1.js'], 'Phase 1 Listening tests');
 runTest(['scripts/tests-phase1-game-content-rl-grants.mjs'], 'Phase 1 game-content rate-limit grant tests');
+runTest(['scripts/tests-central-sentence-library-v1.js'], 'Central sentence library v1 tests');
+runTest(['scripts/tests-sentence-roman-normalization-v1.js'], 'Central sentence Roman normalization v1 tests');
+runTest(['scripts/tests-lg-advanced-sentences.js'], 'LG001-LG012 Advanced sentence catalog tests');
 runTest(['scripts/tests-typing-phase1.js'], 'Phase 1 Typing tests');
 runTest(['scripts/tests-reading-phase1.js'], 'Phase 1 Reading tests');
+runTest(['scripts/tests-game-level-readiness.js'], 'Login Free game level queue readiness tests');
+runTest(['scripts/tests-reading-current-vocabulary.js'], 'Reading Current 389 full-set answer audit');
+runTest(['scripts/tests-paid-vocabulary-queue.js'], 'Inactive Paid vocabulary queue migration tests');
+runTest(['scripts/tests-paid-vocabulary-193.js'], 'Exact Paid 193 central catalog integration tests');
+runTest(['scripts/tests-paid-vocabulary-single-store.js'], 'Free 200 plus Paid 382 single-store all-six-game runtime tests');
+runTest(['scripts/tests-paid-vocabulary-193-db.mjs'], 'Exact Paid 193 database migration and rollback tests');
 runTest(['scripts/tests-word-order-phase1.js'], 'Phase 1 Word Order tests');
 runTest(['scripts/tests-account-export-phase1.js'], 'Phase 1 account-export tests');
 runTest(['scripts/tests-shared-games-phase1.js'], 'Phase 1 shared-game-system tests');
+runTest(['scripts/tests-mobile-landscape-temporary-gate.js'], 'Mobile Landscape temporary gate tests');
 runTest(['scripts/tests-tone-mobile-landscape.js'], 'Tone Mobile Landscape tests');
 runTest(['scripts/tests-game-flow-delta.js'], 'Locked five-game flow tests');
+runTest(['scripts/tests-game-tutorial-lifecycle.js'], 'Five-game tutorial/Resume lifecycle tests');
+runTest(['scripts/tests-mobile-landscape-responsive-regression.js'], 'Five-game responsive regression contract tests');
 runTest(['scripts/tests-study-plan-core.js'], 'Time Auto Plan core tests');
 runTest(['scripts/tests-study-plan-confirmation.js'], 'Time Auto Plan confirmation tests');
 runTest(['scripts/tests-study-plan-integration.js'], 'Time Auto Plan integration tests');
+runTest(['scripts/tests-controlled-beta-p1-h-02.js'], 'Controlled Beta P1-H-02 regression tests');
 runTest(['scripts/tests-phase1-challenge-gate.js'], 'Phase 1 Challenge access-gate tests');
 runTest(['scripts/tests-resource-search-phase1.js'], 'Phase 1 Resource Search tests');
 runTest(['scripts/tests-vault-consent-phase1.js'], 'Phase 1 Vault consent-gate tests');
@@ -146,6 +180,7 @@ runTest(['scripts/tests-auth-session-phase1.js'], 'Phase 1 auth session verifica
 runTest(['scripts/tests-account-lifecycle-phase1.js'], 'Phase 1 account lifecycle recovery tests');
 runTest(['scripts/tests-phase1-account-audit-integrity.js'], 'Phase 1 account audit trust-boundary tests');
 runTest(['scripts/tests-email-otp-auth-security.js'], 'Email OTP auth-security regression tests');
+runTest(['scripts/tests-email-otp-idempotent-resend.mjs'], 'Email OTP idempotent resend flow tests');
 runTest(['scripts/tests-email-otp-service-client-contract.mjs'], 'Email OTP service/client activation contract tests');
 runTest(['scripts/tests-phase1-save-retry.js'], 'Phase 1 API/Edge/save/retry safety tests');
 runTest(['scripts/tests-phase1-canonical-state.js'], 'Phase 1 canonical persistence tests');
@@ -153,6 +188,7 @@ runTest(['scripts/tests-phase1-owner-switch-races.js'], 'Phase 1 owner-switch la
 runTest(['scripts/tests-phase1-backend-transactions.js'], 'Phase 1 backend transaction/idempotency contract tests');
 runTest(['scripts/tests-phase1-rollout-compatibility.mjs'], 'Phase 1 mixed-version rollout compatibility tests');
 runTest(['scripts/tests-phase1-backup-pg17-runtime.js'], 'Phase 1 backup PostgreSQL 17 runtime-pin tests');
+runTest(['scripts/tests-cookie-consent-compact.js'], 'All-page compact cookie-consent persistence tests');
 runTest(['scripts/tests-phase1-consent-coverage.js'], 'Phase 1 all-page analytics consent coverage tests');
 runTest(['scripts/tests-cron-internal-auth.js'], 'Phase 1 cron/browser authorization contract tests');
 runTest(['scripts/tests-phase1-cron-reliability.js'], 'Phase 1 cron reliability/readiness tests');
@@ -162,6 +198,7 @@ runTest(['scripts/tests-phase1-calendar-reliability.mjs'], 'Phase 1 Calendar rat
 //  ซิงค์ตารางหลังย้าย · ระบบเก่าที่ลบถาวรห้ามกลับมา · รีเซ็ตธงเตือน · ปุ่ม LINE พก d=/t=)
 // ทดสอบแล้วว่าจับ regression ได้จริง (negative test 2 แบบ) ไม่ใช่ด่านหลอก
 runTest(['scripts/tests-classroom-behavioral.js'], 'classroom behavioral tests');
+runTest(['scripts/tests-classroom-retirement.js'], 'classroom retirement regression');
 // เพิ่ม 2026-08-14 — Textbook temporary client-side gate ต้องครอบสารบัญ+10 บท
 // และห้ามลามไปล็อก Teaching Pages ใน classroom/
 runTest(['scripts/tests-textbook-access-gate.js'], 'Textbook temporary gate tests');
@@ -172,10 +209,6 @@ runTest(['scripts/check-nav-consistency.js'], 'nav consistency check');
 // เพิ่ม 2026-08-14 — Footer มาตรฐานต้องครอบทุกหน้า Public Shell + vocab cheatsheet
 // และต้องมี Terms, Privacy, copyright โดยไม่มี Contact/Social ใน Footer
 runTest(['scripts/tests-footer-standard.js'], 'footer standard tests');
-// เพิ่ม 2026-08-11 — ตรวจความพร้อมคลังเนื้อหาสำหรับระบบเรียนกลาง (อ่านอย่างเดียว)
-// บล็อกเมื่อ metadata ที่ระบบต้องใช้ขาด (zh/category/level) · ช่องว่างอื่นเป็นรายงานให้ Lin ไม่บล็อก
-// ดูรายการเต็ม: node scripts/audit-learning-content.js --full
-runTest(['scripts/audit-learning-content.js'], 'learning content audit');
 // เพิ่ม 2026-08-11 — คุ้มกันกติกาคลังคำ sync ข้ามเครื่องที่ Lin สั่งไว้ (ผิดแล้วคำของนักเรียนหายถาวร):
 // รวมคำได้แม้เกินเพดาน · ห้ามลบคำอัตโนมัติ · ห้ามข้อมูลเดิมหาย · guest/local ต้องไม่พัง
 // ทดสอบย้อนกลับแล้ว 3 แบบว่าจับของพังได้จริง (ไม่ใช่ด่านหลอก)

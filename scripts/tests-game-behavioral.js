@@ -4,14 +4,14 @@
  * scripts/tests-game-behavioral.js — Lin P3 (2026-08-07)
  * ────────────────────────────────────────────────────────────
  * ตรวจ "พฤติกรรมเกม" แบบ static (อ่านโค้ด ไม่ยิงเน็ตจริง) — คนละเรื่องกับ
- * data/tools/tests-tone-engine.js / data/tools/tests-check-data-health.js ที่ตรวจ "ข้อมูล" (คำ/ประโยค/วรรณยุกต์)
+ * catalog checks inspect reviewed data; runtime language calculators are forbidden.
  *
  * ตรวจ 3 กลุ่ม:
  *   A) เกม Free ทั้ง 5 หน้า (reading-game/tone-finder/typing-game/word-order/listening-game)
  *      โหลดข้อมูลผ่าน game-content-client.js เท่านั้น ไม่มี <script src="data/words-data.js"> หลงเหลือ
  *   B) ยามเฝ้าประตูถูกเรียกจริงในจุดที่ควรบล็อกก่อนให้เล่น/ให้แต้ม
- *      (lego-daily-limit ก่อน startTest, TONE_SERVER.finishRound ในเกมที่มี SRS/ดาว)
- *   C) เพดานเนื้อหาใน Edge Function game-content ตรงกับที่ CLAUDE.md บันทึกไว้ (50/100, 20/40)
+ *      (lego-daily-limit ก่อน startTest, LearningReview.advance ใน Login Free learning loop)
+ *   C) เพดานเนื้อหาใน Edge Function game-content ตรงกับ Product Decision ล่าสุด (50/100, 20/42)
  *      + tier ต้องมาจาก JWT ฝั่งเซิร์ฟเวอร์เท่านั้น ห้ามอ่านจาก body ที่ client ส่งมา
  *
  * ข้อจำกัด (บอกตรงๆ): เช็คนี้เป็น "อ่านโค้ดหาความเข้าใจผิด/regression" ไม่ใช่พิสูจน์ว่า
@@ -52,28 +52,23 @@ GAME_PAGES.forEach((page) => {
   if (text === null) { fail(`A: ${page}`, 'ไม่พบไฟล์'); return; }
   const hasLoaderScript = /src=["']js\/games\/game-content-client\.js/.test(text);
   const hasBootCall = /GameContentLoader\.boot\(/.test(text);
-  const isPausedListening = page === 'listening-game.html' &&
-    /data-listening-availability="coming-soon"/.test(text) &&
-    /Preserved paused runtime: js\/games\/listening-game-app\.js\?v=19/.test(text);
   const hasOldDataScript = /src=["']data\/(words-data|adv-sentences)\.js/.test(text);
   if (!hasLoaderScript) fail(`A: ${page}`, 'ไม่โหลด js/games/game-content-client.js');
-  if (!hasBootCall && !isPausedListening) fail(`A: ${page}`, 'ไม่เรียก GameContentLoader.boot(...)');
+  if (!hasBootCall) fail(`A: ${page}`, 'ไม่เรียก GameContentLoader.boot(...)');
   if (hasOldDataScript) fail(`A: ${page}`, 'ยังโหลด data/words-data.js หรือ data/adv-sentences.js ตรงๆ (ช่องโหว่เดิมที่แก้ไปแล้วอาจกลับมา)');
-  if (hasLoaderScript && (hasBootCall || isPausedListening) && !hasOldDataScript) {
-    ok(isPausedListening ? `A: ${page} เก็บ runtime ไว้แต่ไม่ boot ระหว่างขึ้น 即將開幕` : `A: ${page} โหลดผ่าน game-content-client.js อย่างเดียว`);
-  }
+  if (hasLoaderScript && hasBootCall && !hasOldDataScript) ok(`A: ${page} โหลดผ่าน game-content-client.js อย่างเดียว`);
 });
 
-// lego.html ตั้งใจไม่ใช้ระบบนี้ (คนละคลังข้อมูล) — เช็คว่าไม่มีร่องรอยเก่าหลงเหลือที่จะ error เงียบ
+// Lego must use the same authenticated central catalog and never a separate public store.
 {
   const legoHtml = read('lego.html');
   if (legoHtml === null) fail('A: lego.html', 'ไม่พบไฟล์');
   else {
     const usesLoader = /GameContentLoader\.boot\(/.test(legoHtml);
     const usesOldData = /src=["']data\/(words-data|adv-sentences)\.js/.test(legoHtml);
-    if (usesLoader) notes.push('lego.html เรียก GameContentLoader.boot() ทั้งที่เดิมไม่ใช้ระบบนี้ — ตรวจว่าตั้งใจเปลี่ยนหรือไม่');
+    if (!usesLoader) fail('A: lego.html', 'ไม่เรียก GameContentLoader.boot() เพื่อใช้คลังกลาง');
     if (usesOldData) fail('A: lego.html', 'ยังโหลด data/words-data.js หรือ data/adv-sentences.js ตรงๆ');
-    if (!usesLoader && !usesOldData) ok('A: lego.html ไม่ผูกกับระบบ game-content (ตามที่ออกแบบไว้ — คนละคลังข้อมูล)');
+    if (usesLoader && !usesOldData) ok('A: lego.html ใช้ game-content คลังกลางเดียว');
   }
 }
 
@@ -118,27 +113,36 @@ GAME_PAGES.forEach((page) => {
 }
 
 // ════════════════════════════════════════════════════════════
-// B-2) TONE_SERVER.finishRound ต้องถูกเรียกในทุกเกมที่มีดาว/SRS
+// B-2) Login Free ทั้ง 4 เกมต้องส่งทุก item ให้ LearningReview ซึ่งเรียก server authority
 // ════════════════════════════════════════════════════════════
 {
-  const GAMES_WITH_SRS = {
+  const LOGIN_FREE_GAMES = {
     'js/games/reading-game-app.js': 'เกมอ่าน',
     'js/games/typing-game-app.js': 'เกมพิมพ์',
     'js/games/word-order-app.js': 'เกมลำดับคำ',
     'js/games/tone-finder-game.js': 'เกมเสียง',
   };
-  Object.keys(GAMES_WITH_SRS).forEach((file) => {
+  Object.keys(LOGIN_FREE_GAMES).forEach((file) => {
     const text = read(file);
     if (text === null) { fail(`B-2: ${file}`, 'ไม่พบไฟล์'); return; }
-    const callsFinishRound = /TONE_SERVER\.finishRound\(/.test(text);
-    if (!callsFinishRound) fail(`B-2: ${file}`, `${GAMES_WITH_SRS[file]} ไม่เรียก TONE_SERVER.finishRound() — เสี่ยงให้ดาว/เลื่อนขั้นฝั่ง client เองโดยไม่ผ่านเซิร์ฟเวอร์`);
-    else ok(`B-2: ${file} (${GAMES_WITH_SRS[file]}) เรียก TONE_SERVER.finishRound() ให้เซิร์ฟเวอร์ตัดสินดาว/SRS`);
+    const commitsEveryItem = /LearningReview\.advance\(/.test(text);
+    if (!commitsEveryItem) fail(`B-2: ${file}`, `${LOGIN_FREE_GAMES[file]} ไม่เรียก LearningReview.advance() — เสี่ยงข้าม server learning commit`);
+    else ok(`B-2: ${file} (${LOGIN_FREE_GAMES[file]}) ส่งทุก item ผ่าน LearningReview.advance()`);
   });
+
+  const learningClient = read('js/games/learning-review.js');
+  const scoreSubmit = read('supabase/functions/score-submit/index.ts');
+  if (!learningClient || !/action:\s*'learning_commit'/.test(learningClient)) {
+    fail('B-2: learning-review.js', 'ไม่พบ learning_commit ไปยัง server authority');
+  } else ok('B-2: learning-review.js ส่ง primitive evidence ด้วย learning_commit');
+  if (!scoreSubmit || !/phase1_login_free_learning_commit/.test(scoreSubmit)) {
+    fail('B-2: score-submit/index.ts', 'ไม่พบ transactional learning RPC');
+  } else ok('B-2: score-submit ใช้ transactional learning RPC เป็น authority');
 
   const listeningApp = read('js/games/listening-game-app.js');
   if (listeningApp !== null) {
     const callsFinishRound = /TONE_SERVER\.finishRound\(/.test(listeningApp);
-    if (callsFinishRound) ok('B-2: listening-game-app.js เรียก TONE_SERVER.finishRound() ด้วย');
+    if (callsFinishRound) ok('B-2: listening-game-app.js ยังใช้เส้นทางเดิมตามขอบเขตงาน');
     else notes.push('เกมฟัง (listening-game-app.js) ไม่เรียก TONE_SERVER.finishRound() — ไม่มีระบบดาว/SRS ในเกมนี้ (ตรวจโค้ดแล้วไม่พบการให้ดาวฝั่ง client เองด้วย) ยืนยันกับ Lin ว่าเป็นการออกแบบตั้งใจหรือไม่ได้ทำ');
   }
 }
@@ -156,7 +160,7 @@ GAME_PAGES.forEach((page) => {
       const capsBlock = capsMatch[1];
       const expect = [
         [/anon:\s*{\s*'初':\s*50,\s*'中':\s*50,\s*sentences:\s*20\s*}/, 'anon 初=50 中=50 sentences=20'],
-        [/login:\s*{\s*'初':\s*100,\s*'中':\s*100,\s*sentences:\s*40\s*}/, 'login 初=100 中=100 sentences=40'],
+        [/login:\s*{\s*'初':\s*100,\s*'中':\s*100,\s*sentences:\s*42\s*}/, 'login 初=100 中=100 sentences=42'],
       ];
       expect.forEach(([re, label]) => {
         if (!re.test(capsBlock)) fail('C: game-content CAPS', `ไม่ตรงกับที่ CLAUDE.md บันทึกไว้ (${label}) — ตรวจว่าเอกสารหรือโค้ดที่ผิด`);
@@ -165,10 +169,11 @@ GAME_PAGES.forEach((page) => {
     }
 
     // tier ต้องมาจาก auth.getUser() ของ JWT ใน Authorization header เท่านั้น ห้ามอ่าน body.tier/isLoggedIn
-    const tierFromAuth = /const tier\s*=\s*user\s*\?\s*'login'\s*:\s*'anon'/.test(fn);
+    const tierFromAuth = /const tier\s*=\s*paidAccess\s*\?\s*'paid'\s*:\s*\(user\s*\?\s*'login'\s*:\s*'anon'\)/.test(fn) &&
+      /requestedGame && GAME_SURFACES\.has\(requestedGame\)[\s\S]+owner_all_access/.test(fn);
     const readsBodyForTier = /req\.json\(\)/.test(fn) && /body\.(tier|isLoggedIn)/.test(fn);
-    if (!tierFromAuth) fail('C: game-content/index.ts', 'ไม่พบ "tier = user ? login : anon" จาก auth.getUser() ตรงๆ — ตรวจว่า logic เปลี่ยนไปหรือไม่');
-    else ok('C: game-content/index.ts ตัดสิน tier จาก auth.getUser() ของ JWT เท่านั้น');
+    if (!tierFromAuth) fail('C: game-content/index.ts', 'tier ต้องมาจาก auth.getUser() และ Paid ต้องผ่าน owner entitlement');
+    else ok('C: game-content/index.ts ตัดสิน Guest/Login จาก auth และ Paid จาก owner entitlement');
     if (readsBodyForTier) fail('C: game-content/index.ts', 'พบการอ่าน body.tier/isLoggedIn — เสี่ยงเปิดช่องให้ client ปลอม tier');
     else ok('C: game-content/index.ts ไม่อ่าน tier/isLoggedIn จาก body ที่ client ส่งมา (กันปลอม tier)');
     if (!/if \(rl\.error\) return json\(\{ error: 'rate_limit_unavailable/.test(fn)) fail('C: game-content/index.ts', 'rate-limit error ยังไม่ fail-closed');
@@ -177,8 +182,9 @@ GAME_PAGES.forEach((page) => {
     if (!retryHelper) fail('C: game-content/index.ts', 'ไม่มี bounded retry สำหรับ transient service-role 401');
     else ok('C: game-content retry เฉพาะ transient 401 แบบ bounded และยัง fail-closed');
     const retriedReads = (fn.match(/readWithTransientAuthRetry\(\(\) => admin\.from\(/g) || []).length;
-    if (retriedReads !== 4) fail('C: game-content/index.ts', 'protected content reads ต้องใช้ bounded retry ครบ 4 จุด');
-    else ok('C: game-content protected content reads ใช้ bounded retry ครบ 4 จุด');
+    const retriedWordQueries = (fn.match(/readWithTransientAuthRetry\(\(\) => wordQuery\(/g) || []).length;
+    if (retriedReads !== 4 || retriedWordQueries !== 2) fail('C: game-content/index.ts', 'protected content/entitlement/state reads ต้องใช้ bounded retry ครบ 6 จุด');
+    else ok('C: game-content protected content/entitlement/state reads ใช้ bounded retryครบ 6 จุด');
     if (!/Promise\.all\(\[\s*admin\.rpc\('game_content_rl_check'/.test(fn)) fail('C: game-content/index.ts', 'rate-limit RPC ต้องไม่ถูก retry จนนับซ้ำ');
     else ok('C: game-content rate-limit RPC ไม่ถูก retry ซ้ำ');
     if (!/if \(!words\.length \|\| !sentences\.length\)/.test(fn)) fail('C: game-content/index.ts', 'ไม่บล็อก required dataset ที่ว่าง');

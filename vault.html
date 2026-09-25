@@ -8,13 +8,13 @@
 <title>泰語單字庫 · mrtaihualin.com</title>
 <meta name="description" content="查看登入帳號儲存的泰語單字與句子，並直接回到遊戲練習。">
 <meta name="robots" content="noindex,follow">
-<link rel="canonical" href="https://mrtaihualin.com/vault.html">
+<link rel="canonical" href="https://www.mrtaihualin.com/vault.html">
 <meta property="og:title" content="泰語單字庫 — 泰華眼裡的泰語教學">
 <meta property="og:description" content="查看登入帳號儲存的泰語單字與句子，並直接回到遊戲練習。">
-<meta property="og:image" content="https://mrtaihualin.com/assets/share-card.png">
+<meta property="og:image" content="https://www.mrtaihualin.com/assets/share-card.png">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="zh_TW">
-<meta property="og:url" content="https://mrtaihualin.com/vault.html">
+<meta property="og:url" content="https://www.mrtaihualin.com/vault.html">
 <meta property="og:site_name" content="泰華眼裡的泰語教學">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
@@ -24,22 +24,22 @@
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
 <!-- Lin 2026-08-02: เพิ่มแถบสถานะผู้ใช้ (badge ล็อกอิน) ให้เหมือนหน้าเกมอื่น — ใช้ระบบกลางเดียวกันทุกอย่าง ไม่เขียนใหม่ -->
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="js/core/supabase-config.js?v=9"></script>
+<script defer src="js/core/supabase-config.js?v=11"></script>
 <script defer src="js/core/supabase-fetch-cache.js?v=1"></script><!-- dedupe fetch 2026-07-20: ต้องโหลดก่อน auth-widget.js/shared.js -->
-<script defer src="js/core/auth-widget.js?v=17"></script>
+<script defer src="js/core/auth-widget.js?v=24"></script>
 <script defer src="js/core/network-guard.js?v=1"></script>
-<script defer src="js/score/phase1-canonical-state.js?v=2"></script>
-<script defer src="js/games/reading-auth.js?v=28"></script>
+<script defer src="js/score/phase1-canonical-state.js?v=3"></script>
+<script defer src="js/games/reading-auth.js?v=35"></script>
 <script defer src="js/games/word-vault.js?v=8"></script>
 <script defer src="js/games/sentence-vault.js?v=4"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Sarabun',sans-serif;background:#fdf8ef;min-height:100vh;padding-bottom:80px;}
-.vault-page{max-width:680px;margin:0 auto;padding:16px;}
+.vault-page{max-width:1080px;margin:0 auto;padding:44px 22px 72px;font-family:'Noto Sans TC',sans-serif;text-align:left;}
 
 /* header — page-header/page-title ก็อปสไตล์เดียวกับหน้าเกมอื่นทุกหน้า (reading-game.html เป็นต้น) — Lin 2026-08-02 */
-.page-header{text-align:center;margin-bottom:10px;}
-.page-title{font-family:'Noto Serif TC',serif;font-size:clamp(20px,4vw,28px);font-weight:900;color:#8B6310;letter-spacing:2px;}
+.page-header{text-align:left;margin-bottom:30px;}
+.page-title{font-family:'Noto Serif TC',serif;font-size:clamp(26px,5vw,38px);font-weight:900;color:#2d2a22;}
 /* ไม่มี JS เติมข้อความให้เลย (เช็คแล้ว) ปล่อย display:none ไว้เหมือนเดิม กันเห็นเป็นเม็ดยาว่างๆ */
 .vault-count-chip{font-size:13px;background:rgba(139,99,16,0.12);color:#8B6310;border-radius:20px;padding:3px 12px;display:none;}
 .vault-back{font-size:13px;color:#8B6310;text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-bottom:12px;}
@@ -113,13 +113,13 @@ body{font-family:'Sarabun',sans-serif;background:#fdf8ef;min-height:100vh;paddin
 .pc-source,.pc-muted{margin:4px 0;color:#83775f;font-size:12px;line-height:1.5;}.pc-delete{margin-top:13px;background:#fff;border:1px solid #c96a63;color:#a53e37;}.pc-empty,.pc-guest{text-align:center;background:#fff;border-radius:16px;padding:35px 22px;color:#83775f;line-height:1.7;}.pc-guest h2{color:#5c4410;margin:8px 0}.pc-guest p{font-size:14px}.pc-guest-icon{font-size:40px}.pc-primary{display:inline-flex;margin-top:15px;background:#8B6310;color:#fff;border-radius:999px;padding:10px 18px;text-decoration:none;font-weight:800;}
 @media(max-width:420px){.pc-search{grid-template-columns:1fr}.pc-search-clear{width:100%}}
 </style>
-<script src="js/core/minimum-guest-launch.js?v=6"></script>
+<script src="js/core/minimum-guest-launch.js?v=25"></script>
 </head>
 <body>
 <!--ANN-BAND:START--><!-- Login UI scope: no announcement strip. --><!--ANN-BAND:END-->
 
 <!-- Lin 2026-08-02: เพิ่ม nav บนสุด + page-strip ล่างสุด ให้เหมือนหน้าเกมอื่นทุกหน้า (ก็อปจาก reading-game.html เป๊ะ) -->
-<nav class="site-nav"><div class="nav-logo" onclick="goHome()"><span class="logo-accent">泰華</span><span class="logo-dim">眼裡的</span><span class="logo-main">泰語教學</span></div><ul class="nav-links"><li><a href="/games.html" class="nav-cta-secondary">🎮 遊戲</a></li><li><a href="javascript:void(0)" class="has-drop">學習資源</a><div class="nav-drop"><span class="nav-drop-label">泰語學習資源</span><a href="/content.html">📚 泰語學習資源</a><a href="/blog.html#articles">📝 泰語學習文章</a><a href="/resources.html#video-learning">🎬 影音學習</a><a href="/blog.html#selfstudy">📖 自學資源</a><span class="nav-drop-label">其他學習入口</span><a href="javascript:void(0)" onclick="openModal('modal-quiz')">程度測驗</a><a href="/index.html#problems">學習困境</a><a href="/community.html">🇹🇭 泰語學習心聲與提問</a></div></li><li><a href="javascript:void(0)" class="has-drop">更多</a><div class="nav-drop"><span class="nav-drop-label">課程與老師</span><a href="/index.html#teacher">關於老師</a><a href="/pricing.html#testimonials">學生回饋</a><a href="/pricing.html#pricing">費用方案</a><a href="/pricing.html#how">上課方式</a><span class="nav-drop-label">常見資訊</span><a href="/faq.html#faq">FAQ</a><a href="/faq.html#rules">上課須知</a><a href="/faq.html#feedback-section">分享經驗</a><span class="nav-drop-label">其他服務</span><a href="/page-services.html#tour-guide">🗺️ 導遊</a><a href="/page-services.html#drama">🎬 字幕翻譯</a><a href="/page-services.html#interpret">🎙️ 口譯</a><a href="/page-services.html#quote-form">📋 報價</a><div class="nav-drop-divider"></div><a href="javascript:void(0)" onclick="openModal('modal-contact')">聯絡我們</a></div></li><li><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="nav-cta">免費試聽</a></li></ul><button class="nav-mobile-cta" onclick="openModal('modal-line-qr')">免費試聽</button><div class="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></div></nav><!--NAV-FIT:START--><script>(function(){try{function f(){var n=document.querySelector("nav.site-nav");if(!n)return;var l=n.querySelector(".nav-logo"),k=n.querySelector(".nav-links");if(!l||!k)return;n.classList.remove("nav-compact");k.style.cssText="";var cs=window.getComputedStyle(n);var pl=parseFloat(cs.paddingLeft)||0,pr=parseFloat(cs.paddingRight)||0;var avail=n.clientWidth-pl-pr;var need=l.scrollWidth+k.scrollWidth+12;if(need>avail){n.classList.add("nav-compact");}}window.__navFit=f;f();}catch(e){}})();</script><!--NAV-FIT:END-->
+<nav class="site-nav"><div class="nav-logo" onclick="goHome()"><span class="logo-accent">泰華</span><span class="logo-dim">眼裡的</span><span class="logo-main">泰語教學</span></div><ul class="nav-links"><li><a href="/games.html" class="nav-cta-secondary">🎮 遊戲</a></li><li><a href="javascript:void(0)" class="has-drop">課程與老師</a><div class="nav-drop"><a href="/index.html#teacher">關於老師</a><a href="/pricing.html#testimonials">學生回饋</a><a href="/pricing.html#pricing">費用方案</a><a href="/pricing.html#how">上課方式</a></div></li><li><a href="javascript:void(0)" class="has-drop">常見資訊</a><div class="nav-drop"><a href="/faq.html#faq">FAQ</a><a href="/faq.html#rules">上課須知</a><a href="/faq.html#feedback-section">分享經驗</a></div></li><li><a href="javascript:void(0)" class="has-drop">泰語學習資源</a><div class="nav-drop"><a href="/content.html">📚 泰語學習資源</a><a href="/blog.html#articles">📝 泰語學習文章</a><a href="/resources.html#video-learning">🎬 影音學習</a><a href="/blog.html#selfstudy">📖 自學資源</a><a href="javascript:void(0)" onclick="openModal('modal-quiz')">程度測驗</a><a href="/index.html#problems">學習困境</a><a href="/community.html">🇹🇭 泰語學習心聲與提問</a></div></li><li><a href="javascript:void(0)" class="has-drop">其他服務</a><div class="nav-drop"><a href="/page-services.html#tour-guide">🗺️ 導遊</a><a href="/page-services.html#drama">🎬 字幕翻譯</a><a href="/page-services.html#interpret">🎙️ 口譯</a><a href="/page-services.html#quote-form">📋 報價</a></div></li><li><a href="javascript:void(0)" onclick="openModal('modal-contact')">聯絡我們</a></li><li><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="nav-cta">免費試聽</a></li></ul><div class="nav-mobile-actions"><a class="nav-mobile-game" href="/games.html">🎮 遊戲</a><button class="nav-mobile-cta" onclick="openModal('modal-line-qr')">免費試聽</button></div><div class="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></div></nav><!--NAV-FIT:START--><script>(function(){try{function f(){var n=document.querySelector("nav.site-nav");if(!n)return;var l=n.querySelector(".nav-logo"),k=n.querySelector(".nav-links");if(!l||!k)return;n.classList.remove("nav-compact");k.style.cssText="";var cs=window.getComputedStyle(n);var pl=parseFloat(cs.paddingLeft)||0,pr=parseFloat(cs.paddingRight)||0;var avail=n.clientWidth-pl-pr;var need=l.scrollWidth+k.scrollWidth+12;if(need>avail){n.classList.add("nav-compact");}}window.__navFit=f;f();}catch(e){}})();</script><!--NAV-FIT:END-->
 
 <div class="page-strip">
   <span class="page-strip-label">頁面</span>
@@ -153,10 +153,10 @@ body{font-family:'Sarabun',sans-serif;background:#fdf8ef;min-height:100vh;paddin
   <span class="footer-legal"><a href="/terms.html" style="color:inherit;text-decoration:underline;">使用條款與著作權聲明</a><span aria-hidden="true"> · </span><a href="/privacy.html" style="color:inherit;text-decoration:underline;">隱私權政策</a></span><br>
   <span class="footer-copyright">© 2026 mrtaihualin.com</span>
 </footer>
-<script src="js/games/game-switcher.js?v=6"></script>
+<script src="js/games/game-switcher.js?v=9"></script>
 
 <script src="data/nav-template.js?v=4"></script>
-<script src="js/core/shared.min.js?v=47"></script>
+<script src="js/core/shared.min.js?v=52"></script>
 <script type="text/plain" data-superseded="phase1-personal-content">
 var TAGS = ['อยากฝึก','เป็นแล้ว','ชอบ'];
 var TAG_COLORS = {'อยากฝึก':'#C8973A','เป็นแล้ว':'#5a3e0a','ชอบ':'#A8780F'};
@@ -173,7 +173,7 @@ function sourceLabel(s){
 }
 // ปุ่มเลือกว่าจะเอาคำนี้ไปฝึกในเกมไหน (แทนที่ป้าย "ที่มา" เดิม) — Lin 2026-07-02
 function practiceBtnsHtml(th){
-  var q='?word='+encodeURIComponent(th);
+  var q='';
   return '<div class="vault-practice-btns">'+
     '<a class="vault-practice-btn" href="reading-game.html'+q+'">✍️ 拼讀練習室</a>'+
     /* Lin 2026-07-25: ถอดปุ่ม 🎵 聲調練習室 ออก — เกมเสียงปิดโหมด 自行搜尋 แล้ว ลิงก์ ?word= ใช้ไม่ได้ (กันปุ่มพัง) */
@@ -275,21 +275,39 @@ renderList();
 // (word-vault.js ยิง event นี้ให้หลังรวมคำเสร็จทุกครั้ง)
 window.addEventListener('wordvault:changed', renderList);
 </script>
-<script src="js/games/practice-events.js?v=2"></script>
+<script src="js/games/practice-events.js?v=3"></script>
 <script src="js/score/personal-search.js?v=2"></script>
 <script src="js/score/personal-content.js?v=5"></script>
 
-<div id="cookieConsentBanner" role="dialog" aria-label="Cookie 與分析設定" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:9999;
-  background:#FAF4E8;border-top:2px solid #8B6310;box-shadow:0 -4px 16px rgba(0,0,0,0.12);
-  padding:18px 20px;font-family:'Noto Sans TC',sans-serif;">
-  <div style="max-width:960px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:14px;justify-content:space-between;">
-    <p style="margin:0;color:#1C1C1C;font-size:14px;line-height:1.6;flex:1;min-width:240px;">
-      🍪 我們只會在您同意後載入 <strong>Microsoft Clarity</strong>，用來改善網站體驗。詳見
+<style>
+  #cookieConsentBanner{display:none;position:fixed;left:0;right:0;bottom:0;z-index:9999;background:#FAF4E8;border-top:1px solid #8B6310;box-shadow:0 -3px 12px rgba(0,0,0,.12);padding:10px 14px;font-family:'Noto Sans TC',sans-serif;}
+  #cookieConsentBanner .ccb-inner{max-width:960px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;}
+  #cookieConsentBanner .ccb-copy{margin:0;color:#1C1C1C;font-size:13px;line-height:1.45;min-width:0;}
+  #cookieConsentBanner .ccb-actions{display:flex;gap:7px;flex-wrap:nowrap;align-items:center;}
+  #cookieConsentBanner .ccb-button{border-radius:8px;min-height:36px;padding:6px 12px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;font-family:'Noto Sans TC',sans-serif;}
+  #cookieConsentBanner .ccb-reject{background:#FAF4E8;color:#8B6310;border:1.5px solid #8B6310;}
+  #cookieConsentBanner .ccb-accept{background:linear-gradient(135deg,#C8973A,#8B6310);color:#FAF4E8;border:1.5px solid transparent;}
+  @media (max-width:767px), (max-width:900px) and (max-height:500px){
+    #cookieConsentBanner{left:max(7px,env(safe-area-inset-left));right:max(7px,env(safe-area-inset-right));bottom:max(7px,env(safe-area-inset-bottom));border:1px solid #8B6310;border-radius:11px;padding:7px 8px;max-height:calc(100dvh - 14px);overflow:auto;}
+    #cookieConsentBanner .ccb-inner{grid-template-columns:minmax(0,1fr) auto;gap:7px;}
+    #cookieConsentBanner .ccb-copy{font-size:11px;line-height:1.35;}
+    #cookieConsentBanner .ccb-actions{gap:5px;}
+    #cookieConsentBanner .ccb-button{min-height:34px;padding:5px 9px;font-size:12px;}
+  }
+  @media (max-width:359px){
+    #cookieConsentBanner .ccb-inner{grid-template-columns:1fr;gap:6px;}
+    #cookieConsentBanner .ccb-actions{justify-content:flex-end;}
+  }
+</style>
+<div id="cookieConsentBanner" role="dialog" aria-label="Cookie 與分析設定" style="display:none;">
+  <div class="ccb-inner">
+    <p class="ccb-copy">
+      🍪 僅在您同意後載入 <strong>Microsoft Clarity</strong> 以改善體驗。詳見
       <a href="/privacy.html" style="color:#8B6310;font-weight:700;text-decoration:underline;">隱私權政策</a>。
     </p>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;">
-      <button type="button" onclick="window.__cookieConsentDecide(false)" style="background:#FAF4E8;color:#8B6310;border:1.5px solid #8B6310;border-radius:8px;padding:9px 18px;font-weight:700;font-size:14px;cursor:pointer;font-family:'Noto Sans TC',sans-serif;">拒絕</button>
-      <button type="button" onclick="window.__cookieConsentDecide(true)" style="background:linear-gradient(135deg,#C8973A,#8B6310);color:#FAF4E8;border:none;border-radius:8px;padding:9px 22px;font-weight:700;font-size:14px;cursor:pointer;font-family:'Noto Sans TC',sans-serif;">接受</button>
+    <div class="ccb-actions">
+      <button type="button" class="ccb-button ccb-reject" onclick="window.__cookieConsentDecide(false)">拒絕</button>
+      <button type="button" class="ccb-button ccb-accept" onclick="window.__cookieConsentDecide(true)">接受</button>
     </div>
   </div>
 </div>
@@ -308,6 +326,6 @@ if (!window.AnalyticsConsent || window.AnalyticsConsent.state() === 'unset') {
   if (initialBanner) initialBanner.style.display = 'block';
 }
 </script>
-<nav id="bottom-nav"><a href="/index.html" class="bn-item"><span class="bn-icon">🏠</span><span class="bn-label">首頁</span></a><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="bn-item bn-cta"><span class="bn-icon">📞</span><span class="bn-label">試聽</span></a><a href="/games.html" class="bn-item"><span class="bn-icon">🎮</span><span class="bn-label">遊戲</span></a></nav>
+<nav id="bottom-nav"><a href="/index.html" class="bn-item"><span class="bn-icon">🏠</span><span class="bn-label">首頁</span></a><a href="javascript:void(0)" onclick="openModal('modal-line-qr')" class="bn-item bn-cta"><span class="bn-icon">📞</span><span class="bn-label">試聽</span></a><a href="/games.html" class="bn-item"><span class="bn-icon">🎮</span><span class="bn-label">遊戲</span></a><a href="/my-progress.html" class="bn-item"><span class="bn-icon">📚</span><span class="bn-label">學習</span></a></nav>
 </body>
 </html>

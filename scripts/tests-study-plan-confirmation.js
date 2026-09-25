@@ -10,10 +10,11 @@ const Core=require(path.join(root,'js/games/study-plan-core.js'));
 let passed=0;
 function check(label,fn){fn();passed++;console.log('✓ '+label);}
 
-check('Minimum Guest parks the Time Plan UI without deleting its core module',()=>{
+check('Games hub exposes the locked Time Plan UI and runtime',()=>{
   const html=read('games.html');
-  assert.doesNotMatch(html,/id="timePlanTitle"|id="timePlanProposal"|id="timePlanConfirm"|id="timePlanCancel"/);
-  assert.doesNotMatch(html,/study-plan(?:-core)?\.js/);
+  assert.match(html,/id="timePlanTitle"|id="timePlanProposal"|id="timePlanConfirm"|id="timePlanCancel"/);
+  assert.match(html,/study-plan-core\.js\?v=2/);
+  assert.match(html,/study-plan\.js\?v=5/);
   assert.doesNotMatch(html,/id="gameSearchInput"/);
 });
 
@@ -91,18 +92,19 @@ check('initial queue transitions into normal rotation instead of becoming a clos
   assert.doesNotMatch(advance,/%queue\.items\.length|skip_single|location\.href='\/games\.html'/);
 });
 
-check('Tone applies proposal preference before auto-start and suppresses old resume',()=>{
+check('Tone preserves a pending Login Free round before applying an Auto Plan preference',()=>{
   const source=read('js/games/tone-finder-game.js');
   assert.match(source,/StudyPlan\.preferredLevel\('tone'\)/);
   assert.match(source,/TF\.selectLevel\(__tfAutoPlanLevel \|\| 1\)/);
-  assert.match(source,/if \(!__tfAutoPlanLevel && __tfResumeSnapshot\)/);
+  assert.match(source,/if \(!__tfAutoPlanLevel \|\| __tfLoginFreeRuntime\)/);
+  assert.match(source,/if \(__tfLoginFreeResume\) TF\.resumeSavedSession\(\)/);
 });
 
-check('Reading applies proposal preference without overwriting remembered preference',()=>{
+check('Reading keeps its preference while a pending Login Free round resumes first',()=>{
   const source=read('js/games/reading-game-app.js');
   assert.match(source,/StudyPlan\.preferredLevel\('reading'\)/);
   assert.match(source,/_autoPlanReadingLevel\|\|localStorage\.getItem\('rg_reading_level'\)/);
-  assert.match(source,/if\(_autoPlanReadingLevel\|\|!rgTryLoadResumeBanner\(\)\)/);
+  assert.match(source,/if\(\(_autoPlanReadingLevel&&!_rgLoginFreeResume\)\|\|!rgTryLoadResumeBanner\(\)\)/);
 });
 
 check('Listening accepts only beginner/intermediate Auto Plan preferences',()=>{
@@ -112,11 +114,12 @@ check('Listening accepts only beginner/intermediate Auto Plan preferences',()=>{
   assert.match(source,/if \(!autoPlanListeningLevel\) tryShowResumeBanner\(\)/);
 });
 
-check('Typing applies proposal preference without overwriting remembered preference',()=>{
+check('Typing keeps its preference while a pending Login Free round resumes first',()=>{
   const source=read('js/games/typing-game-app.js');
   assert.match(source,/StudyPlan\.preferredLevel\('typing'\)/);
   assert.match(source,/_autoPlanTypingLevel\|\|localStorage\.getItem\('tg_level'\)/);
-  assert.match(source,/if\(!_autoPlanTypingLevel\)\{try\{ tgTryResume\(\)/);
+  assert.match(source,/if\(!tgProtectedEligible\(\)&&\(!_autoPlanTypingLevel\|\|_tgLoginFreeResume\)\)\{try\{ _tgResumeHandled=tgTryResume\(\)/);
+  assert.match(source,/if\(_tgResumeHandled\)return;[\s\S]*if\(tgProtectedEligible\(\)\)\{_tgInitialGo\(\);return;\}[\s\S]*Promise\.all\(\[_tgInitialReviewReady,_tgInitialSrsReady\]\)[\s\S]*\.then\(_tgInitialGo,_tgInitialGo\)/);
 });
 
 check('Search and Time Plan quota backends remain separate',()=>{

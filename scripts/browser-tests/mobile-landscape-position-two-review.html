@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ปุ่มควบคุมร่วม Mobile Landscape</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: #ece7de; color: #49350d; font-family: system-ui, sans-serif; }
+    body { display: grid; place-items: start center; width: 100%; padding: 18px; }
+    .review { width: 100%; max-width: 900px; min-width: 0; }
+    .review__header { margin-bottom: 10px; }
+    .review__title { margin: 0; font-size: 16px; }
+    .review__games { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .review__game { min-width: 0; }
+    .review__label { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 5px; font-size: 13px; }
+    .review__label span { color: #8b6310; }
+    .review__screen { position: relative; width: 100%; aspect-ratio: 844 / 390; border: 1px solid #c9b27e; border-radius: 14px; background: #f5f0e8; box-shadow: 0 8px 20px rgba(73,53,13,.14); overflow: hidden; }
+    iframe { position: absolute; inset: 0 auto auto 0; display: block; width: 844px; height: 390px; border: 0; transform-origin: top left; }
+    @media (max-width: 480px) { .review__games { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main class="review">
+    <div class="review__header">
+      <h1 class="review__title">ปุ่มล่างขวาตำแหน่งเดียวกัน — ทั้ง 4 เกม</h1>
+    </div>
+    <div class="review__games">
+      <article class="review__game">
+        <h2 class="review__label">Tone <span>不確定</span></h2>
+        <div class="review__screen"><iframe title="Tone — 不確定" src="mobile-landscape-account-menu.html?game=tone&amp;preview=position"></iframe></div>
+      </article>
+      <article class="review__game">
+        <h2 class="review__label">Reading <span>檢查</span></h2>
+        <div class="review__screen"><iframe title="Reading — 檢查" src="mobile-landscape-account-menu.html?game=reading&amp;preview=position"></iframe></div>
+      </article>
+      <article class="review__game">
+        <h2 class="review__label">Typing <span>檢查</span></h2>
+        <div class="review__screen"><iframe title="Typing — 檢查" src="mobile-landscape-account-menu.html?game=typing&amp;preview=position"></iframe></div>
+      </article>
+      <article class="review__game">
+        <h2 class="review__label">Word Order <span>重新</span></h2>
+        <div class="review__screen"><iframe title="Word Order — 重新" src="mobile-landscape-account-menu.html?game=word-order&amp;preview=position"></iframe></div>
+      </article>
+    </div>
+  </main>
+  <script>
+    (function () {
+      'use strict';
+      var previews = Array.prototype.slice.call(document.querySelectorAll('.review__screen'));
+      function fitGames() {
+        previews.forEach(function (screen) {
+          screen.querySelector('iframe').style.transform = 'scale(' + Math.min(1, screen.clientWidth / 844) + ')';
+        });
+      }
+      fitGames();
+      if (window.ResizeObserver) {
+        var observer = new ResizeObserver(fitGames);
+        previews.forEach(function (screen) { observer.observe(screen); });
+      } else {
+        window.addEventListener('resize', fitGames);
+      }
+    })();
+  </script>
+</body>
+</html>

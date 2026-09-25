@@ -92,40 +92,17 @@ assert.match(webhook, /googleCalendarRequest/);
 assert.match(webhook, /terminalStateForCalendarFailure/);
 assert.match(webhook, /formatCalendarTerminalMessage/);
 assert.doesNotMatch(webhook, /replyLine\([^\n]+usageLimits/);
-assert.match(webhook, /eventDeletedButUnverified[\s\S]{0,900}CALENDAR_TERMINAL_STATE\.RETRY_PENDING/,
-  'delete accepted but follow-up verification failed must remain pending, not report success');
-assert.match(webhook, /scheduleCleanupPendingCancel[\s\S]{0,1800}CALENDAR_TERMINAL_STATE\.PARTIAL_SUCCESS/,
-  'delete follow-up sync failure must be an explicit partial success');
-assert.doesNotMatch(webhook, /claimCalendarOperation\(supabase, requestIdCancel, true\)/,
-  'delete must not reclaim a stale lock when an earlier DELETE may have reached Google');
-assert.match(webhook, /moveCalendarEventById\([\s\S]{0,180}preMove\.preEvent\)/,
-  'move must reuse its claimed precheck snapshot instead of issuing an immediate duplicate event GET');
-assert.match(webhook, /moveCalendarEventById\([\s\S]{0,180}prePick\.preEvent\)/,
-  'picked move must reuse its claimed precheck snapshot instead of issuing an immediate duplicate event GET');
-
-{
-  const cancelStart = webhook.indexOf("if (action === 'confirm_cancel_delete')");
-  const cancelEnd = webhook.indexOf("if (action === '", cancelStart + 20);
-  const cancelBlock = webhook.slice(cancelStart, cancelEnd);
-  assert.ok(cancelBlock.indexOf('notifyStudentOfCalendarCancel(') < cancelBlock.indexOf("update({ status: 'acknowledged'"),
-    'student notification must be attempted before request finalization can fail');
-}
-
-for (const suffix of ['Move', 'Pick']) {
-  const notifyAt = webhook.indexOf('pushRes' + suffix + ' = await pushLineChecked');
-  const finalizeAt = webhook.indexOf("const { error: updErr" + suffix + ", count: updCount" + suffix + " }");
-  assert.ok(notifyAt >= 0 && finalizeAt > notifyAt, `reschedule ${suffix.toLowerCase()} notification must precede finalization`);
-}
-
+assert.ok(/if \(createResultAddC\.eventCreatedButUnverified\)[\s\S]{0,700}continue;/.test(webhook),
+  'add-class creation accepted but unverified must keep its lock and stop');
+assert.match(webhook, /checkFreebusyConflictService/,
+  'add-class conflict check must remain active');
+assert.match(webhook, /createCalendarEventById/,
+  'add-class Calendar creation must remain active');
+assert.match(webhook, /RETIRED_CLASSROOM_POSTBACKS\.has\(action/,
+  'historical cancel/reschedule postbacks must stop before mutation');
 for (const action of ['confirm_reschedule_move', 'confirm_reschedule_pick', 'confirm_cancel_delete']) {
-  const start = webhook.indexOf("if (action === '" + action + "')");
-  assert.notEqual(start, -1, `${action} handler must exist`);
-  const end = webhook.indexOf("if (action === '", start + 20);
-  const block = webhook.slice(start, end === -1 ? webhook.length : end);
-  const claimAt = block.indexOf('claimCalendarOperation(');
-  const firstCalendarRead = Math.min(...['precheckRescheduleMoveTarget(', 'fetchCalendarEventById(', 'deleteCalendarEventById(']
-    .map((needle) => block.indexOf(needle)).filter((index) => index >= 0));
-  assert.ok(claimAt >= 0 && claimAt < firstCalendarRead, `${action} must dedupe before its first Calendar API read`);
+  assert.doesNotMatch(webhook, new RegExp("if \\(action === '" + action + "'\\)"),
+    `${action} handler must be retired`);
 }
 
-console.log('PASS Phase 1 Calendar reliability: terminal states, rate-limit backoff, redaction, early dedupe, idempotent retry');
+console.log('PASS Phase 1 Calendar reliability: terminal states, rate-limit backoff, add-class safety and retired postbacks');
