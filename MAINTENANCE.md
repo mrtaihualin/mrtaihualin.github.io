@@ -3311,3 +3311,8 @@ node scripts/check-site.js
 
 - Corrected the two disposable Typing PostgreSQL harnesses after GitLab MR `!79` exposed that PostgreSQL 15 does not accept the newer `initdb --set` option. The harnesses now detect that option before using it and apply the required `mmap` shared-memory settings at server startup on every supported version, preserving the constrained local-run path while allowing the PostgreSQL 15 CI image to initialize normally.
 - Both focused PostgreSQL suites pass after the repair, and `node scripts/check-site.js` passes every check across all `1,172` repository files. This changes test-cluster startup only; no game/runtime behavior, Supabase schema, Edge deployment, Auth, player data, public package or Production state changed.
+
+# 2026-09-25 — GitHub backup CI PostgreSQL tool discovery
+
+- Added the runner-provided PostgreSQL binary directory to `GITHUB_PATH` before the repository gate. GitHub Required checks had passed the exact 419-path Write-Set and every non-PostgreSQL suite, but its Ubuntu runner could not resolve `initdb`; this keeps the source/tests unchanged and makes the existing disposable PostgreSQL suites discoverable.
+- Scope is CI-only. It does not deploy the site, run a migration, change Supabase/Auth/data, or alter Cloudflare Production.
